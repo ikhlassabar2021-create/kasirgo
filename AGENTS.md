@@ -14,7 +14,7 @@ Aplikasi kasir UMKM super-app untuk Indonesia (warung Madura, kelontong, retail,
 
 RLS: Owner full access outlet sendiri; Admin CRUD produk + read reports; Cashier read produk + insert transaksi.
 Triggers: `handle_new_user` auto-create outlet on signup; `decrement_stock` auto-kurang stok on transaction item insert.
-Schema SQL lengkap: docs/MONKEYCODE-WORKFLOW.md Phase 1.
+Schema SQL lengkap: docs/KASIRGO-WORKFLOW-LENGKAP.md Phase 1.
 
 ## Roles
 | Role | Akses | Platform |
@@ -34,10 +34,20 @@ Schema SQL lengkap: docs/MONKEYCODE-WORKFLOW.md Phase 1.
 Prediksi penjualan (moving average), deteksi anomali (z-score), rekomendasi produk serupa (association rule), ABC ranking (Pareto), margin alert, daily digest, flash sale auto-suggest, best time to sell. Implementasi: `utils/ai_engine.dart`.
 
 ## Design System
-Glassmorphism dark theme. Warna: primary #4F46E5, secondary #7C3AED, accent #06B6D4, bg #0F172A, surface #1E293B. Font: Google Fonts Inter. Min touch target 48dp. Responsive 360dp width.
+Lihat selengkapnya: `docs/superpowers/specs/2026-09-08-ui-ux-design.md`
+Glassmorphism dark theme. Warna: primary #4F46E5, secondary #7C3AED, accent #06B6D4, bg #0F172A, surface #1E293B. Font: Google Fonts Inter. Min touch target 56dp (primary), 48dp (secondary). Responsive 360dp width.
 
 ## Offline-First
-SQLite (drift) lokal untuk produk & transaksi. Sync ke Supabase setiap 30 detik saat online. Conflict: last-write-wins. Foto produk simpan lokal, upload Supabase Storage saat online.
+SQLite (drift) lokal untuk produk & transaksi. Sync ke Supabase setiap 30 detik saat online. Conflict: last-write-wins.
+
+## Kebijakan Foto & Penyimpanan (WAJIB)
+- **Foto produk = LOKAL saja** (path di HP). Tidak pernah upload ke Supabase Storage.
+- **Database = teks & angka saja** (nama, harga, stok, kategori, `image_local_path`).
+- **Thumbnail online = opt-in** ke Cloudflare R2 (WebP, maks 512px, ~15-30KB) hanya untuk produk yang dipublikasikan ke toko online / QR menu. `thumb_key` null jika tidak dipublikasikan.
+- **R2, bukan Supabase Storage** untuk file (R2: 10GB gratis + egress Rp0).
+- Transaksi: HOT (SQLite, semua) -> WARM (Supabase, 30 hari + agregat harian) -> COLD (R2 arsip).
+- Backup penuh opsional ke Google Drive milik warung (biaya user, bukan developer).
+- Skema: `image_url` (Supabase) DIGANTI menjadi `image_local_path` + `thumb_key`.
 
 ## File Structure
 ```
@@ -62,21 +72,42 @@ kasirgo-admin/src/
 ## Dependencies (pubspec.yaml)
 supabase_flutter, drift, sqlite3_flutter_libs, path_provider, go_router, flutter_riverpod, shared_preferences, intl, mobile_scanner, qr_flutter, barcode, pdf, printing, excel, url_launcher, connectivity_plus, google_fonts, flutter_animate, flutter_slidable, fl_chart, cached_network_image, image_picker
 
+## Development Workflow
+- **Testing cepat (MonkeyCode):** `flutter run -d web-server --web-renderer html --web-hostname 0.0.0.0 --web-port 8080`
+  Gunakan HTML renderer (bukan CanvasKit) supaya preview langsung muncul, tidak blank.
+- **Testing APK:** `flutter build apk --debug` untuk test cepat di HP.
+- **APK rilis:** `flutter build apk --release --split-per-abi --obfuscate --split-debug-info=build/debug-info`
+  Target: per ABI di bawah 10MB. Gunakan `--split-per-abi` (3 APK: arm64, armeabi, x86_64).
+- **Web build:** `flutter build web --web-renderer html` (file statis, deploy ke Cloudflare Pages / shared hosting).
+- **Ukuran APK ditekan:** hapus package tidak perlu, gambar WebP bukan PNG, font subset Inter, `proguard-rules.pro`, tree-shaking Dart otomatis.
+
 ## Repository & Env
 - GITHUB_URL: [isi URL repo]
 - SUPABASE_URL & ANON_KEY: placeholder di config/supabase_config.dart, isi manual
 - Deployment: React admin ke Vercel. Flutter APK release via flutter build apk --release
 
 ## Dokumen Referensi
-- Workflow 8 Phase: docs/MONKEYCODE-WORKFLOW.md
+- Workflow 8 Phase: docs/KASIRGO-WORKFLOW-LENGKAP.md
 - Design spec: docs/superpowers/specs/2026-09-08-pos-app-design.md
 - PRD: docs/PRD-KasirGo.md
 - Implementation plan: docs/superpowers/plans/2026-09-08-kasirgo-implementation.md
 
+## Handoff Phase 1 (TERVERIFIKASI)
+Status: SELESAI. Project Supabase sudah dibuat dan schema terpasang serta diuji.
+
+- Schema: 13 tabel, 16 RLS policy (di 11 tabel; `affiliates` + `affiliate_referrals` RLS aktif tanpa policy = by design, superadmin via service key), 2 trigger (`handle_new_user`, `decrement_stock`), 2 function, 9 index.
+- Verifikasi fungsional:
+  - `handle_new_user` PASS -- insert user -> outlet auto-create, `business_name` + `business_type` dari `user_metadata` terbaca.
+  - `decrement_stock` PASS -- stok 10 -> 7 setelah insert transaction item quantity 3.
+  - Login API PASS* -- user hasil direct-SQL tidak punya `auth.identities`, jadi password grant gagal. Full test via `signUp()` SDK di Phase 2.
+- Data test sudah dibersihkan (user `test-phase1@kasirgo.test` + product `__TEST_DECREMENT__` = 0).
+- Kredensial: `SUPABASE_URL` + anon key diisi manual di `config/supabase_config.dart` (Phase 2). `service_role` TIDAK disimpan di repo/APK.
+- Sisa: full auth flow diuji di Phase 2.
+
 ## Progress Tracker
 - [x] Phase 0: Design docs + PRD + workflow
 - [x] Phase 1: Supabase DB + Auth
-- [x] Phase 2: Flutter app shell + auth + offline engine
+- [ ] Phase 2: Flutter app shell + auth + offline engine  (SEDANG DIKERJAKAN)
 - [ ] Phase 3: Produk + POS + QRIS + AI Co-Pilot
 - [ ] Phase 4: Laporan + pelanggan + karyawan
 - [ ] Phase 5: Premium features + subscription gate

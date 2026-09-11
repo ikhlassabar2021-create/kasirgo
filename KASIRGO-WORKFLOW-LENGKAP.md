@@ -1,75 +1,66 @@
-# MonkeyCode Vibecoding Workflow -- KasirGo
+# KASIRGO -- WORKFLOW LENGKAP (Copy-Paste ke MonkeyCode)
 
-> STATUS: Phase 0-1 SELESAI. Phase 2 SEDANG DIKERJAKAN. AGENTS.md sudah ada di root repo (memori proyek).
-
-## Cara Kerja: Satu Session = Satu Phase
-
-Alur per phase:
-1. Buka session MonkeyCode baru (fresh environment)
-2. Copy prompt Phase lalu paste (prompt sudah include perintah clone repo)
-3. AI clone repo -> **otomatis baca AGENTS.md** (memori proyek) -> langsung paham konteks & progress tanpa perlu cerita ulang
-4. AI kerjakan fitur phase, **push tiap 1-2 file selesai** (= save point)
-5. Test live, pastikan tidak error
-6. Update checklist "Progress Tracker" di AGENTS.md lalu commit + push
-7. Selesai. Reset context / tutup session. Lanjut Phase berikutnya di session baru.
-
-## AGENTS.md = Memori Permanen Proyek
-
-- AGENTS.md di root repo berisi SEMUA konteks: stack, DB, roles, paket, AI, design, file structure, progress.
-- Setiap session baru / reset context: AI auto-load AGENTS.md di awal -> langsung "ingat" proyek.
-- Update hanya bagian **Progress Tracker** saat phase selesai (`- [ ]` -> `- [x]`). Jangan edit bagian lain tanpa perlu.
-- Prompt Phase tetap membawa konteks 1-baris sbg cadangan (double safety).
-
-## Aturan Push -- JANGAN tunggu akhir Phase!
-
-Context window MonkeyCode bisa penuh sebelum Phase selesai. Solusi: **push setiap 1-2 file selesai.**
-
-```
-SETIAP kali selesai bikin 1-2 file:
-  git add . && git commit -m "progress: [nama file]" && git push
-
-JANGAN tunggu semua file selesai baru push.
-```
-
-Jika session mati sebelum push, code hilang. Push = save point.
-
-## Kena Limit Context: Reset > Compact
-
-| Kondisi | Aksi |
-|---------|------|
-| Ganti Phase / mulai fitur baru | **RESET context** (bukan task baru) - AGENTS.md auto-load lagi, langsung siap |
-| Tengah debug satu bug rumit, detail history masih bernilai | **Compact** dulu, selesaikan, baru reset |
-| Session mati sebelum sempat push | Code ter-push aman di GitHub; yang belum push HILANG -> ulangi dari commit terakhir |
-
-Setelah reset: AI baca AGENTS.md + `git log --oneline` -> tahu posisi terakhir -> lanjut tanpa tanya ulang.
-Jangan pakai Compact saat ganti phase - hasilnya lossy, bisa ada detail yang hilang.
-
-## Awal Phase (Session Baru)
-
-```
-Copy prompt Phase berikutnya lalu paste. Prompt sudah include:
-- Perintah clone repo
-- Konteks 1-baris (cadangan, AGENTS.md tetap sumber utama)
-- Perintah install dependency (hanya flutter pub get / npm install -- BUKAN install SDK)
-
-Setelah clone: baca AGENTS.md dulu, lalu kerjakan sesuai prompt.
-```
-
-## Akhir Phase
-
-```
-git add . && git commit -m "Phase X: [nama]" && git push origin main
-```
+> Copy prompt Phase yang ingin dikerjakan, paste ke session MonkeyCode baru. Satu session = satu Phase.
+> Sebelum memulai: pastikan repo sudah di-push ke GitHub dan `AGENTS.md` ada di root.
 
 ---
 
-## PHASE 1: Supabase Setup + Auth
+## MASTER CHECKLIST
 
-### Prompt:
+| Phase | Nama | Status | Session |
+|-------|------|--------|---------|
+| 0 | Design docs + PRD + workflow | [x] SELESAI | - |
+| 1 | Supabase DB + Auth | [x] SELESAI | - |
+| 2 | Flutter App Shell + Auth + Offline Engine | [ ] SEDANG | Session 2 |
+| 3 | Produk + POS + QRIS + AI Co-Pilot | [ ] | Session 3 |
+| 4 | Laporan + Pelanggan + Karyawan | [ ] | Session 4 |
+| 5 | Premium Features + Subscription Gate | [ ] | Session 5 |
+| 6 | WhatsApp + Social Commerce + QR Meja + Health Score | [ ] | Session 6 |
+| 7 | Superadmin Web (React + Cloudflare Pages) | [ ] | Session 7 |
+| 8 | Polish + Testing + Final Deploy | [ ] | Session 8 |
+
+---
+
+## ATURAN UMUM (BACA SEKALI)
+
+1. **Satu session = satu Phase.** Jangan kerjakan 2 Phase dalam 1 session.
+2. **Push tiap 1-2 file selesai.** Jangan tunggu semua selesai baru push.
+3. **Baca AGENTS.md dulu.** Itu sumber konteks proyek.
+4. **Update Progress Tracker** di AGENTS.md saat phase selesai.
+5. **Testing: HTML renderer.** `flutter run -d web-server --web-renderer html --web-hostname 0.0.0.0 --web-port 8080`
+6. **APK target <10MB per ABI.** `flutter build apk --release --split-per-abi --obfuscate --split-debug-info=build/debug-info`
+7. **Foto produk = LOKAL** (`image_local_path`). Tidak upload ke Supabase.
+8. **Jika kena limit context: push -> Compact -> AI baca AGENTS.md + git log -> lanjut.** Lihat bagian "CONTEXT WINDOW RECOVERY".
+9. **Ganti Phase: push -> Compact -> memory check -> baru lanjut.** Compact hemat token tapi tetap ingat ringkasan; `AGENTS.md` = jaring pengaman. Pakai RESET hanya kalau hasil Compact ngawur.
+10. **Hemat token:** lihat bagian "HEMAT TOKEN (WAJIB)" di bawah -- satu task per pesan, jangan baca file tidak relevan, error sama >3x = reset.
+11. **Test LIVE setiap Phase selesai.** Jalankan dev server, minta URL preview, uji pakai klik -- jangan hanya percaya "build sukses". Lihat bagian "TEST LIVE PER PHASE".
+
+---
+
+---
+
+## PHASE 1: Supabase DB + Auth
+
+### FILE LAMPIRAN
+| File | Status | Dibuat di Phase |
+|------|--------|-----------------|
+| `kasirgo/` (project Flutter) | BELUM | Phase 2 |
+| `kasirgo-admin/` (project React) | BELUM | Phase 7 |
+| `docs/KASIRGO-WORKFLOW-LENGKAP.md` | SUDAH | Phase 0 |
+| `docs/STRATEGI-KASIRGO.md` | SUDAH | Phase 0 |
+| `docs/PRD-KasirGo.md` | SUDAH | Phase 0 |
+| `AGENTS.md` | SUDAH | Phase 0 |
+
+> Phase 1 dikerjakan di Supabase Dashboard (web). Tidak ada kode Flutter/React yang dibuat.
+
+### PROMPT (Copy-Paste)
 
 ```
 === KASIRGO: Aplikasi kasir UMKM (Flutter mobile + Supabase + React superadmin). 3 role: Owner (full), Admin (CRUD produk), Cashier (POS only). 3 paket: Gratis (500 tx/produk+iklan), 25rb (unlimited+barcode), 50rb (WA+social commerce+QR meja). AI Co-Pilot gratis local compute. Glassmorphism: #4F46E5 #7C3AED #06B6D4. Font Inter. Offline-first: SQLite lokal sync Supabase. 13 tabel DB+RLS. ===
 Buat project Supabase baru untuk aplikasi kasir UMKM bernama "KasirGo".
+
+ATURAN: SETIAP selesai 1 langkah (tabel, trigger, RLS, verifikasi) atau update file docs/AGENTS.md, langsung git add . && git commit -m "progress: [nama langkah]" && git push. JANGAN tunggu semua selesai.
+SETELAH PHASE SELESAI: tulis section "Handoff Phase 1" di AGENTS.md (status, schema, hasil verifikasi, sisa pekerjaan), lalu commit + push.
 
 Setup database schema berikut di Supabase SQL Editor:
 
@@ -109,7 +100,8 @@ CREATE TABLE products (
   stock DECIMAL(12,2) DEFAULT 0,
   unit TEXT DEFAULT 'pcs',
   expired_date DATE,
-  image_url TEXT,
+  image_local_path TEXT NOT NULL DEFAULT '',
+  thumb_key TEXT,
   min_stock_alert DECIMAL(12,2) DEFAULT 5,
   created_at TIMESTAMPTZ DEFAULT NOW(),
   updated_at TIMESTAMPTZ DEFAULT NOW()
@@ -202,10 +194,10 @@ CREATE TABLE affiliates (
 CREATE TABLE affiliate_referrals (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   affiliate_id UUID REFERENCES affiliates(id) ON DELETE CASCADE,
+  referred_user_id UUID REFERENCES auth.users(id),
   outlet_id UUID REFERENCES outlets(id),
-  subscription_tier TEXT NOT NULL,
   commission_amount DECIMAL(12,2) DEFAULT 0,
-  status TEXT DEFAULT 'pending' CHECK (status IN ('pending', 'paid')),
+  status TEXT DEFAULT 'active',
   created_at TIMESTAMPTZ DEFAULT NOW()
 );
 
@@ -214,51 +206,18 @@ CREATE TABLE ai_insights (
   outlet_id UUID REFERENCES outlets(id) ON DELETE CASCADE,
   insight_type TEXT NOT NULL,
   data JSONB NOT NULL DEFAULT '{}',
-  generated_at TIMESTAMPTZ DEFAULT NOW()
+  created_at TIMESTAMPTZ DEFAULT NOW()
 );
 
 -- ============================================
--- RLS POLICIES
+-- TRIGGERS
 -- ============================================
 
-ALTER TABLE outlets ENABLE ROW LEVEL SECURITY;
-ALTER TABLE user_roles ENABLE ROW LEVEL SECURITY;
-ALTER TABLE products ENABLE ROW LEVEL SECURITY;
-ALTER TABLE product_prices ENABLE ROW LEVEL SECURITY;
-ALTER TABLE product_discounts ENABLE ROW LEVEL SECURITY;
-ALTER TABLE transactions ENABLE ROW LEVEL SECURITY;
-ALTER TABLE transaction_items ENABLE ROW LEVEL SECURITY;
-ALTER TABLE customers ENABLE ROW LEVEL SECURITY;
-ALTER TABLE employees ENABLE ROW LEVEL SECURITY;
-ALTER TABLE subscriptions ENABLE ROW LEVEL SECURITY;
-ALTER TABLE ai_insights ENABLE ROW LEVEL SECURITY;
-
--- Owner: full access to own outlet
-CREATE POLICY owner_outlets ON outlets FOR ALL USING (owner_id = auth.uid());
-CREATE POLICY owner_products ON products FOR ALL USING (outlet_id IN (SELECT id FROM outlets WHERE owner_id = auth.uid()));
-CREATE POLICY owner_transactions ON transactions FOR ALL USING (outlet_id IN (SELECT id FROM outlets WHERE owner_id = auth.uid()));
-CREATE POLICY owner_customers ON customers FOR ALL USING (outlet_id IN (SELECT id FROM outlets WHERE owner_id = auth.uid()));
-CREATE POLICY owner_employees ON employees FOR ALL USING (outlet_id IN (SELECT id FROM outlets WHERE owner_id = auth.uid()));
-CREATE POLICY owner_subscriptions ON subscriptions FOR ALL USING (outlet_id IN (SELECT id FROM outlets WHERE owner_id = auth.uid()));
-
--- Admin: CRUD products, read reports
-CREATE POLICY admin_products ON products FOR ALL USING (outlet_id IN (SELECT outlet_id FROM user_roles WHERE user_id = auth.uid() AND role = 'admin'));
-CREATE POLICY admin_transactions_read ON transactions FOR SELECT USING (outlet_id IN (SELECT outlet_id FROM user_roles WHERE user_id = auth.uid() AND role = 'admin'));
-
--- Cashier: read products, create transactions
-CREATE POLICY cashier_products_read ON products FOR SELECT USING (outlet_id IN (SELECT outlet_id FROM user_roles WHERE user_id = auth.uid() AND role = 'cashier'));
-CREATE POLICY cashier_transactions_insert ON transactions FOR INSERT WITH CHECK (outlet_id IN (SELECT outlet_id FROM user_roles WHERE user_id = auth.uid() AND role = 'cashier'));
-
--- ============================================
--- FUNCTIONS
--- ============================================
-
--- Auto-create outlet on user signup
 CREATE OR REPLACE FUNCTION handle_new_user()
 RETURNS TRIGGER AS $$
 BEGIN
   INSERT INTO outlets (owner_id, name, type)
-  VALUES (NEW.id, NEW.raw_user_meta_data->>'business_name', COALESCE(NEW.raw_user_meta_data->>'business_type', 'warung'));
+  VALUES (NEW.id, COALESCE(NEW.raw_user_meta_data->>'business_name', 'Toko Baru'), COALESCE(NEW.raw_user_meta_data->>'business_type', 'warung'));
   RETURN NEW;
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
@@ -267,53 +226,222 @@ CREATE TRIGGER on_auth_user_created
   AFTER INSERT ON auth.users
   FOR EACH ROW EXECUTE FUNCTION handle_new_user();
 
--- Auto-decrement stock on transaction
 CREATE OR REPLACE FUNCTION decrement_stock()
 RETURNS TRIGGER AS $$
 BEGIN
-  UPDATE products SET stock = stock - NEW.quantity, updated_at = NOW()
-  WHERE id = NEW.product_id;
+  UPDATE products SET stock = stock - NEW.quantity WHERE id = NEW.product_id;
   RETURN NEW;
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
 
-CREATE TRIGGER on_transaction_item_insert
+CREATE TRIGGER tr_decrement_stock
   AFTER INSERT ON transaction_items
   FOR EACH ROW EXECUTE FUNCTION decrement_stock();
 
 -- ============================================
--- INDEXES
+-- RLS POLICIES
 -- ============================================
 
+-- outlets: owner full access
+ALTER TABLE outlets ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "Owner can manage own outlet" ON outlets FOR ALL USING (owner_id = auth.uid());
+CREATE POLICY "Admin/Cashier can view own outlet" ON outlets FOR SELECT USING (
+  EXISTS (SELECT 1 FROM user_roles WHERE user_id = auth.uid() AND outlet_id = outlets.id)
+);
+
+-- user_roles: owner full access
+ALTER TABLE user_roles ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "Owner can manage roles" ON user_roles FOR ALL USING (
+  EXISTS (SELECT 1 FROM outlets WHERE id = user_roles.outlet_id AND owner_id = auth.uid())
+);
+
+-- products: owner/admin CRUD, cashier read
+ALTER TABLE products ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "Owner/Admin can manage products" ON products FOR ALL USING (
+  EXISTS (SELECT 1 FROM outlets WHERE id = products.outlet_id AND owner_id = auth.uid())
+  OR EXISTS (SELECT 1 FROM user_roles WHERE user_id = auth.uid() AND outlet_id = products.outlet_id AND role = 'admin')
+);
+CREATE POLICY "Cashier can view products" ON products FOR SELECT USING (
+  EXISTS (SELECT 1 FROM user_roles WHERE user_id = auth.uid() AND outlet_id = products.outlet_id AND role = 'cashier')
+);
+
+-- product_prices: same as products
+ALTER TABLE product_prices ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "Owner/Admin can manage prices" ON product_prices FOR ALL USING (
+  EXISTS (SELECT 1 FROM products p JOIN outlets o ON p.outlet_id = o.id WHERE p.id = product_prices.product_id AND o.owner_id = auth.uid())
+  OR EXISTS (SELECT 1 FROM products p JOIN user_roles r ON p.outlet_id = r.outlet_id WHERE p.id = product_prices.product_id AND r.user_id = auth.uid() AND r.role = 'admin')
+);
+CREATE POLICY "Cashier can view prices" ON product_prices FOR SELECT USING (
+  EXISTS (SELECT 1 FROM products p JOIN user_roles r ON p.outlet_id = r.outlet_id WHERE p.id = product_prices.product_id AND r.user_id = auth.uid() AND r.role = 'cashier')
+);
+
+-- product_discounts
+ALTER TABLE product_discounts ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "Owner/Admin can manage discounts" ON product_discounts FOR ALL USING (
+  EXISTS (SELECT 1 FROM products p JOIN outlets o ON p.outlet_id = o.id WHERE p.id = product_discounts.product_id AND o.owner_id = auth.uid())
+  OR EXISTS (SELECT 1 FROM products p JOIN user_roles r ON p.outlet_id = r.outlet_id WHERE p.id = product_discounts.product_id AND r.user_id = auth.uid() AND r.role = 'admin')
+);
+
+-- transactions: owner/admin read, cashier insert
+ALTER TABLE transactions ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "Owner/Admin can view transactions" ON transactions FOR SELECT USING (
+  EXISTS (SELECT 1 FROM outlets WHERE id = transactions.outlet_id AND owner_id = auth.uid())
+  OR EXISTS (SELECT 1 FROM user_roles WHERE user_id = auth.uid() AND outlet_id = transactions.outlet_id AND role IN ('admin', 'cashier'))
+);
+CREATE POLICY "Any role can insert transactions" ON transactions FOR INSERT WITH CHECK (
+  EXISTS (SELECT 1 FROM outlets WHERE id = transactions.outlet_id AND owner_id = auth.uid())
+  OR EXISTS (SELECT 1 FROM user_roles WHERE user_id = auth.uid() AND outlet_id = transactions.outlet_id)
+);
+
+-- transaction_items
+ALTER TABLE transaction_items ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "View transaction items" ON transaction_items FOR SELECT USING (
+  EXISTS (SELECT 1 FROM transactions t JOIN outlets o ON t.outlet_id = o.id WHERE t.id = transaction_items.transaction_id AND o.owner_id = auth.uid())
+  OR EXISTS (SELECT 1 FROM transactions t JOIN user_roles r ON t.outlet_id = r.outlet_id WHERE t.id = transaction_items.transaction_id AND r.user_id = auth.uid())
+);
+CREATE POLICY "Insert transaction items" ON transaction_items FOR INSERT WITH CHECK (
+  EXISTS (SELECT 1 FROM transactions t JOIN outlets o ON t.outlet_id = o.id WHERE t.id = transaction_items.transaction_id AND o.owner_id = auth.uid())
+  OR EXISTS (SELECT 1 FROM transactions t JOIN user_roles r ON t.outlet_id = r.outlet_id WHERE t.id = transaction_items.transaction_id AND r.user_id = auth.uid())
+);
+
+-- customers
+ALTER TABLE customers ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "Manage customers" ON customers FOR ALL USING (
+  EXISTS (SELECT 1 FROM outlets WHERE id = customers.outlet_id AND owner_id = auth.uid())
+  OR EXISTS (SELECT 1 FROM user_roles WHERE user_id = auth.uid() AND outlet_id = customers.outlet_id AND role IN ('admin', 'cashier'))
+);
+
+-- employees
+ALTER TABLE employees ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "Manage employees" ON employees FOR ALL USING (
+  EXISTS (SELECT 1 FROM outlets WHERE id = employees.outlet_id AND owner_id = auth.uid())
+  OR (EXISTS (SELECT 1 FROM user_roles WHERE user_id = auth.uid() AND outlet_id = employees.outlet_id) AND employees.user_id = auth.uid())
+);
+
+-- subscriptions
+ALTER TABLE subscriptions ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "View own subscriptions" ON subscriptions FOR SELECT USING (
+  EXISTS (SELECT 1 FROM outlets WHERE id = subscriptions.outlet_id AND owner_id = auth.uid())
+);
+
+-- affiliates (superadmin only via service key)
+ALTER TABLE affiliates ENABLE ROW LEVEL SECURITY;
+ALTER TABLE affiliate_referrals ENABLE ROW LEVEL SECURITY;
+
+-- ai_insights
+ALTER TABLE ai_insights ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "View own insights" ON ai_insights FOR SELECT USING (
+  EXISTS (SELECT 1 FROM outlets WHERE id = ai_insights.outlet_id AND owner_id = auth.uid())
+  OR EXISTS (SELECT 1 FROM user_roles WHERE user_id = auth.uid() AND outlet_id = ai_insights.outlet_id)
+);
+
+-- ============================================
+-- INDEXES
+-- ============================================
 CREATE INDEX idx_products_outlet ON products(outlet_id);
+CREATE INDEX idx_products_category ON products(outlet_id, category);
 CREATE INDEX idx_products_barcode ON products(barcode);
 CREATE INDEX idx_transactions_outlet ON transactions(outlet_id);
-CREATE INDEX idx_transactions_date ON transactions(created_at DESC);
+CREATE INDEX idx_transactions_date ON transactions(outlet_id, created_at DESC);
 CREATE INDEX idx_transaction_items_tx ON transaction_items(transaction_id);
 CREATE INDEX idx_customers_outlet ON customers(outlet_id);
-CREATE INDEX idx_employees_outlet_date ON employees(outlet_id, date);
-CREATE INDEX idx_ai_insights_outlet ON ai_insights(outlet_id, insight_type);
+CREATE INDEX idx_employees_date ON employees(outlet_id, date);
+CREATE INDEX idx_ai_insights_outlet ON ai_insights(outlet_id, created_at DESC);
 
-Jalankan semua SQL di atas di Supabase SQL Editor. Pastikan tidak ada error. Setelah selesai, buat test user via Supabase Auth UI dan verifikasi trigger handle_new_user berjalan (outlet otomatis terbuat). Laporkan hasilnya.
+PASTIKAN:
+- Semua 13 tabel terbuat tanpa error
+- RLS policies aktif untuk semua tabel
+- Trigger handle_new_user berfungsi (register user baru = outlet auto-create)
+- Trigger decrement_stock berfungsi
+- Register + login dari Supabase Auth UI berhasil
 ```
 
-### Test Check:
-- [ ] Semua tabel terbuat tanpa error
+### TEST CHECKLIST Phase 1
+- [ ] Semua 13 tabel terbuat tanpa error
 - [ ] RLS policies aktif
 - [ ] Trigger handle_new_user berfungsi (register user baru, outlet auto-create)
-- [ ] Register + login berhasil
+- [ ] Trigger decrement_stock berfungsi
+- [ ] Register + login berhasil dari Supabase Auth UI
 
 ---
 
 ## PHASE 2: Flutter App Shell + Auth + Offline Engine
 
-### Prompt:
+### FILE LAMPIRAN (Dibuat di Phase Ini)
+```
+kasirgo/
+  pubspec.yaml
+  lib/
+    main.dart
+    app.dart
+    config/
+      supabase_config.dart
+      app_theme.dart
+      constants.dart
+    models/
+      user.dart
+      outlet.dart
+      product.dart
+      transaction.dart
+      customer.dart
+      employee.dart
+    services/
+      auth_service.dart
+      sync_service.dart
+      local_db_service.dart
+      supabase_service.dart
+    providers/
+      auth_provider.dart
+      outlet_provider.dart
+      sync_provider.dart
+    screens/
+      auth/
+        login_screen.dart
+        register_screen.dart
+      owner/
+        owner_home_screen.dart
+        product_list_screen.dart      (placeholder)
+        product_form_screen.dart      (placeholder)
+        pos_screen.dart               (placeholder)
+        report_screen.dart            (placeholder)
+        customer_list_screen.dart     (placeholder)
+        employee_screen.dart          (placeholder)
+        settings_screen.dart          (placeholder)
+      admin/
+        admin_home_screen.dart
+      cashier/
+        cashier_home_screen.dart
+        cashier_pos_screen.dart
+      customer/
+        customer_menu_screen.dart     (placeholder)
+    widgets/
+      common/
+        loading_widget.dart
+        error_widget.dart
+        empty_state_widget.dart
+        app_drawer.dart
+        search_bar.dart
+      pos/
+        cart_panel.dart               (placeholder)
+        product_grid.dart             (placeholder)
+        checkout_dialog.dart          (placeholder)
+    utils/
+      offline_queue.dart
+      ai_engine.dart                  (placeholder)
+      formatters.dart
+      validators.dart
+```
+
+### PROMPT (Copy-Paste)
 
 ```
 === KASIRGO: Aplikasi kasir UMKM (Flutter mobile + Supabase + React superadmin). 3 role: Owner (full), Admin (CRUD produk), Cashier (POS only). 3 paket: Gratis (500 tx/produk+iklan), 25rb (unlimited+barcode), 50rb (WA+social commerce+QR meja). AI Co-Pilot gratis local compute. Glassmorphism: #4F46E5 #7C3AED #06B6D4. Font Inter. Offline-first: SQLite lokal sync Supabase. 13 tabel DB+RLS. ===
 Clone repo [GITHUB_URL] lalu LANJUTKAN project Flutter kasirgo. Phase 1 selesai: Supabase DB + Auth. flutter pub get.
 ATURAN: SETIAP selesai 1-2 file, langsung git add . && git commit -m "progress: [nama file]" && git push. JANGAN tunggu semua selesai.
+SETELAH PHASE SELESAI: jalankan dev server + minta URL preview + uji live pakai klik (lihat bagian "TEST LIVE PER PHASE"). Jangan hanya bilang build sukses.
 SETELAH CLONE: baca file AGENTS.md di root repo untuk konteks lengkap proyek, lalu update checklist Progress Tracker di sana jika ada Phase yang selesai di session ini.
+TESTING CEPAT: flutter run -d web-server --web-renderer html --web-hostname 0.0.0.0 --web-port 8080 untuk preview instan (HTML renderer, tidak blank). APK build hanya untuk test final (kamera, SQLite).
+APK TARGET: di bawah 10MB per ABI (--split-per-abi --obfuscate).
 
 Buat project Flutter baru bernama "kasirgo" dengan struktur berikut.
 
@@ -441,15 +569,17 @@ OFFLINE ENGINE:
 
 PASTIKAN:
 - flutter analyze tidak ada error
-- flutter build apk --debug berhasil
+- flutter run -d web-server --web-renderer html --web-hostname 0.0.0.0 --web-port 8080 berjalan
+- flutter build apk --debug berhasil (cek ukuran APK: target per ABI <10MB)
 - Test: login dengan user yang sudah dibuat di Supabase, pastikan redirect ke screen sesuai role
 
-Laporkan hasil build dan test.
+Laporkan hasil build dan test (web + APK).
 ```
 
-### Test Check:
+### TEST CHECKLIST Phase 2
 - [ ] flutter analyze clean
-- [ ] flutter build apk --debug berhasil
+- [ ] flutter run web HTML renderer berhasil (tidak blank)
+- [ ] flutter build apk --debug berhasil, per ABI di bawah 10MB
 - [ ] Login screen muncul dengan glassmorphism design
 - [ ] Register user baru, outlet auto-create
 - [ ] Role detection berfungsi (owner/admin/cashier redirect berbeda)
@@ -457,14 +587,34 @@ Laporkan hasil build dan test.
 
 ---
 
-## PHASE 3: Core Modules (Produk + POS + QRIS Manual)
+## PHASE 3: Produk + POS + QRIS + AI Co-Pilot
 
-### Prompt:
+### FILE LAMPIRAN (Dibuat/Diupdate di Phase Ini)
+```
+DIBUAT/DIISI:
+  lib/models/product.dart               (jika belum)
+  lib/services/supabase_service.dart     (CRUD lengkap)
+  lib/screens/owner/product_list_screen.dart
+  lib/screens/owner/product_form_screen.dart
+  lib/screens/owner/pos_screen.dart
+  lib/screens/cashier/cashier_pos_screen.dart
+  lib/widgets/pos/cart_panel.dart
+  lib/widgets/pos/product_grid.dart
+  lib/widgets/pos/checkout_dialog.dart
+  lib/utils/ai_engine.dart
+
+DIUPDATE:
+  lib/screens/owner/owner_home_screen.dart  (AI insight cards)
+  lib/app.dart                              (routing tambahan)
+```
+
+### PROMPT (Copy-Paste)
 
 ```
 === KASIRGO: Aplikasi kasir UMKM (Flutter mobile + Supabase + React superadmin). 3 role: Owner (full), Admin (CRUD produk), Cashier (POS only). 3 paket: Gratis (500 tx/produk+iklan), 25rb (unlimited+barcode), 50rb (WA+social commerce+QR meja). AI Co-Pilot gratis local compute. Glassmorphism: #4F46E5 #7C3AED #06B6D4. Font Inter. Offline-first: SQLite lokal sync Supabase. 13 tabel DB+RLS. ===
 Clone repo [GITHUB_URL] lalu LANJUTKAN project Flutter kasirgo. Phase 1-2 selesai: DB + Auth + App shell + navigation. flutter pub get.
 ATURAN: SETIAP selesai 1-2 file, langsung git add . && git commit -m "progress: [nama file]" && git push. JANGAN tunggu semua selesai.
+SETELAH PHASE SELESAI: jalankan dev server + minta URL preview + uji live pakai klik (lihat bagian "TEST LIVE PER PHASE"). Jangan hanya bilang build sukses.
 SETELAH CLONE: baca file AGENTS.md di root repo untuk konteks lengkap proyek, lalu update checklist Progress Tracker di sana jika ada Phase yang selesai di session ini.
 
 Lanjutkan project Flutter kasirgo. Tambahkan modul core berikut:
@@ -475,7 +625,7 @@ Lanjutkan project Flutter kasirgo. Tambahkan modul core berikut:
    - Swipe to delete
    - Fab button untuk tambah produk
    - Form produk: nama, kategori, harga modal, harga jual, stok, satuan, barcode, expired date, foto produk
-   - Foto produk: ambil dari kamera/galeri, simpan lokal, upload ke Supabase Storage saat online
+   - Foto produk: ambil dari kamera/galeri, simpan LOKAL saja (path disimpan di `image_local_path`). TIDAK upload ke Supabase. Thumbnail ke R2 hanya untuk produk yang dipublikasikan (opt-in).
    - Tampilkan stok dengan warna: hijau (aman), kuning (menipis), merah (habis)
    - Scan barcode untuk input produk (pakai mobile_scanner)
    - Generate barcode dari text ke gambar (pakai library barcode)
@@ -537,7 +687,7 @@ PASTIKAN:
 Laporkan hasil build dan test.
 ```
 
-### Test Check:
+### TEST CHECKLIST Phase 3
 - [ ] Tambah produk dengan foto berhasil
 - [ ] Scan barcode berfungsi
 - [ ] Generate barcode berfungsi
@@ -552,12 +702,24 @@ Laporkan hasil build dan test.
 
 ## PHASE 4: Laporan + Pelanggan + Karyawan
 
-### Prompt:
+### FILE LAMPIRAN (Dibuat/Diupdate di Phase Ini)
+```
+DIBUAT/DIISI:
+  lib/screens/owner/report_screen.dart
+  lib/screens/owner/customer_list_screen.dart
+  lib/screens/owner/employee_screen.dart
+
+DIUPDATE:
+  lib/screens/owner/owner_home_screen.dart  (IndexedStack update)
+```
+
+### PROMPT (Copy-Paste)
 
 ```
 === KASIRGO: Aplikasi kasir UMKM (Flutter mobile + Supabase + React superadmin). 3 role: Owner (full), Admin (CRUD produk), Cashier (POS only). 3 paket: Gratis (500 tx/produk+iklan), 25rb (unlimited+barcode), 50rb (WA+social commerce+QR meja). AI Co-Pilot gratis local compute. Glassmorphism: #4F46E5 #7C3AED #06B6D4. Font Inter. Offline-first: SQLite lokal sync Supabase. 13 tabel DB+RLS. ===
 Clone repo [GITHUB_URL] lalu LANJUTKAN project Flutter kasirgo. Phase 1-3 selesai: DB + Auth + App shell + Produk + POS + AI. flutter pub get.
 ATURAN: SETIAP selesai 1-2 file, langsung git add . && git commit -m "progress: [nama file]" && git push. JANGAN tunggu semua selesai.
+SETELAH PHASE SELESAI: jalankan dev server + minta URL preview + uji live pakai klik (lihat bagian "TEST LIVE PER PHASE"). Jangan hanya bilang build sukses.
 SETELAH CLONE: baca file AGENTS.md di root repo untuk konteks lengkap proyek, lalu update checklist Progress Tracker di sana jika ada Phase yang selesai di session ini.
 
 Lanjutkan project Flutter kasirgo. Tambahkan modul laporan, pelanggan, dan karyawan.
@@ -618,7 +780,7 @@ PASTIKAN:
 Laporkan hasil build dan test.
 ```
 
-### Test Check:
+### TEST CHECKLIST Phase 4
 - [ ] Laporan ringkasan menampilkan data akurat
 - [ ] Grafik penjualan berfungsi
 - [ ] Export Excel berhasil
@@ -631,12 +793,29 @@ Laporkan hasil build dan test.
 
 ## PHASE 5: Premium Features + Subscription Gate
 
-### Prompt:
+### FILE LAMPIRAN (Dibuat/Diupdate di Phase Ini)
+```
+DIBUAT:
+  lib/screens/owner/settings_screen.dart
+
+DIUPDATE:
+  lib/screens/owner/product_form_screen.dart   (multi-channel pricing + diskon)
+  lib/screens/owner/product_list_screen.dart    (tier limits)
+  lib/screens/owner/pos_screen.dart             (diskon badge)
+  lib/screens/owner/owner_home_screen.dart      (notifikasi, flash sale suggest)
+  lib/utils/ai_engine.dart                      (flash sale auto-suggest)
+
+SUPABASE EDGE FUNCTION:
+  supabase/functions/stock_alert/index.ts
+```
+
+### PROMPT (Copy-Paste)
 
 ```
 === KASIRGO: Aplikasi kasir UMKM (Flutter mobile + Supabase + React superadmin). 3 role: Owner (full), Admin (CRUD produk), Cashier (POS only). 3 paket: Gratis (500 tx/produk+iklan), 25rb (unlimited+barcode), 50rb (WA+social commerce+QR meja). AI Co-Pilot gratis local compute. Glassmorphism: #4F46E5 #7C3AED #06B6D4. Font Inter. Offline-first: SQLite lokal sync Supabase. 13 tabel DB+RLS. ===
 Clone repo [GITHUB_URL] lalu LANJUTKAN project Flutter kasirgo. Phase 1-4 selesai: DB + Auth + App + Produk + POS + AI + Laporan. flutter pub get.
 ATURAN: SETIAP selesai 1-2 file, langsung git add . && git commit -m "progress: [nama file]" && git push. JANGAN tunggu semua selesai.
+SETELAH PHASE SELESAI: jalankan dev server + minta URL preview + uji live pakai klik (lihat bagian "TEST LIVE PER PHASE"). Jangan hanya bilang build sukses.
 SETELAH CLONE: baca file AGENTS.md di root repo untuk konteks lengkap proyek, lalu update checklist Progress Tracker di sana jika ada Phase yang selesai di session ini.
 
 Lanjutkan project Flutter kasirgo. Tambahkan fitur premium dan subscription gate.
@@ -737,7 +916,7 @@ PASTIKAN:
 Laporkan hasil build dan test.
 ```
 
-### Test Check:
+### TEST CHECKLIST Phase 5
 - [ ] Subscription gate berfungsi (free -> basic -> pro)
 - [ ] Multi-channel pricing tersimpan dan muncul di POS
 - [ ] Diskon produk muncul di POS dengan badge
@@ -747,14 +926,32 @@ Laporkan hasil build dan test.
 
 ---
 
-## PHASE 6: WhatsApp + Social Commerce + Toko Online + QR Meja
+## PHASE 6: WhatsApp + Social Commerce + QR Meja + Health Score
 
-### Prompt:
+### FILE LAMPIRAN (Dibuat/Diupdate di Phase Ini)
+```
+DIBUAT:
+  lib/utils/wa_helper.dart
+  lib/screens/owner/social_commerce_screen.dart
+  lib/screens/owner/whatsapp_broadcast_screen.dart
+  lib/screens/owner/qr_table_screen.dart
+  lib/screens/owner/online_catalog_screen.dart
+  lib/screens/owner/health_score_screen.dart
+  lib/screens/customer/customer_order_screen.dart
+
+DIUPDATE:
+  lib/screens/owner/owner_home_screen.dart      (navigation tambahan)
+  lib/screens/owner/report_screen.dart           (per-channel reporting)
+  lib/widgets/pos/checkout_dialog.dart           (tombol kirim struk WA)
+```
+
+### PROMPT (Copy-Paste)
 
 ```
 === KASIRGO: Aplikasi kasir UMKM (Flutter mobile + Supabase + React superadmin). 3 role: Owner (full), Admin (CRUD produk), Cashier (POS only). 3 paket: Gratis (500 tx/produk+iklan), 25rb (unlimited+barcode), 50rb (WA+social commerce+QR meja). AI Co-Pilot gratis local compute. Glassmorphism: #4F46E5 #7C3AED #06B6D4. Font Inter. Offline-first: SQLite lokal sync Supabase. 13 tabel DB+RLS. ===
 Clone repo [GITHUB_URL] lalu LANJUTKAN project Flutter kasirgo. Phase 1-5 selesai. flutter pub get.
 ATURAN: SETIAP selesai 1-2 file, langsung git add . && git commit -m "progress: [nama file]" && git push. JANGAN tunggu semua selesai.
+SETELAH PHASE SELESAI: jalankan dev server + minta URL preview + uji live pakai klik (lihat bagian "TEST LIVE PER PHASE"). Jangan hanya bilang build sukses.
 SETELAH CLONE: baca file AGENTS.md di root repo untuk konteks lengkap proyek, lalu update checklist Progress Tracker di sana jika ada Phase yang selesai di session ini.
 
 Lanjutkan project Flutter kasirgo. Tambahkan integrasi dan fitur premium lanjutan.
@@ -819,7 +1016,7 @@ PASTIKAN:
 Laporkan hasil build dan test.
 ```
 
-### Test Check:
+### TEST CHECKLIST Phase 6
 - [ ] Struk WhatsApp terkirim (intent terbuka)
 - [ ] Broadcast promosi ke pelanggan terpilih
 - [ ] Social commerce: input transaksi, stok berkurang
@@ -829,17 +1026,45 @@ Laporkan hasil build dan test.
 
 ---
 
-## PHASE 7: Superadmin Web (React.js + Vercel)
+## PHASE 7: Superadmin Web (React.js + Cloudflare Pages)
 
-### Prompt:
+### FILE LAMPIRAN (Dibuat di Phase Ini)
+```
+kasirgo-admin/
+  package.json
+  tsconfig.json
+  vite.config.ts
+  tailwind.config.js
+  index.html
+  src/
+    main.tsx
+    App.tsx
+    config/
+      supabase.ts
+    components/
+      Layout.tsx
+      Sidebar.tsx
+      StatCard.tsx
+    pages/
+      Login.tsx
+      Dashboard.tsx
+      Users.tsx
+      UserDetail.tsx
+      Affiliates.tsx
+      Backup.tsx
+      Revenue.tsx
+```
+
+### PROMPT (Copy-Paste)
 
 ```
 === KASIRGO: Aplikasi kasir UMKM (Flutter mobile + Supabase + React superadmin). 3 role: Owner (full), Admin (CRUD produk), Cashier (POS only). 3 paket: Gratis (500 tx/produk+iklan), 25rb (unlimited+barcode), 50rb (WA+social commerce+QR meja). AI Co-Pilot gratis local compute. Glassmorphism: #4F46E5 #7C3AED #06B6D4. Font Inter. Offline-first: SQLite lokal sync Supabase. 13 tabel DB+RLS. ===
 Clone repo [GITHUB_URL] lalu LANJUTKAN project React kasirgo-admin. Phase 1-6 selesai (Flutter app). npm install.
 ATURAN: SETIAP selesai 1-2 file, langsung git add . && git commit -m "progress: [nama file]" && git push. JANGAN tunggu semua selesai.
+SETELAH PHASE SELESAI: jalankan dev server + minta URL preview + uji live pakai klik (lihat bagian "TEST LIVE PER PHASE"). Jangan hanya bilang build sukses.
 SETELAH CLONE: baca file AGENTS.md di root repo untuk konteks lengkap proyek, lalu update checklist Progress Tracker di sana jika ada Phase yang selesai di session ini.
 
-Buat project React.js baru untuk superadmin dashboard KasirGo. Deploy ke Vercel.
+Buat project React.js baru untuk superadmin dashboard KasirGo. Deploy ke Cloudflare Pages.
 
 Buat dengan Vite + React + TypeScript + Tailwind CSS:
 
@@ -919,18 +1144,18 @@ SUPABASE SETUP:
 
 DEPLOY:
 - Push ke GitHub
-- Deploy ke Vercel (connect repo)
+- Deploy ke Cloudflare Pages (connect repo)
 - Set environment variables: VITE_SUPABASE_URL, VITE_SUPABASE_ANON_KEY
 
 PASTIKAN:
 - npm run build tidak error
-- Deploy ke Vercel berhasil
+- Deploy ke Cloudflare Pages berhasil
 - Test: login superadmin, lihat dashboard, impersonate owner, manage affiliates, backup
 
 Laporkan hasil deploy.
 ```
 
-### Test Check:
+### TEST CHECKLIST Phase 7
 - [ ] Login superadmin berfungsi
 - [ ] Dashboard menampilkan stats
 - [ ] User list, search, filter berfungsi
@@ -938,18 +1163,34 @@ Laporkan hasil deploy.
 - [ ] Affiliate CRUD berfungsi
 - [ ] Backup/restore berfungsi
 - [ ] Revenue dashboard akurat
-- [ ] Deploy Vercel sukses
+- [ ] Deploy Cloudflare Pages sukses
 
 ---
 
-## PHASE 8: Polish, Testing, Final Deploy
+## PHASE 8: Polish + Testing + Final Deploy
 
-### Prompt:
+### FILE LAMPIRAN (Diupdate di Phase Ini)
+```
+FLUTTER (semua screen di-update polish):
+  lib/screens/              (semua: loading/error/empty state, pull-to-refresh, animasi)
+  lib/main.dart             (splash screen)
+  lib/config/app_theme.dart (konsistensi glassmorphism)
+
+REACT:
+  kasirgo-admin/src/        (final polish + responsive)
+
+BUILD:
+  build/app/outputs/        (APK release)
+  build/web/                (Flutter web untuk katalog)
+```
+
+### PROMPT (Copy-Paste)
 
 ```
 === KASIRGO: Aplikasi kasir UMKM (Flutter mobile + Supabase + React superadmin). 3 role: Owner (full), Admin (CRUD produk), Cashier (POS only). 3 paket: Gratis (500 tx/produk+iklan), 25rb (unlimited+barcode), 50rb (WA+social commerce+QR meja). AI Co-Pilot gratis local compute. Glassmorphism: #4F46E5 #7C3AED #06B6D4. Font Inter. Offline-first: SQLite lokal sync Supabase. 13 tabel DB+RLS. ===
 Clone repo [GITHUB_URL] lalu LANJUTKAN project. Phase 1-7 selesai: Flutter app + React admin. flutter pub get && npm install.
 ATURAN: SETIAP selesai 1-2 file, langsung git add . && git commit -m "progress: [nama file]" && git push. JANGAN tunggu semua selesai.
+SETELAH PHASE SELESAI: jalankan dev server + minta URL preview + uji live pakai klik (lihat bagian "TEST LIVE PER PHASE"). Jangan hanya bilang build sukses.
 SETELAH CLONE: baca file AGENTS.md di root repo untuk konteks lengkap proyek, lalu update checklist Progress Tracker di sana jika ada Phase yang selesai di session ini.
 
 Lakukan finalisasi project KasirGo:
@@ -965,7 +1206,7 @@ Lakukan finalisasi project KasirGo:
 2. PWA SETUP (Flutter Web untuk katalog)
    - Build Flutter web untuk katalog online
    - Tambahkan manifest.json dan service worker
-   - Deploy ke Vercel sebagai static site
+   - Deploy ke Cloudflare Pages sebagai static site
 
 3. ADSTERA INTEGRATION (Free Tier)
    - Tambahkan banner ad di bagian bawah screen untuk free tier
@@ -983,12 +1224,12 @@ Lakukan finalisasi project KasirGo:
    - Push semua kode
    - Tambahkan README dengan setup instructions
 
-6. VERCEL DEPLOY
-   - Deploy React admin ke Vercel
-   - Deploy Flutter web katalog ke Vercel (jika ada)
+6. CLOUDFLARE PAGES DEPLOY
+   - Deploy React admin ke Cloudflare Pages
+   - Deploy Flutter web katalog ke Cloudflare Pages (jika ada)
 
 7. APK BUILD
-   - flutter build apk --release
+   - flutter build apk --release --split-per-abi --obfuscate --split-debug-info=build/debug-info
    - Upload APK sebagai GitHub release
 
 PASTIKAN:
@@ -1000,7 +1241,7 @@ PASTIKAN:
 Laporkan semua hasil final.
 ```
 
-### Test Check:
+### TEST CHECKLIST Phase 8
 - [ ] UI konsisten di semua screen
 - [ ] Loading/error/empty states ada
 - [ ] Pull-to-refresh berfungsi
@@ -1013,36 +1254,141 @@ Laporkan semua hasil final.
 - [ ] Offline test: transaksi offline -> sync online
 - [ ] Upgrade test: semua tier
 - [ ] GitHub repo terisi kode
-- [ ] Vercel deploy sukses
-- [ ] APK release berfungsi
+- [ ] Cloudflare Pages deploy sukses
+- [ ] APK release berfungsi, per ABI <10MB
 
 ---
 
-## RINGKASAN WORKFLOW
+## CONTEXT WINDOW RECOVERY (WAJIB TAHU)
 
-### Per Phase:
+### Tanda Kena Limit
+AI mulai lupa / respon lambat / error "context window full"
+
+### Prosedur Recovery (Compact -- pilihan utama)
+Compact merangkum chat jadi ringkasan: token hemat, Phase sebelumnya tetap "diingat".
+Wajib PUSH dulu supaya detail tersimpan di file (bukan cuma di ringkasan).
+
 ```
-AKHIR session lama:  Update checklist di AGENTS.md, lalu git add . && git commit -m "Phase X: [nama]" && git push
-AWAL session baru:   Reset context (BUKAN task baru), lalu copy prompt Phase berikutnya
-                     Prompt sudah include: clone repo + perintah baca AGENTS.md + install dependency
-SETELAH clone:       AI baca AGENTS.md -> paham konteks & progress -> kerjakan phase
-PUSH:                tiap 1-2 file selesai (save point), jangan tunggu akhir phase
-KENA LIMIT:          Reset context > Compact. Compact hanya saat di tengah debug 1 bug rumit.
+LANGKAH 1: PUSH DULU
+   git add . && git commit -m "checkpoint: [fitur terakhir]" && git push
+
+LANGKAH 2: COMPRESS
+   Jalankan fitur Compact pada session yang sama.
+
+LANGKAH 3: MEMORY CHECK (jangan skip)
+   Paste: "Baca ulang AGENTS.md di root dan jalankan git log --oneline -5.
+   Konfirmasi singkat: status Phase terakhir, schema, dan sisa pekerjaan.
+   Jangan coding dulu."
+   - Jawaban sesuai -> lanjut ke LANGKAH 4.
+   - Jawaban ngawur / detail hilang -> pakai Prosedur Reset di bawah.
+
+LANGKAH 4: LANJUT
+   Paste prompt Phase yang sedang/berikutnya (yang berisi "baca AGENTS.md").
 ```
 
-### Alur Satu Phase (ringkas):
+### Prosedur Reset (fallback kalau Compact bermasalah)
 ```
-1. Session baru  ->  2. Paste prompt phase  ->  3. AI clone + baca AGENTS.md
-4. AI kerjakan + push tiap 1-2 file  ->  5. Test live
-6. Update Progress Tracker AGENTS.md + commit + push  ->  7. Selesai
+LANGKAH 1: PUSH DULU
+   git add . && git commit -m "checkpoint: [fitur terakhir]" && git push
+
+LANGKAH 2: RESET
+   Tutup session, buka session BARU (atau tombol Reset di tool).
+
+LANGKAH 3: PASTE PROMPT PHASE YANG SAMA
+   AI clone repo, baca AGENTS.md + git log, lalu LANJUT dari commit terakhir.
+
+LANGKAH 4: VERIFIKASI
+   Katakan: "Lanjutkan dari commit terakhir. Cek git log."
 ```
 
-### Tools per Phase:
-| Phase | Tools | Perintah install |
+### Kapan Compact vs Reset
+| Situasi | Tindakan |
+|---------|----------|
+| Ganti Phase / mulai fitur baru | Push -> Compact -> memory check (Reset kalau ngawur) |
+| Debug 1 bug kecil (progress belum bisa push) | Compact, selesaikan, push |
+| AI mulai lupa / ngawur / error sama >3x | Push + Reset |
+| Baru push 1-2 file, masih banyak kerjaan | Lanjutkan (belum penuh) |
+| Sudah 10+ file push dalam 1 session | Pertimbangkan Compact |
+
+---
+
+## HEMAT TOKEN (WAJIB)
+
+Context window terbatas. Ikuti aturan ini supaya tidak cepat penuh:
+
+1. **Push tiap 1-2 file**, bukan tiap 5-10 file.
+2. **Jangan minta AI baca file yang tidak relevan** ke task saat ini.
+3. **Satu task per pesan.** Jangan gabung banyak perintah dalam 1 pesan.
+4. **Jangan bolak-balik revisi file yang sama** berulang kali dalam 1 session.
+5. **Kalau error sama kena >3x -> push + RESET.** Jangan debug terus-menerus.
+6. **Jangan paste output panjang** (log build besar, dump file) ke chat kalau tidak perlu.
+7. **AGENTS.md sudah merangkum konteks.** Tidak perlu cerita ulang proyek dari awal.
+8. **Ganti Phase = push -> Compact -> memory check.** Token hemat & Phase lama tetap diingat. Reset hanya kalau hasil Compact ngawur.
+
+---
+
+## TOOLS PER PHASE
+
+| Phase | Tools | Perintah Install |
 |-------|-------|-----------------|
-| 1 | None (Supabase web) | - |
-| 2-6 | Flutter SDK | `flutter pub get` |
-| 7 | Node.js | `npm install` |
-| 8 | Flutter + Node.js | `flutter pub get && npm install` |
+| 1 | Supabase Dashboard (web) | - |
+| 2 | Flutter SDK | `flutter pub get` |
+| 3 | Flutter SDK | `flutter pub get` |
+| 4 | Flutter SDK | `flutter pub get` |
+| 5 | Flutter SDK + Supabase Dashboard | `flutter pub get` |
+| 6 | Flutter SDK | `flutter pub get` |
+| 7 | Node.js + npm | `npm install` |
+| 8 | Flutter SDK + Node.js | `flutter pub get && npm install` |
 
-Setelah semua 8 Phase selesai: push ke GitHub, deploy Vercel, build APK release.
+---
+
+## TEST LIVE PER PHASE (SETIAP PHASE SELESAI)
+
+Setelah phase selesai: **jalankan dev server -> minta URL preview -> uji pakai klik -> laporkan hasilnya.** Jangan hanya bilang "build sukses".
+
+### Cara Jalankan Live Test
+
+**Flutter (Phase 2-6, 8):**
+```
+flutter run -d web-server --web-renderer html --web-hostname 0.0.0.0 --web-port 8080
+```
+Lalu minta URL preview untuk port 8080 (gunakan tool preview/deploy bawaan).
+
+**React admin (Phase 7-8):**
+```
+npm run dev
+```
+Lalu minta URL preview untuk port yang muncul (biasanya 5173).
+
+### Yang Diuji Live per Phase
+
+| Phase | Yang diuji live di web preview |
+|-------|-------------------------------|
+| 1 | Tidak ada app. Cek di Supabase Dashboard: 13 tabel, RLS, trigger jalan |
+| 2 | Login/register, redirect per role, navigasi tab, sync online, tampilan glassmorphism |
+| 3 | Tambah produk, POS (pilih produk -> cart -> checkout), QRIS tampil, stok berkurang, AI insight card |
+| 4 | Laporan (grafik, filter), export Excel, tambah pelanggan, absensi check-in/out |
+| 5 | Upgrade tier, multi-channel pricing, diskon di POS, notifikasi, banner iklan free tier |
+| 6 | Kirim struk WA, social commerce input, generate QR meja, health score, katalog online |
+| 7 | Login superadmin, dashboard stats, user list, impersonate, affiliate, backup, revenue |
+| 8 | Full flow end-to-end semua role + offline + upgrade |
+
+### Catatan Penting
+
+- **Fitur native TIDAK jalan di web:** kamera (scan barcode/foto), SQLite drift, image_picker. Untuk fitur ini, build APK: `flutter build apk --debug` -> install ke HP -> uji manual.
+- **Yang bisa diuji di web:** UI, navigasi, auth, CRUD Supabase, chart, POS, laporan, WhatsApp intent.
+- **Kalau preview blank:** pastikan pakai `--web-renderer html` (bukan CanvasKit).
+- **Laporkan ke user:** URL preview + apa saja yang sudah diklik/diuji + error kalau ada.
+
+---
+
+## DOKUMEN REFERENSI (di folder docs/)
+
+| File | Isi |
+|------|-----|
+| `KASIRGO-WORKFLOW-LENGKAP.md` | DOKUMEN INI -- prompt lengkap + lampiran file per phase |
+| `STRATEGI-KASIRGO.md` | Strategi induk: visi, segmentasi, monetisasi, roadmap |
+| `PRD-KasirGo.md` | Product Requirements Document |
+| `superpowers/specs/2026-09-08-ui-ux-design.md` | Design system (warna, font, komponen, layout) |
+| `superpowers/specs/2026-09-08-pos-app-design.md` | POS design spec |
+| `superpowers/plans/2026-09-08-kasirgo-implementation.md` | Implementation plan detail per task |
