@@ -107,7 +107,7 @@ Status: SELESAI. Project Supabase sudah dibuat dan schema terpasang serta diuji.
 ## Progress Tracker
 - [x] Phase 0: Design docs + PRD + workflow
 - [x] Phase 1: Supabase DB + Auth
-- [ ] Phase 2: Flutter app shell + auth + offline engine  (SEDANG DIKERJAKAN)
+- [x] Phase 2: Flutter app shell + auth + offline engine
 - [ ] Phase 3: Produk + POS + QRIS + AI Co-Pilot
 - [ ] Phase 4: Laporan + pelanggan + karyawan
 - [ ] Phase 5: Premium features + subscription gate
