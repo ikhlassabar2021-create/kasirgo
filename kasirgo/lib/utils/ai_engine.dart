@@ -3,38 +3,75 @@ import '../models/product.dart';
 import '../models/transaction.dart';
 
 class AIEngine {
-  List<double> predictSales(List<double> historicalSales, int periods) {
-    if (historicalSales.isEmpty) return List.filled(periods, 0.0);
-    if (historicalSales.length == 1) {
-      return List.filled(periods, historicalSales.last);
+  List<double> predictSales(List<Transaction> transactions, int days) {
+    if (days <= 0) return [];
+    if (transactions.isEmpty) return List.filled(days, 0.0);
+
+    final dailyMap = <String, double>{};
+    for (final tx in transactions) {
+      final dateKey =
+          '${tx.createdAt.year}-${tx.createdAt.month.toString().padLeft(2, '0')}-${tx.createdAt.day.toString().padLeft(2, '0')}';
+      dailyMap[dateKey] = (dailyMap[dateKey] ?? 0.0) + tx.finalAmount;
     }
 
-    final windowSize = min(7, historicalSales.length);
+    final sortedKeys = dailyMap.keys.toList()..sort();
+    final historicalSales = sortedKeys.map((k) => dailyMap[k]!).toList();
+
+    if (historicalSales.isEmpty) return List.filled(days, 0.0);
+    if (historicalSales.length == 1) {
+      return List.filled(days, historicalSales.first);
+    }
+
+    int windowSize;
+    if (historicalSales.length >= 30 && days >= 30) {
+      windowSize = 30;
+    } else if (historicalSales.length >= 14 && days >= 14) {
+      windowSize = 14;
+    } else {
+      windowSize = min(7, historicalSales.length);
+    }
+
     final recent = historicalSales.sublist(historicalSales.length - windowSize);
     final avg = recent.reduce((a, b) => a + b) / recent.length;
+    final roundedAvg = (avg * 100).round() / 100;
 
-    return List.filled(periods, (avg * 10).round() / 10);
+    return List.filled(days, roundedAvg);
   }
 
-  List<Map<String, dynamic>> detectAnomalies(List<double> salesData) {
-    if (salesData.length < 5) return [];
+  List<Map<String, dynamic>> detectAnomaly(List<Transaction> transactions) {
+    if (transactions.isEmpty) return [];
 
-    final mean = salesData.reduce((a, b) => a + b) / salesData.length;
-    final stdDev = sqrt(
-      salesData.map((x) => pow(x - mean, 2)).reduce((a, b) => a + b) /
-          salesData.length,
-    );
+    final dailyMap = <String, double>{};
+    for (final tx in transactions) {
+      final dateKey =
+          '${tx.createdAt.year}-${tx.createdAt.month.toString().padLeft(2, '0')}-${tx.createdAt.day.toString().padLeft(2, '0')}';
+      dailyMap[dateKey] = (dailyMap[dateKey] ?? 0.0) + tx.finalAmount;
+    }
+
+    final entries = dailyMap.entries.toList()
+      ..sort((a, b) => a.key.compareTo(b.key));
+
+    if (entries.length < 3) return [];
+
+    final values = entries.map((e) => e.value).toList();
+    final mean = values.reduce((a, b) => a + b) / values.length;
+    final variance =
+        values.map((x) => pow(x - mean, 2)).reduce((a, b) => a + b) /
+        values.length;
+    final stdDev = sqrt(variance);
 
     if (stdDev == 0) return [];
 
     final anomalies = <Map<String, dynamic>>[];
-    for (var i = 0; i < salesData.length; i++) {
-      final zScore = (salesData[i] - mean) / stdDev;
+    for (final entry in entries) {
+      final zScore = (entry.value - mean) / stdDev;
       if (zScore.abs() > 2.0) {
         anomalies.add({
-          'index': i,
-          'value': salesData[i],
-          'zScore': zScore.toStringAsFixed(2),
+          'date': entry.key,
+          'value': entry.value,
+          'mean': (mean * 100).round() / 100,
+          'stdDev': (stdDev * 100).round() / 100,
+          'zScore': (zScore * 100).round() / 100,
           'type': zScore > 0 ? 'high' : 'low',
         });
       }
@@ -43,44 +80,87 @@ class AIEngine {
     return anomalies;
   }
 
+  List<String> recommendProducts(dynamic items, String productId) {
+    if (productId.isEmpty) return [];
+
+    final cooccurrence = <String, int>{};
+    int targetCount = 0;
+
+    if (items is List<Transaction>) {
+      for (final tx in items) {
+        final productIds = tx.items.map((i) => i.productId).toSet();
+        if (productIds.contains(productId)) {
+          targetCount++;
+          for (final id in productIds) {
+            if (id != productId) {
+              cooccurrence[id] = (cooccurrence[id] ?? 0) + 1;
+            }
+          }
+        }
+      }
+    } else if (items is List<List<String>>) {
+      for (final basket in items) {
+        final productIds = basket.toSet();
+        if (productIds.contains(productId)) {
+          targetCount++;
+          for (final id in productIds) {
+            if (id != productId) {
+              cooccurrence[id] = (cooccurrence[id] ?? 0) + 1;
+            }
+          }
+        }
+      }
+    }
+
+    if (targetCount == 0 || cooccurrence.isEmpty) return [];
+
+    final sorted = cooccurrence.entries.toList()
+      ..sort((a, b) => b.value.compareTo(a.value));
+
+    return sorted.take(5).map((e) => e.key).toList();
+  }
+
   Map<String, List<Product>> abcRanking(
     List<Product> products,
     List<Transaction> transactions,
   ) {
-    final productSales = <String, double>{};
+    if (products.isEmpty) {
+      return {'A': [], 'B': [], 'C': []};
+    }
 
+    final productSales = <String, double>{};
     for (final tx in transactions) {
       for (final item in tx.items) {
         productSales[item.productId] =
-            (productSales[item.productId] ?? 0) + item.subtotal;
+            (productSales[item.productId] ?? 0.0) + item.subtotal;
       }
     }
 
     final totalRevenue = productSales.values.fold(0.0, (a, b) => a + b);
-    if (totalRevenue == 0) {
-      return {'A': [], 'B': [], 'C': products};
+    if (totalRevenue <= 0) {
+      return {'A': [], 'B': [], 'C': List<Product>.from(products)};
     }
 
-    final sorted = products.toList()
+    final sorted = List<Product>.from(products)
       ..sort((a, b) {
-        final aValue = productSales[a.id] ?? 0;
-        final bValue = productSales[b.id] ?? 0;
-        return bValue.compareTo(aValue);
+        final revA = productSales[a.id] ?? 0.0;
+        final revB = productSales[b.id] ?? 0.0;
+        return revB.compareTo(revA);
       });
 
     final rankA = <Product>[];
     final rankB = <Product>[];
     final rankC = <Product>[];
 
-    double cumulative = 0;
+    double cumulativeRevenue = 0.0;
     for (final product in sorted) {
-      final value = productSales[product.id] ?? 0;
-      cumulative += value;
-      final percentage = (cumulative / totalRevenue) * 100;
+      final rev = productSales[product.id] ?? 0.0;
+      cumulativeRevenue += rev;
+      final percentage = (cumulativeRevenue / totalRevenue) * 100;
 
-      if (percentage <= 70) {
+      if (percentage <= 80) {
         rankA.add(product);
-      } else if (percentage <= 90) {
+      } else if (percentage <= 95) {
         rankB.add(product);
       } else {
         rankC.add(product);
@@ -90,69 +170,71 @@ class AIEngine {
     return {'A': rankA, 'B': rankB, 'C': rankC};
   }
 
-  List<Product> recommendRelated(
-    Product target,
-    List<Product> allProducts,
-    List<Transaction> transactions,
-  ) {
-    final cooccurrences = <String, int>{};
-
-    for (final tx in transactions) {
-      final itemIds = tx.items.map((item) => item.productId).toSet();
-      if (itemIds.contains(target.id)) {
-        for (final id in itemIds) {
-          if (id != target.id) {
-            cooccurrences[id] = (cooccurrences[id] ?? 0) + 1;
-          }
-        }
-      }
-    }
-
-    final sorted = cooccurrences.entries.toList()
-      ..sort((a, b) => b.value.compareTo(a.value));
-
-    final recommendations = <Product>[];
-    for (final entry in sorted.take(5)) {
-      final product = allProducts.where((p) => p.id == entry.key).firstOrNull;
-      if (product != null) {
-        recommendations.add(product);
-      }
-    }
-
-    return recommendations;
-  }
-
-  Map<String, double> calculateMargin(Product product) {
-    final margin = product.price - (product.costPrice ?? 0);
-    final marginPercent =
-        product.costPrice != null && product.costPrice! > 0
-            ? (margin / product.costPrice!) * 100
-            : 0.0;
+  Map<String, dynamic> checkMargin(Product product, {double minMarginPercent = 15.0}) {
+    final sellingPrice = product.basePrice;
+    final costPrice = product.costPrice ?? 0.0;
+    final margin = sellingPrice - costPrice;
+    final marginPercent = sellingPrice > 0 ? (margin / sellingPrice) * 100 : 0.0;
+    final markupPercent = costPrice > 0 ? (margin / costPrice) * 100 : 0.0;
 
     return {
-      'margin': margin,
-      'marginPercent': marginPercent,
+      'sellingPrice': sellingPrice,
+      'costPrice': costPrice,
+      'margin': (margin * 100).round() / 100,
+      'marginPercent': (marginPercent * 10).round() / 10,
+      'markupPercent': (markupPercent * 10).round() / 10,
+      'isLowMargin': marginPercent < minMarginPercent,
     };
   }
 
-  List<Product> marginAlert(List<Product> products, {double threshold = 10}) {
+  List<Product> suggestFlashSale(
+    List<Product> products, {
+    int daysThreshold = 30,
+    DateTime? referenceDate,
+  }) {
+    final now = referenceDate ?? DateTime.now();
     return products.where((product) {
-      final margin = calculateMargin(product);
-      return margin['marginPercent']! < threshold;
+      if (product.stock <= 0) return false;
+      final lastActivity = product.updatedAt ?? product.createdAt;
+      if (lastActivity == null) return false;
+      return now.difference(lastActivity).inDays >= daysThreshold;
     }).toList();
+  }
+
+  Map<String, dynamic> calculateMargin(Product product) => checkMargin(product);
+
+  List<Map<String, dynamic>> detectAnomalies(List<double> salesData) {
+    if (salesData.length < 3) return [];
+    final mean = salesData.reduce((a, b) => a + b) / salesData.length;
+    final variance =
+        salesData.map((x) => pow(x - mean, 2)).reduce((a, b) => a + b) /
+        salesData.length;
+    final stdDev = sqrt(variance);
+    if (stdDev == 0) return [];
+
+    final anomalies = <Map<String, dynamic>>[];
+    for (var i = 0; i < salesData.length; i++) {
+      final zScore = (salesData[i] - mean) / stdDev;
+      if (zScore.abs() > 2.0) {
+        anomalies.add({
+          'index': i,
+          'value': salesData[i],
+          'zScore': (zScore * 100).round() / 100,
+          'type': zScore > 0 ? 'high' : 'low',
+        });
+      }
+    }
+    return anomalies;
   }
 
   Map<String, List<int>> bestTimeToSell(List<Transaction> transactions) {
     final hourlyCounts = <int, int>{};
-
     for (final tx in transactions) {
       final hour = tx.createdAt.hour;
       hourlyCounts[hour] = (hourlyCounts[hour] ?? 0) + 1;
     }
-
     final sorted = hourlyCounts.entries.toList()
       ..sort((a, b) => b.value.compareTo(a.value));
-
     return {
       'bestHours': sorted.take(4).map((e) => e.key).toList(),
       'hourlyData': sorted.map((e) => e.value).toList(),
