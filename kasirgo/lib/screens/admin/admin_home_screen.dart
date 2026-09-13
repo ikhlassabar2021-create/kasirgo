@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import '../../config/app_theme.dart';
 import '../../providers/auth_provider.dart';
 import '../../widgets/common/app_drawer.dart';
@@ -39,7 +40,7 @@ class AdminHomeScreen extends ConsumerWidget {
         currentIndex: 0,
         onTap: (index) {
           final routes = ['/admin', '/admin/reports'];
-          if (index < routes.length) Navigator.pushReplacementNamed(context, routes[index]);
+          if (index < routes.length) context.pushReplacement(routes[index]);
         },
         items: const [
           BottomNavigationBarItem(icon: Icon(Icons.inventory_2), label: 'Produk'),

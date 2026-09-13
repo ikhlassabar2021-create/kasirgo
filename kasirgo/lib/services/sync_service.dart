@@ -10,8 +10,8 @@ class SyncService {
   bool get isSyncing => _isSyncing;
 
   Future<bool> isOnline() async {
-    final result = await Connectivity().checkConnectivity();
-    return result != ConnectivityResult.none;
+    final results = await Connectivity().checkConnectivity();
+    return results.isNotEmpty && !results.contains(ConnectivityResult.none);
   }
 
   Future<void> startPeriodicSync() async {

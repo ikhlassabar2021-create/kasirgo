@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import '../../config/app_theme.dart';
 import '../../providers/auth_provider.dart';
 import '../../widgets/common/app_drawer.dart';
@@ -82,7 +83,7 @@ class SettingsScreen extends ConsumerWidget {
               onPressed: () async {
                 await ref.read(currentUserProvider.notifier).signOut();
                 if (context.mounted) {
-                  Navigator.of(context).pushNamedAndRemoveUntil('/login', (route) => false);
+                  context.go('/login');
                 }
               },
               style: OutlinedButton.styleFrom(foregroundColor: AppTheme.errorColor),
@@ -95,7 +96,7 @@ class SettingsScreen extends ConsumerWidget {
         currentIndex: 4,
         onTap: (index) {
           final routes = ['/owner', '/owner/products', '/owner/pos', '/owner/reports', '/owner/settings'];
-          if (index != 4) Navigator.pushReplacementNamed(context, routes[index]);
+          if (index != 4) context.pushReplacement(routes[index]);
         },
         items: const [
           BottomNavigationBarItem(icon: Icon(Icons.dashboard), label: 'Dashboard'),

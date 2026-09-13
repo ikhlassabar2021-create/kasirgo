@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import '../../config/app_theme.dart';
 import '../../providers/auth_provider.dart';
 import '../../widgets/common/app_drawer.dart';
@@ -36,7 +37,7 @@ class CashierHomeScreen extends ConsumerWidget {
         ),
       ),
       floatingActionButton: FloatingActionButton.extended(
-        onPressed: () => Navigator.pushNamed(context, '/cashier/pos'),
+        onPressed: () => context.push('/cashier/pos'),
         backgroundColor: AppTheme.primaryColor,
         icon: const Icon(Icons.point_of_sale),
         label: const Text('Buka POS'),

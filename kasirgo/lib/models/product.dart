@@ -33,30 +33,25 @@ class Product {
 
   factory Product.fromJson(Map<String, dynamic> json) {
     return Product(
-      id: json['id'] ?? '',
-      outletId: json['outlet_id'] ?? '',
-      name: json['name'] ?? '',
-      category: json['category'],
-      price: (json['price'] ?? 0).toDouble(),
-      costPrice: json['cost_price']?.toDouble(),
-      stock: json['stock'] ?? 0,
-      unit: json['unit'],
-      barcode: json['barcode'],
-      imageLocalPath: json['image_local_path'],
-      thumbKey: json['thumb_key'],
-      isActive: json['is_active'] ?? true,
-      createdAt: json['created_at'] != null
-          ? DateTime.parse(json['created_at'])
-          : null,
-      updatedAt: json['updated_at'] != null
-          ? DateTime.parse(json['updated_at'])
-          : null,
+      id: (json['id'] ?? '').toString(),
+      outletId: (json['outlet_id'] ?? '').toString(),
+      name: (json['name'] ?? '').toString(),
+      category: json['category']?.toString(),
+      price: (json['price'] as num?)?.toDouble() ?? 0.0,
+      costPrice: (json['cost_price'] as num?)?.toDouble(),
+      stock: (json['stock'] as num?)?.toInt() ?? 0,
+      unit: json['unit']?.toString(),
+      barcode: json['barcode']?.toString(),
+      imageLocalPath: json['image_local_path']?.toString(),
+      thumbKey: json['thumb_key']?.toString(),
+      isActive: json['is_active'] == null ? true : (json['is_active'] == true || json['is_active'] == 1),
+      createdAt: json['created_at'] != null ? DateTime.tryParse(json['created_at'].toString()) : null,
+      updatedAt: json['updated_at'] != null ? DateTime.tryParse(json['updated_at'].toString()) : null,
     );
   }
 
-  Map<String, dynamic> toJson() {
-    return {
-      'id': id,
+  Map<String, dynamic> toJson({bool includeId = true}) {
+    final data = <String, dynamic>{
       'outlet_id': outletId,
       'name': name,
       'category': category,
@@ -68,9 +63,17 @@ class Product {
       'image_local_path': imageLocalPath,
       'thumb_key': thumbKey,
       'is_active': isActive,
-      'created_at': createdAt?.toIso8601String(),
-      'updated_at': updatedAt?.toIso8601String(),
     };
+    if (includeId && id.isNotEmpty) {
+      data['id'] = id;
+    }
+    if (createdAt != null) {
+      data['created_at'] = createdAt!.toIso8601String();
+    }
+    if (updatedAt != null) {
+      data['updated_at'] = updatedAt!.toIso8601String();
+    }
+    return data;
   }
 
   Map<String, dynamic> toMap() {
@@ -94,24 +97,20 @@ class Product {
 
   factory Product.fromMap(Map<String, dynamic> map) {
     return Product(
-      id: map['id'] ?? '',
-      outletId: map['outlet_id'] ?? '',
-      name: map['name'] ?? '',
-      category: map['category'],
-      price: (map['price'] ?? 0).toDouble(),
-      costPrice: map['cost_price']?.toDouble(),
-      stock: map['stock'] ?? 0,
-      unit: map['unit'],
-      barcode: map['barcode'],
-      imageLocalPath: map['image_local_path'],
-      thumbKey: map['thumb_key'],
+      id: (map['id'] ?? '').toString(),
+      outletId: (map['outlet_id'] ?? '').toString(),
+      name: (map['name'] ?? '').toString(),
+      category: map['category']?.toString(),
+      price: (map['price'] as num?)?.toDouble() ?? 0.0,
+      costPrice: (map['cost_price'] as num?)?.toDouble(),
+      stock: (map['stock'] as num?)?.toInt() ?? 0,
+      unit: map['unit']?.toString(),
+      barcode: map['barcode']?.toString(),
+      imageLocalPath: map['image_local_path']?.toString(),
+      thumbKey: map['thumb_key']?.toString(),
       isActive: map['is_active'] == 1 || map['is_active'] == true,
-      createdAt: map['created_at'] != null
-          ? DateTime.parse(map['created_at'])
-          : null,
-      updatedAt: map['updated_at'] != null
-          ? DateTime.parse(map['updated_at'])
-          : null,
+      createdAt: map['created_at'] != null ? DateTime.tryParse(map['created_at'].toString()) : null,
+      updatedAt: map['updated_at'] != null ? DateTime.tryParse(map['updated_at'].toString()) : null,
     );
   }
 
@@ -148,4 +147,12 @@ class Product {
       updatedAt: updatedAt ?? this.updatedAt,
     );
   }
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is Product && runtimeType == other.runtimeType && id == other.id;
+
+  @override
+  int get hashCode => id.hashCode;
 }

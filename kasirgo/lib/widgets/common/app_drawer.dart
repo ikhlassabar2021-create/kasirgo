@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import '../../config/app_theme.dart';
 import '../../models/user.dart';
 import '../../providers/auth_provider.dart';
@@ -94,10 +95,7 @@ class AppDrawer extends ConsumerWidget {
               onTap: () async {
                 await ref.read(currentUserProvider.notifier).signOut();
                 if (context.mounted) {
-                  Navigator.of(context).pushNamedAndRemoveUntil(
-                    '/login',
-                    (route) => false,
-                  );
+                  context.go('/login');
                 }
               },
             ),

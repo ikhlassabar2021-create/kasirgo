@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import '../../config/app_theme.dart';
 import '../../config/constants.dart';
 import '../../providers/auth_provider.dart';
@@ -50,7 +51,7 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
             backgroundColor: AppTheme.successColor,
           ),
         );
-        Navigator.pushNamedAndRemoveUntil(context, '/login', (route) => false);
+        context.go('/login');
       }
     } catch (e) {
       if (mounted) {
@@ -127,7 +128,7 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                           ),
                           const SizedBox(height: 16),
                           DropdownButtonFormField<String>(
-                            value: _selectedBusinessType,
+                            initialValue: _selectedBusinessType,
                             decoration: const InputDecoration(
                               labelText: 'Tipe Usaha',
                               prefixIcon: Icon(Icons.category),
@@ -139,7 +140,10 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                                     ))
                                 .toList(),
                             onChanged: (value) {
-                              setState(() => _selectedBusinessType = value!);
+                              if (value != null) {
+                                setState(
+                                    () => _selectedBusinessType = value);
+                              }
                             },
                           ),
                           const SizedBox(height: 16),
@@ -193,7 +197,7 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                           const SizedBox(height: 16),
                           TextButton(
                             onPressed: () {
-                              Navigator.pushReplacementNamed(context, '/login');
+                              context.go('/login');
                             },
                             child: const Text('Sudah punya akun? Masuk'),
                           ),

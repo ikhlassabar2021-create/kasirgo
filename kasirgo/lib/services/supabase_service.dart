@@ -25,15 +25,87 @@ class SupabaseService {
     }
   }
 
-  Future<Product?> createProduct(Product product) async {
+  Future<Product?> getProduct(String productId) async {
     try {
       final response = await _client
           .from('products')
-          .insert(product.toJson())
+          .select()
+          .eq('id', productId)
+          .maybeSingle();
+
+      if (response == null) return null;
+      return Product.fromJson(response);
+    } catch (e) {
+      return null;
+    }
+  }
+
+  Future<Product?> getProductByBarcode(String outletId, String barcode) async {
+    try {
+      final response = await _client
+          .from('products')
+          .select()
+          .eq('outlet_id', outletId)
+          .eq('barcode', barcode)
+          .eq('is_active', true)
+          .maybeSingle();
+
+      if (response == null) return null;
+      return Product.fromJson(response);
+    } catch (e) {
+      return null;
+    }
+  }
+
+  Future<List<Product>> searchProducts(String outletId, String query) async {
+    try {
+      final response = await _client
+          .from('products')
+          .select()
+          .eq('outlet_id', outletId)
+          .eq('is_active', true)
+          .ilike('name', '%$query%')
+          .order('name');
+
+      return (response as List)
+          .map((json) => Product.fromJson(json as Map<String, dynamic>))
+          .toList();
+    } catch (e) {
+      return [];
+    }
+  }
+
+  Future<List<String>> getCategories(String outletId) async {
+    try {
+      final response = await _client
+          .from('products')
+          .select('category')
+          .eq('outlet_id', outletId)
+          .eq('is_active', true)
+          .not('category', 'is', null);
+
+      final categories = (response as List)
+          .map((item) => item['category']?.toString() ?? '')
+          .where((cat) => cat.isNotEmpty)
+          .toSet()
+          .toList();
+      categories.sort();
+      return categories;
+    } catch (e) {
+      return [];
+    }
+  }
+
+  Future<Product?> createProduct(Product product) async {
+    try {
+      final data = product.toJson(includeId: product.id.isNotEmpty);
+      final response = await _client
+          .from('products')
+          .insert(data)
           .select()
           .single();
 
-      return Product.fromJson(response as Map<String, dynamic>);
+      return Product.fromJson(response);
     } catch (e) {
       return null;
     }
@@ -43,23 +115,38 @@ class SupabaseService {
     try {
       final response = await _client
           .from('products')
-          .update(product.toJson())
+          .update(product.toJson(includeId: false))
           .eq('id', product.id)
           .select()
           .single();
 
-      return Product.fromJson(response as Map<String, dynamic>);
+      return Product.fromJson(response);
     } catch (e) {
       return null;
     }
   }
 
+  Future<bool> updateStock(String productId, int newStock) async {
+    try {
+      await _client
+          .from('products')
+          .update({
+            'stock': newStock,
+            'updated_at': DateTime.now().toIso8601String(),
+          })
+          .eq('id', productId);
+      return true;
+    } catch (e) {
+      return false;
+    }
+  }
+
   Future<bool> deleteProduct(String productId) async {
     try {
-      await _client.from('products').update({'is_active': false}).eq(
-        'id',
-        productId,
-      );
+      await _client.from('products').update({
+        'is_active': false,
+        'updated_at': DateTime.now().toIso8601String(),
+      }).eq('id', productId);
       return true;
     } catch (e) {
       return false;
@@ -91,7 +178,7 @@ class SupabaseService {
           .select()
           .single();
 
-      return Transaction.fromJson(response as Map<String, dynamic>);
+      return Transaction.fromJson(response);
     } catch (e) {
       return null;
     }
@@ -121,7 +208,7 @@ class SupabaseService {
           .select()
           .single();
 
-      return Customer.fromJson(response as Map<String, dynamic>);
+      return Customer.fromJson(response);
     } catch (e) {
       return null;
     }
@@ -135,7 +222,7 @@ class SupabaseService {
           .eq('id', outletId)
           .single();
 
-      return Outlet.fromJson(response as Map<String, dynamic>);
+      return Outlet.fromJson(response);
     } catch (e) {
       return null;
     }

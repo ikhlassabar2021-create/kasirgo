@@ -104,6 +104,29 @@ Status: SELESAI. Project Supabase sudah dibuat dan schema terpasang serta diuji.
 - Kredensial: `SUPABASE_URL` + anon key diisi manual di `config/supabase_config.dart` (Phase 2). `service_role` TIDAK disimpan di repo/APK.
 - Sisa: full auth flow diuji di Phase 2.
 
+## Handoff Phase 2 (TERVERIFIKASI)
+Status: SELESAI. Auth flow, role routing, offline engine, dan APK sudah berjalan.
+
+- Fix kritis auth (diterapkan langsung ke DB Supabase + `docs/kasirgo-schema.sql`):
+  - `handle_new_user`: tambah `SET search_path = 'public'` + prefix `public.` (trigger fire dari schema `auth`, tanpa ini INSERT `outlets` gagal).
+  - `handle_new_user`: sekarang juga INSERT ke `user_roles` role `owner` memakai `outlet_id` hasil `RETURNING id`.
+  - `user_roles` CHECK: tambah `'owner'` (sebelumnya hanya `admin`/`cashier`).
+  - RLS `outlets` <-> `user_roles` infinite recursion (42P17) diperbaiki: `outlets` SELECT admin/cashier filter `role IN ('admin','cashier')`; `user_roles` dipecah per-operasi, SELECT pakai `user_id = auth.uid()` (tanpa join `outlets`) sehingga siklus putus.
+- Flutter:
+  - Login: `setUserDirectly(user)` dipanggil sebelum `context.go()` supaya `currentUserProvider` tidak null (sebelumnya dashboard spinner selamanya).
+  - Logout drawer pakai `context.go('/login')` (bukan `pushNamedAndRemoveUntil` yang tidak valid di `MaterialApp.router`).
+  - Session restore di `app.dart`: baca session Supabase saat start, arahkan ke `/owner` / `/admin` / `/cashier`.
+  - `sync_service.isOnline()` diperbaiki untuk connectivity_plus 7.x (`List<ConnectivityResult>`).
+  - `flutter analyze` bersih (0 issues).
+- Verifikasi fungsional (via REST + DB):
+  - Register/Admin API -> user + outlet + `user_roles(owner)` auto-create PASS.
+  - Login owner/admin/cashier -> `user_roles` join `outlets` mengembalikan role benar PASS.
+  - RLS outlets: `200 OK` (tidak ada recursion) PASS.
+- APK: `kasirgo-v6-release.apk` (24.7MB, arm64, debug-signed).
+- Catatan penting: `mailer_autoconfirm = false` di Supabase, jadi signup dari app butuh verifikasi email dan terkena rate limit email free tier. Untuk testing register lancar, matikan "Confirm email" di Supabase Dashboard (Authentication > Providers > Email), atau pakai akun test siap pakai.
+- Akun test (password semua `TestFix123!`): owner `fresh1789288641@testakhir.test`, admin `admin1789291743@kasirgo.test`, cashier `kasir1789291743@kasirgo.test`.
+- Sisa untuk Phase 3: mapping kolom saat sync transaksi ke Supabase (`transactions.items` belum ada kolomnya; POS & transaction_items ditangani Phase 3).
+
 ## Progress Tracker
 - [x] Phase 0: Design docs + PRD + workflow
 - [x] Phase 1: Supabase DB + Auth

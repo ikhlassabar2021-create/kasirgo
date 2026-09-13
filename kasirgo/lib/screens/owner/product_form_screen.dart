@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 import '../../config/app_theme.dart';
 import '../../utils/validators.dart';
 
@@ -40,7 +41,7 @@ class _ProductFormScreenState extends State<ProductFormScreen> {
         backgroundColor: AppTheme.successColor,
       ),
     );
-    Navigator.pop(context);
+    context.pop();
   }
 
   @override

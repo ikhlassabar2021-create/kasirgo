@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 import '../../config/app_theme.dart';
 import '../../models/product.dart';
 import '../../models/transaction.dart';
@@ -199,7 +200,7 @@ class _PosScreenState extends State<PosScreen> {
         currentIndex: 2,
         onTap: (index) {
           final routes = ['/owner', '/owner/products', '/owner/pos', '/owner/reports', '/owner/settings'];
-          if (index != 2) Navigator.pushReplacementNamed(context, routes[index]);
+          if (index != 2) context.pushReplacement(routes[index]);
         },
         items: const [
           BottomNavigationBarItem(icon: Icon(Icons.dashboard), label: 'Dashboard'),

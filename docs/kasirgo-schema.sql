@@ -20,7 +20,7 @@ CREATE TABLE user_roles (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   user_id UUID REFERENCES auth.users(id) ON DELETE CASCADE,
   outlet_id UUID REFERENCES outlets(id) ON DELETE CASCADE,
-  role TEXT NOT NULL CHECK (role IN ('admin', 'cashier')),
+  role TEXT NOT NULL CHECK (role IN ('admin', 'cashier', 'owner')),
   created_at TIMESTAMPTZ DEFAULT NOW(),
   UNIQUE(user_id, outlet_id)
 );
@@ -151,12 +151,23 @@ CREATE TABLE ai_insights (
 
 CREATE OR REPLACE FUNCTION handle_new_user()
 RETURNS TRIGGER AS $$
+DECLARE
+  new_outlet_id UUID;
 BEGIN
-  INSERT INTO outlets (owner_id, name, type)
-  VALUES (NEW.id, COALESCE(NEW.raw_user_meta_data->>'business_name', 'Toko Baru'), COALESCE(NEW.raw_user_meta_data->>'business_type', 'warung'));
+  INSERT INTO public.outlets (owner_id, name, type)
+  VALUES (
+    NEW.id,
+    COALESCE(NEW.raw_user_meta_data->>'business_name', 'Toko Baru'),
+    COALESCE(NEW.raw_user_meta_data->>'business_type', 'warung')
+  )
+  RETURNING id INTO new_outlet_id;
+
+  INSERT INTO public.user_roles (user_id, outlet_id, role)
+  VALUES (NEW.id, new_outlet_id, 'owner');
+
   RETURN NEW;
 END;
-$$ LANGUAGE plpgsql SECURITY DEFINER;
+$$ LANGUAGE plpgsql SECURITY DEFINER SET search_path = 'public';
 
 CREATE TRIGGER on_auth_user_created
   AFTER INSERT ON auth.users
@@ -181,13 +192,29 @@ CREATE TRIGGER tr_decrement_stock
 ALTER TABLE outlets ENABLE ROW LEVEL SECURITY;
 CREATE POLICY "Owner can manage own outlet" ON outlets FOR ALL USING (owner_id = auth.uid());
 CREATE POLICY "Admin/Cashier can view own outlet" ON outlets FOR SELECT USING (
-  EXISTS (SELECT 1 FROM user_roles WHERE user_id = auth.uid() AND outlet_id = outlets.id)
+  EXISTS (
+    SELECT 1 FROM user_roles
+    WHERE user_id = auth.uid()
+      AND outlet_id = outlets.id
+      AND role IN ('admin', 'cashier')
+  )
 );
 
 ALTER TABLE user_roles ENABLE ROW LEVEL SECURITY;
-CREATE POLICY "Owner can manage roles" ON user_roles FOR ALL USING (
-  EXISTS (SELECT 1 FROM outlets WHERE id = user_roles.outlet_id AND owner_id = auth.uid())
-);
+CREATE POLICY "Users can see own roles" ON user_roles FOR SELECT
+  USING (user_id = auth.uid());
+CREATE POLICY "Owner can insert roles" ON user_roles FOR INSERT
+  WITH CHECK (
+    EXISTS (SELECT 1 FROM outlets WHERE id = user_roles.outlet_id AND owner_id = auth.uid())
+  );
+CREATE POLICY "Owner can update roles" ON user_roles FOR UPDATE
+  USING (
+    EXISTS (SELECT 1 FROM outlets WHERE id = user_roles.outlet_id AND owner_id = auth.uid())
+  );
+CREATE POLICY "Owner can delete roles" ON user_roles FOR DELETE
+  USING (
+    EXISTS (SELECT 1 FROM outlets WHERE id = user_roles.outlet_id AND owner_id = auth.uid())
+  );
 
 ALTER TABLE products ENABLE ROW LEVEL SECURITY;
 CREATE POLICY "Owner/Admin can manage products" ON products FOR ALL USING (

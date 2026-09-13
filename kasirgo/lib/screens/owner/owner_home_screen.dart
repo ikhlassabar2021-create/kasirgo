@@ -1,9 +1,36 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:fl_chart/fl_chart.dart';
+import 'package:go_router/go_router.dart';
 import '../../config/app_theme.dart';
 import '../../providers/auth_provider.dart';
+import '../../services/supabase_service.dart';
+import '../../utils/formatters.dart';
 import '../../widgets/common/app_drawer.dart';
+
+final homeSummaryProvider = FutureProvider<Map<String, dynamic>>((ref) async {
+  final user = ref.watch(currentUserProvider);
+  if (user?.outletId == null) return {};
+
+  final service = SupabaseService();
+  final today = DateTime.now().toIso8601String().split('T')[0];
+
+  final todayTransactions = await service.getTransactions(user!.outletId!, limit: 100);
+  final todayFiltered = todayTransactions.where((t) => t.createdAt.toIso8601String().startsWith(today)).toList();
+
+  final products = await service.getProducts(user.outletId!);
+  final customers = await service.getCustomers(user.outletId!);
+
+  final todaySales = todayFiltered.fold<double>(0, (sum, t) => sum + t.finalAmount);
+  final todayCount = todayFiltered.length;
+
+  return {
+    'todaySales': todaySales,
+    'todayTransactions': todayCount,
+    'products': products.length,
+    'customers': customers.length,
+  };
+});
 
 class OwnerHomeScreen extends ConsumerWidget {
   const OwnerHomeScreen({super.key});
@@ -11,6 +38,7 @@ class OwnerHomeScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final user = ref.watch(currentUserProvider);
+    final summaryAsync = ref.watch(homeSummaryProvider);
 
     if (user == null) {
       return const Scaffold(
@@ -40,63 +68,65 @@ class OwnerHomeScreen extends ConsumerWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(
+            const Text(
               'Selamat Datang',
-              style: TextStyle(
-                fontSize: 14,
-                color: AppTheme.textSecondary,
-              ),
+              style: TextStyle(fontSize: 14, color: AppTheme.textSecondary),
             ),
             const Text(
               'Dashboard',
-              style: TextStyle(
-                fontSize: 24,
-                fontWeight: FontWeight.bold,
-              ),
+              style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
             ),
             const SizedBox(height: 20),
-            Row(
-              children: [
-                Expanded(
-                  child: _SummaryCard(
-                    title: 'Penjualan Hari Ini',
-                    value: 'Rp 0',
-                    icon: Icons.trending_up,
-                    color: AppTheme.primaryColor,
+            summaryAsync.when(
+              loading: () => const Center(child: CircularProgressIndicator()),
+              error: (_, _) => const SizedBox(),
+              data: (summary) => Row(
+                children: [
+                  Expanded(
+                    child: _SummaryCard(
+                      title: 'Penjualan Hari Ini',
+                      value: Formatters.currency(summary['todaySales'] ?? 0),
+                      icon: Icons.trending_up,
+                      color: AppTheme.primaryColor,
+                    ),
                   ),
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: _SummaryCard(
-                    title: 'Transaksi',
-                    value: '0',
-                    icon: Icons.receipt_long,
-                    color: AppTheme.secondaryColor,
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: _SummaryCard(
+                      title: 'Transaksi',
+                      value: '${summary['todayTransactions'] ?? 0}',
+                      icon: Icons.receipt_long,
+                      color: AppTheme.secondaryColor,
+                    ),
                   ),
-                ),
-              ],
+                ],
+              ),
             ),
             const SizedBox(height: 12),
-            Row(
-              children: [
-                Expanded(
-                  child: _SummaryCard(
-                    title: 'Produk',
-                    value: '0',
-                    icon: Icons.inventory_2,
-                    color: AppTheme.accentColor,
+            summaryAsync.when(
+              loading: () => const SizedBox.shrink(),
+              error: (_, _) => const SizedBox.shrink(),
+              data: (summary) => Row(
+                children: [
+                  Expanded(
+                    child: _SummaryCard(
+                      title: 'Produk',
+                      value: '${summary['products'] ?? 0}',
+                      icon: Icons.inventory_2,
+                      color: AppTheme.accentColor,
+                    ),
                   ),
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: _SummaryCard(
-                    title: 'Pelanggan',
-                    value: '0',
-                    icon: Icons.people,
-                    color: AppTheme.successColor,
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: _SummaryCard(
+                      title: 'Pelanggan',
+                      value: '${summary['customers'] ?? 0}',
+                      icon: Icons.people,
+                      color: AppTheme.successColor,
+                    ),
                   ),
-                ),
-              ],
+                ],
+              ),
             ),
             const SizedBox(height: 24),
             const Text(
@@ -188,7 +218,7 @@ class OwnerHomeScreen extends ConsumerWidget {
           '/owner/settings',
         ];
         if (index != currentIndex) {
-          Navigator.pushReplacementNamed(context, routes[index]);
+          context.pushReplacement(routes[index]);
         }
       },
       items: const [

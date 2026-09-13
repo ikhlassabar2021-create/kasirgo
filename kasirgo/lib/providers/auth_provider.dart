@@ -28,6 +28,10 @@ class CurrentUserNotifier extends StateNotifier<User?> {
     state = user;
   }
 
+  void setUserDirectly(User user) {
+    state = user;
+  }
+
   Future<void> signOut() async {
     await _authService.signOut();
     state = null;

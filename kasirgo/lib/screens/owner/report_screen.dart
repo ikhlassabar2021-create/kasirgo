@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:fl_chart/fl_chart.dart';
+import 'package:go_router/go_router.dart';
 import '../../config/app_theme.dart';
 import '../../utils/formatters.dart';
 
@@ -130,7 +131,7 @@ class ReportScreen extends StatelessWidget {
         currentIndex: 3,
         onTap: (index) {
           final routes = ['/owner', '/owner/products', '/owner/pos', '/owner/reports', '/owner/settings'];
-          if (index != 3) Navigator.pushReplacementNamed(context, routes[index]);
+          if (index != 3) context.pushReplacement(routes[index]);
         },
         items: const [
           BottomNavigationBarItem(icon: Icon(Icons.dashboard), label: 'Dashboard'),

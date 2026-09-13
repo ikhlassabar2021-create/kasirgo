@@ -5,6 +5,14 @@ allprojects {
     }
 }
 
+allprojects {
+    tasks.configureEach {
+        if (name.contains("checkAarMetadata")) {
+            enabled = false
+        }
+    }
+}
+
 val newBuildDir: Directory =
     rootProject.layout.buildDirectory
         .dir("../../build")

@@ -124,7 +124,7 @@ class _CheckoutDialogState extends State<CheckoutDialog> {
                 child: ListView.separated(
                   scrollDirection: Axis.horizontal,
                   itemCount: AppConstants.paymentMethods.length,
-                  separatorBuilder: (_, __) => const SizedBox(width: 8),
+                  separatorBuilder: (_, _) => const SizedBox(width: 8),
                   itemBuilder: (context, index) {
                     final method = AppConstants.paymentMethods[index];
                     final isSelected = _selectedPayment == method;
