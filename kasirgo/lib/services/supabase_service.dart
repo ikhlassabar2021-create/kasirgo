@@ -25,12 +25,12 @@ class SupabaseService {
     }
   }
 
-  Future<Product?> getProduct(String productId) async {
+  Future<Product?> getProduct(String id) async {
     try {
       final response = await _client
           .from('products')
           .select()
-          .eq('id', productId)
+          .eq('id', id)
           .maybeSingle();
 
       if (response == null) return null;
@@ -141,12 +141,12 @@ class SupabaseService {
     }
   }
 
-  Future<bool> deleteProduct(String productId) async {
+  Future<bool> deleteProduct(String id) async {
     try {
       await _client.from('products').update({
         'is_active': false,
         'updated_at': DateTime.now().toIso8601String(),
-      }).eq('id', productId);
+      }).eq('id', id);
       return true;
     } catch (e) {
       return false;
@@ -170,6 +170,21 @@ class SupabaseService {
     }
   }
 
+  Future<Transaction?> getTransaction(String id) async {
+    try {
+      final response = await _client
+          .from('transactions')
+          .select()
+          .eq('id', id)
+          .maybeSingle();
+
+      if (response == null) return null;
+      return Transaction.fromJson(response);
+    } catch (e) {
+      return null;
+    }
+  }
+
   Future<Transaction?> createTransaction(Transaction transaction) async {
     try {
       final response = await _client
@@ -181,6 +196,95 @@ class SupabaseService {
       return Transaction.fromJson(response);
     } catch (e) {
       return null;
+    }
+  }
+
+  Future<bool> updateTransaction(String id, Map<String, dynamic> data) async {
+    try {
+      await _client.from('transactions').update(data).eq('id', id);
+      return true;
+    } catch (e) {
+      return false;
+    }
+  }
+
+  Future<bool> deleteTransaction(String id) async {
+    try {
+      await _client.from('transactions').delete().eq('id', id);
+      return true;
+    } catch (e) {
+      return false;
+    }
+  }
+
+  Future<List<Map<String, dynamic>>> getTransactionItems(String transactionId) async {
+    try {
+      final response = await _client
+          .from('transaction_items')
+          .select()
+          .eq('transaction_id', transactionId);
+
+      return List<Map<String, dynamic>>.from(response);
+    } catch (e) {
+      return [];
+    }
+  }
+
+  Future<List<Map<String, dynamic>>> getTransactionItemsByOutlet(String outletId) async {
+    try {
+      final response = await _client
+          .from('transaction_items')
+          .select('*, transactions!inner(outlet_id)')
+          .eq('transactions.outlet_id', outletId);
+
+      return List<Map<String, dynamic>>.from(response);
+    } catch (e) {
+      return [];
+    }
+  }
+
+  Future<Map<String, dynamic>?> createTransactionItem(Map<String, dynamic> item) async {
+    try {
+      final response = await _client
+          .from('transaction_items')
+          .insert(item)
+          .select()
+          .single();
+
+      return response;
+    } catch (e) {
+      return null;
+    }
+  }
+
+  Future<List<Map<String, dynamic>>> createTransactionItems(List<Map<String, dynamic>> items) async {
+    try {
+      final response = await _client
+          .from('transaction_items')
+          .insert(items)
+          .select();
+
+      return List<Map<String, dynamic>>.from(response);
+    } catch (e) {
+      return [];
+    }
+  }
+
+  Future<bool> updateTransactionItem(String id, Map<String, dynamic> item) async {
+    try {
+      await _client.from('transaction_items').update(item).eq('id', id);
+      return true;
+    } catch (e) {
+      return false;
+    }
+  }
+
+  Future<bool> deleteTransactionItem(String id) async {
+    try {
+      await _client.from('transaction_items').delete().eq('id', id);
+      return true;
+    } catch (e) {
+      return false;
     }
   }
 
@@ -200,6 +304,21 @@ class SupabaseService {
     }
   }
 
+  Future<Customer?> getCustomer(String id) async {
+    try {
+      final response = await _client
+          .from('customers')
+          .select()
+          .eq('id', id)
+          .maybeSingle();
+
+      if (response == null) return null;
+      return Customer.fromJson(response);
+    } catch (e) {
+      return null;
+    }
+  }
+
   Future<Customer?> createCustomer(Customer customer) async {
     try {
       final response = await _client
@@ -214,17 +333,27 @@ class SupabaseService {
     }
   }
 
-  Future<Outlet?> getOutlet(String outletId) async {
+  Future<Customer?> updateCustomer(Customer customer) async {
     try {
       final response = await _client
-          .from('outlets')
+          .from('customers')
+          .update(customer.toJson())
+          .eq('id', customer.id)
           .select()
-          .eq('id', outletId)
           .single();
 
-      return Outlet.fromJson(response);
+      return Customer.fromJson(response);
     } catch (e) {
       return null;
+    }
+  }
+
+  Future<bool> deleteCustomer(String id) async {
+    try {
+      await _client.from('customers').delete().eq('id', id);
+      return true;
+    } catch (e) {
+      return false;
     }
   }
 
@@ -241,6 +370,201 @@ class SupabaseService {
           .toList();
     } catch (e) {
       return [];
+    }
+  }
+
+  Future<Employee?> getEmployee(String id) async {
+    try {
+      final response = await _client
+          .from('employees')
+          .select()
+          .eq('id', id)
+          .maybeSingle();
+
+      if (response == null) return null;
+      return Employee.fromJson(response);
+    } catch (e) {
+      return null;
+    }
+  }
+
+  Future<Employee?> createEmployee(Employee employee) async {
+    try {
+      final response = await _client
+          .from('employees')
+          .insert(employee.toJson())
+          .select()
+          .single();
+
+      return Employee.fromJson(response);
+    } catch (e) {
+      return null;
+    }
+  }
+
+  Future<Employee?> updateEmployee(Employee employee) async {
+    try {
+      final response = await _client
+          .from('employees')
+          .update(employee.toJson())
+          .eq('id', employee.id)
+          .select()
+          .single();
+
+      return Employee.fromJson(response);
+    } catch (e) {
+      return null;
+    }
+  }
+
+  Future<bool> deleteEmployee(String id) async {
+    try {
+      await _client.from('employees').delete().eq('id', id);
+      return true;
+    } catch (e) {
+      return false;
+    }
+  }
+
+  Future<List<Map<String, dynamic>>> getSubscriptions(String outletId) async {
+    try {
+      final response = await _client
+          .from('subscriptions')
+          .select()
+          .eq('outlet_id', outletId)
+          .order('start_date', ascending: false);
+
+      return List<Map<String, dynamic>>.from(response);
+    } catch (e) {
+      return [];
+    }
+  }
+
+  Future<Map<String, dynamic>?> getActiveSubscription(String outletId) async {
+    try {
+      final response = await _client
+          .from('subscriptions')
+          .select()
+          .eq('outlet_id', outletId)
+          .eq('payment_status', 'paid')
+          .gte('end_date', DateTime.now().toIso8601String())
+          .order('end_date', ascending: false)
+          .limit(1)
+          .maybeSingle();
+
+      return response;
+    } catch (e) {
+      return null;
+    }
+  }
+
+  Future<Map<String, dynamic>?> createSubscription(Map<String, dynamic> subscription) async {
+    try {
+      final response = await _client
+          .from('subscriptions')
+          .insert(subscription)
+          .select()
+          .single();
+
+      return response;
+    } catch (e) {
+      return null;
+    }
+  }
+
+  Future<bool> updateSubscription(String id, Map<String, dynamic> subscription) async {
+    try {
+      await _client.from('subscriptions').update(subscription).eq('id', id);
+      return true;
+    } catch (e) {
+      return false;
+    }
+  }
+
+  Future<bool> deleteSubscription(String id) async {
+    try {
+      await _client.from('subscriptions').delete().eq('id', id);
+      return true;
+    } catch (e) {
+      return false;
+    }
+  }
+
+  Future<List<Map<String, dynamic>>> getAiInsights(String outletId, {String? insightType}) async {
+    try {
+      var query = _client
+          .from('ai_insights')
+          .select()
+          .eq('outlet_id', outletId);
+
+      if (insightType != null) {
+        query = query.eq('insight_type', insightType);
+      }
+
+      final response = await query.order('created_at', ascending: false);
+      return List<Map<String, dynamic>>.from(response);
+    } catch (e) {
+      return [];
+    }
+  }
+
+  Future<Map<String, dynamic>?> getAiInsight(String id) async {
+    try {
+      final response = await _client
+          .from('ai_insights')
+          .select()
+          .eq('id', id)
+          .maybeSingle();
+
+      return response;
+    } catch (e) {
+      return null;
+    }
+  }
+
+  Future<Map<String, dynamic>?> createAiInsight(Map<String, dynamic> insight) async {
+    try {
+      final response = await _client
+          .from('ai_insights')
+          .insert(insight)
+          .select()
+          .single();
+
+      return response;
+    } catch (e) {
+      return null;
+    }
+  }
+
+  Future<bool> updateAiInsight(String id, Map<String, dynamic> insight) async {
+    try {
+      await _client.from('ai_insights').update(insight).eq('id', id);
+      return true;
+    } catch (e) {
+      return false;
+    }
+  }
+
+  Future<bool> deleteAiInsight(String id) async {
+    try {
+      await _client.from('ai_insights').delete().eq('id', id);
+      return true;
+    } catch (e) {
+      return false;
+    }
+  }
+
+  Future<Outlet?> getOutlet(String outletId) async {
+    try {
+      final response = await _client
+          .from('outlets')
+          .select()
+          .eq('id', outletId)
+          .single();
+
+      return Outlet.fromJson(response);
+    } catch (e) {
+      return null;
     }
   }
 }
