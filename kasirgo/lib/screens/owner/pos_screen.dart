@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:supabase_flutter/supabase_flutter.dart' as sb;
 import '../../config/app_theme.dart';
 import '../../models/product.dart';
 import '../../models/transaction.dart';
@@ -115,8 +116,9 @@ class _PosScreenState extends ConsumerState<PosScreen> {
     setState(() => _isLoading = true);
 
     try {
-      final user = SupabaseService().currentUser;
-      final outletId = user?.id != null ? await SupabaseService().getOutletIdForUser(user!.id) : null;
+      final client = sb.Supabase.instance.client;
+      final user = client.auth.currentUser;
+      final outletId = products.isNotEmpty ? products.first.outletId : null;
       if (outletId == null) {
         throw Exception('Outlet ID tidak ditemukan');
       }
