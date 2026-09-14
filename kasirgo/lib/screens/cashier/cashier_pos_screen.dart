@@ -3,7 +3,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../config/app_theme.dart';
 import '../../models/product.dart';
 import '../../models/transaction.dart';
-import '../../services/auth_service.dart';
 import '../../services/supabase_service.dart';
 import '../owner/product_list_screen.dart';
 import '../../widgets/pos/product_grid.dart';
@@ -104,8 +103,8 @@ class _CashierPosScreenState extends ConsumerState<CashierPosScreen> {
     setState(() => _isLoading = true);
 
     try {
-      final user = ref.read(currentUserProvider);
-      final outletId = user?.outletId;
+      final user = SupabaseService().currentUser;
+      final outletId = user?.id != null ? await SupabaseService().getOutletIdForUser(user!.id) : null;
       if (outletId == null) {
         throw Exception('Outlet ID tidak ditemukan');
       }
@@ -125,8 +124,8 @@ class _CashierPosScreenState extends ConsumerState<CashierPosScreen> {
         createdAt: DateTime.now(),
       );
 
-      final success = await SupabaseService().createTransaction(tx);
-      if (!success) {
+      final created = await SupabaseService().createTransaction(tx);
+      if (created == null) {
         throw Exception('Gagal menyimpan transaksi');
       }
 
