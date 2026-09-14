@@ -1,16 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:go_router/go_router.dart';
-import 'package:mobile_scanner/mobile_scanner.dart';
 import '../../config/app_theme.dart';
 import '../../models/product.dart';
 import '../../models/transaction.dart';
-import '../../providers/auth_provider.dart';
+import '../../services/auth_service.dart';
 import '../../services/supabase_service.dart';
+import '../owner/product_list_screen.dart';
 import '../../widgets/pos/product_grid.dart';
 import '../../widgets/pos/cart_panel.dart';
 import '../../widgets/pos/checkout_dialog.dart';
-import 'product_list_screen.dart';
 
 class PosScreen extends ConsumerStatefulWidget {
   const PosScreen({super.key});
@@ -23,18 +21,17 @@ class _PosScreenState extends ConsumerState<PosScreen> {
   final _searchController = TextEditingController();
   final List<TransactionItem> _cart = [];
   String _searchQuery = '';
-  String? _selectedCategory;
   String _selectedChannel = 'Toko Fisik';
   double _discountAmount = 0.0;
+  bool _isLoading = false;
 
-  final _channels = [
+  final List<String> _channels = [
     'Toko Fisik',
     'WhatsApp',
     'Tokopedia',
     'Shopee',
-    'TikTok Shop',
-    'GoFood',
     'GrabFood',
+    'GoFood',
   ];
 
   @override
@@ -43,234 +40,148 @@ class _PosScreenState extends ConsumerState<PosScreen> {
     super.dispose();
   }
 
-  double get _subtotal => _cart.fold(0.0, (sum, item) => sum + item.subtotal);
-
   void _addToCart(Product product) {
     if (product.stock <= 0) {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Stok "${product.name}" habis'),
-          backgroundColor: AppTheme.errorColor,
-          duration: const Duration(seconds: 1),
-        ),
+        const SnackBar(content: Text('Stok produk habis'), backgroundColor: AppTheme.errorColor),
       );
       return;
     }
 
     setState(() {
-      final existingIndex = _cart.indexWhere((item) => item.productId == product.id);
-      if (existingIndex >= 0) {
-        final existing = _cart[existingIndex];
-        if (existing.quantity >= product.stock) {
+      final index = _cart.indexWhere((item) => item.productId == product.id);
+      if (index >= 0) {
+        final currentQty = _cart[index].quantity;
+        if (currentQty >= product.stock) {
           ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text('Maksimal stok tercapai (${product.stock} ${product.unit ?? "pcs"})'),
-              backgroundColor: AppTheme.warningColor,
-              duration: const Duration(seconds: 1),
-            ),
+            SnackBar(content: Text('Maksimal stok tercapai (${product.stock})'), backgroundColor: AppTheme.errorColor),
           );
           return;
         }
-        _cart[existingIndex] = existing.copyWith(
-          quantity: existing.quantity + 1,
-          subtotal: existing.price * (existing.quantity + 1),
+        _cart[index] = _cart[index].copyWith(
+          quantity: currentQty + 1,
+          subtotal: product.price * (currentQty + 1),
         );
       } else {
-        _cart.add(TransactionItem(
-          productId: product.id,
-          productName: product.name,
-          price: product.price,
-          quantity: 1,
-          subtotal: product.price,
-        ));
+        _cart.add(
+          TransactionItem(
+            productId: product.id,
+            productName: product.name,
+            price: product.price,
+            quantity: 1,
+            subtotal: product.price,
+          ),
+        );
+      }
+    });
+  }
+
+  void _updateQty(MapEntry<String, int> entry, List<Product> products) {
+    setState(() {
+      final index = _cart.indexWhere((item) => item.productId == entry.key);
+      if (index >= 0) {
+        final productIndex = products.indexWhere((p) => p.id == entry.key);
+        final maxStock = productIndex >= 0 ? products[productIndex].stock : 9999;
+        final targetQty = entry.value.clamp(1, maxStock);
+        _cart[index] = _cart[index].copyWith(
+          quantity: targetQty,
+          subtotal: _cart[index].price * targetQty,
+        );
       }
     });
   }
 
   void _removeItem(int index) {
-    setState(() => _cart.removeAt(index));
-  }
-
-  void _updateQty(MapEntry<String, int> entry, List<Product> allProducts) {
     setState(() {
-      final index = _cart.indexWhere((item) => item.productId == entry.key);
-      if (index >= 0) {
-        final product = allProducts.firstWhere(
-          (p) => p.id == entry.key,
-          orElse: () => Product(id: '', outletId: '', name: '', price: 0),
-        );
-
-        int newQty = entry.value;
-        if (product.id.isNotEmpty && newQty > product.stock) {
-          newQty = product.stock;
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text('Stok hanya tersedia ${product.stock}'),
-              backgroundColor: AppTheme.warningColor,
-            ),
-          );
-        }
-
-        if (newQty <= 0) {
-          _cart.removeAt(index);
-        } else {
-          _cart[index] = _cart[index].copyWith(
-            quantity: newQty,
-            subtotal: _cart[index].price * newQty,
-          );
-        }
-      }
+      _cart.removeAt(index);
     });
   }
 
-  void _openBarcodeScanner(List<Product> products) {
-    showDialog(
-      context: context,
-      builder: (dialogCtx) => Dialog(
-        backgroundColor: AppTheme.surfaceColor,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        child: SizedBox(
-          height: 400,
-          child: Column(
-            children: [
-              AppBar(
-                title: const Text('Scan Barcode Produk', style: TextStyle(fontSize: 16)),
-                backgroundColor: Colors.transparent,
-                elevation: 0,
-                automaticallyImplyLeading: false,
-                actions: [
-                  IconButton(
-                    icon: const Icon(Icons.close),
-                    onPressed: () => Navigator.pop(dialogCtx),
-                  ),
-                ],
-              ),
-              Expanded(
-                child: ClipRRect(
-                  borderRadius: BorderRadius.circular(12),
-                  child: MobileScanner(
-                    onDetect: (capture) {
-                      for (final barcode in capture.barcodes) {
-                        final code = barcode.rawValue ?? barcode.displayValue;
-                        if (code != null && code.isNotEmpty) {
-                          Navigator.pop(dialogCtx);
-                          _onBarcodeScanned(code, products);
-                          break;
-                        }
-                      }
-                    },
-                  ),
-                ),
-              ),
-              const Padding(
-                padding: EdgeInsets.all(12),
-                child: Text(
-                  'Arahkan kamera ke barcode produk',
-                  style: TextStyle(fontSize: 12, color: AppTheme.textSecondary),
-                ),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
+  double get _subtotal => _cart.fold(0.0, (sum, item) => sum + item.subtotal);
+  double get _total => (_subtotal - _discountAmount).clamp(0.0, double.infinity);
 
-  void _onBarcodeScanned(String code, List<Product> products) {
-    final matched = products.where(
-      (p) => p.barcode != null && p.barcode!.trim() == code.trim(),
-    ).toList();
-
-    if (matched.isNotEmpty) {
-      _addToCart(matched.first);
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('${matched.first.name} dimasukkan ke keranjang'),
-          backgroundColor: AppTheme.successColor,
-          duration: const Duration(seconds: 1),
-        ),
-      );
-    } else {
-      setState(() {
-        _searchController.text = code;
-        _searchQuery = code.toLowerCase();
-      });
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Barcode "$code" tidak cocok dengan produk terdaftar'),
-          backgroundColor: AppTheme.errorColor,
-        ),
-      );
-    }
-  }
-
-  void _showCheckout() {
+  Future<void> _handleCheckout(List<Product> products) async {
     if (_cart.isEmpty) return;
 
-    showDialog(
+    final result = await showDialog<CheckoutResult>(
       context: context,
-      builder: (dialogCtx) => CheckoutDialog(
-        items: _cart,
-        totalAmount: _subtotal,
-        discountAmount: _discountAmount,
-        onConfirm: ({
-          required String paymentMethod,
-          required String? notes,
-          required double finalAmount,
-          required String? customerId,
-        }) async {
-          final user = ref.read(currentUserProvider);
-          final outletId = user?.outletId;
-          if (outletId == null) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(content: Text('Outlet ID tidak valid'), backgroundColor: AppTheme.errorColor),
-            );
-            return;
-          }
-
-          final fullNotes = 'Channel: $_selectedChannel${notes != null && notes.isNotEmpty ? " | $notes" : ""}';
-          final tx = Transaction(
-            id: '',
-            outletId: outletId,
-            cashierId: user?.id,
-            customerId: customerId,
-            items: List.from(_cart),
-            totalAmount: _subtotal,
-            discountAmount: _discountAmount > 0 ? _discountAmount : null,
-            finalAmount: finalAmount,
-            paymentMethod: paymentMethod,
-            paymentStatus: 'paid',
-            notes: fullNotes,
-            isSynced: true,
-            createdAt: DateTime.now(),
-          );
-
-          final result = await SupabaseService().createTransaction(tx);
-          if (mounted) {
-            if (result != null) {
-              setState(() {
-                _cart.clear();
-                _discountAmount = 0.0;
-              });
-              ref.invalidate(productsProvider);
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(
-                  content: Text('Transaksi POS berhasil disimpan!'),
-                  backgroundColor: AppTheme.successColor,
-                ),
-              );
-            } else {
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(
-                  content: Text('Gagal menyimpan transaksi ke database'),
-                  backgroundColor: AppTheme.errorColor,
-                ),
-              );
-            }
-          }
-        },
+      builder: (ctx) => CheckoutDialog(
+        items: List.from(_cart),
+        totalAmount: _total,
       ),
     );
+
+    if (result == null) return;
+
+    setState(() => _isLoading = true);
+
+    try {
+      final user = ref.read(currentUserProvider);
+      final outletId = user?.outletId;
+      if (outletId == null) {
+        throw Exception('Outlet ID tidak ditemukan');
+      }
+
+      final notes = 'Channel: $_selectedChannel${result.notes != null ? ' | ${result.notes}' : ''}';
+      final tx = Transaction(
+        id: '',
+        outletId: outletId,
+        cashierId: user?.id,
+        items: List.from(_cart),
+        totalAmount: _subtotal,
+        discountAmount: _discountAmount > 0 ? _discountAmount : null,
+        finalAmount: result.amount,
+        paymentMethod: result.paymentMethod,
+        paymentStatus: 'paid',
+        notes: notes,
+        isSynced: true,
+        createdAt: DateTime.now(),
+      );
+
+      final success = await SupabaseService().createTransaction(tx);
+      if (!success) {
+        throw Exception('Gagal menyimpan transaksi');
+      }
+
+      for (final item in _cart) {
+        final prodIdx = products.indexWhere((p) => p.id == item.productId);
+        if (prodIdx >= 0) {
+          final prod = products[prodIdx];
+          final newStock = (prod.stock - item.quantity).clamp(0, 999999);
+          await SupabaseService().updateProduct(prod.copyWith(stock: newStock));
+        }
+      }
+
+      ref.invalidate(productsProvider);
+
+      if (mounted) {
+        setState(() {
+          _cart.clear();
+          _discountAmount = 0.0;
+        });
+
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              result.change > 0
+                  ? 'Transaksi sukses! Kembalian: Rp ${result.change.toStringAsFixed(0)}'
+                  : 'Transaksi sukses!',
+            ),
+            backgroundColor: AppTheme.successColor,
+          ),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error: $e'), backgroundColor: AppTheme.errorColor),
+        );
+      }
+    } finally {
+      if (mounted) {
+        setState(() => _isLoading = false);
+      }
+    }
   }
 
   @override
@@ -279,187 +190,89 @@ class _PosScreenState extends ConsumerState<PosScreen> {
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Kasir / POS'),
+        title: const Text('Kasir POS (Owner)'),
         actions: [
-          // Channel selector
-          Container(
-            margin: const EdgeInsets.only(right: 8),
-            padding: const EdgeInsets.symmetric(horizontal: 10),
-            decoration: BoxDecoration(
-              color: AppTheme.surfaceColor,
-              borderRadius: BorderRadius.circular(10),
-              border: Border.all(color: AppTheme.borderColor),
-            ),
-            child: DropdownButtonHideUnderline(
-              child: DropdownButton<String>(
-                value: _selectedChannel,
-                dropdownColor: AppTheme.surfaceColor,
-                icon: const Icon(Icons.arrow_drop_down, color: AppTheme.accentColor, size: 20),
-                style: const TextStyle(fontSize: 12, color: Colors.white, fontWeight: FontWeight.w600),
-                items: _channels.map((ch) {
-                  return DropdownMenuItem(value: ch, child: Text(ch));
-                }).toList(),
-                onChanged: (val) {
-                  if (val != null) setState(() => _selectedChannel = val);
-                },
-              ),
+          DropdownButtonHideUnderline(
+            child: DropdownButton<String>(
+              value: _selectedChannel,
+              dropdownColor: AppTheme.surfaceColor,
+              icon: const Icon(Icons.arrow_drop_down, color: AppTheme.accentColor),
+              style: const TextStyle(color: AppTheme.textPrimary, fontSize: 12, fontWeight: FontWeight.bold),
+              items: _channels.map((ch) {
+                return DropdownMenuItem(
+                  value: ch,
+                  child: Text(ch),
+                );
+              }).toList(),
+              onChanged: (val) {
+                if (val != null) setState(() => _selectedChannel = val);
+              },
             ),
           ),
+          const SizedBox(width: 8),
         ],
       ),
       body: productsAsync.when(
-        data: (allProducts) {
-          var filtered = allProducts;
-          if (_searchQuery.isNotEmpty) {
-            final query = _searchQuery.toLowerCase();
-            filtered = filtered.where((p) {
-              final nameMatch = p.name.toLowerCase().contains(query);
-              final barcodeMatch = p.barcode != null && p.barcode!.toLowerCase().contains(query);
-              return nameMatch || barcodeMatch;
-            }).toList();
-          }
+        loading: () => const Center(child: CircularProgressIndicator()),
+        error: (err, _) => Center(
+          child: Text('Gagal memuat produk: $err', style: const TextStyle(color: AppTheme.errorColor)),
+        ),
+        data: (products) {
+          final filtered = products.where((p) {
+            final matchSearch = _searchQuery.isEmpty ||
+                p.name.toLowerCase().contains(_searchQuery.toLowerCase()) ||
+                (p.barcode != null && p.barcode!.contains(_searchQuery));
+            return matchSearch;
+          }).toList();
 
-          if (_selectedCategory != null) {
-            filtered = filtered.where((p) => p.category == _selectedCategory).toList();
-          }
-
-          final categories = allProducts
-              .map((p) => p.category)
-              .whereType<String>()
-              .where((c) => c.isNotEmpty)
-              .toSet()
-              .toList();
-
-          return Column(
+          return Stack(
             children: [
-              // Search & Barcode Scan Bar
-              Padding(
-                padding: const EdgeInsets.fromLTRB(12, 10, 12, 6),
-                child: Row(
-                  children: [
-                    Expanded(
-                      child: TextField(
-                        controller: _searchController,
-                        onChanged: (v) => setState(() => _searchQuery = v),
-                        decoration: InputDecoration(
-                          hintText: 'Cari nama produk / barcode...',
-                          prefixIcon: const Icon(Icons.search, color: AppTheme.textSecondary),
-                          suffixIcon: _searchQuery.isNotEmpty
-                              ? IconButton(
-                                  icon: const Icon(Icons.clear, color: AppTheme.textSecondary),
-                                  onPressed: () {
-                                    _searchController.clear();
-                                    setState(() => _searchQuery = '');
-                                  },
-                                )
-                              : null,
-                          contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-                        ),
+              Column(
+                children: [
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                    child: TextField(
+                      controller: _searchController,
+                      style: const TextStyle(color: AppTheme.textPrimary, fontSize: 14),
+                      onChanged: (v) => setState(() => _searchQuery = v),
+                      decoration: InputDecoration(
+                        hintText: 'Cari produk / barcode...',
+                        prefixIcon: const Icon(Icons.search, color: AppTheme.textSecondary),
+                        suffixIcon: _searchQuery.isNotEmpty
+                            ? IconButton(
+                                icon: const Icon(Icons.clear, color: AppTheme.textSecondary),
+                                onPressed: () {
+                                  _searchController.clear();
+                                  setState(() => _searchQuery = '');
+                                },
+                              )
+                            : null,
                       ),
                     ),
-                    const SizedBox(width: 8),
-                    IconButton.filledTonal(
-                      onPressed: () => _openBarcodeScanner(allProducts),
-                      tooltip: 'Scan Barcode',
-                      icon: const Icon(Icons.qr_code_scanner),
-                    ),
-                  ],
-                ),
-              ),
-
-              // Category Filter Chips
-              if (categories.isNotEmpty)
-                SizedBox(
-                  height: 36,
-                  child: ListView.separated(
-                    scrollDirection: Axis.horizontal,
-                    padding: const EdgeInsets.symmetric(horizontal: 12),
-                    itemCount: categories.length + 1,
-                    separatorBuilder: (_, _) => const SizedBox(width: 8),
-                    itemBuilder: (context, index) {
-                      if (index == 0) {
-                        final isAll = _selectedCategory == null;
-                        return FilterChip(
-                          label: const Text('Semua'),
-                          selected: isAll,
-                          onSelected: (_) => setState(() => _selectedCategory = null),
-                          selectedColor: AppTheme.primaryColor,
-                          labelStyle: TextStyle(
-                            color: isAll ? Colors.white : AppTheme.textPrimary,
-                            fontSize: 12,
-                          ),
-                          visualDensity: VisualDensity.compact,
-                        );
-                      }
-                      final cat = categories[index - 1];
-                      final isSelected = _selectedCategory == cat;
-                      return FilterChip(
-                        label: Text(cat),
-                        selected: isSelected,
-                        onSelected: (_) => setState(() => _selectedCategory = cat),
-                        selectedColor: AppTheme.primaryColor,
-                        labelStyle: TextStyle(
-                          color: isSelected ? Colors.white : AppTheme.textPrimary,
-                          fontSize: 12,
-                        ),
-                        visualDensity: VisualDensity.compact,
-                      );
-                    },
                   ),
-                ),
-
-              const SizedBox(height: 6),
-
-              // Product Grid
-              Expanded(
-                child: ProductGrid(
-                  products: filtered,
-                  onTap: _addToCart,
-                ),
+                  Expanded(
+                    child: ProductGrid(
+                      products: filtered,
+                      onProductTap: _addToCart,
+                    ),
+                  ),
+                ],
               ),
-
-              // Cart Panel
               CartPanel(
                 items: _cart,
                 discountAmount: _discountAmount,
-                onUpdateDiscount: (disc) => setState(() => _discountAmount = disc),
-                onCheckout: _showCheckout,
+                onCheckout: () => _handleCheckout(products),
                 onRemoveItem: _removeItem,
-                onUpdateQty: (entry) => _updateQty(entry, allProducts),
+                onUpdateQty: (entry) => _updateQty(entry, products),
               ),
+              if (_isLoading)
+                Container(
+                  color: Colors.black45,
+                  child: const Center(child: CircularProgressIndicator()),
+                ),
             ],
           );
         },
-        loading: () => const Center(child: CircularProgressIndicator()),
-        error: (err, _) => Center(
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              const Icon(Icons.error_outline, size: 48, color: AppTheme.errorColor),
-              const SizedBox(height: 12),
-              Text('Gagal memuat produk: $err', style: const TextStyle(color: AppTheme.errorColor)),
-              const SizedBox(height: 12),
-              ElevatedButton(
-                onPressed: () => ref.invalidate(productsProvider),
-                child: const Text('Coba Lagi'),
-              ),
-            ],
-          ),
-        ),
-      ),
-      bottomNavigationBar: BottomNavigationBar(
-        currentIndex: 2,
-        onTap: (index) {
-          final routes = ['/owner', '/owner/products', '/owner/pos', '/owner/reports', '/owner/settings'];
-          if (index != 2) context.pushReplacement(routes[index]);
-        },
-        items: const [
-          BottomNavigationBarItem(icon: Icon(Icons.dashboard), label: 'Dashboard'),
-          BottomNavigationBarItem(icon: Icon(Icons.inventory_2), label: 'Produk'),
-          BottomNavigationBarItem(icon: Icon(Icons.point_of_sale), label: 'Kasir'),
-          BottomNavigationBarItem(icon: Icon(Icons.bar_chart), label: 'Laporan'),
-          BottomNavigationBarItem(icon: Icon(Icons.settings), label: 'Atur'),
-        ],
       ),
     );
   }
