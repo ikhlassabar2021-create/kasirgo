@@ -1,16 +1,14 @@
 import 'package:flutter/material.dart';
 import '../../config/app_theme.dart';
 import '../../models/transaction.dart';
-import '../../utils/formatters.dart';
 
-class CartPanel extends StatefulWidget {
+class CartPanel extends StatelessWidget {
   final List<TransactionItem> items;
   final VoidCallback onCheckout;
-  final ValueChanged<int> onRemoveItem;
-  final ValueChanged<MapEntry<String, int>> onUpdateQty;
+  final Function(int index) onRemoveItem;
+  final Function(MapEntry<String, int> entry) onUpdateQty;
   final double discountAmount;
-  final ValueChanged<double>? onUpdateDiscount;
-  final bool readOnly;
+  final VoidCallback? onApplyDiscount;
 
   const CartPanel({
     super.key,
@@ -19,378 +17,227 @@ class CartPanel extends StatefulWidget {
     required this.onRemoveItem,
     required this.onUpdateQty,
     this.discountAmount = 0.0,
-    this.onUpdateDiscount,
-    this.readOnly = false,
+    this.onApplyDiscount,
   });
 
-  @override
-  State<CartPanel> createState() => _CartPanelState();
-}
-
-class _CartPanelState extends State<CartPanel> {
-  bool _isExpanded = false;
-
-  double get _subtotal =>
-      widget.items.fold(0.0, (sum, item) => sum + item.subtotal);
-
-  double get _finalTotal =>
-      (_subtotal - widget.discountAmount).clamp(0.0, double.infinity);
-
-  int get _totalItemCount =>
-      widget.items.fold(0, (sum, item) => sum + item.quantity);
-
-  void _showDiscountDialog() {
-    final controller = TextEditingController(
-      text: widget.discountAmount > 0
-          ? widget.discountAmount.toStringAsFixed(0)
-          : '',
-    );
-
-    showDialog(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        backgroundColor: AppTheme.surfaceColor,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        title: const Row(
-          children: [
-            Icon(Icons.discount_outlined, color: AppTheme.primaryColor),
-            SizedBox(width: 8),
-            Text('Potongan / Diskon', style: TextStyle(fontSize: 16)),
-          ],
-        ),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            TextField(
-              controller: controller,
-              autofocus: true,
-              keyboardType: TextInputType.number,
-              decoration: const InputDecoration(
-                labelText: 'Nominal Diskon (Rp)',
-                prefixIcon: Icon(Icons.money_off),
-              ),
-            ),
-            const SizedBox(height: 12),
-            Wrap(
-              spacing: 8,
-              children: [5000, 10000, 15000, 20000].map((nominal) {
-                return ActionChip(
-                  label: Text(Formatters.currency(nominal.toDouble())),
-                  onPressed: () {
-                    controller.text = nominal.toString();
-                  },
-                );
-              }).toList(),
-            ),
-          ],
-        ),
-        actions: [
-          TextButton(
-            onPressed: () {
-              widget.onUpdateDiscount?.call(0.0);
-              Navigator.pop(ctx);
-            },
-            child: const Text('Hapus Diskon', style: TextStyle(color: AppTheme.errorColor)),
-          ),
-          ElevatedButton(
-            onPressed: () {
-              final val = double.tryParse(controller.text.trim()) ?? 0.0;
-              widget.onUpdateDiscount?.call(val);
-              Navigator.pop(ctx);
-            },
-            child: const Text('Terapkan'),
-          ),
-        ],
-      ),
-    );
-  }
+  double get subtotal => items.fold(0.0, (sum, item) => sum + item.subtotal);
+  double get total => (subtotal - discountAmount).clamp(0.0, double.infinity);
 
   @override
   Widget build(BuildContext context) {
-    if (widget.items.isEmpty) {
-      return Container(
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-        decoration: BoxDecoration(
-          color: AppTheme.surfaceColor,
-          border: Border(
-            top: BorderSide(color: AppTheme.borderColor.withValues(alpha: 0.4)),
-          ),
-        ),
-        child: const SafeArea(
-          top: false,
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Icon(Icons.shopping_cart_outlined, color: AppTheme.textSecondary, size: 20),
-              SizedBox(width: 8),
-              Text(
-                'Keranjang masih kosong. Pilih produk di atas.',
-                style: TextStyle(color: AppTheme.textSecondary, fontSize: 13),
+    return DraggableScrollableSheet(
+      initialChildSize: 0.25,
+      minChildSize: 0.12,
+      maxChildSize: 0.85,
+      builder: (context, scrollController) {
+        return Container(
+          decoration: const BoxDecoration(
+            color: AppTheme.surfaceColor,
+            borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black26,
+                blurRadius: 10,
+                offset: Offset(0, -2),
               ),
             ],
           ),
-        ),
-      );
-    }
-
-    return AnimatedContainer(
-      duration: const Duration(milliseconds: 250),
-      curve: Curves.easeInOut,
-      decoration: BoxDecoration(
-        color: AppTheme.surfaceColor,
-        borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.35),
-            blurRadius: 14,
-            offset: const Offset(0, -3),
-          ),
-        ],
-      ),
-      child: SafeArea(
-        top: false,
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            // Drag handle & toggle header
-            GestureDetector(
-              onTap: () => setState(() => _isExpanded = !_isExpanded),
-              behavior: HitTestBehavior.opaque,
-              child: Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                child: Column(
+          child: Column(
+            children: [
+              Container(
+                margin: const EdgeInsets.symmetric(vertical: 8),
+                height: 4,
+                width: 36,
+                decoration: BoxDecoration(
+                  color: AppTheme.borderColor,
+                  borderRadius: BorderRadius.circular(2),
+                ),
+              ),
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    Container(
-                      width: 40,
-                      height: 4,
-                      decoration: BoxDecoration(
-                        color: AppTheme.textSecondary.withValues(alpha: 0.4),
-                        borderRadius: BorderRadius.circular(2),
+                    Text(
+                      'Keranjang (${items.length})',
+                      style: const TextStyle(
+                        color: AppTheme.textPrimary,
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
                       ),
                     ),
-                    const SizedBox(height: 8),
-                    Row(
-                      children: [
-                        Container(
-                          padding: const EdgeInsets.all(6),
-                          decoration: BoxDecoration(
-                            color: AppTheme.primaryColor.withValues(alpha: 0.15),
-                            shape: BoxShape.circle,
-                          ),
-                          child: const Icon(Icons.shopping_bag, color: AppTheme.primaryColor, size: 18),
-                        ),
-                        const SizedBox(width: 10),
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                'Keranjang ($_totalItemCount item)',
-                                style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold),
-                              ),
-                              Text(
-                                '${widget.items.length} jenis produk',
-                                style: const TextStyle(fontSize: 11, color: AppTheme.textSecondary),
-                              ),
-                            ],
-                          ),
-                        ),
-                        Text(
-                          Formatters.currency(_finalTotal),
-                          style: const TextStyle(
-                            fontSize: 16,
-                            fontWeight: FontWeight.bold,
-                            color: AppTheme.accentColor,
-                          ),
-                        ),
-                        const SizedBox(width: 4),
-                        Icon(
-                          _isExpanded ? Icons.keyboard_arrow_down : Icons.keyboard_arrow_up,
-                          color: AppTheme.textSecondary,
-                        ),
-                      ],
+                    Text(
+                      'Rp ${total.toStringAsFixed(0)}',
+                      style: const TextStyle(
+                        color: AppTheme.primaryColor,
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
+                      ),
                     ),
                   ],
                 ),
               ),
-            ),
-
-            // Expanded Item List
-            if (_isExpanded)
-              ConstrainedBox(
-                constraints: const BoxConstraints(maxHeight: 220),
-                child: ListView.separated(
-                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
-                  shrinkWrap: true,
-                  itemCount: widget.items.length,
-                  separatorBuilder: (context, index) => const Divider(height: 1, color: AppTheme.borderColor),
-                  itemBuilder: (context, index) {
-                    final item = widget.items[index];
-                    return Padding(
-                      padding: const EdgeInsets.symmetric(vertical: 8),
-                      child: Row(
-                        children: [
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
+              const Divider(color: AppTheme.borderColor, height: 1),
+              Expanded(
+                child: items.isEmpty
+                    ? const Center(
+                        child: Text(
+                          'Keranjang masih kosong',
+                          style: TextStyle(color: AppTheme.textSecondary),
+                        ),
+                      )
+                    : ListView.separated(
+                        controller: scrollController,
+                        padding: const EdgeInsets.all(12),
+                        itemCount: items.length,
+                        separatorBuilder: (_, __) => const Divider(color: AppTheme.borderColor, height: 1),
+                        itemBuilder: (context, index) {
+                          final item = items[index];
+                          return Padding(
+                            padding: const EdgeInsets.symmetric(vertical: 6),
+                            child: Row(
                               children: [
-                                Text(
-                                  item.productName,
-                                  style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600),
-                                  maxLines: 1,
-                                  overflow: TextOverflow.ellipsis,
+                                Expanded(
+                                  child: Column(
+                                    crossAxisAlignment: CrossAxisCrossAxisAlignment.start,
+                                    children: [
+                                      Text(
+                                        item.productName,
+                                        style: const TextStyle(
+                                          color: AppTheme.textPrimary,
+                                          fontWeight: FontWeight.w600,
+                                          fontSize: 13,
+                                        ),
+                                        maxLines: 1,
+                                        overflow: TextOverflow.ellipsis,
+                                      ),
+                                      const SizedBox(height: 2),
+                                      Text(
+                                        'Rp ${item.price.toStringAsFixed(0)}',
+                                        style: const TextStyle(
+                                          color: AppTheme.textSecondary,
+                                          fontSize: 11,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
                                 ),
-                                const SizedBox(height: 2),
-                                Text(
-                                  '${Formatters.currency(item.price)} x ${item.quantity}',
-                                  style: const TextStyle(fontSize: 11, color: AppTheme.textSecondary),
+                                Row(
+                                  children: [
+                                    IconButton(
+                                      icon: const Icon(Icons.remove_circle_outline, size: 20, color: AppTheme.textSecondary),
+                                      onPressed: () {
+                                        if (item.quantity > 1) {
+                                          onUpdateQty(MapEntry(item.productId, item.quantity - 1));
+                                        } else {
+                                          onRemoveItem(index);
+                                        }
+                                      },
+                                    ),
+                                    Text(
+                                      '${item.quantity}',
+                                      style: const TextStyle(
+                                        color: AppTheme.textPrimary,
+                                        fontWeight: FontWeight.bold,
+                                        fontSize: 13,
+                                      ),
+                                    ),
+                                    IconButton(
+                                      icon: const Icon(Icons.add_circle_outline, size: 20, color: AppTheme.primaryColor),
+                                      onPressed: () {
+                                        onUpdateQty(MapEntry(item.productId, item.quantity + 1));
+                                      },
+                                    ),
+                                  ],
+                                ),
+                                SizedBox(
+                                  width: 75,
+                                  child: Text(
+                                    'Rp ${item.subtotal.toStringAsFixed(0)}',
+                                    textAlign: TextAlign.end,
+                                    style: const TextStyle(
+                                      color: AppTheme.textPrimary,
+                                      fontWeight: FontWeight.bold,
+                                      fontSize: 12,
+                                    ),
+                                  ),
                                 ),
                               ],
                             ),
-                          ),
-                          Text(
-                            Formatters.currency(item.subtotal),
-                            style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold),
-                          ),
-                          if (!widget.readOnly) ...[
-                            const SizedBox(width: 8),
-                            InkWell(
-                              onTap: () {
-                                if (item.quantity > 1) {
-                                  widget.onUpdateQty(MapEntry(item.productId, item.quantity - 1));
-                                } else {
-                                  widget.onRemoveItem(index);
-                                }
-                              },
-                              borderRadius: BorderRadius.circular(20),
-                              child: Container(
-                                padding: const EdgeInsets.all(4),
-                                decoration: BoxDecoration(
-                                  color: AppTheme.surfaceColor,
-                                  shape: BoxShape.circle,
-                                  border: Border.all(color: AppTheme.borderColor),
-                                ),
-                                child: const Icon(Icons.remove, size: 14, color: AppTheme.errorColor),
-                              ),
-                            ),
-                            Padding(
-                              padding: const EdgeInsets.symmetric(horizontal: 8),
-                              child: Text(
-                                '${item.quantity}',
-                                style: const TextStyle(fontSize: 13, fontWeight: FontWeight.bold),
-                              ),
-                            ),
-                            InkWell(
-                              onTap: () {
-                                widget.onUpdateQty(MapEntry(item.productId, item.quantity + 1));
-                              },
-                              borderRadius: BorderRadius.circular(20),
-                              child: Container(
-                                padding: const EdgeInsets.all(4),
-                                decoration: BoxDecoration(
-                                  color: AppTheme.primaryColor.withValues(alpha: 0.2),
-                                  shape: BoxShape.circle,
-                                ),
-                                child: const Icon(Icons.add, size: 14, color: AppTheme.primaryColor),
-                              ),
-                            ),
-                          ],
-                        ],
+                          );
+                        },
                       ),
-                    );
-                  },
-                ),
               ),
-
-            // Calculation Breakdown & Actions
-            Padding(
-              padding: const EdgeInsets.fromLTRB(16, 4, 16, 12),
-              child: Column(
-                children: [
-                  if (_isExpanded) ...[
-                    const Divider(color: AppTheme.borderColor),
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        const Text('Subtotal', style: TextStyle(fontSize: 12, color: AppTheme.textSecondary)),
-                        Text(Formatters.currency(_subtotal), style: const TextStyle(fontSize: 12)),
-                      ],
-                    ),
-                    const SizedBox(height: 4),
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        InkWell(
-                          onTap: widget.readOnly ? null : _showDiscountDialog,
+              Container(
+                padding: const EdgeInsets.all(12),
+                decoration: const BoxDecoration(
+                  color: AppTheme.surfaceColor,
+                  border: Border(top: BorderSide(color: AppTheme.borderColor)),
+                ),
+                child: SafeArea(
+                  top: false,
+                  child: Column(
+                    children: [
+                      if (discountAmount > 0)
+                        Padding(
+                          padding: const EdgeInsets.only(bottom: 6),
                           child: Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
                             children: [
-                              const Icon(Icons.discount, size: 14, color: AppTheme.primaryColor),
-                              const SizedBox(width: 4),
-                              Text(
-                                widget.discountAmount > 0 ? 'Diskon (Ubah)' : '+ Tambah Diskon',
-                                style: const TextStyle(
-                                  fontSize: 12,
-                                  color: AppTheme.primaryColor,
-                                  fontWeight: FontWeight.w600,
-                                ),
-                              ),
+                              const Text('Diskon', style: TextStyle(color: AppTheme.errorColor, fontSize: 12)),
+                              Text('- Rp ${discountAmount.toStringAsFixed(0)}',
+                                  style: const TextStyle(color: AppTheme.errorColor, fontSize: 12)),
                             ],
                           ),
                         ),
-                        if (widget.discountAmount > 0)
-                          Text(
-                            '-${Formatters.currency(widget.discountAmount)}',
-                            style: const TextStyle(fontSize: 12, color: AppTheme.errorColor, fontWeight: FontWeight.bold),
-                          )
-                        else
-                          const Text('Rp0', style: TextStyle(fontSize: 12, color: AppTheme.textSecondary)),
-                      ],
-                    ),
-                    const SizedBox(height: 8),
-                  ],
-                  Row(
-                    children: [
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            const Text('Total Bayar', style: TextStyle(fontSize: 11, color: AppTheme.textSecondary)),
-                            Text(
-                              Formatters.currency(_finalTotal),
-                              style: const TextStyle(
-                                fontSize: 18,
-                                fontWeight: FontWeight.bold,
-                                color: AppTheme.accentColor,
-                              ),
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          const Text(
+                            'Total',
+                            style: TextStyle(
+                              color: AppTheme.textPrimary,
+                              fontWeight: FontWeight.bold,
+                              fontSize: 14,
                             ),
-                          ],
-                        ),
+                          ),
+                          Text(
+                            'Rp ${total.toStringAsFixed(0)}',
+                            style: const TextStyle(
+                              color: AppTheme.accentColor,
+                              fontWeight: FontWeight.bold,
+                              fontSize: 16,
+                            ),
+                          ),
+                        ],
                       ),
-                      const SizedBox(width: 12),
-                      ElevatedButton(
-                        onPressed: widget.onCheckout,
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: AppTheme.successColor,
-                          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
-                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                        ),
-                        child: const Row(
-                          children: [
-                            Icon(Icons.payment, size: 18),
-                            SizedBox(width: 8),
-                            Text('Bayar', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15)),
-                          ],
+                      const SizedBox(height: 10),
+                      SizedBox(
+                        width: double.infinity,
+                        height: 44,
+                        child: ElevatedButton(
+                          onPressed: items.isEmpty ? null : onCheckout,
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: AppTheme.primaryColor,
+                            foregroundColor: Colors.white,
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                          ),
+                          child: const Text(
+                            'Checkout',
+                            style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
+                          ),
                         ),
                       ),
                     ],
                   ),
-                ],
+                ),
               ),
-            ),
-          ],
-        ),
-      ),
+            ],
+          ),
+        );
+      },
     );
   }
 }
