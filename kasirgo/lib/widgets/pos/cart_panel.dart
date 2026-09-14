@@ -90,7 +90,7 @@ class CartPanel extends StatelessWidget {
                         controller: scrollController,
                         padding: const EdgeInsets.all(12),
                         itemCount: items.length,
-                        separatorBuilder: (_, __) => const Divider(color: AppTheme.borderColor, height: 1),
+                        separatorBuilder: (context, index) => const Divider(color: AppTheme.borderColor, height: 1),
                         itemBuilder: (context, index) {
                           final item = items[index];
                           return Padding(
@@ -99,7 +99,7 @@ class CartPanel extends StatelessWidget {
                               children: [
                                 Expanded(
                                   child: Column(
-                                    crossAxisAlignment: CrossAxisCrossAxisAlignment.start,
+                                    crossAxisAlignment: CrossAxisAlignment.start,
                                     children: [
                                       Text(
                                         item.productName,

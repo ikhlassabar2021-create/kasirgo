@@ -51,14 +51,14 @@ class ProductGrid extends StatelessWidget {
               ),
             ),
             child: Column(
-              crossAxisAlignment: CrossAxisCrossAxisAlignment.start,
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Expanded(
                   child: ClipRRect(
                     borderRadius: const BorderRadius.vertical(top: Radius.circular(9)),
                     child: Container(
                       width: double.infinity,
-                      color: AppTheme.cardColor,
+                      color: AppTheme.surfaceColor,
                       child: _buildImage(product.imageLocalPath),
                     ),
                   ),
@@ -66,7 +66,7 @@ class ProductGrid extends StatelessWidget {
                 Padding(
                   padding: const EdgeInsets.all(6),
                   child: Column(
-                    crossAxisAlignment: CrossAxisCrossAxisAlignment.start,
+                    crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
                         product.name,
@@ -112,7 +112,7 @@ class ProductGrid extends StatelessWidget {
         return Image.network(
           path,
           fit: BoxFit.cover,
-          errorBuilder: (_, __, ___) => const Icon(Icons.inventory_2, color: AppTheme.textSecondary, size: 24),
+          errorBuilder: (context, error, stackTrace) => const Icon(Icons.inventory_2, color: AppTheme.textSecondary, size: 24),
         );
       }
       final file = File(path);
@@ -120,7 +120,7 @@ class ProductGrid extends StatelessWidget {
         return Image.file(
           file,
           fit: BoxFit.cover,
-          errorBuilder: (_, __, ___) => const Icon(Icons.inventory_2, color: AppTheme.textSecondary, size: 24),
+          errorBuilder: (context, error, stackTrace) => const Icon(Icons.inventory_2, color: AppTheme.textSecondary, size: 24),
         );
       }
     }
