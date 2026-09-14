@@ -6,6 +6,7 @@ import '../../config/app_theme.dart';
 import '../../providers/auth_provider.dart';
 import '../../services/supabase_service.dart';
 import '../../utils/formatters.dart';
+import '../../utils/ai_engine.dart';
 import '../../widgets/common/app_drawer.dart';
 
 final homeSummaryProvider = FutureProvider<Map<String, dynamic>>((ref) async {
@@ -24,11 +25,24 @@ final homeSummaryProvider = FutureProvider<Map<String, dynamic>>((ref) async {
   final todaySales = todayFiltered.fold<double>(0, (sum, t) => sum + t.finalAmount);
   final todayCount = todayFiltered.length;
 
+  final ai = AIEngine();
+  final lowStockProducts = products.where((p) => p.stock > 0 && p.stock <= 10).toList();
+  final lowMarginProducts = products.where((p) {
+    final m = ai.checkMargin(p);
+    return m['isLowMargin'] == true && p.costPrice != null && p.costPrice! > 0;
+  }).toList();
+  final flashSale = ai.suggestFlashSale(products);
+
   return {
     'todaySales': todaySales,
     'todayTransactions': todayCount,
     'products': products.length,
     'customers': customers.length,
+    'lowStockProducts': lowStockProducts,
+    'lowMarginProducts': lowMarginProducts,
+    'flashSaleProducts': flashSale,
+    'allTransactions': todayTransactions,
+    'allProducts': products,
   };
 });
 
@@ -199,6 +213,63 @@ class OwnerHomeScreen extends ConsumerWidget {
                 ),
               ),
             ),
+            const SizedBox(height: 24),
+            const Text(
+              'AI Co-Pilot',
+              style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
+            ),
+            const SizedBox(height: 12),
+            summaryAsync.when(
+              loading: () => const SizedBox.shrink(),
+              error: (_, _) => const SizedBox.shrink(),
+              data: (summary) {
+                final lowStock = summary['lowStockProducts'] as List? ?? [];
+                final lowMargin = summary['lowMarginProducts'] as List? ?? [];
+                final flashSale = summary['flashSaleProducts'] as List? ?? [];
+                if (lowStock.isEmpty && lowMargin.isEmpty && flashSale.isEmpty) {
+                  return Container(
+                    padding: const EdgeInsets.all(16),
+                    decoration: BoxDecoration(
+                      color: AppTheme.surfaceColor.withValues(alpha: 0.8),
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(color: AppTheme.borderColor.withValues(alpha: 0.5)),
+                    ),
+                    child: const Row(
+                      children: [
+                        Icon(Icons.check_circle, color: AppTheme.successColor),
+                        SizedBox(width: 12),
+                        Expanded(child: Text('Semua aman! Tidak ada alert dari AI Co-Pilot.', style: TextStyle(color: AppTheme.textSecondary, fontSize: 13))),
+                      ],
+                    ),
+                  );
+                }
+                return Column(
+                  children: [
+                    if (lowStock.isNotEmpty)
+                      _AICard(
+                        icon: Icons.warning_amber_rounded,
+                        color: AppTheme.errorColor,
+                        title: 'Stok Menipis (${lowStock.length} produk)',
+                        body: lowStock.take(3).map((p) => '${p.name}: ${p.stock} ${p.unit ?? "pcs"}').join('\n'),
+                      ),
+                    if (lowMargin.isNotEmpty)
+                      _AICard(
+                        icon: Icons.trending_down,
+                        color: Colors.orange,
+                        title: 'Margin Rendah (${lowMargin.length} produk)',
+                        body: lowMargin.take(3).map((p) => p.name as String).join(', '),
+                      ),
+                    if (flashSale.isNotEmpty)
+                      _AICard(
+                        icon: Icons.flash_on,
+                        color: AppTheme.accentColor,
+                        title: 'Saran Flash Sale (${flashSale.length} produk)',
+                        body: flashSale.take(3).map((p) => p.name as String).join(', '),
+                      ),
+                  ],
+                );
+              },
+            ),
           ],
         ),
       ),
@@ -279,6 +350,50 @@ class _SummaryCard extends StatelessWidget {
               fontSize: 20,
               fontWeight: FontWeight.bold,
               color: color,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _AICard extends StatelessWidget {
+  final IconData icon;
+  final Color color;
+  final String title;
+  final String body;
+
+  const _AICard({
+    required this.icon,
+    required this.color,
+    required this.title,
+    required this.body,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      margin: const EdgeInsets.only(bottom: 10),
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: AppTheme.surfaceColor.withValues(alpha: 0.8),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: color.withValues(alpha: 0.4)),
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Icon(icon, color: color, size: 22),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(title, style: TextStyle(color: color, fontWeight: FontWeight.bold, fontSize: 13)),
+                const SizedBox(height: 4),
+                Text(body, style: const TextStyle(color: AppTheme.textSecondary, fontSize: 12)),
+              ],
             ),
           ),
         ],

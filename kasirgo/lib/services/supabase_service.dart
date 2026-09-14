@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../models/product.dart';
 import '../models/transaction.dart';
@@ -107,6 +108,7 @@ class SupabaseService {
 
       return Product.fromJson(response);
     } catch (e) {
+      debugPrint('createProduct error: $e');
       return null;
     }
   }
@@ -122,6 +124,7 @@ class SupabaseService {
 
       return Product.fromJson(response);
     } catch (e) {
+      debugPrint('updateProduct error: $e');
       return null;
     }
   }

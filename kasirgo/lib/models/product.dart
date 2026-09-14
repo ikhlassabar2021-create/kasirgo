@@ -79,7 +79,6 @@ class Product {
       'expired_date': expiredDate?.toIso8601String().split('T').first,
       'image_local_path': imageLocalPath ?? '',
       'thumb_key': thumbKey,
-      'is_active': isActive,
     };
     if (includeId && id.isNotEmpty) {
       data['id'] = id;
