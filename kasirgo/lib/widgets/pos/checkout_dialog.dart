@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:qr_flutter/qr_flutter.dart';
 import '../../config/app_theme.dart';
 import '../../models/transaction.dart';
 
@@ -51,15 +50,10 @@ class _CheckoutDialogState extends State<CheckoutDialog> {
   double get _change => (_cashPaid - widget.totalAmount).clamp(0.0, double.infinity);
 
   @override
-  void initStateExisting() {
-    _cashController.text = widget.totalAmount.toStringAsFixed(0);
-    _qrisAmountController.text = widget.totalAmount.toStringAsFixed(0);
-  }
-
-  @override
   void initState() {
     super.initState();
-    initStateExisting();
+    _cashController.text = widget.totalAmount.toStringAsFixed(0);
+    _qrisAmountController.text = widget.totalAmount.toStringAsFixed(0);
   }
 
   @override
@@ -174,33 +168,9 @@ class _CheckoutDialogState extends State<CheckoutDialog> {
                 ),
               ),
               const SizedBox(height: 8),
-              RadioListTile<String>(
-                value: 'cash',
-                groupValue: _paymentMethod,
-                dense: true,
-                contentPadding: EdgeInsets.zero,
-                activeColor: AppTheme.primaryColor,
-                title: const Text('Tunai (Cash)', style: TextStyle(color: AppTheme.textPrimary, fontSize: 14)),
-                onChanged: (val) => setState(() => _paymentMethod = val!),
-              ),
-              RadioListTile<String>(
-                value: 'qris',
-                groupValue: _paymentMethod,
-                dense: true,
-                contentPadding: EdgeInsets.zero,
-                activeColor: AppTheme.primaryColor,
-                title: const Text('QRIS Manual', style: TextStyle(color: AppTheme.textPrimary, fontSize: 14)),
-                onChanged: (val) => setState(() => _paymentMethod = val!),
-              ),
-              RadioListTile<String>(
-                value: 'bank_transfer',
-                groupValue: _paymentMethod,
-                dense: true,
-                contentPadding: EdgeInsets.zero,
-                activeColor: AppTheme.primaryColor,
-                title: const Text('Transfer Bank', style: TextStyle(color: AppTheme.textPrimary, fontSize: 14)),
-                onChanged: (val) => setState(() => _paymentMethod = val!),
-              ),
+              _buildPaymentOption('cash', 'Tunai (Cash)', Icons.money),
+              _buildPaymentOption('qris', 'QRIS Manual', Icons.qr_code_2),
+              _buildPaymentOption('bank_transfer', 'Transfer Bank', Icons.account_balance),
               const Divider(color: AppTheme.borderColor, height: 24),
               if (_paymentMethod == 'cash') _buildCashSection(),
               if (_paymentMethod == 'qris') _buildQrisSection(),
@@ -240,6 +210,47 @@ class _CheckoutDialogState extends State<CheckoutDialog> {
     );
   }
 
+  Widget _buildPaymentOption(String value, String label, IconData icon) {
+    final isSelected = _paymentMethod == value;
+    return InkWell(
+      onTap: () => setState(() => _paymentMethod = value),
+      borderRadius: BorderRadius.circular(8),
+      child: Container(
+        margin: const EdgeInsets.symmetric(vertical: 4),
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+        decoration: BoxDecoration(
+          color: isSelected ? AppTheme.primaryColor.withValues(alpha: 0.15) : Colors.transparent,
+          borderRadius: BorderRadius.circular(8),
+          border: Border.all(
+            color: isSelected ? AppTheme.primaryColor : AppTheme.borderColor,
+          ),
+        ),
+        child: Row(
+          children: [
+            Icon(
+              icon,
+              size: 20,
+              color: isSelected ? AppTheme.primaryColor : AppTheme.textSecondary,
+            ),
+            const SizedBox(width: 10),
+            Expanded(
+              child: Text(
+                label,
+                style: TextStyle(
+                  color: isSelected ? AppTheme.primaryColor : AppTheme.textPrimary,
+                  fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+                  fontSize: 14,
+                ),
+              ),
+            ),
+            if (isSelected)
+              const Icon(Icons.check_circle, size: 18, color: AppTheme.primaryColor),
+          ],
+        ),
+      ),
+    );
+  }
+
   Widget _buildCashSection() {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -253,7 +264,7 @@ class _CheckoutDialogState extends State<CheckoutDialog> {
           controller: _cashController,
           keyboardType: TextInputType.number,
           inputFormatters: [FilteringTextInputFormatter.digitsOnly],
-          onChanged: (_) => setState(() {}),
+          onChanged: (text) => setState(() {}),
           style: const TextStyle(color: AppTheme.textPrimary, fontSize: 16, fontWeight: FontWeight.bold),
           decoration: const InputDecoration(
             prefixText: 'Rp ',
@@ -313,15 +324,35 @@ class _CheckoutDialogState extends State<CheckoutDialog> {
       children: [
         Center(
           child: Container(
-            padding: const EdgeInsets.all(12),
+            padding: const EdgeInsets.all(16),
             decoration: BoxDecoration(
               color: Colors.white,
               borderRadius: BorderRadius.circular(12),
             ),
-            child: QrImageView(
-              data: '00020101021126610014ID.LINKAJA.WWW01189360091100223788775204549953033605802ID5911KASIRGO POS6007JAKARTA6304',
-              version: QrVersions.auto,
-              size: 150,
+            child: Column(
+              children: [
+                const Icon(
+                  Icons.qr_code_2,
+                  size: 140,
+                  color: Colors.black,
+                ),
+                const SizedBox(height: 6),
+                const Text(
+                  'QRIS STANDAR PEMBAYARAN NASIONAL',
+                  style: TextStyle(
+                    color: Colors.black54,
+                    fontSize: 8,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+                Text(
+                  'NMID: ID1020038847291',
+                  style: TextStyle(
+                    color: Colors.grey.shade600,
+                    fontSize: 8,
+                  ),
+                ),
+              ],
             ),
           ),
         ),
