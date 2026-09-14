@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'config/app_theme.dart';
+import 'models/product.dart';
 import 'screens/auth/login_screen.dart';
 import 'screens/auth/register_screen.dart';
 import 'screens/owner/owner_home_screen.dart';
@@ -42,7 +43,7 @@ final _router = GoRouter(
     ),
     GoRoute(
       path: '/owner/products/add',
-      builder: (context, state) => const ProductFormScreen(),
+      builder: (context, state) => ProductFormScreen(product: state.extra as Product?),
     ),
     GoRoute(
       path: '/owner/pos',

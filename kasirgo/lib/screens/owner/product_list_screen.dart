@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../config/app_theme.dart';
+import '../../config/constants.dart';
 import '../../models/product.dart';
 import '../../providers/auth_provider.dart';
 import '../../services/supabase_service.dart';
@@ -410,11 +411,41 @@ class _ProductListScreenState extends ConsumerState<ProductListScreen> {
           );
         },
       ),
-      floatingActionButton: FloatingActionButton.extended(
-        onPressed: () => context.push('/owner/products/add'),
-        backgroundColor: AppTheme.primaryColor,
-        icon: const Icon(Icons.add),
-        label: const Text('Tambah'),
+      floatingActionButton: productsAsync.when(
+        data: (products) {
+          final isLimitReached = products.length >= AppConstants.freeTierMaxProducts;
+          return FloatingActionButton.extended(
+            onPressed: () {
+              if (isLimitReached) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(
+                    content: Text(
+                      'Batas paket gratis (500 produk) tercapai. Silakan upgrade paket.',
+                    ),
+                    backgroundColor: AppTheme.errorColor,
+                  ),
+                );
+                return;
+              }
+              context.push('/owner/products/add');
+            },
+            backgroundColor: isLimitReached ? Colors.grey : AppTheme.primaryColor,
+            icon: const Icon(Icons.add),
+            label: const Text('Tambah'),
+          );
+        },
+        loading: () => FloatingActionButton.extended(
+          onPressed: () => context.push('/owner/products/add'),
+          backgroundColor: AppTheme.primaryColor,
+          icon: const Icon(Icons.add),
+          label: const Text('Tambah'),
+        ),
+        error: (err, stack) => FloatingActionButton.extended(
+          onPressed: () => context.push('/owner/products/add'),
+          backgroundColor: AppTheme.primaryColor,
+          icon: const Icon(Icons.add),
+          label: const Text('Tambah'),
+        ),
       ),
       bottomNavigationBar: _buildBottomNav(context),
     );
