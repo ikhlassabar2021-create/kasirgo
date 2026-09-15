@@ -149,12 +149,21 @@ class SupabaseService {
     }
   }
 
-  Future<List<Transaction>> getTransactions(String outletId, {int limit = 50}) async {
+  Future<List<Transaction>> getTransactions(String outletId, {int limit = 50, DateTime? startDate, DateTime? endDate}) async {
     try {
-      final response = await _client
+      var query = _client
           .from('transactions')
           .select()
-          .eq('outlet_id', outletId)
+          .eq('outlet_id', outletId);
+
+      if (startDate != null) {
+        query = query.gte('created_at', startDate.toIso8601String());
+      }
+      if (endDate != null) {
+        query = query.lte('created_at', endDate.toIso8601String());
+      }
+
+      final response = await query
           .order('created_at', ascending: false)
           .limit(limit);
 
