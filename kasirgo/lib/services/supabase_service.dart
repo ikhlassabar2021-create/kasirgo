@@ -461,6 +461,28 @@ class SupabaseService {
     }
   }
 
+  Future<bool> updateEmployeeRole(String employeeId, String newRole, {String? userId, String? outletId}) async {
+    try {
+      await _client
+          .from('employees')
+          .update({'role': newRole, 'updated_at': DateTime.now().toIso8601String()})
+          .eq('id', employeeId);
+
+      if (userId != null && userId.isNotEmpty && outletId != null && outletId.isNotEmpty) {
+        await _client
+            .from('user_roles')
+            .upsert({
+              'user_id': userId,
+              'outlet_id': outletId,
+              'role': newRole,
+            });
+      }
+      return true;
+    } catch (e) {
+      return false;
+    }
+  }
+
   Future<bool> deleteEmployee(String id) async {
     try {
       await _client.from('employees').delete().eq('id', id);
