@@ -66,6 +66,7 @@ class Transaction {
   final String? paymentStatus;
   final String? notes;
   final bool isSynced;
+  final String channel;
   final DateTime createdAt;
 
   const Transaction({
@@ -82,6 +83,7 @@ class Transaction {
     this.paymentStatus,
     this.notes,
     this.isSynced = false,
+    this.channel = 'offline',
     required this.createdAt,
   });
 
@@ -114,6 +116,7 @@ class Transaction {
       paymentStatus: json['payment_status'],
       notes: json['notes'],
       isSynced: json['is_synced'] == true || json['is_synced'] == 1,
+      channel: json['channel']?.toString() ?? 'offline',
       createdAt: json['created_at'] != null
           ? DateTime.parse(json['created_at'])
           : DateTime.now(),
@@ -121,22 +124,22 @@ class Transaction {
   }
 
   Map<String, dynamic> toJson() {
-    return {
-      'id': id,
+    final data = <String, dynamic>{
       'outlet_id': outletId,
-      'cashier_id': cashierId,
+      'user_id': cashierId,
       'customer_id': customerId,
-      'items': jsonEncode(items.map((i) => i.toJson()).toList()),
-      'total_amount': totalAmount,
-      'discount_amount': discountAmount,
-      'tax_amount': taxAmount,
-      'final_amount': finalAmount,
+      'channel': channel,
       'payment_method': paymentMethod,
-      'payment_status': paymentStatus,
-      'notes': notes,
-      'is_synced': isSynced,
+      'total_amount': totalAmount,
+      'total_discount': discountAmount ?? 0,
+      'final_amount': finalAmount,
+      'status': paymentStatus == 'voided' ? 'voided' : 'completed',
       'created_at': createdAt.toIso8601String(),
     };
+    if (id.isNotEmpty) {
+      data['id'] = id;
+    }
+    return data;
   }
 
   Map<String, dynamic> toMap() {
@@ -154,6 +157,7 @@ class Transaction {
       'payment_status': paymentStatus,
       'notes': notes,
       'is_synced': isSynced ? 1 : 0,
+      'channel': channel,
       'created_at': createdAt.toIso8601String(),
     };
   }
@@ -183,6 +187,7 @@ class Transaction {
       paymentStatus: map['payment_status'],
       notes: map['notes'],
       isSynced: map['is_synced'] == 1 || map['is_synced'] == true,
+      channel: map['channel']?.toString() ?? 'offline',
       createdAt: map['created_at'] != null
           ? DateTime.parse(map['created_at'])
           : DateTime.now(),
@@ -203,6 +208,7 @@ class Transaction {
     String? paymentStatus,
     String? notes,
     bool? isSynced,
+    String? channel,
     DateTime? createdAt,
   }) {
     return Transaction(
@@ -219,6 +225,7 @@ class Transaction {
       paymentStatus: paymentStatus ?? this.paymentStatus,
       notes: notes ?? this.notes,
       isSynced: isSynced ?? this.isSynced,
+      channel: channel ?? this.channel,
       createdAt: createdAt ?? this.createdAt,
     );
   }

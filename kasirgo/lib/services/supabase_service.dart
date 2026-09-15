@@ -15,7 +15,6 @@ class SupabaseService {
           .from('products')
           .select()
           .eq('outlet_id', outletId)
-          .eq('is_active', true)
           .order('name');
 
       return (response as List)
@@ -48,7 +47,6 @@ class SupabaseService {
           .select()
           .eq('outlet_id', outletId)
           .eq('barcode', barcode)
-          .eq('is_active', true)
           .maybeSingle();
 
       if (response == null) return null;
@@ -64,7 +62,6 @@ class SupabaseService {
           .from('products')
           .select()
           .eq('outlet_id', outletId)
-          .eq('is_active', true)
           .ilike('name', '%$query%')
           .order('name');
 
@@ -82,7 +79,6 @@ class SupabaseService {
           .from('products')
           .select('category')
           .eq('outlet_id', outletId)
-          .eq('is_active', true)
           .not('category', 'is', null);
 
       final categories = (response as List)
@@ -146,10 +142,7 @@ class SupabaseService {
 
   Future<bool> deleteProduct(String id) async {
     try {
-      await _client.from('products').update({
-        'is_active': false,
-        'updated_at': DateTime.now().toIso8601String(),
-      }).eq('id', id);
+      await _client.from('products').delete().eq('id', id);
       return true;
     } catch (e) {
       return false;
@@ -196,8 +189,30 @@ class SupabaseService {
           .select()
           .single();
 
-      return Transaction.fromJson(response);
+      final created = Transaction.fromJson(response);
+
+      if (transaction.items.isNotEmpty && created.id.isNotEmpty) {
+        final itemRows = transaction.items
+            .where((item) => item.productId.isNotEmpty)
+            .map((item) => <String, dynamic>{
+                  'transaction_id': created.id,
+                  'product_id': item.productId,
+                  'product_name': item.productName,
+                  'quantity': item.quantity,
+                  'unit_price': item.price,
+                  'discount': 0,
+                  'subtotal': item.subtotal,
+                })
+            .toList();
+
+        if (itemRows.isNotEmpty) {
+          await _client.from('transaction_items').insert(itemRows);
+        }
+      }
+
+      return created;
     } catch (e) {
+      debugPrint('createTransaction error: $e');
       return null;
     }
   }

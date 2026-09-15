@@ -127,11 +127,20 @@ Status: SELESAI. Auth flow, role routing, offline engine, dan APK sudah berjalan
 - Akun test (password semua `TestFix123!`): owner `fresh1789288641@testakhir.test`, admin `admin1789291743@kasirgo.test`, cashier `kasir1789291743@kasirgo.test`.
 - Sisa untuk Phase 3: mapping kolom saat sync transaksi ke Supabase (`transactions.items` belum ada kolomnya; POS & transaction_items ditangani Phase 3).
 
+## Handoff Phase 3 (TERVERIFIKASI)
+Status: SELESAI. Produk + POS + QRIS + AI Co-Pilot sudah terpasang, terintegrasi live DB, dan diuji.
+
+- Produk: CRUD produk terhubung langsung ke Supabase (`products`), support image lokal & web fallback, search & category filter, validasi stok.
+- POS: Grid produk responsif, indikator badge jumlah di cart, bottom cart panel, multi-channel (in-store, WhatsApp, Tokopedia, Shopee), batasan stok maksimum.
+- Checkout & QRIS: Dukung 3 metode pembayaran (Tunai/Cash dengan hitung kembalian instan, QRIS manual statis merchant, Transfer Bank).
+- Database Trigger: Insert transaksi & `transaction_items` otomatis memicu DB trigger `decrement_stock` di Supabase.
+- AI Co-Pilot: Engine lokal (`ai_engine.dart`) menghitung stok menipis, analisis margin rendah, saran flash sale, dan ringkasan dashboard owner.
+
 ## Progress Tracker
 - [x] Phase 0: Design docs + PRD + workflow
 - [x] Phase 1: Supabase DB + Auth
 - [x] Phase 2: Flutter app shell + auth + offline engine
-- [ ] Phase 3: Produk + POS + QRIS + AI Co-Pilot
+- [x] Phase 3: Produk + POS + QRIS + AI Co-Pilot
 - [ ] Phase 4: Laporan + pelanggan + karyawan
 - [ ] Phase 5: Premium features + subscription gate
 - [ ] Phase 6: WhatsApp + social commerce + QR meja + health score

@@ -26,9 +26,11 @@ class CartPanel extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return DraggableScrollableSheet(
-      initialChildSize: 0.25,
-      minChildSize: 0.12,
-      maxChildSize: 0.85,
+      initialChildSize: 0.32,
+      minChildSize: 0.20,
+      maxChildSize: 0.88,
+      snap: true,
+      snapSizes: const [0.20, 0.50, 0.88],
       builder: (context, scrollController) {
         return Container(
           decoration: const BoxDecoration(
@@ -169,7 +171,7 @@ class CartPanel extends StatelessWidget {
                       ),
               ),
               Container(
-                padding: const EdgeInsets.all(12),
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                 decoration: const BoxDecoration(
                   color: AppTheme.surfaceColor,
                   border: Border(top: BorderSide(color: AppTheme.borderColor)),
@@ -177,10 +179,11 @@ class CartPanel extends StatelessWidget {
                 child: SafeArea(
                   top: false,
                   child: Column(
+                    mainAxisSize: MainAxisSize.min,
                     children: [
                       if (discountAmount > 0)
                         Padding(
-                          padding: const EdgeInsets.only(bottom: 6),
+                          padding: const EdgeInsets.only(bottom: 4),
                           child: Row(
                             mainAxisAlignment: MainAxisAlignment.spaceBetween,
                             children: [
@@ -206,15 +209,15 @@ class CartPanel extends StatelessWidget {
                             style: const TextStyle(
                               color: AppTheme.accentColor,
                               fontWeight: FontWeight.bold,
-                              fontSize: 16,
+                              fontSize: 15,
                             ),
                           ),
                         ],
                       ),
-                      const SizedBox(height: 10),
+                      const SizedBox(height: 6),
                       SizedBox(
                         width: double.infinity,
-                        height: 44,
+                        height: 40,
                         child: ElevatedButton(
                           onPressed: items.isEmpty ? null : onCheckout,
                           style: ElevatedButton.styleFrom(

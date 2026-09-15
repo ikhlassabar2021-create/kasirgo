@@ -48,6 +48,7 @@ class _PosScreenState extends ConsumerState<PosScreen> {
       return;
     }
 
+    int newQty = 1;
     setState(() {
       final index = _cart.indexWhere((item) => item.productId == product.id);
       if (index >= 0) {
@@ -58,11 +59,13 @@ class _PosScreenState extends ConsumerState<PosScreen> {
           );
           return;
         }
+        newQty = currentQty + 1;
         _cart[index] = _cart[index].copyWith(
-          quantity: currentQty + 1,
-          subtotal: product.price * (currentQty + 1),
+          quantity: newQty,
+          subtotal: product.price * newQty,
         );
       } else {
+        newQty = 1;
         _cart.add(
           TransactionItem(
             productId: product.id,
@@ -74,6 +77,16 @@ class _PosScreenState extends ConsumerState<PosScreen> {
         );
       }
     });
+
+    ScaffoldMessenger.of(context).hideCurrentSnackBar();
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text('${product.name} masuk keranjang ($newQty)'),
+        duration: const Duration(milliseconds: 700),
+        backgroundColor: AppTheme.primaryColor,
+        behavior: SnackBarBehavior.floating,
+      ),
+    );
   }
 
   void _updateQty(MapEntry<String, int> entry, List<Product> products) {
@@ -123,7 +136,9 @@ class _PosScreenState extends ConsumerState<PosScreen> {
         throw Exception('Outlet ID tidak ditemukan');
       }
 
-      final notes = 'Channel: $_selectedChannel${result.notes != null ? ' | ${result.notes}' : ''}';
+      final channel = _selectedChannel == 'Toko Fisik'
+          ? 'offline'
+          : _selectedChannel.toLowerCase();
       final tx = Transaction(
         id: '',
         outletId: outletId,
@@ -134,23 +149,15 @@ class _PosScreenState extends ConsumerState<PosScreen> {
         finalAmount: result.amount,
         paymentMethod: result.paymentMethod,
         paymentStatus: 'paid',
-        notes: notes,
+        notes: result.notes,
         isSynced: true,
+        channel: channel,
         createdAt: DateTime.now(),
       );
 
       final created = await SupabaseService().createTransaction(tx);
       if (created == null) {
         throw Exception('Gagal menyimpan transaksi');
-      }
-
-      for (final item in _cart) {
-        final prodIdx = products.indexWhere((p) => p.id == item.productId);
-        if (prodIdx >= 0) {
-          final prod = products[prodIdx];
-          final newStock = (prod.stock - item.quantity).clamp(0, 999999);
-          await SupabaseService().updateProduct(prod.copyWith(stock: newStock));
-        }
       }
 
       ref.invalidate(productsProvider);
@@ -255,6 +262,9 @@ class _PosScreenState extends ConsumerState<PosScreen> {
                     child: ProductGrid(
                       products: filtered,
                       onProductTap: _addToCart,
+                      cartQuantities: {
+                        for (final item in _cart) item.productId: item.quantity,
+                      },
                     ),
                   ),
                 ],

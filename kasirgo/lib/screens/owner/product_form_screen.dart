@@ -66,7 +66,7 @@ class _ProductFormScreenState extends ConsumerState<ProductFormScreen> {
       _categories.add(_selectedCategory!);
     }
     _expiredDate = p?.expiredDate;
-    _imageLocalPath = p?.imageLocalPath;
+    _imageLocalPath = kIsWeb ? null : p?.imageLocalPath;
   }
 
   @override
@@ -312,7 +312,7 @@ class _ProductFormScreenState extends ConsumerState<ProductFormScreen> {
       stock: int.tryParse(_stockController.text) ?? 0,
       unit: _unitController.text.trim().isEmpty ? 'pcs' : _unitController.text.trim(),
       expiredDate: _expiredDate,
-      imageLocalPath: _imageLocalPath,
+      imageLocalPath: kIsWeb ? null : _imageLocalPath,
       thumbKey: widget.product?.thumbKey,
       isActive: true,
     );

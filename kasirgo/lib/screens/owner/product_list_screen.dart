@@ -393,8 +393,18 @@ class _ProductListScreenState extends ConsumerState<ProductListScreen> {
                                               color: AppTheme.accentColor,
                                             ),
                                           ),
-                                          const SizedBox(height: 6),
-                                          _buildStockBadge(product.stock, product.unit),
+                                           const SizedBox(height: 6),
+                                           Row(
+                                             mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                             children: [
+                                               _buildStockBadge(product.stock, product.unit),
+                                               const Icon(
+                                                 Icons.edit_outlined,
+                                                 size: 16,
+                                                 color: AppTheme.textSecondary,
+                                               ),
+                                             ],
+                                           ),
                                         ],
                                       ),
                                     ),
