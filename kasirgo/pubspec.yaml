@@ -24,6 +24,10 @@ dependencies:
   image_picker: ^1.2.3
   mobile_scanner: ^7.4.1
   barcode: ^2.2.9
+  excel: ^4.0.6
+  pdf: ^3.12.0
+  printing: ^5.14.3
+  url_launcher: ^6.3.2
 
 dev_dependencies:
   flutter_test:

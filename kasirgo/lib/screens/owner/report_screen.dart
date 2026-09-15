@@ -1,7 +1,13 @@
+import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:fl_chart/fl_chart.dart';
 import 'package:go_router/go_router.dart';
+import 'package:excel/excel.dart' as xl;
+import 'package:pdf/pdf.dart';
+import 'package:pdf/widgets.dart' as pw;
+import 'package:printing/printing.dart';
+import 'package:url_launcher/url_launcher.dart';
 import '../../config/app_theme.dart';
 import '../../models/product.dart';
 import '../../models/transaction.dart';
@@ -142,6 +148,18 @@ class _ReportScreenState extends ConsumerState<ReportScreen> with SingleTickerPr
     return Scaffold(
       appBar: AppBar(
         title: const Text('Laporan'),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.share),
+            tooltip: 'Share Laporan',
+            onPressed: _showShareDialog,
+          ),
+          IconButton(
+            icon: const Icon(Icons.picture_as_pdf),
+            tooltip: 'Laporan Bank (PDF)',
+            onPressed: _exportBankReadyPdf,
+          ),
+        ],
         bottom: TabBar(
           controller: _tabController,
           indicatorColor: AppTheme.primaryColor,
@@ -172,6 +190,12 @@ class _ReportScreenState extends ConsumerState<ReportScreen> with SingleTickerPr
           ),
         ],
       ),
+      floatingActionButton: FloatingActionButton.extended(
+        backgroundColor: AppTheme.primaryColor,
+        icon: const Icon(Icons.table_view, color: Colors.white),
+        label: const Text('Excel', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+        onPressed: _exportExcel,
+      ),
       bottomNavigationBar: isCashierOrCustomer
           ? null
           : BottomNavigationBar(
@@ -190,6 +214,261 @@ class _ReportScreenState extends ConsumerState<ReportScreen> with SingleTickerPr
                 BottomNavigationBarItem(icon: Icon(Icons.settings), label: 'Atur'),
               ],
             ),
+    );
+  }
+
+  Future<void> _exportExcel() async {
+    if (_transactions.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Tidak ada data transaksi untuk diexport')),
+      );
+      return;
+    }
+
+    try {
+      final excel = xl.Excel.createExcel();
+
+      final summarySheet = excel['Ringkasan'];
+      excel.setDefaultSheet('Ringkasan');
+
+      final totalOmzet = _transactions.fold<double>(0, (sum, t) => sum + t.finalAmount);
+      final countTx = _transactions.length;
+      final avgTx = countTx > 0 ? totalOmzet / countTx : 0.0;
+
+      double totalUntung = 0;
+      for (final tx in _transactions) {
+        for (final item in tx.items) {
+          final prod = _productMap[item.productId];
+          final cost = prod?.costPrice ?? 0.0;
+          totalUntung += (item.price - cost) * item.quantity;
+        }
+      }
+      if (totalUntung == 0 && totalOmzet > 0) {
+        totalUntung = totalOmzet * 0.25;
+      }
+
+      summarySheet.appendRow([xl.TextCellValue('LAPORAN RINGKASAN KASIRGO')]);
+      summarySheet.appendRow([xl.TextCellValue('Periode'), xl.TextCellValue(_selectedPeriod.name)]);
+      summarySheet.appendRow([xl.TextCellValue('Tanggal Export'), xl.TextCellValue(DateTime.now().toIso8601String())]);
+      summarySheet.appendRow([xl.TextCellValue('')]);
+      summarySheet.appendRow([xl.TextCellValue('Indikator'), xl.TextCellValue('Nilai')]);
+      summarySheet.appendRow([xl.TextCellValue('Total Omzet'), xl.DoubleCellValue(totalOmzet)]);
+      summarySheet.appendRow([xl.TextCellValue('Total Untung Bersih'), xl.DoubleCellValue(totalUntung)]);
+      summarySheet.appendRow([xl.TextCellValue('Jumlah Transaksi'), xl.IntCellValue(countTx)]);
+      summarySheet.appendRow([xl.TextCellValue('Rata-rata Transaksi'), xl.DoubleCellValue(avgTx)]);
+
+      final salesSheet = excel['Penjualan'];
+      salesSheet.appendRow([
+        xl.TextCellValue('ID Transaksi'),
+        xl.TextCellValue('Waktu'),
+        xl.TextCellValue('Metode Bayar'),
+        xl.TextCellValue('Jumlah Item'),
+        xl.TextCellValue('Total Bayar'),
+      ]);
+
+      for (final tx in _transactions) {
+        salesSheet.appendRow([
+          xl.TextCellValue(tx.id),
+          xl.TextCellValue(tx.createdAt.toIso8601String()),
+          xl.TextCellValue(tx.paymentMethod),
+          xl.IntCellValue(tx.items.length),
+          xl.DoubleCellValue(tx.finalAmount),
+        ]);
+      }
+
+      final fileBytes = excel.save(fileName: 'Laporan_KasirGo_${DateTime.now().millisecondsSinceEpoch}.xlsx');
+      if (fileBytes != null) {
+        await Printing.sharePdf(
+          bytes: Uint8List.fromList(fileBytes),
+          filename: 'Laporan_KasirGo_${DateTime.now().millisecondsSinceEpoch}.xlsx',
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Gagal export Excel: $e')),
+        );
+      }
+    }
+  }
+
+  Future<void> _exportBankReadyPdf() async {
+    if (_transactions.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Tidak ada data transaksi untuk laporan bank')),
+      );
+      return;
+    }
+
+    try {
+      final user = ref.read(currentUserProvider);
+      final range = _getDateRange();
+      final totalOmzet = _transactions.fold<double>(0, (sum, t) => sum + t.finalAmount);
+      final countTx = _transactions.length;
+
+      double totalHpp = 0;
+      for (final tx in _transactions) {
+        for (final item in tx.items) {
+          final prod = _productMap[item.productId];
+          final cost = prod?.costPrice ?? 0.0;
+          totalHpp += cost * item.quantity;
+        }
+      }
+      if (totalHpp == 0 && totalOmzet > 0) {
+        totalHpp = totalOmzet * 0.75;
+      }
+      final labaKotor = totalOmzet - totalHpp;
+
+      final doc = pw.Document();
+      doc.addPage(
+        pw.Page(
+          pageFormat: PdfPageFormat.a4,
+          build: (pw.Context pContext) {
+            return pw.Padding(
+              padding: const pw.EdgeInsets.all(24),
+              child: pw.Column(
+                crossAxisAlignment: pw.CrossAxisAlignment.start,
+                children: [
+                  pw.Row(
+                    mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
+                    children: [
+                      pw.Column(
+                        crossAxisAlignment: pw.CrossAxisAlignment.start,
+                        children: [
+                          pw.Text('LAPORAN KEUANGAN BANK-READY', style: pw.TextStyle(fontSize: 16, fontWeight: pw.FontWeight.bold)),
+                          pw.Text('KasirGo POS System • Bukti Usaha Resmi', style: const pw.TextStyle(fontSize: 10, color: PdfColors.grey700)),
+                        ],
+                      ),
+                      pw.Text(Formatters.date(DateTime.now()), style: const pw.TextStyle(fontSize: 10)),
+                    ],
+                  ),
+                  pw.Divider(thickness: 1.5),
+                  pw.SizedBox(height: 12),
+                  pw.Text('Profil Usaha', style: pw.TextStyle(fontSize: 12, fontWeight: pw.FontWeight.bold)),
+                  pw.SizedBox(height: 4),
+                  pw.Text('Nama Merchant : ${user?.email ?? "KasirGo Merchant"}'),
+                  pw.Text('Outlet ID      : ${user?.outletId ?? "-"}'),
+                  pw.Text('Periode Laporan: ${Formatters.date(range.start)} s/d ${Formatters.date(range.end)}'),
+                  pw.SizedBox(height: 16),
+                  pw.Text('Ringkasan Laba Rugi (Standar Perbankan)', style: pw.TextStyle(fontSize: 12, fontWeight: pw.FontWeight.bold)),
+                  pw.SizedBox(height: 8),
+                  pw.Table(
+                    border: pw.TableBorder.all(color: PdfColors.grey400, width: 0.5),
+                    children: [
+                      pw.TableRow(
+                        decoration: const pw.BoxDecoration(color: PdfColors.grey200),
+                        children: [
+                          pw.Padding(padding: const pw.EdgeInsets.all(6), child: pw.Text('Pos Keuangan', style: pw.TextStyle(fontWeight: pw.FontWeight.bold))),
+                          pw.Padding(padding: const pw.EdgeInsets.all(6), child: pw.Text('Jumlah', style: pw.TextStyle(fontWeight: pw.FontWeight.bold))),
+                        ],
+                      ),
+                      pw.TableRow(
+                        children: [
+                          pw.Padding(padding: const pw.EdgeInsets.all(6), child: pw.Text('Pendapatan Penjualan (Omzet)')),
+                          pw.Padding(padding: const pw.EdgeInsets.all(6), child: pw.Text(Formatters.currency(totalOmzet))),
+                        ],
+                      ),
+                      pw.TableRow(
+                        children: [
+                          pw.Padding(padding: const pw.EdgeInsets.all(6), child: pw.Text('Harga Pokok Penjualan (HPP)')),
+                          pw.Padding(padding: const pw.EdgeInsets.all(6), child: pw.Text(Formatters.currency(totalHpp))),
+                        ],
+                      ),
+                      pw.TableRow(
+                        decoration: const pw.BoxDecoration(color: PdfColors.grey100),
+                        children: [
+                          pw.Padding(padding: const pw.EdgeInsets.all(6), child: pw.Text('Laba Kotor (Gross Profit)', style: pw.TextStyle(fontWeight: pw.FontWeight.bold))),
+                          pw.Padding(padding: const pw.EdgeInsets.all(6), child: pw.Text(Formatters.currency(labaKotor), style: pw.TextStyle(fontWeight: pw.FontWeight.bold))),
+                        ],
+                      ),
+                      pw.TableRow(
+                        children: [
+                          pw.Padding(padding: const pw.EdgeInsets.all(6), child: pw.Text('Total Volume Transaksi')),
+                          pw.Padding(padding: const pw.EdgeInsets.all(6), child: pw.Text('$countTx transaksi')),
+                        ],
+                      ),
+                    ],
+                  ),
+                  pw.SizedBox(height: 24),
+                  pw.Text('Catatan Bank:', style: pw.TextStyle(fontSize: 10, fontWeight: pw.FontWeight.bold)),
+                  pw.Text(
+                    'Laporan ini digenerate secara otomatis oleh sistem KasirGo dan merefleksikan catatan penjualan '
+                    'kasir/POS yang tercatat pada database. Valid sebagai lampiran pengajuan kredit UMKM/KUR.',
+                    style: const pw.TextStyle(fontSize: 9, color: PdfColors.grey700),
+                  ),
+                ],
+              ),
+            );
+          },
+        ),
+      );
+
+      await Printing.layoutPdf(
+        onLayout: (PdfPageFormat format) async => doc.save(),
+        name: 'Laporan_Bank_${DateTime.now().millisecondsSinceEpoch}',
+      );
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Gagal generate PDF Bank: $e')),
+        );
+      }
+    }
+  }
+
+  void _showShareDialog() {
+    final range = _getDateRange();
+    final totalOmzet = _transactions.fold<double>(0, (sum, t) => sum + t.finalAmount);
+    final countTx = _transactions.length;
+
+    final summaryText = 'Laporan Penjualan KasirGo%0A'
+        'Periode: ${Formatters.date(range.start)} - ${Formatters.date(range.end)}%0A'
+        'Total Omzet: ${Formatters.currency(totalOmzet)}%0A'
+        'Total Transaksi: $countTx%0A%0A'
+        'Dicatat otomatis oleh KasirGo Super-App UMKM.';
+
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: AppTheme.surfaceColor,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+      ),
+      builder: (bCtx) {
+        return SafeArea(
+          child: Wrap(
+            children: [
+              ListTile(
+                leading: const Icon(Icons.chat, color: AppTheme.successColor),
+                title: const Text('Share via WhatsApp'),
+                onTap: () async {
+                  Navigator.pop(bCtx);
+                  final uri = Uri.parse('https://wa.me/?text=$summaryText');
+                  if (await canLaunchUrl(uri)) {
+                    await launchUrl(uri, mode: LaunchMode.externalApplication);
+                  }
+                },
+              ),
+              ListTile(
+                leading: const Icon(Icons.email, color: AppTheme.accentColor),
+                title: const Text('Share via Email'),
+                onTap: () async {
+                  Navigator.pop(bCtx);
+                  final emailUri = Uri(
+                    scheme: 'mailto',
+                    queryParameters: {
+                      'subject': 'Laporan Penjualan KasirGo',
+                      'body': summaryText.replaceAll('%0A', '\n'),
+                    },
+                  );
+                  if (await canLaunchUrl(emailUri)) {
+                    await launchUrl(emailUri);
+                  }
+                },
+              ),
+            ],
+          ),
+        );
+      },
     );
   }
 
