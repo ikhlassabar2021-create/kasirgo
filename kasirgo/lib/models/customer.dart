@@ -7,6 +7,7 @@ class Customer {
   final String? address;
   final int? totalTransactions;
   final double? totalSpent;
+  final int loyaltyPoints;
   final DateTime? lastVisit;
   final DateTime? createdAt;
 
@@ -19,6 +20,7 @@ class Customer {
     this.address,
     this.totalTransactions,
     this.totalSpent,
+    this.loyaltyPoints = 0,
     this.lastVisit,
     this.createdAt,
   });
@@ -37,6 +39,9 @@ class Customer {
           : (json['total_spent'] != null
               ? double.tryParse(json['total_spent'].toString())
               : null),
+      loyaltyPoints: (json['loyalty_points'] is num)
+          ? (json['loyalty_points'] as num).toInt()
+          : (int.tryParse(json['loyalty_points']?.toString() ?? '') ?? 0),
       lastVisit: json['last_visit'] != null
           ? DateTime.parse(json['last_visit'])
           : null,
@@ -60,6 +65,7 @@ class Customer {
     if (totalSpent != null) {
       map['total_spent'] = totalSpent;
     }
+    map['loyalty_points'] = loyaltyPoints;
     return map;
   }
 
@@ -74,6 +80,7 @@ class Customer {
       'address': address,
       'total_transactions': totalTransactions,
       'total_spent': totalSpent,
+      'loyalty_points': loyaltyPoints,
       'last_visit': lastVisit?.toIso8601String(),
       'created_at': createdAt?.toIso8601String(),
     };
@@ -93,6 +100,9 @@ class Customer {
           : (map['total_spent'] != null
               ? double.tryParse(map['total_spent'].toString())
               : null),
+      loyaltyPoints: (map['loyalty_points'] is num)
+          ? (map['loyalty_points'] as num).toInt()
+          : (int.tryParse(map['loyalty_points']?.toString() ?? '') ?? 0),
       lastVisit: map['last_visit'] != null
           ? DateTime.parse(map['last_visit'])
           : null,
@@ -111,6 +121,7 @@ class Customer {
     String? address,
     int? totalTransactions,
     double? totalSpent,
+    int? loyaltyPoints,
     DateTime? lastVisit,
     DateTime? createdAt,
   }) {
@@ -123,6 +134,7 @@ class Customer {
       address: address ?? this.address,
       totalTransactions: totalTransactions ?? this.totalTransactions,
       totalSpent: totalSpent ?? this.totalSpent,
+      loyaltyPoints: loyaltyPoints ?? this.loyaltyPoints,
       lastVisit: lastVisit ?? this.lastVisit,
       createdAt: createdAt ?? this.createdAt,
     );

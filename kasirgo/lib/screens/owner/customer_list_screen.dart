@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../config/app_theme.dart';
 import '../../models/customer.dart';
+import '../../models/transaction.dart';
 import '../../providers/auth_provider.dart';
 import '../../services/supabase_service.dart';
 import '../../utils/formatters.dart';
@@ -170,6 +171,338 @@ class _CustomerListScreenState extends ConsumerState<CustomerListScreen> {
     );
   }
 
+  void _showCustomerDetail(Customer customer) {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: AppTheme.backgroundColor,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (ctx) {
+        return DraggableScrollableSheet(
+          initialChildSize: 0.85,
+          minChildSize: 0.5,
+          maxChildSize: 0.95,
+          expand: false,
+          builder: (sheetContext, scrollController) {
+            return FutureBuilder<List<Transaction>>(
+              future: _supabaseService.getCustomerTransactions(customer.id),
+              builder: (context, snapshot) {
+                final txList = snapshot.data ?? [];
+                final unpaidList = txList.where((t) {
+                  final status = (t.paymentStatus ?? '').toLowerCase();
+                  final method = t.paymentMethod.toLowerCase();
+                  return status == 'pending' ||
+                      status == 'unpaid' ||
+                      status == 'tempo' ||
+                      status == 'hutang' ||
+                      method == 'tempo' ||
+                      method == 'hutang' ||
+                      method == 'piutang';
+                }).toList();
+                final totalPiutang = unpaidList.fold<double>(
+                  0.0,
+                  (sum, t) => sum + t.finalAmount,
+                );
+
+                return ListView(
+                  controller: scrollController,
+                  padding: const EdgeInsets.all(16),
+                  children: [
+                    Center(
+                      child: Container(
+                        width: 40,
+                        height: 4,
+                        margin: const EdgeInsets.only(bottom: 16),
+                        decoration: BoxDecoration(
+                          color: AppTheme.textSecondary.withValues(alpha: 0.3),
+                          borderRadius: BorderRadius.circular(2),
+                        ),
+                      ),
+                    ),
+                    Row(
+                      children: [
+                        CircleAvatar(
+                          radius: 28,
+                          backgroundColor: AppTheme.primaryColor.withValues(alpha: 0.2),
+                          child: Text(
+                            customer.name.isNotEmpty ? customer.name[0].toUpperCase() : '?',
+                            style: const TextStyle(
+                              color: AppTheme.accentColor,
+                              fontWeight: FontWeight.bold,
+                              fontSize: 22,
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 16),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                customer.name,
+                                style: const TextStyle(
+                                  fontSize: 18,
+                                  fontWeight: FontWeight.bold,
+                                  color: AppTheme.textPrimary,
+                                ),
+                              ),
+                              const SizedBox(height: 4),
+                              Row(
+                                children: [
+                                  const Icon(Icons.phone, size: 14, color: AppTheme.textSecondary),
+                                  const SizedBox(width: 4),
+                                  Text(
+                                    (customer.phone != null && customer.phone!.isNotEmpty)
+                                        ? customer.phone!
+                                        : 'Tidak ada nomor WA',
+                                    style: const TextStyle(
+                                      color: AppTheme.textSecondary,
+                                      fontSize: 13,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 20),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: Container(
+                            padding: const EdgeInsets.all(12),
+                            decoration: BoxDecoration(
+                              color: AppTheme.surfaceColor,
+                              borderRadius: BorderRadius.circular(12),
+                              border: Border.all(color: AppTheme.borderColor.withValues(alpha: 0.5)),
+                            ),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                const Text(
+                                  'Total Belanja',
+                                  style: TextStyle(fontSize: 11, color: AppTheme.textSecondary),
+                                ),
+                                const SizedBox(height: 4),
+                                Text(
+                                  Formatters.currency(customer.totalSpent ?? 0),
+                                  style: const TextStyle(
+                                    fontSize: 14,
+                                    fontWeight: FontWeight.bold,
+                                    color: AppTheme.accentColor,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: Container(
+                            padding: const EdgeInsets.all(12),
+                            decoration: BoxDecoration(
+                              color: AppTheme.surfaceColor,
+                              borderRadius: BorderRadius.circular(12),
+                              border: Border.all(color: AppTheme.borderColor.withValues(alpha: 0.5)),
+                            ),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                const Text(
+                                  'Loyalty Points',
+                                  style: TextStyle(fontSize: 11, color: AppTheme.textSecondary),
+                                ),
+                                const SizedBox(height: 4),
+                                Row(
+                                  children: [
+                                    const Icon(Icons.stars, size: 16, color: Colors.amber),
+                                    const SizedBox(width: 4),
+                                    Text(
+                                      '${customer.loyaltyPoints} Pts',
+                                      style: const TextStyle(
+                                        fontSize: 14,
+                                        fontWeight: FontWeight.bold,
+                                        color: Colors.amber,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: Container(
+                            padding: const EdgeInsets.all(12),
+                            decoration: BoxDecoration(
+                              color: AppTheme.surfaceColor,
+                              borderRadius: BorderRadius.circular(12),
+                              border: Border.all(
+                                color: totalPiutang > 0
+                                    ? Colors.redAccent.withValues(alpha: 0.5)
+                                    : AppTheme.borderColor.withValues(alpha: 0.5),
+                              ),
+                            ),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                const Text(
+                                  'Piutang / Tempo',
+                                  style: TextStyle(fontSize: 11, color: AppTheme.textSecondary),
+                                ),
+                                const SizedBox(height: 4),
+                                Text(
+                                  Formatters.currency(totalPiutang),
+                                  style: TextStyle(
+                                    fontSize: 14,
+                                    fontWeight: FontWeight.bold,
+                                    color: totalPiutang > 0 ? Colors.redAccent : AppTheme.textPrimary,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 24),
+                    const Text(
+                      'Riwayat Transaksi',
+                      style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
+                        color: AppTheme.textPrimary,
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                    if (snapshot.connectionState == ConnectionState.waiting)
+                      const Center(
+                        child: Padding(
+                          padding: EdgeInsets.all(24),
+                          child: CircularProgressIndicator(),
+                        ),
+                      )
+                    else if (txList.isEmpty)
+                      Container(
+                        padding: const EdgeInsets.all(24),
+                        decoration: BoxDecoration(
+                          color: AppTheme.surfaceColor,
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: const Center(
+                          child: Text(
+                            'Belum ada transaksi untuk pelanggan ini',
+                            style: TextStyle(color: AppTheme.textSecondary),
+                          ),
+                        ),
+                      )
+                    else
+                      ...txList.map((tx) {
+                        final isUnpaid = (tx.paymentStatus ?? '').toLowerCase() == 'pending' ||
+                            (tx.paymentStatus ?? '').toLowerCase() == 'unpaid' ||
+                            (tx.paymentStatus ?? '').toLowerCase() == 'tempo' ||
+                            tx.paymentMethod.toLowerCase() == 'tempo' ||
+                            tx.paymentMethod.toLowerCase() == 'hutang';
+
+                        return Container(
+                          margin: const EdgeInsets.only(bottom: 8),
+                          padding: const EdgeInsets.all(12),
+                          decoration: BoxDecoration(
+                            color: AppTheme.surfaceColor,
+                            borderRadius: BorderRadius.circular(12),
+                            border: Border.all(
+                              color: isUnpaid
+                                  ? Colors.redAccent.withValues(alpha: 0.4)
+                                  : AppTheme.borderColor.withValues(alpha: 0.4),
+                            ),
+                          ),
+                          child: Row(
+                            children: [
+                              CircleAvatar(
+                                radius: 18,
+                                backgroundColor: isUnpaid
+                                    ? Colors.redAccent.withValues(alpha: 0.15)
+                                    : AppTheme.primaryColor.withValues(alpha: 0.15),
+                                child: Icon(
+                                  isUnpaid ? Icons.warning_amber_rounded : Icons.receipt_long,
+                                  size: 18,
+                                  color: isUnpaid ? Colors.redAccent : AppTheme.accentColor,
+                                ),
+                              ),
+                              const SizedBox(width: 12),
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      Formatters.dateTime(tx.createdAt),
+                                      style: const TextStyle(
+                                        fontSize: 13,
+                                        fontWeight: FontWeight.w600,
+                                        color: AppTheme.textPrimary,
+                                      ),
+                                    ),
+                                    const SizedBox(height: 2),
+                                    Text(
+                                      'Metode: ${tx.paymentMethod.toUpperCase()}',
+                                      style: const TextStyle(
+                                        fontSize: 11,
+                                        color: AppTheme.textSecondary,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                              Column(
+                                crossAxisAlignment: CrossAxisAlignment.end,
+                                children: [
+                                  Text(
+                                    Formatters.currency(tx.finalAmount),
+                                    style: TextStyle(
+                                      fontSize: 13,
+                                      fontWeight: FontWeight.bold,
+                                      color: isUnpaid ? Colors.redAccent : AppTheme.textPrimary,
+                                    ),
+                                  ),
+                                  const SizedBox(height: 2),
+                                  Container(
+                                    padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                    decoration: BoxDecoration(
+                                      color: isUnpaid
+                                          ? Colors.redAccent.withValues(alpha: 0.2)
+                                          : Colors.green.withValues(alpha: 0.2),
+                                      borderRadius: BorderRadius.circular(4),
+                                    ),
+                                    child: Text(
+                                      isUnpaid ? 'BELUM LUNAS' : 'LUNAS',
+                                      style: TextStyle(
+                                        fontSize: 9,
+                                        fontWeight: FontWeight.bold,
+                                        color: isUnpaid ? Colors.redAccent : Colors.greenAccent,
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ],
+                          ),
+                        );
+                      }),
+                  ],
+                );
+              },
+            );
+          },
+        );
+      },
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final filtered = _customers.where((c) {
@@ -251,74 +584,84 @@ class _CustomerListScreenState extends ConsumerState<CustomerListScreen> {
                                   color: AppTheme.borderColor.withValues(alpha: 0.5),
                                 ),
                               ),
-                              child: Padding(
-                                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                                child: Row(
-                                  children: [
-                                    CircleAvatar(
-                                      radius: 22,
-                                      backgroundColor: AppTheme.primaryColor.withValues(alpha: 0.15),
-                                      child: Text(
-                                        customer.name.isNotEmpty ? customer.name[0].toUpperCase() : '?',
-                                        style: const TextStyle(
-                                          color: AppTheme.accentColor,
-                                          fontWeight: FontWeight.bold,
-                                          fontSize: 16,
+                              child: InkWell(
+                                borderRadius: BorderRadius.circular(12),
+                                onTap: () => _showCustomerDetail(customer),
+                                child: Padding(
+                                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                                  child: Row(
+                                    children: [
+                                      CircleAvatar(
+                                        radius: 22,
+                                        backgroundColor: AppTheme.primaryColor.withValues(alpha: 0.15),
+                                        child: Text(
+                                          customer.name.isNotEmpty ? customer.name[0].toUpperCase() : '?',
+                                          style: const TextStyle(
+                                            color: AppTheme.accentColor,
+                                            fontWeight: FontWeight.bold,
+                                            fontSize: 16,
+                                          ),
                                         ),
                                       ),
-                                    ),
-                                    const SizedBox(width: 14),
-                                    Expanded(
-                                      child: Column(
-                                        crossAxisAlignment: CrossAxisAlignment.start,
+                                      const SizedBox(width: 14),
+                                      Expanded(
+                                        child: Column(
+                                          crossAxisAlignment: CrossAxisAlignment.start,
+                                          children: [
+                                            Text(
+                                              customer.name,
+                                              style: const TextStyle(
+                                                fontWeight: FontWeight.bold,
+                                                fontSize: 15,
+                                                color: AppTheme.textPrimary,
+                                              ),
+                                            ),
+                                            const SizedBox(height: 4),
+                                            Row(
+                                              children: [
+                                                const Icon(Icons.phone, size: 13, color: AppTheme.textSecondary),
+                                                const SizedBox(width: 4),
+                                                Text(
+                                                  phoneDisplay,
+                                                  style: const TextStyle(
+                                                    color: AppTheme.textSecondary,
+                                                    fontSize: 12,
+                                                  ),
+                                                ),
+                                              ],
+                                            ),
+                                          ],
+                                        ),
+                                      ),
+                                      Column(
+                                        crossAxisAlignment: CrossAxisAlignment.end,
                                         children: [
-                                          Text(
-                                            customer.name,
-                                            style: const TextStyle(
-                                              fontWeight: FontWeight.bold,
-                                              fontSize: 15,
-                                              color: AppTheme.textPrimary,
+                                          const Text(
+                                            'Total Belanja',
+                                            style: TextStyle(
+                                              fontSize: 11,
+                                              color: AppTheme.textSecondary,
                                             ),
                                           ),
-                                          const SizedBox(height: 4),
-                                          Row(
-                                            children: [
-                                              const Icon(Icons.phone, size: 13, color: AppTheme.textSecondary),
-                                              const SizedBox(width: 4),
-                                              Text(
-                                                phoneDisplay,
-                                                style: const TextStyle(
-                                                  color: AppTheme.textSecondary,
-                                                  fontSize: 12,
-                                                ),
-                                              ),
-                                            ],
+                                          const SizedBox(height: 2),
+                                          Text(
+                                            totalSpentDisplay,
+                                            style: const TextStyle(
+                                              fontWeight: FontWeight.bold,
+                                              fontSize: 13,
+                                              color: AppTheme.accentColor,
+                                            ),
                                           ),
                                         ],
                                       ),
-                                    ),
-                                    Column(
-                                      crossAxisAlignment: CrossAxisAlignment.end,
-                                      children: [
-                                        const Text(
-                                          'Total Belanja',
-                                          style: TextStyle(
-                                            fontSize: 11,
-                                            color: AppTheme.textSecondary,
-                                          ),
-                                        ),
-                                        const SizedBox(height: 2),
-                                        Text(
-                                          totalSpentDisplay,
-                                          style: const TextStyle(
-                                            fontWeight: FontWeight.bold,
-                                            fontSize: 13,
-                                            color: AppTheme.accentColor,
-                                          ),
-                                        ),
-                                      ],
-                                    ),
-                                  ],
+                                      const SizedBox(width: 8),
+                                      const Icon(
+                                        Icons.chevron_right,
+                                        size: 18,
+                                        color: AppTheme.textSecondary,
+                                      ),
+                                    ],
+                                  ),
                                 ),
                               ),
                             );

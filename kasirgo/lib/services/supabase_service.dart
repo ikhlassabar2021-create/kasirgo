@@ -175,6 +175,23 @@ class SupabaseService {
     }
   }
 
+  Future<List<Transaction>> getCustomerTransactions(String customerId, {int limit = 50}) async {
+    try {
+      final response = await _client
+          .from('transactions')
+          .select()
+          .eq('customer_id', customerId)
+          .order('created_at', ascending: false)
+          .limit(limit);
+
+      return (response as List)
+          .map((json) => Transaction.fromJson(json as Map<String, dynamic>))
+          .toList();
+    } catch (e) {
+      return [];
+    }
+  }
+
   Future<Transaction?> getTransaction(String id) async {
     try {
       final response = await _client
