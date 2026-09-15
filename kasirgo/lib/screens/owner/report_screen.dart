@@ -418,64 +418,153 @@ class _ReportScreenState extends ConsumerState<ReportScreen> with SingleTickerPr
       );
     }
 
-    return ListView.separated(
+    final barGroups = _generateDailyBarGroups();
+
+    return SingleChildScrollView(
       padding: const EdgeInsets.all(16),
-      itemCount: _transactions.length,
-      separatorBuilder: (_, _) => const SizedBox(height: 8),
-      itemBuilder: (context, index) {
-        final tx = _transactions[index];
-        return Container(
-          padding: const EdgeInsets.all(12),
-          decoration: BoxDecoration(
-            color: AppTheme.surfaceColor.withValues(alpha: 0.7),
-            borderRadius: BorderRadius.circular(12),
-            border: Border.all(color: AppTheme.borderColor.withValues(alpha: 0.4)),
-          ),
-          child: Row(
-            children: [
-              Container(
-                padding: const EdgeInsets.all(8),
-                decoration: BoxDecoration(
-                  color: AppTheme.primaryColor.withValues(alpha: 0.15),
-                  borderRadius: BorderRadius.circular(8),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Container(
+            height: 200,
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: AppTheme.surfaceColor.withValues(alpha: 0.8),
+              borderRadius: BorderRadius.circular(16),
+              border: Border.all(color: AppTheme.borderColor.withValues(alpha: 0.5)),
+            ),
+            child: BarChart(
+              BarChartData(
+                alignment: BarChartAlignment.spaceAround,
+                gridData: FlGridData(
+                  show: true,
+                  drawVerticalLine: false,
+                  getDrawingHorizontalLine: (_) => FlLine(
+                    color: AppTheme.borderColor.withValues(alpha: 0.3),
+                    strokeWidth: 1,
+                  ),
                 ),
-                child: const Icon(Icons.receipt, color: AppTheme.primaryColor, size: 20),
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      '#${tx.id.length > 8 ? tx.id.substring(0, 8) : tx.id}',
-                      style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 13),
+                titlesData: FlTitlesData(
+                  show: true,
+                  rightTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
+                  topTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
+                  leftTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
+                  bottomTitles: AxisTitles(
+                    sideTitles: SideTitles(
+                      showTitles: true,
+                      reservedSize: 22,
+                      getTitlesWidget: (value, _) {
+                        final idx = value.toInt();
+                        if (idx >= 0 && idx < barGroups.length) {
+                          return Text('${idx + 1}', style: const TextStyle(fontSize: 10, color: AppTheme.textSecondary));
+                        }
+                        return const Text('');
+                      },
                     ),
-                    const SizedBox(height: 2),
-                    Text(
-                      '${Formatters.date(tx.createdAt)} • ${tx.paymentMethod}',
-                      style: const TextStyle(color: AppTheme.textSecondary, fontSize: 11),
+                  ),
+                ),
+                borderData: FlBorderData(show: false),
+                barGroups: barGroups,
+              ),
+            ),
+          ),
+          const SizedBox(height: 20),
+          const Text('Daftar Transaksi', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600)),
+          const SizedBox(height: 12),
+          ListView.separated(
+            shrinkWrap: true,
+            physics: const NeverScrollableScrollPhysics(),
+            itemCount: _transactions.length,
+            separatorBuilder: (_, _) => const SizedBox(height: 8),
+            itemBuilder: (context, index) {
+              final tx = _transactions[index];
+              return Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: AppTheme.surfaceColor.withValues(alpha: 0.7),
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(color: AppTheme.borderColor.withValues(alpha: 0.4)),
+                ),
+                child: Row(
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.all(8),
+                      decoration: BoxDecoration(
+                        color: AppTheme.primaryColor.withValues(alpha: 0.15),
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: const Icon(Icons.receipt, color: AppTheme.primaryColor, size: 20),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            '#${tx.id.length > 8 ? tx.id.substring(0, 8) : tx.id}',
+                            style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 13),
+                          ),
+                          const SizedBox(height: 2),
+                          Text(
+                            '${Formatters.date(tx.createdAt)} • ${tx.paymentMethod}',
+                            style: const TextStyle(color: AppTheme.textSecondary, fontSize: 11),
+                          ),
+                        ],
+                      ),
+                    ),
+                    Column(
+                      crossAxisAlignment: CrossAxisAlignment.end,
+                      children: [
+                        Text(
+                          Formatters.currency(tx.finalAmount),
+                          style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14, color: AppTheme.successColor),
+                        ),
+                        Text(
+                          '${tx.items.length} item',
+                          style: const TextStyle(color: AppTheme.textSecondary, fontSize: 11),
+                        ),
+                      ],
                     ),
                   ],
                 ),
-              ),
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.end,
-                children: [
-                  Text(
-                    Formatters.currency(tx.finalAmount),
-                    style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14, color: AppTheme.successColor),
-                  ),
-                  Text(
-                    '${tx.items.length} item',
-                    style: const TextStyle(color: AppTheme.textSecondary, fontSize: 11),
-                  ),
-                ],
-              ),
-            ],
+              );
+            },
           ),
-        );
-      },
+        ],
+      ),
     );
+  }
+
+  List<BarChartGroupData> _generateDailyBarGroups() {
+    final range = _getDateRange();
+    final totalDays = range.end.difference(range.start).inDays + 1;
+    final daySlots = totalDays > 0 ? (totalDays > 14 ? 14 : totalDays) : 1;
+
+    final dailyMap = <int, double>{};
+    for (var i = 0; i < daySlots; i++) {
+      dailyMap[i] = 0.0;
+    }
+
+    for (final tx in _transactions) {
+      final diff = tx.createdAt.difference(range.start).inDays;
+      if (diff >= 0 && diff < daySlots) {
+        dailyMap[diff] = (dailyMap[diff] ?? 0) + tx.finalAmount;
+      }
+    }
+
+    return List.generate(daySlots, (i) {
+      return BarChartGroupData(
+        x: i,
+        barRods: [
+          BarChartRodData(
+            toY: dailyMap[i] ?? 0.0,
+            color: AppTheme.primaryColor,
+            width: 12,
+            borderRadius: const BorderRadius.vertical(top: Radius.circular(4)),
+          ),
+        ],
+      );
+    });
   }
 
   Widget _buildProductsTab() {
@@ -496,49 +585,114 @@ class _ReportScreenState extends ConsumerState<ReportScreen> with SingleTickerPr
     }
 
     final sortedNames = soldMap.keys.toList()..sort((a, b) => (soldMap[b] ?? 0).compareTo(soldMap[a] ?? 0));
+    final top10Names = sortedNames.take(10).toList();
+    final maxQty = top10Names.fold<int>(1, (max, n) => (soldMap[n] ?? 0) > max ? (soldMap[n] ?? 0) : max);
 
-    return ListView.separated(
+    return SingleChildScrollView(
       padding: const EdgeInsets.all(16),
-      itemCount: sortedNames.length,
-      separatorBuilder: (_, _) => const SizedBox(height: 8),
-      itemBuilder: (context, index) {
-        final name = sortedNames[index];
-        final qty = soldMap[name] ?? 0;
-        final rev = revenueMap[name] ?? 0.0;
-
-        return Container(
-          padding: const EdgeInsets.all(12),
-          decoration: BoxDecoration(
-            color: AppTheme.surfaceColor.withValues(alpha: 0.7),
-            borderRadius: BorderRadius.circular(12),
-            border: Border.all(color: AppTheme.borderColor.withValues(alpha: 0.4)),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Container(
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: AppTheme.surfaceColor.withValues(alpha: 0.8),
+              borderRadius: BorderRadius.circular(16),
+              border: Border.all(color: AppTheme.borderColor.withValues(alpha: 0.5)),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text('Top 10 Produk Terlaris (Qty)', style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600)),
+                const SizedBox(height: 16),
+                ...top10Names.map((name) {
+                  final qty = soldMap[name] ?? 0;
+                  final pct = qty / maxQty;
+                  return Padding(
+                    padding: const EdgeInsets.only(bottom: 12),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            Expanded(
+                              child: Text(
+                                name,
+                                style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w500),
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                            ),
+                            Text('$qty pcs', style: const TextStyle(fontSize: 12, color: AppTheme.accentColor, fontWeight: FontWeight.bold)),
+                          ],
+                        ),
+                        const SizedBox(height: 4),
+                        ClipRRect(
+                          borderRadius: BorderRadius.circular(4),
+                          child: LinearProgressIndicator(
+                            value: pct,
+                            minHeight: 8,
+                            backgroundColor: AppTheme.borderColor.withValues(alpha: 0.2),
+                            valueColor: const AlwaysStoppedAnimation<Color>(AppTheme.secondaryColor),
+                          ),
+                        ),
+                      ],
+                    ),
+                  );
+                }),
+              ],
+            ),
           ),
-          child: Row(
-            children: [
-              CircleAvatar(
-                radius: 16,
-                backgroundColor: AppTheme.primaryColor.withValues(alpha: 0.2),
-                child: Text('${index + 1}', style: const TextStyle(color: AppTheme.primaryColor, fontSize: 12, fontWeight: FontWeight.bold)),
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
+          const SizedBox(height: 20),
+          const Text('Semua Produk Terjual', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600)),
+          const SizedBox(height: 12),
+          ListView.separated(
+            shrinkWrap: true,
+            physics: const NeverScrollableScrollPhysics(),
+            itemCount: sortedNames.length,
+            separatorBuilder: (_, _) => const SizedBox(height: 8),
+            itemBuilder: (context, index) {
+              final name = sortedNames[index];
+              final qty = soldMap[name] ?? 0;
+              final rev = revenueMap[name] ?? 0.0;
+
+              return Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: AppTheme.surfaceColor.withValues(alpha: 0.7),
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(color: AppTheme.borderColor.withValues(alpha: 0.4)),
+                ),
+                child: Row(
                   children: [
-                    Text(name, style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 13)),
-                    const SizedBox(height: 2),
-                    Text('Terjual: $qty pcs', style: const TextStyle(color: AppTheme.textSecondary, fontSize: 11)),
+                    CircleAvatar(
+                      radius: 16,
+                      backgroundColor: AppTheme.primaryColor.withValues(alpha: 0.2),
+                      child: Text('${index + 1}', style: const TextStyle(color: AppTheme.primaryColor, fontSize: 12, fontWeight: FontWeight.bold)),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(name, style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 13)),
+                          const SizedBox(height: 2),
+                          Text('Terjual: $qty pcs', style: const TextStyle(color: AppTheme.textSecondary, fontSize: 11)),
+                        ],
+                      ),
+                    ),
+                    Text(
+                      Formatters.currency(rev),
+                      style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: AppTheme.accentColor),
+                    ),
                   ],
                 ),
-              ),
-              Text(
-                Formatters.currency(rev),
-                style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: AppTheme.accentColor),
-              ),
-            ],
+              );
+            },
           ),
-        );
-      },
+        ],
+      ),
     );
   }
 }
