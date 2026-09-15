@@ -483,6 +483,66 @@ class SupabaseService {
     }
   }
 
+  Future<List<Map<String, dynamic>>> getAttendanceLogs(String outletId) async {
+    try {
+      final response = await _client
+          .from('employees')
+          .select()
+          .eq('outlet_id', outletId)
+          .order('date', ascending: false)
+          .order('check_in_time', ascending: false)
+          .limit(100);
+
+      return List<Map<String, dynamic>>.from(response as List);
+    } catch (e) {
+      return [];
+    }
+  }
+
+  Future<Map<String, dynamic>?> checkInEmployee({
+    required String outletId,
+    required String userId,
+    required String shift,
+    String? employeeName,
+  }) async {
+    try {
+      final now = DateTime.now();
+      final dateStr = "${now.year}-${now.month.toString().padLeft(2, '0')}-${now.day.toString().padLeft(2, '0')}";
+      final row = <String, dynamic>{
+        'outlet_id': outletId,
+        'user_id': userId,
+        'shift': shift,
+        'date': dateStr,
+        'check_in_time': now.toIso8601String(),
+      };
+      if (employeeName != null && employeeName.isNotEmpty) {
+        row['name'] = employeeName;
+      }
+      final response = await _client
+          .from('employees')
+          .insert(row)
+          .select()
+          .single();
+
+      return response;
+    } catch (e) {
+      return null;
+    }
+  }
+
+  Future<bool> checkOutEmployee(String attendanceId) async {
+    try {
+      final now = DateTime.now();
+      await _client
+          .from('employees')
+          .update({'check_out_time': now.toIso8601String()})
+          .eq('id', attendanceId);
+      return true;
+    } catch (e) {
+      return false;
+    }
+  }
+
   Future<bool> deleteEmployee(String id) async {
     try {
       await _client.from('employees').delete().eq('id', id);
