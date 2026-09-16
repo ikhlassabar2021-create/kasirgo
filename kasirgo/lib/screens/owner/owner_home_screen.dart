@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:fl_chart/fl_chart.dart';
 import '../../config/app_theme.dart';
+import '../../models/product.dart';
 import '../../providers/auth_provider.dart';
 import '../../services/supabase_service.dart';
 import '../../utils/formatters.dart';
@@ -39,7 +40,52 @@ final homeSummaryProvider = FutureProvider<Map<String, dynamic>>((ref) async {
     final m = ai.checkMargin(p);
     return m['isLowMargin'] == true && p.costPrice != null && p.costPrice! > 0;
   }).toList();
-  final flashSale = ai.suggestFlashSale(products);
+  final flashSale = ai.suggestFlashSale(products, todayTransactions);
+
+  final now = DateTime.now();
+  final expiredProducts = products.where((p) {
+    if (p.expiredDate == null) return false;
+    return p.expiredDate!.isBefore(now) || p.expiredDate!.difference(now).inDays <= 7;
+  }).toList();
+
+  final notifications = <Map<String, dynamic>>[];
+  for (final p in lowStockProducts) {
+    notifications.add({
+      'type': 'low_stock',
+      'title': 'Stok Menipis: ${p.name}',
+      'message': 'Sisa stok ${p.stock} ${p.unit ?? "pcs"}. Segera restock.',
+      'icon': Icons.warning_amber_rounded,
+      'color': AppTheme.errorColor,
+    });
+  }
+  for (final p in expiredProducts) {
+    final isPassed = p.expiredDate!.isBefore(now);
+    notifications.add({
+      'type': 'expired',
+      'title': isPassed ? 'Produk Kedaluwarsa: ${p.name}' : 'Mendekati Kedaluwarsa: ${p.name}',
+      'message': 'Expired: ${p.expiredDate.toString().split(' ')[0]}',
+      'icon': Icons.timer_outlined,
+      'color': Colors.redAccent,
+    });
+  }
+  for (final fs in flashSale) {
+    notifications.add({
+      'type': 'dead_stock',
+      'title': 'Stok Menumpuk: ${fs['productName']}',
+      'message': '${fs['reason']}. Disarankan diskon ${fs['suggestedDiscount']}%.',
+      'icon': Icons.inventory_2_outlined,
+      'color': AppTheme.accentColor,
+    });
+  }
+  if (todayFiltered.isNotEmpty) {
+    notifications.add({
+      'type': 'insight',
+      'title': 'Insight Harian AI',
+      'message': 'Total $todayCount transaksi bernilai Rp ${todaySales.toStringAsFixed(0)} hari ini.',
+      'icon': Icons.auto_graph,
+      'color': AppTheme.primaryColor,
+    });
+  }
 
   return {
     'todaySales': todaySales,
@@ -49,6 +95,8 @@ final homeSummaryProvider = FutureProvider<Map<String, dynamic>>((ref) async {
     'lowStockProducts': lowStockProducts,
     'lowMarginProducts': lowMarginProducts,
     'flashSaleProducts': flashSale,
+    'expiredProducts': expiredProducts,
+    'notifications': notifications,
     'allTransactions': todayTransactions,
     'allProducts': products,
     'tier': tier,
@@ -64,6 +112,80 @@ class OwnerHomeScreen extends ConsumerStatefulWidget {
 
 class _OwnerHomeScreenState extends ConsumerState<OwnerHomeScreen> {
   int _currentIndex = 0;
+
+  void _showNotificationsDialog(BuildContext context, List<Map<String, dynamic>> notifications) {
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: AppTheme.surfaceColor,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (ctx) {
+        return SafeArea(
+          child: Padding(
+            padding: const EdgeInsets.all(16),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Text(
+                      'Notifikasi (${notifications.length})',
+                      style: const TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                        color: AppTheme.textPrimary,
+                      ),
+                    ),
+                    IconButton(
+                      icon: const Icon(Icons.close, color: AppTheme.textSecondary),
+                      onPressed: () => Navigator.pop(ctx),
+                    ),
+                  ],
+                ),
+                const Divider(color: AppTheme.borderColor),
+                if (notifications.isEmpty)
+                  const Padding(
+                    padding: EdgeInsets.symmetric(vertical: 24),
+                    child: Center(
+                      child: Text('Tidak ada notifikasi saat ini.', style: TextStyle(color: AppTheme.textSecondary)),
+                    ),
+                  )
+                else
+                  Flexible(
+                    child: ListView.separated(
+                      shrinkWrap: true,
+                      itemCount: notifications.length,
+                      separatorBuilder: (_, _) => const Divider(color: AppTheme.borderColor, height: 1),
+                      itemBuilder: (context, idx) {
+                        final notif = notifications[idx];
+                        return ListTile(
+                          contentPadding: const EdgeInsets.symmetric(vertical: 4, horizontal: 8),
+                          leading: CircleAvatar(
+                            backgroundColor: (notif['color'] as Color).withValues(alpha: 0.15),
+                            child: Icon(notif['icon'] as IconData, color: notif['color'] as Color, size: 20),
+                          ),
+                          title: Text(
+                            notif['title'] as String,
+                            style: const TextStyle(color: AppTheme.textPrimary, fontWeight: FontWeight.bold, fontSize: 13),
+                          ),
+                          subtitle: Text(
+                            notif['message'] as String,
+                            style: const TextStyle(color: AppTheme.textSecondary, fontSize: 12),
+                          ),
+                        );
+                      },
+                    ),
+                  ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -86,9 +208,45 @@ class _OwnerHomeScreenState extends ConsumerState<OwnerHomeScreen> {
           ),
         ),
         actions: [
-          IconButton(
-            icon: const Icon(Icons.notifications_outlined),
-            onPressed: () {},
+          summaryAsync.maybeWhen(
+            data: (summary) {
+              final notifs = (summary['notifications'] as List?)?.cast<Map<String, dynamic>>() ?? [];
+              return Stack(
+                alignment: Alignment.center,
+                children: [
+                  IconButton(
+                    icon: const Icon(Icons.notifications_outlined),
+                    onPressed: () => _showNotificationsDialog(context, notifs),
+                  ),
+                  if (notifs.isNotEmpty)
+                    Positioned(
+                      top: 8,
+                      right: 8,
+                      child: Container(
+                        padding: const EdgeInsets.all(4),
+                        decoration: const BoxDecoration(
+                          color: AppTheme.errorColor,
+                          shape: BoxShape.circle,
+                        ),
+                        constraints: const BoxConstraints(minWidth: 16, minHeight: 16),
+                        child: Text(
+                          '${notifs.length > 9 ? "9+" : notifs.length}',
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontSize: 10,
+                            fontWeight: FontWeight.bold,
+                          ),
+                          textAlign: TextAlign.center,
+                        ),
+                      ),
+                    ),
+                ],
+              );
+            },
+            orElse: () => IconButton(
+              icon: const Icon(Icons.notifications_outlined),
+              onPressed: () {},
+            ),
           ),
         ],
       ),
@@ -280,10 +438,15 @@ class _OwnerHomeScreenState extends ConsumerState<OwnerHomeScreen> {
                       ),
                     if (flashSale.isNotEmpty)
                       _AICard(
-                        icon: Icons.flash_on,
+                        icon: Icons.inventory_2_outlined,
                         color: AppTheme.accentColor,
-                        title: 'Saran Flash Sale (${flashSale.length} produk)',
-                        body: flashSale.take(3).map((p) => p.name as String).join(', '),
+                        title: 'Stok Menumpuk (${flashSale.length} produk)',
+                        body: flashSale.take(3).map((fs) {
+                          if (fs is Map<String, dynamic>) {
+                            return '${fs['productName']}: tidak ada transaksi ${fs['daysInactive']} hari (saran diskon ${fs['suggestedDiscount']}%)';
+                          }
+                          return (fs as Product).name;
+                        }).join('\n'),
                       ),
                   ],
                 );

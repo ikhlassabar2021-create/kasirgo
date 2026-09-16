@@ -187,18 +187,60 @@ class AIEngine {
     };
   }
 
-  List<Product> suggestFlashSale(
-    List<Product> products, {
+  List<Map<String, dynamic>> suggestFlashSale(
+    List<Product> products,
+    List<Transaction> transactions, {
     int daysThreshold = 30,
-    DateTime? referenceDate,
   }) {
-    final now = referenceDate ?? DateTime.now();
-    return products.where((product) {
-      if (product.stock <= 0) return false;
-      final lastActivity = product.updatedAt ?? product.createdAt;
-      if (lastActivity == null) return false;
-      return now.difference(lastActivity).inDays >= daysThreshold;
-    }).toList();
+    final now = DateTime.now();
+    final lastSaleDateMap = <String, DateTime>{};
+
+    for (final tx in transactions) {
+      for (final item in tx.items) {
+        final existing = lastSaleDateMap[item.productId];
+        if (existing == null || tx.createdAt.isAfter(existing)) {
+          lastSaleDateMap[item.productId] = tx.createdAt;
+        }
+      }
+    }
+
+    final suggestions = <Map<String, dynamic>>[];
+
+    for (final product in products) {
+      if (product.stock <= 0) continue;
+
+      final lastSold = lastSaleDateMap[product.id];
+      final referenceDate = lastSold ?? product.updatedAt ?? product.createdAt ?? DateTime.fromMillisecondsSinceEpoch(0);
+      final daysInactive = now.difference(referenceDate).inDays;
+
+      if (daysInactive >= daysThreshold) {
+        int suggestedDiscount = 20;
+        if (daysInactive >= 60) {
+          suggestedDiscount = 30;
+        } else if (daysInactive >= 45) {
+          suggestedDiscount = 25;
+        }
+
+        final discountedPrice = product.price * (1 - (suggestedDiscount / 100));
+
+        suggestions.add({
+          'product': product,
+          'productId': product.id,
+          'productName': product.name,
+          'stock': product.stock,
+          'currentPrice': product.price,
+          'suggestedDiscount': suggestedDiscount,
+          'suggestedPrice': discountedPrice,
+          'daysInactive': daysInactive,
+          'reason': lastSold == null
+              ? 'Belum pernah terjual sejak ditambahkan ($daysInactive hari)'
+              : 'Tidak ada transaksi selama $daysInactive hari',
+        });
+      }
+    }
+
+    suggestions.sort((a, b) => (b['daysInactive'] as int).compareTo(a['daysInactive'] as int));
+    return suggestions;
   }
 
   Map<String, dynamic> calculateMargin(Product product) => checkMargin(product);
