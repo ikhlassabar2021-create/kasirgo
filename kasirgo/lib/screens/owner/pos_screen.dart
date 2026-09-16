@@ -25,6 +25,8 @@ class _PosScreenState extends ConsumerState<PosScreen> {
   String _selectedChannel = 'Toko Fisik';
   double _discountAmount = 0.0;
   bool _isLoading = false;
+  Map<String, Map<String, double>> _channelPrices = {};
+  Map<String, Map<String, dynamic>> _activeDiscounts = {};
 
   final List<String> _channels = [
     'Toko Fisik',
@@ -34,6 +36,110 @@ class _PosScreenState extends ConsumerState<PosScreen> {
     'GrabFood',
     'GoFood',
   ];
+
+  @override
+  void initState() {
+    super.initState();
+    _loadPricingAndDiscounts();
+  }
+
+  Future<void> _loadPricingAndDiscounts() async {
+    try {
+      final client = sb.Supabase.instance.client;
+      final pricesRes = await client.from('product_prices').select('product_id, channel, price');
+      final discountsRes = await client.from('product_discounts').select(
+        'product_id, discount_percent, discount_amount, start_date, end_date, is_flash_sale'
+      );
+
+      final newChannelPrices = <String, Map<String, double>>{};
+      for (final row in pricesRes as List) {
+        final pId = row['product_id'] as String;
+        final ch = row['channel'] as String;
+        final pr = (row['price'] as num).toDouble();
+        newChannelPrices.putIfAbsent(pId, () => {})[ch] = pr;
+      }
+
+      final now = DateTime.now();
+      final newDiscounts = <String, Map<String, dynamic>>{};
+      for (final row in discountsRes as List) {
+        final pId = row['product_id'] as String;
+        final start = row['start_date'] != null ? DateTime.tryParse(row['start_date']) : null;
+        final end = row['end_date'] != null ? DateTime.tryParse(row['end_date']) : null;
+
+        final isStarted = start == null || now.isAfter(start);
+        final isNotExpired = end == null || now.isBefore(end);
+
+        if (isStarted && isNotExpired) {
+          newDiscounts[pId] = row as Map<String, dynamic>;
+        }
+      }
+
+      if (mounted) {
+        setState(() {
+          _channelPrices = newChannelPrices;
+          _activeDiscounts = newDiscounts;
+        });
+      }
+    } catch (_) {}
+  }
+
+  String _normalizeChannel(String displayChannel) {
+    switch (displayChannel) {
+      case 'Toko Fisik':
+        return 'offline';
+      case 'WhatsApp':
+        return 'whatsapp';
+      case 'Tokopedia':
+        return 'tokopedia';
+      case 'Shopee':
+        return 'shopee';
+      case 'GrabFood':
+        return 'grabfood';
+      case 'GoFood':
+        return 'gofood';
+      default:
+        return displayChannel.toLowerCase();
+    }
+  }
+
+  double _getProductBasePrice(Product product) {
+    final normChannel = _normalizeChannel(_selectedChannel);
+    if (normChannel != 'offline') {
+      final chPrice = _channelPrices[product.id]?[normChannel];
+      if (chPrice != null && chPrice > 0) return chPrice;
+    }
+    return product.price;
+  }
+
+  double _getProductEffectivePrice(Product product) {
+    final basePrice = _getProductBasePrice(product);
+    final disc = _activeDiscounts[product.id];
+    if (disc == null) return basePrice;
+
+    final pct = (disc['discount_percent'] as num?)?.toDouble() ?? 0.0;
+    final amt = (disc['discount_amount'] as num?)?.toDouble() ?? 0.0;
+
+    if (pct > 0) {
+      return (basePrice * (1 - (pct / 100))).clamp(0, double.infinity);
+    } else if (amt > 0) {
+      return (basePrice - amt).clamp(0, double.infinity);
+    }
+    return basePrice;
+  }
+
+  String? _getDiscountBadge(Product product) {
+    final disc = _activeDiscounts[product.id];
+    if (disc == null) return null;
+
+    final isFlash = disc['is_flash_sale'] as bool? ?? false;
+    final pct = (disc['discount_percent'] as num?)?.toDouble() ?? 0.0;
+    final amt = (disc['discount_amount'] as num?)?.toDouble() ?? 0.0;
+
+    if (isFlash) return 'FLASH SALE';
+    if (pct > 0) return '-${pct.toStringAsFixed(0)}%';
+    if (amt > 0) return '-Rp${(amt / 1000).toStringAsFixed(0)}k';
+    return null;
+  }
 
   @override
   void dispose() {
@@ -49,6 +155,8 @@ class _PosScreenState extends ConsumerState<PosScreen> {
       return;
     }
 
+    final effectivePrice = _getProductEffectivePrice(product);
+
     int newQty = 1;
     setState(() {
       final index = _cart.indexWhere((item) => item.productId == product.id);
@@ -63,7 +171,7 @@ class _PosScreenState extends ConsumerState<PosScreen> {
         newQty = currentQty + 1;
         _cart[index] = _cart[index].copyWith(
           quantity: newQty,
-          subtotal: product.price * newQty,
+          subtotal: effectivePrice * newQty,
         );
       } else {
         newQty = 1;
@@ -71,9 +179,9 @@ class _PosScreenState extends ConsumerState<PosScreen> {
           TransactionItem(
             productId: product.id,
             productName: product.name,
-            price: product.price,
+            price: effectivePrice,
             quantity: 1,
-            subtotal: product.price,
+            subtotal: effectivePrice,
           ),
         );
       }
@@ -280,6 +388,16 @@ class _PosScreenState extends ConsumerState<PosScreen> {
                       onProductTap: _addToCart,
                       cartQuantities: {
                         for (final item in _cart) item.productId: item.quantity,
+                      },
+                      customPrices: {
+                        for (final p in filtered) p.id: _getProductEffectivePrice(p),
+                      },
+                      originalPrices: {
+                        for (final p in filtered) p.id: _getProductBasePrice(p),
+                      },
+                      discountBadges: {
+                        for (final p in filtered)
+                          if (_getDiscountBadge(p) != null) p.id: _getDiscountBadge(p)!,
                       },
                     ),
                   ),

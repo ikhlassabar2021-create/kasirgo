@@ -8,12 +8,18 @@ class ProductGrid extends StatelessWidget {
   final List<Product> products;
   final ValueChanged<Product> onProductTap;
   final Map<String, int> cartQuantities;
+  final Map<String, double>? customPrices;
+  final Map<String, String>? discountBadges;
+  final Map<String, double>? originalPrices;
 
   const ProductGrid({
     super.key,
     required this.products,
     required this.onProductTap,
     this.cartQuantities = const {},
+    this.customPrices,
+    this.discountBadges,
+    this.originalPrices,
   });
 
   @override
@@ -41,6 +47,10 @@ class ProductGrid extends StatelessWidget {
         final isOutOfStock = product.stock <= 0;
         final inCartQty = cartQuantities[product.id] ?? 0;
         final hasInCart = inCartQty > 0;
+        final displayPrice = customPrices?[product.id] ?? product.price;
+        final originalPrice = originalPrices?[product.id];
+        final discountBadge = discountBadges?[product.id];
+        final hasDiscount = discountBadge != null && discountBadge.isNotEmpty;
 
         return Material(
           color: AppTheme.surfaceColor,
@@ -88,14 +98,41 @@ class ProductGrid extends StatelessWidget {
                               ),
                             ),
                             const SizedBox(height: 2),
-                            Text(
-                              'Rp ${product.price.toStringAsFixed(0)}',
-                              style: const TextStyle(
-                                color: AppTheme.accentColor,
-                                fontSize: 11,
-                                fontWeight: FontWeight.bold,
+                            if (hasDiscount && originalPrice != null && originalPrice > displayPrice) ...[
+                              Row(
+                                children: [
+                                  Text(
+                                    'Rp ${displayPrice.toStringAsFixed(0)}',
+                                    style: const TextStyle(
+                                      color: AppTheme.successColor,
+                                      fontSize: 11,
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                                  ),
+                                  const SizedBox(width: 4),
+                                  Flexible(
+                                    child: Text(
+                                      'Rp ${originalPrice.toStringAsFixed(0)}',
+                                      style: const TextStyle(
+                                        color: AppTheme.textSecondary,
+                                        fontSize: 9,
+                                        decoration: TextDecoration.lineThrough,
+                                      ),
+                                      overflow: TextOverflow.ellipsis,
+                                    ),
+                                  ),
+                                ],
                               ),
-                            ),
+                            ] else ...[
+                              Text(
+                                'Rp ${displayPrice.toStringAsFixed(0)}',
+                                style: const TextStyle(
+                                  color: AppTheme.accentColor,
+                                  fontSize: 11,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                            ],
                             const SizedBox(height: 2),
                             Text(
                               isOutOfStock ? 'Habis' : 'Stok: ${product.stock}',
@@ -109,6 +146,26 @@ class ProductGrid extends StatelessWidget {
                       ),
                     ],
                   ),
+                  if (hasDiscount)
+                    Positioned(
+                      top: 4,
+                      left: 4,
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 2),
+                        decoration: BoxDecoration(
+                          color: AppTheme.errorColor,
+                          borderRadius: BorderRadius.circular(4),
+                        ),
+                        child: Text(
+                          discountBadge,
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontSize: 9,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ),
+                    ),
                   if (hasInCart)
                     Positioned(
                       top: 4,
