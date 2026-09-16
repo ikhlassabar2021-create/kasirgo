@@ -8,6 +8,7 @@ import 'package:image_picker/image_picker.dart';
 import 'package:mobile_scanner/mobile_scanner.dart';
 import 'package:barcode/barcode.dart' as bc;
 import 'package:path_provider/path_provider.dart';
+import 'package:supabase_flutter/supabase_flutter.dart' as sb;
 import '../../config/app_theme.dart';
 import '../../config/constants.dart';
 import '../../models/product.dart';
@@ -49,6 +50,19 @@ class _ProductFormScreenState extends ConsumerState<ProductFormScreen> {
     'Lainnya',
   ];
 
+  static const _channels = [
+    'offline',
+    'tokopedia',
+    'shopee',
+    'blibli',
+    'gofood',
+    'grabfood',
+    'shopeefood',
+  ];
+
+  final Map<String, TextEditingController> _channelPriceControllers = {};
+  final Map<String, TextEditingController> _channelFeeControllers = {};
+
   @override
   void initState() {
     super.initState();
@@ -67,6 +81,40 @@ class _ProductFormScreenState extends ConsumerState<ProductFormScreen> {
     }
     _expiredDate = p?.expiredDate;
     _imageLocalPath = kIsWeb ? null : p?.imageLocalPath;
+
+    for (final ch in _channels) {
+      _channelPriceControllers[ch] = TextEditingController();
+      _channelFeeControllers[ch] = TextEditingController(text: ch == 'offline' ? '0' : '');
+    }
+
+    if (p != null && p.id.isNotEmpty) {
+      _loadChannelPrices(p.id);
+    }
+  }
+
+  Future<void> _loadChannelPrices(String productId) async {
+    try {
+      final client = sb.Supabase.instance.client;
+      final res = await client
+          .from('product_prices')
+          .select('channel, price, platform_fee_percent')
+          .eq('product_id', productId);
+      final list = res as List<dynamic>;
+      for (final row in list) {
+        final ch = row['channel'] as String?;
+        if (ch != null && _channelPriceControllers.containsKey(ch)) {
+          final price = (row['price'] as num?)?.toDouble();
+          final fee = (row['platform_fee_percent'] as num?)?.toDouble();
+          if (price != null) {
+            _channelPriceControllers[ch]?.text = price.toStringAsFixed(0);
+          }
+          if (fee != null) {
+            _channelFeeControllers[ch]?.text = fee.toStringAsFixed(1);
+          }
+        }
+      }
+      if (mounted) setState(() {});
+    } catch (_) {}
   }
 
   @override
@@ -77,6 +125,12 @@ class _ProductFormScreenState extends ConsumerState<ProductFormScreen> {
     _stockController.dispose();
     _barcodeController.dispose();
     _unitController.dispose();
+    for (final c in _channelPriceControllers.values) {
+      c.dispose();
+    }
+    for (final c in _channelFeeControllers.values) {
+      c.dispose();
+    }
     super.dispose();
   }
 
@@ -325,6 +379,10 @@ class _ProductFormScreenState extends ConsumerState<ProductFormScreen> {
       result = await service.createProduct(product);
     }
 
+    if (result != null && result.id.isNotEmpty) {
+      await _saveChannelPrices(result.id);
+    }
+
     setState(() => _isLoading = false);
 
     if (mounted) {
@@ -348,6 +406,41 @@ class _ProductFormScreenState extends ConsumerState<ProductFormScreen> {
         );
       }
     }
+  }
+
+  Future<void> _saveChannelPrices(String productId) async {
+    try {
+      final client = sb.Supabase.instance.client;
+      for (final ch in _channels) {
+        final priceText = _channelPriceControllers[ch]?.text.trim() ?? '';
+        final feeText = _channelFeeControllers[ch]?.text.trim() ?? '';
+        final price = double.tryParse(priceText);
+        final fee = double.tryParse(feeText) ?? 0.0;
+
+        if (price != null && price > 0) {
+          final existing = await client
+              .from('product_prices')
+              .select('id')
+              .eq('product_id', productId)
+              .eq('channel', ch)
+              .maybeSingle();
+
+          if (existing != null) {
+            await client.from('product_prices').update({
+              'price': price,
+              'platform_fee_percent': fee,
+            }).eq('id', existing['id']);
+          } else {
+            await client.from('product_prices').insert({
+              'product_id': productId,
+              'channel': ch,
+              'price': price,
+              'platform_fee_percent': fee,
+            });
+          }
+        }
+      }
+    } catch (_) {}
   }
 
   Widget _buildImagePreview() {
@@ -419,6 +512,135 @@ class _ProductFormScreenState extends ConsumerState<ProductFormScreen> {
                 ),
               ),
             ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildChannelPricingSection() {
+    final cost = double.tryParse(_costPriceController.text) ?? 0.0;
+
+    return Container(
+      decoration: BoxDecoration(
+        color: AppTheme.surfaceColor,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: AppTheme.borderColor),
+      ),
+      padding: const EdgeInsets.all(12),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              const Icon(Icons.storefront, color: AppTheme.primaryColor, size: 20),
+              const SizedBox(width: 8),
+              const Text(
+                'Harga per Channel',
+                style: TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.white,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 4),
+          const Text(
+            'Atur harga jual dan potongan platform tiap channel untuk melihat margin bersih.',
+            style: TextStyle(fontSize: 12, color: AppTheme.textSecondary),
+          ),
+          const SizedBox(height: 12),
+          ..._channels.map((ch) {
+            final priceCtrl = _channelPriceControllers[ch]!;
+            final feeCtrl = _channelFeeControllers[ch]!;
+            final price = double.tryParse(priceCtrl.text) ?? 0.0;
+            final fee = double.tryParse(feeCtrl.text) ?? 0.0;
+            final netReceive = price * (1 - (fee / 100));
+            final margin = netReceive - cost;
+            final marginPercent = price > 0 ? (margin / price) * 100 : 0.0;
+
+            final channelLabel = switch (ch) {
+              'offline' => 'Offline (Toko)',
+              'tokopedia' => 'Tokopedia',
+              'shopee' => 'Shopee',
+              'blibli' => 'Blibli',
+              'gofood' => 'GoFood',
+              'grabfood' => 'GrabFood',
+              'shopeefood' => 'ShopeeFood',
+              _ => ch,
+            };
+
+            return Container(
+              margin: const EdgeInsets.only(bottom: 12),
+              padding: const EdgeInsets.all(10),
+              decoration: BoxDecoration(
+                color: AppTheme.backgroundColor.withValues(alpha: 0.6),
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(color: AppTheme.borderColor.withValues(alpha: 0.4)),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    channelLabel,
+                    style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 13),
+                  ),
+                  const SizedBox(height: 8),
+                  Row(
+                    children: [
+                      Expanded(
+                        flex: 3,
+                        child: TextFormField(
+                          controller: priceCtrl,
+                          keyboardType: TextInputType.number,
+                          onChanged: (_) => setState(() {}),
+                          decoration: InputDecoration(
+                            isDense: true,
+                            labelText: 'Harga (Rp)',
+                            hintText: _priceController.text.isNotEmpty ? _priceController.text : '0',
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        flex: 2,
+                        child: TextFormField(
+                          controller: feeCtrl,
+                          keyboardType: TextInputType.number,
+                          onChanged: (_) => setState(() {}),
+                          decoration: const InputDecoration(
+                            isDense: true,
+                            labelText: 'Fee %',
+                            hintText: '0',
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                  if (price > 0) ...[
+                    const SizedBox(height: 6),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Text(
+                          'Terima: Rp ${netReceive.toStringAsFixed(0)}',
+                          style: const TextStyle(fontSize: 11, color: AppTheme.textSecondary),
+                        ),
+                        Text(
+                          'Margin: Rp ${margin.toStringAsFixed(0)} (${marginPercent.toStringAsFixed(1)}%)',
+                          style: TextStyle(
+                            fontSize: 11,
+                            fontWeight: FontWeight.bold,
+                            color: margin >= 0 ? AppTheme.successColor : AppTheme.errorColor,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                ],
+              ),
+            );
+          }),
         ],
       ),
     );
@@ -627,6 +849,8 @@ class _ProductFormScreenState extends ConsumerState<ProductFormScreen> {
                     ),
                   ),
                 ),
+                const SizedBox(height: 20),
+                _buildChannelPricingSection(),
                 const SizedBox(height: 24),
                 SizedBox(
                   height: 48,
