@@ -63,6 +63,13 @@ class _ProductFormScreenState extends ConsumerState<ProductFormScreen> {
   final Map<String, TextEditingController> _channelPriceControllers = {};
   final Map<String, TextEditingController> _channelFeeControllers = {};
 
+  final TextEditingController _discountPercentController = TextEditingController();
+  final TextEditingController _discountAmountController = TextEditingController();
+  DateTime? _discountStartDate;
+  DateTime? _discountEndDate;
+  bool _isFlashSale = false;
+  String? _existingDiscountId;
+
   @override
   void initState() {
     super.initState();
@@ -89,6 +96,7 @@ class _ProductFormScreenState extends ConsumerState<ProductFormScreen> {
 
     if (p != null && p.id.isNotEmpty) {
       _loadChannelPrices(p.id);
+      _loadProductDiscount(p.id);
     }
   }
 
@@ -117,6 +125,39 @@ class _ProductFormScreenState extends ConsumerState<ProductFormScreen> {
     } catch (_) {}
   }
 
+  Future<void> _loadProductDiscount(String productId) async {
+    try {
+      final client = sb.Supabase.instance.client;
+      final res = await client
+          .from('product_discounts')
+          .select('id, discount_percent, discount_amount, start_date, end_date, is_flash_sale')
+          .eq('product_id', productId)
+          .order('end_date', ascending: false)
+          .limit(1)
+          .maybeSingle();
+
+      if (res != null) {
+        _existingDiscountId = res['id'] as String?;
+        final pVal = (res['discount_percent'] as num?)?.toDouble();
+        final aVal = (res['discount_amount'] as num?)?.toDouble();
+        if (pVal != null && pVal > 0) {
+          _discountPercentController.text = pVal.toStringAsFixed(1);
+        }
+        if (aVal != null && aVal > 0) {
+          _discountAmountController.text = aVal.toStringAsFixed(0);
+        }
+        if (res['start_date'] != null) {
+          _discountStartDate = DateTime.tryParse(res['start_date'] as String)?.toLocal();
+        }
+        if (res['end_date'] != null) {
+          _discountEndDate = DateTime.tryParse(res['end_date'] as String)?.toLocal();
+        }
+        _isFlashSale = res['is_flash_sale'] as bool? ?? false;
+        if (mounted) setState(() {});
+      }
+    } catch (_) {}
+  }
+
   @override
   void dispose() {
     _nameController.dispose();
@@ -131,6 +172,8 @@ class _ProductFormScreenState extends ConsumerState<ProductFormScreen> {
     for (final c in _channelFeeControllers.values) {
       c.dispose();
     }
+    _discountPercentController.dispose();
+    _discountAmountController.dispose();
     super.dispose();
   }
 
@@ -381,6 +424,7 @@ class _ProductFormScreenState extends ConsumerState<ProductFormScreen> {
 
     if (result != null && result.id.isNotEmpty) {
       await _saveChannelPrices(result.id);
+      await _saveProductDiscount(result.id);
     }
 
     setState(() => _isLoading = false);
@@ -439,6 +483,40 @@ class _ProductFormScreenState extends ConsumerState<ProductFormScreen> {
             });
           }
         }
+      }
+    } catch (_) {}
+  }
+
+  Future<void> _saveProductDiscount(String productId) async {
+    try {
+      final client = sb.Supabase.instance.client;
+      final pct = double.tryParse(_discountPercentController.text.trim());
+      final amt = double.tryParse(_discountAmountController.text.trim());
+
+      final hasDiscount = (pct != null && pct > 0) || (amt != null && amt > 0);
+      if (!hasDiscount) {
+        if (_existingDiscountId != null) {
+          await client.from('product_discounts').delete().eq('id', _existingDiscountId!);
+        }
+        return;
+      }
+
+      final start = _discountStartDate ?? DateTime.now();
+      final end = _discountEndDate ?? DateTime.now().add(const Duration(days: 7));
+
+      final data = {
+        'product_id': productId,
+        'discount_percent': pct,
+        'discount_amount': amt,
+        'start_date': start.toUtc().toIso8601String(),
+        'end_date': end.toUtc().toIso8601String(),
+        'is_flash_sale': _isFlashSale,
+      };
+
+      if (_existingDiscountId != null) {
+        await client.from('product_discounts').update(data).eq('id', _existingDiscountId!);
+      } else {
+        await client.from('product_discounts').insert(data);
       }
     } catch (_) {}
   }
@@ -641,6 +719,194 @@ class _ProductFormScreenState extends ConsumerState<ProductFormScreen> {
               ),
             );
           }),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildDiscountSection() {
+    final basePrice = double.tryParse(_priceController.text) ?? 0.0;
+    final pct = double.tryParse(_discountPercentController.text) ?? 0.0;
+    final amt = double.tryParse(_discountAmountController.text) ?? 0.0;
+
+    double finalDiscountedPrice = basePrice;
+    if (pct > 0) {
+      finalDiscountedPrice = basePrice * (1 - (pct / 100));
+    } else if (amt > 0) {
+      finalDiscountedPrice = (basePrice - amt).clamp(0, double.infinity);
+    }
+
+    return Container(
+      decoration: BoxDecoration(
+        color: AppTheme.surfaceColor,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: AppTheme.borderColor),
+      ),
+      padding: const EdgeInsets.all(12),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              const Icon(Icons.local_offer, color: AppTheme.accentColor, size: 20),
+              const SizedBox(width: 8),
+              const Text(
+                'Diskon & Promo',
+                style: TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.white,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 4),
+          const Text(
+            'Atur diskon persentase atau nominal, periode berlaku, dan label Flash Sale.',
+            style: TextStyle(fontSize: 12, color: AppTheme.textSecondary),
+          ),
+          const SizedBox(height: 12),
+          Row(
+            children: [
+              Expanded(
+                child: TextFormField(
+                  controller: _discountPercentController,
+                  keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                  onChanged: (val) {
+                    if (val.isNotEmpty && _discountAmountController.text.isNotEmpty) {
+                      _discountAmountController.clear();
+                    }
+                    setState(() {});
+                  },
+                  decoration: const InputDecoration(
+                    labelText: 'Diskon %',
+                    hintText: 'Misal: 10',
+                    prefixIcon: Icon(Icons.percent, size: 18),
+                  ),
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: TextFormField(
+                  controller: _discountAmountController,
+                  keyboardType: TextInputType.number,
+                  onChanged: (val) {
+                    if (val.isNotEmpty && _discountPercentController.text.isNotEmpty) {
+                      _discountPercentController.clear();
+                    }
+                    setState(() {});
+                  },
+                  decoration: const InputDecoration(
+                    labelText: 'Potongan Rp',
+                    hintText: 'Misal: 5000',
+                    prefixIcon: Icon(Icons.money_off, size: 18),
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          Row(
+            children: [
+              Expanded(
+                child: InkWell(
+                  onTap: () async {
+                    final picked = await showDatePicker(
+                      context: context,
+                      initialDate: _discountStartDate ?? DateTime.now(),
+                      firstDate: DateTime(2020),
+                      lastDate: DateTime(2035),
+                    );
+                    if (picked != null) {
+                      setState(() => _discountStartDate = picked);
+                    }
+                  },
+                  borderRadius: BorderRadius.circular(8),
+                  child: InputDecorator(
+                    decoration: InputDecoration(
+                      isDense: true,
+                      labelText: 'Mulai',
+                      prefixIcon: const Icon(Icons.play_arrow, size: 16),
+                      suffixIcon: _discountStartDate != null
+                          ? IconButton(
+                              icon: const Icon(Icons.clear, size: 14),
+                              onPressed: () => setState(() => _discountStartDate = null),
+                            )
+                          : null,
+                    ),
+                    child: Text(
+                      _discountStartDate != null
+                          ? '${_discountStartDate!.day}/${_discountStartDate!.month}/${_discountStartDate!.year}'
+                          : 'Sekarang',
+                      style: const TextStyle(fontSize: 12),
+                    ),
+                  ),
+                ),
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: InkWell(
+                  onTap: () async {
+                    final picked = await showDatePicker(
+                      context: context,
+                      initialDate: _discountEndDate ?? DateTime.now().add(const Duration(days: 7)),
+                      firstDate: DateTime(2020),
+                      lastDate: DateTime(2035),
+                    );
+                    if (picked != null) {
+                      setState(() => _discountEndDate = picked);
+                    }
+                  },
+                  borderRadius: BorderRadius.circular(8),
+                  child: InputDecorator(
+                    decoration: InputDecoration(
+                      isDense: true,
+                      labelText: 'Selesai',
+                      prefixIcon: const Icon(Icons.stop, size: 16),
+                      suffixIcon: _discountEndDate != null
+                          ? IconButton(
+                              icon: const Icon(Icons.clear, size: 14),
+                              onPressed: () => setState(() => _discountEndDate = null),
+                            )
+                          : null,
+                    ),
+                    child: Text(
+                      _discountEndDate != null
+                          ? '${_discountEndDate!.day}/${_discountEndDate!.month}/${_discountEndDate!.year}'
+                          : 'Pilih',
+                      style: const TextStyle(fontSize: 12),
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          SwitchListTile(
+            contentPadding: EdgeInsets.zero,
+            title: const Text('Tandai sebagai Flash Sale', style: TextStyle(fontSize: 13)),
+            subtitle: const Text('Akan diprioritaskan di rekomendasi AI & POS', style: TextStyle(fontSize: 11)),
+            value: _isFlashSale,
+            onChanged: (val) => setState(() => _isFlashSale = val),
+            activeThumbColor: AppTheme.accentColor,
+          ),
+          if ((pct > 0 || amt > 0) && basePrice > 0) ...[
+            const Divider(color: AppTheme.borderColor),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                const Text('Harga Setelah Diskon:', style: TextStyle(fontSize: 12, color: AppTheme.textSecondary)),
+                Text(
+                  'Rp ${finalDiscountedPrice.toStringAsFixed(0)}',
+                  style: const TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.bold,
+                    color: AppTheme.successColor,
+                  ),
+                ),
+              ],
+            ),
+          ],
         ],
       ),
     );
@@ -851,6 +1117,8 @@ class _ProductFormScreenState extends ConsumerState<ProductFormScreen> {
                 ),
                 const SizedBox(height: 20),
                 _buildChannelPricingSection(),
+                const SizedBox(height: 20),
+                _buildDiscountSection(),
                 const SizedBox(height: 24),
                 SizedBox(
                   height: 48,
