@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import '../../config/app_theme.dart';
 import '../../providers/auth_provider.dart';
 import '../../widgets/common/app_drawer.dart';
+import '../owner/product_list_screen.dart';
 import '../owner/report_screen.dart';
 
 class AdminHomeScreen extends ConsumerStatefulWidget {
@@ -34,18 +34,7 @@ class _AdminHomeScreenState extends ConsumerState<AdminHomeScreen> {
       body: IndexedStack(
         index: _currentIndex,
         children: const [
-          Center(
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Icon(Icons.admin_panel_settings, size: 64, color: AppTheme.primaryColor),
-                SizedBox(height: 12),
-                Text('Admin Dashboard', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
-                SizedBox(height: 8),
-                Text('Kelola produk dan lihat laporan', style: TextStyle(color: AppTheme.textSecondary)),
-              ],
-            ),
-          ),
+          ProductListScreen(),
           ReportScreen(),
         ],
       ),
