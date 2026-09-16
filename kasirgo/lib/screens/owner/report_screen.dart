@@ -2,7 +2,6 @@ import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:fl_chart/fl_chart.dart';
-import 'package:go_router/go_router.dart';
 import 'package:excel/excel.dart' as xl;
 import 'package:pdf/pdf.dart';
 import 'package:pdf/widgets.dart' as pw;
@@ -142,9 +141,6 @@ class _ReportScreenState extends ConsumerState<ReportScreen> with SingleTickerPr
 
   @override
   Widget build(BuildContext context) {
-    final user = ref.watch(currentUserProvider);
-    final isCashierOrCustomer = user?.role == 'cashier' || user?.role == 'customer';
-
     return Scaffold(
       appBar: AppBar(
         title: const Text('Laporan'),
@@ -196,24 +192,6 @@ class _ReportScreenState extends ConsumerState<ReportScreen> with SingleTickerPr
         label: const Text('Excel', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
         onPressed: _exportExcel,
       ),
-      bottomNavigationBar: isCashierOrCustomer
-          ? null
-          : BottomNavigationBar(
-              currentIndex: 3,
-              onTap: (index) {
-                final routes = ['/owner', '/owner/products', '/owner/pos', '/owner/reports', '/owner/settings'];
-                if (index != 3 && index < routes.length) {
-                  context.pushReplacement(routes[index]);
-                }
-              },
-              items: const [
-                BottomNavigationBarItem(icon: Icon(Icons.dashboard), label: 'Dashboard'),
-                BottomNavigationBarItem(icon: Icon(Icons.inventory_2), label: 'Produk'),
-                BottomNavigationBarItem(icon: Icon(Icons.point_of_sale), label: 'Kasir'),
-                BottomNavigationBarItem(icon: Icon(Icons.bar_chart), label: 'Laporan'),
-                BottomNavigationBarItem(icon: Icon(Icons.settings), label: 'Atur'),
-              ],
-            ),
     );
   }
 

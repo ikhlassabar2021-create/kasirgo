@@ -291,9 +291,9 @@ class _OwnerHomeScreenState extends ConsumerState<OwnerHomeScreen> {
           const ProductListScreen(),
           const PosScreen(),
           const ReportScreen(),
-          const SettingsScreen(),
           const CustomerListScreen(),
           const EmployeeScreen(),
+          const SettingsScreen(),
         ],
       ),
       bottomNavigationBar: _buildBottomNav(context, _currentIndex),
@@ -306,11 +306,14 @@ class _OwnerHomeScreenState extends ConsumerState<OwnerHomeScreen> {
       onTap: (index) {
         setState(() => _currentIndex = index);
       },
+      type: BottomNavigationBarType.fixed,
       items: const [
         BottomNavigationBarItem(icon: Icon(Icons.dashboard), label: 'Dashboard'),
         BottomNavigationBarItem(icon: Icon(Icons.inventory_2), label: 'Produk'),
         BottomNavigationBarItem(icon: Icon(Icons.point_of_sale), label: 'Kasir'),
         BottomNavigationBarItem(icon: Icon(Icons.bar_chart), label: 'Laporan'),
+        BottomNavigationBarItem(icon: Icon(Icons.people), label: 'Pelanggan'),
+        BottomNavigationBarItem(icon: Icon(Icons.badge), label: 'Karyawan'),
         BottomNavigationBarItem(icon: Icon(Icons.settings), label: 'Atur'),
       ],
     );
