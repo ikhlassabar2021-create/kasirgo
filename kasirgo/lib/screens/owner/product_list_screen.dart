@@ -4,11 +4,11 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../config/app_theme.dart';
-import '../../config/constants.dart';
 import '../../models/product.dart';
 import '../../providers/auth_provider.dart';
 import '../../services/supabase_service.dart';
 import '../../utils/formatters.dart';
+import '../../utils/subscription_gate.dart';
 
 final productsProvider = FutureProvider<List<Product>>((ref) async {
   final user = ref.watch(currentUserProvider);
@@ -423,25 +423,33 @@ class _ProductListScreenState extends ConsumerState<ProductListScreen> {
       ),
       floatingActionButton: productsAsync.when(
         data: (products) {
-          final isLimitReached = products.length >= AppConstants.freeTierMaxProducts;
-          return FloatingActionButton.extended(
-            onPressed: () {
-              if (isLimitReached) {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(
-                    content: Text(
-                      'Batas paket gratis (500 produk) tercapai. Silakan upgrade paket.',
-                    ),
-                    backgroundColor: AppTheme.errorColor,
-                  ),
-                );
-                return;
-              }
-              context.push('/owner/products/add');
+          final user = ref.watch(currentUserProvider);
+          return FutureBuilder<String>(
+            future: user?.outletId != null
+                ? SubscriptionGate.getOutletTier(user!.outletId!)
+                : Future.value('free'),
+            builder: (context, snapshot) {
+              final tier = snapshot.data ?? 'free';
+              final isFree = SubscriptionGate.isFree(tier);
+              final isLimitReached = isFree && products.length >= SubscriptionGate.freeMaxProducts;
+
+              return FloatingActionButton.extended(
+                onPressed: () {
+                  if (isLimitReached) {
+                    SubscriptionGate.showUpgradeDialog(
+                      context,
+                      title: 'Batas Produk Tercapai',
+                      message: 'Paket Gratis dibatasi maksimal 500 produk. Upgrade ke Basic atau Pro untuk menambah produk tanpa batas.',
+                    );
+                    return;
+                  }
+                  context.push('/owner/products/add');
+                },
+                backgroundColor: isLimitReached ? Colors.grey : AppTheme.primaryColor,
+                icon: const Icon(Icons.add),
+                label: const Text('Tambah'),
+              );
             },
-            backgroundColor: isLimitReached ? Colors.grey : AppTheme.primaryColor,
-            icon: const Icon(Icons.add),
-            label: const Text('Tambah'),
           );
         },
         loading: () => FloatingActionButton.extended(
