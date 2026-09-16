@@ -8,4 +8,4 @@
 - [x] ST5: Diskon aktif badge & harga coret + channel price di `lib/screens/owner/pos_screen.dart`.
 - [x] ST6: `ai_engine.dart` suggestFlashSale + `owner_home_screen.dart` dead stock card & notifications.
 - [x] ST7: Supabase Edge Function `supabase/functions/stock_alert/index.ts`.
-- [ ] ST8: Verification & live test.
+- [x] ST8: Verification & live test.
