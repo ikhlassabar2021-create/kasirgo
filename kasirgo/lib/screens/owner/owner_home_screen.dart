@@ -1,13 +1,18 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:fl_chart/fl_chart.dart';
-import 'package:go_router/go_router.dart';
 import '../../config/app_theme.dart';
 import '../../providers/auth_provider.dart';
 import '../../services/supabase_service.dart';
 import '../../utils/formatters.dart';
 import '../../utils/ai_engine.dart';
 import '../../widgets/common/app_drawer.dart';
+import 'customer_list_screen.dart';
+import 'employee_screen.dart';
+import 'pos_screen.dart';
+import 'product_list_screen.dart';
+import 'report_screen.dart';
+import 'settings_screen.dart';
 
 final homeSummaryProvider = FutureProvider<Map<String, dynamic>>((ref) async {
   final user = ref.watch(currentUserProvider);
@@ -46,11 +51,18 @@ final homeSummaryProvider = FutureProvider<Map<String, dynamic>>((ref) async {
   };
 });
 
-class OwnerHomeScreen extends ConsumerWidget {
+class OwnerHomeScreen extends ConsumerStatefulWidget {
   const OwnerHomeScreen({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<OwnerHomeScreen> createState() => _OwnerHomeScreenState();
+}
+
+class _OwnerHomeScreenState extends ConsumerState<OwnerHomeScreen> {
+  int _currentIndex = 0;
+
+  @override
+  Widget build(BuildContext context) {
     final user = ref.watch(currentUserProvider);
     final summaryAsync = ref.watch(homeSummaryProvider);
 
@@ -77,7 +89,10 @@ class OwnerHomeScreen extends ConsumerWidget {
         ],
       ),
       drawer: AppDrawer(user: user),
-      body: SingleChildScrollView(
+      body: IndexedStack(
+        index: _currentIndex,
+        children: [
+          SingleChildScrollView(
         padding: const EdgeInsets.all(16),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -273,7 +288,15 @@ class OwnerHomeScreen extends ConsumerWidget {
           ],
         ),
       ),
-      bottomNavigationBar: _buildBottomNav(context, 0),
+          const ProductListScreen(),
+          const PosScreen(),
+          const ReportScreen(),
+          const SettingsScreen(),
+          const CustomerListScreen(),
+          const EmployeeScreen(),
+        ],
+      ),
+      bottomNavigationBar: _buildBottomNav(context, _currentIndex),
     );
   }
 
@@ -281,16 +304,7 @@ class OwnerHomeScreen extends ConsumerWidget {
     return BottomNavigationBar(
       currentIndex: currentIndex,
       onTap: (index) {
-        final routes = [
-          '/owner',
-          '/owner/products',
-          '/owner/pos',
-          '/owner/reports',
-          '/owner/settings',
-        ];
-        if (index != currentIndex) {
-          context.pushReplacement(routes[index]);
-        }
+        setState(() => _currentIndex = index);
       },
       items: const [
         BottomNavigationBarItem(icon: Icon(Icons.dashboard), label: 'Dashboard'),

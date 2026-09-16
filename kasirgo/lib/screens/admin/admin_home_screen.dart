@@ -1,15 +1,22 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:go_router/go_router.dart';
 import '../../config/app_theme.dart';
 import '../../providers/auth_provider.dart';
 import '../../widgets/common/app_drawer.dart';
+import '../owner/report_screen.dart';
 
-class AdminHomeScreen extends ConsumerWidget {
+class AdminHomeScreen extends ConsumerStatefulWidget {
   const AdminHomeScreen({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<AdminHomeScreen> createState() => _AdminHomeScreenState();
+}
+
+class _AdminHomeScreenState extends ConsumerState<AdminHomeScreen> {
+  int _currentIndex = 0;
+
+  @override
+  Widget build(BuildContext context) {
     final user = ref.watch(currentUserProvider);
     if (user == null) return const Scaffold(body: Center(child: CircularProgressIndicator()));
 
@@ -24,23 +31,28 @@ class AdminHomeScreen extends ConsumerWidget {
         ),
       ),
       drawer: AppDrawer(user: user),
-      body: const Center(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(Icons.admin_panel_settings, size: 64, color: AppTheme.primaryColor),
-            SizedBox(height: 12),
-            Text('Admin Dashboard', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
-            SizedBox(height: 8),
-            Text('Kelola produk dan lihat laporan', style: TextStyle(color: AppTheme.textSecondary)),
-          ],
-        ),
+      body: IndexedStack(
+        index: _currentIndex,
+        children: const [
+          Center(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(Icons.admin_panel_settings, size: 64, color: AppTheme.primaryColor),
+                SizedBox(height: 12),
+                Text('Admin Dashboard', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+                SizedBox(height: 8),
+                Text('Kelola produk dan lihat laporan', style: TextStyle(color: AppTheme.textSecondary)),
+              ],
+            ),
+          ),
+          ReportScreen(),
+        ],
       ),
       bottomNavigationBar: BottomNavigationBar(
-        currentIndex: 0,
+        currentIndex: _currentIndex,
         onTap: (index) {
-          final routes = ['/admin', '/admin/reports'];
-          if (index < routes.length) context.pushReplacement(routes[index]);
+          setState(() => _currentIndex = index);
         },
         items: const [
           BottomNavigationBarItem(icon: Icon(Icons.inventory_2), label: 'Produk'),

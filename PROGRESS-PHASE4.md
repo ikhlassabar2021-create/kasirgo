@@ -7,3 +7,4 @@
 - [x] ST4: Manajemen Karyawan (employee_screen.dart, role assignment)
 - [x] ST5: Detail Pelanggan (customer_list_screen.dart: riwayat transaksi, total belanja, loyalty points, piutang/tempo tracking)
 - [x] ST6: Absensi Karyawan (employee_screen.dart: header tanggal, tombol Check-in/Check-out, shift pagi/siang/malam, history absensi Supabase)
+- [x] ST7: Integrasi tab Owner (owner_home_screen.dart: IndexedStack Dashboard/Produk/Kasir/Laporan/Pengaturan/Pelanggan/Karyawan) + tab Laporan Admin (admin_home_screen.dart: ReportScreen)
