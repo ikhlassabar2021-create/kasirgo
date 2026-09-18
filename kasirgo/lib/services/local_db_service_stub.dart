@@ -2,6 +2,9 @@
 import '../models/product.dart';
 import '../models/transaction.dart';
 import '../models/customer.dart';
+import '../models/debt.dart';
+import '../models/variant.dart';
+import '../models/ppob.dart';
 
 class LocalDatabase {
   Future<void> initialize() async {
@@ -21,5 +24,23 @@ class LocalDatabase {
   void markTransactionSynced(String id) {}
   List<Customer> getAllCustomers(String outletId) => [];
   void insertCustomer(Customer customer) {}
+
+  // KasirGo 3.0: debts, stock_logs, ppob_transactions
+  List<Debt> getAllDebts(String outletId) => [];
+  void insertDebt(Debt debt) {}
+  List<Debt> getUnsyncedDebts() => [];
+  void markDebtSynced(String id) {}
+
+  List<StockLog> getStockLogs(String outletId) => [];
+  void insertStockLog(StockLog log) {}
+  List<StockLog> getUnsyncedStockLogs() => [];
+  void markStockLogSynced(String id) {}
+
+  List<PpobTransaction> getAllPpobTransactions(String outletId) => [];
+  void insertPpobTransaction(PpobTransaction tx) {}
+  List<PpobTransaction> getUnsyncedPpobTransactions() => [];
+  void markPpobTransactionSynced(String id) {}
+
   void close() {}
 }
+

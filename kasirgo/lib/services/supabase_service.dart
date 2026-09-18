@@ -5,6 +5,14 @@ import '../models/transaction.dart';
 import '../models/customer.dart';
 import '../models/outlet.dart';
 import '../models/employee.dart';
+import '../models/supporter.dart';
+import '../models/debt.dart';
+import '../models/shift.dart';
+import '../models/tip.dart';
+import '../models/recipe.dart';
+import '../models/variant.dart';
+import '../models/ppob.dart';
+import '../models/restock.dart';
 
 class SupabaseService {
   final SupabaseClient _client = Supabase.instance.client;
@@ -552,69 +560,452 @@ class SupabaseService {
     }
   }
 
-  Future<List<Map<String, dynamic>>> getSubscriptions(String outletId) async {
+  // ==========================================
+  // SUPPORTERS & BENEFITS (Ganti Subscriptions)
+  // ==========================================
+
+  Future<List<Supporter>> getSupporters(String outletId) async {
     try {
       final response = await _client
-          .from('subscriptions')
+          .from('supporters')
           .select()
           .eq('outlet_id', outletId)
           .order('start_date', ascending: false);
 
+      return (response as List)
+          .map((json) => Supporter.fromJson(json as Map<String, dynamic>))
+          .toList();
+    } catch (e) {
+      return [];
+    }
+  }
+
+  Future<Supporter?> getActiveSupporter(String outletId) async {
+    try {
+      final response = await _client
+          .from('supporters')
+          .select()
+          .eq('outlet_id', outletId)
+          .eq('status', 'active')
+          .order('start_date', ascending: false)
+          .limit(1)
+          .maybeSingle();
+
+      if (response == null) return null;
+      return Supporter.fromJson(response);
+    } catch (e) {
+      return null;
+    }
+  }
+
+  Future<Supporter?> createSupporter(Supporter supporter) async {
+    try {
+      final response = await _client
+          .from('supporters')
+          .insert(supporter.toJson())
+          .select()
+          .single();
+
+      return Supporter.fromJson(response);
+    } catch (e) {
+      return null;
+    }
+  }
+
+  Future<bool> updateSupporter(String id, Map<String, dynamic> data) async {
+    try {
+      await _client.from('supporters').update(data).eq('id', id);
+      return true;
+    } catch (e) {
+      return false;
+    }
+  }
+
+  Future<bool> deleteSupporter(String id) async {
+    try {
+      await _client.from('supporters').delete().eq('id', id);
+      return true;
+    } catch (e) {
+      return false;
+    }
+  }
+
+  Future<List<SupporterBenefit>> getSupporterBenefits(String outletId) async {
+    try {
+      final response = await _client
+          .from('supporter_benefits')
+          .select()
+          .eq('outlet_id', outletId);
+
+      return (response as List)
+          .map((json) => SupporterBenefit.fromJson(json as Map<String, dynamic>))
+          .toList();
+    } catch (e) {
+      return [];
+    }
+  }
+
+  Future<bool> setSupporterBenefit(String outletId, String benefitKey, bool enabled) async {
+    try {
+      await _client.from('supporter_benefits').upsert({
+        'outlet_id': outletId,
+        'benefit_key': benefitKey,
+        'enabled': enabled,
+      }, onConflict: 'outlet_id,benefit_key');
+      return true;
+    } catch (e) {
+      return false;
+    }
+  }
+
+  // Backward compatibility alias for deprecated subscriptions
+  @Deprecated('Use getSupporters instead')
+  Future<List<Map<String, dynamic>>> getSubscriptions(String outletId) async {
+    try {
+      final response = await _client
+          .from('supporters')
+          .select()
+          .eq('outlet_id', outletId)
+          .order('start_date', ascending: false);
       return List<Map<String, dynamic>>.from(response);
     } catch (e) {
       return [];
     }
   }
 
+  @Deprecated('Use getActiveSupporter instead')
   Future<Map<String, dynamic>?> getActiveSubscription(String outletId) async {
     try {
-      final response = await _client
-          .from('subscriptions')
-          .select()
-          .eq('outlet_id', outletId)
-          .eq('payment_status', 'paid')
-          .gte('end_date', DateTime.now().toIso8601String())
-          .order('end_date', ascending: false)
-          .limit(1)
-          .maybeSingle();
-
-      return response;
+      final s = await getActiveSupporter(outletId);
+      return s?.toJson();
     } catch (e) {
       return null;
     }
   }
 
+  @Deprecated('Use createSupporter instead')
   Future<Map<String, dynamic>?> createSubscription(Map<String, dynamic> subscription) async {
     try {
       final response = await _client
-          .from('subscriptions')
+          .from('supporters')
           .insert(subscription)
           .select()
           .single();
-
       return response;
     } catch (e) {
       return null;
     }
   }
 
-  Future<bool> updateSubscription(String id, Map<String, dynamic> subscription) async {
+  // ==========================================
+  // DEBTS & DEBT PAYMENTS (Kasbon / Piutang)
+  // ==========================================
+
+  Future<List<Debt>> getDebts(String outletId, {String? status}) async {
     try {
-      await _client.from('subscriptions').update(subscription).eq('id', id);
+      var query = _client.from('debts').select().eq('outlet_id', outletId);
+      if (status != null) {
+        query = query.eq('status', status);
+      }
+      final response = await query.order('created_at', ascending: false);
+      return (response as List)
+          .map((json) => Debt.fromJson(json as Map<String, dynamic>))
+          .toList();
+    } catch (e) {
+      return [];
+    }
+  }
+
+  Future<Debt?> createDebt(Debt debt) async {
+    try {
+      final response = await _client
+          .from('debts')
+          .insert(debt.toJson())
+          .select()
+          .single();
+      return Debt.fromJson(response);
+    } catch (e) {
+      return null;
+    }
+  }
+
+  Future<bool> updateDebt(String id, Map<String, dynamic> data) async {
+    try {
+      await _client.from('debts').update(data).eq('id', id);
       return true;
     } catch (e) {
       return false;
     }
   }
 
-  Future<bool> deleteSubscription(String id) async {
+  Future<List<DebtPayment>> getDebtPayments(String debtId) async {
     try {
-      await _client.from('subscriptions').delete().eq('id', id);
+      final response = await _client
+          .from('debt_payments')
+          .select()
+          .eq('debt_id', debtId)
+          .order('paid_at', ascending: false);
+      return (response as List)
+          .map((json) => DebtPayment.fromJson(json as Map<String, dynamic>))
+          .toList();
+    } catch (e) {
+      return [];
+    }
+  }
+
+  Future<DebtPayment?> recordDebtPayment(DebtPayment payment) async {
+    try {
+      final response = await _client
+          .from('debt_payments')
+          .insert(payment.toJson())
+          .select()
+          .single();
+      return DebtPayment.fromJson(response);
+    } catch (e) {
+      return null;
+    }
+  }
+
+  // ==========================================
+  // SHIFTS & TIPS
+  // ==========================================
+
+  Future<Shift?> getActiveShift(String outletId, {String? userId}) async {
+    try {
+      var query = _client
+          .from('shifts')
+          .select()
+          .eq('outlet_id', outletId)
+          .filter('closed_at', 'is', 'null');
+      if (userId != null) {
+        query = query.eq('user_id', userId);
+      }
+      final response = await query.order('opened_at', ascending: false).limit(1).maybeSingle();
+      if (response == null) return null;
+      return Shift.fromJson(response);
+    } catch (e) {
+      return null;
+    }
+  }
+
+  Future<Shift?> openShift(Shift shift) async {
+    try {
+      final response = await _client
+          .from('shifts')
+          .insert(shift.toJson())
+          .select()
+          .single();
+      return Shift.fromJson(response);
+    } catch (e) {
+      return null;
+    }
+  }
+
+  Future<bool> closeShift(String shiftId, double closingCash) async {
+    try {
+      await _client.from('shifts').update({
+        'closing_cash': closingCash,
+        'closed_at': DateTime.now().toIso8601String(),
+      }).eq('id', shiftId);
       return true;
     } catch (e) {
       return false;
     }
   }
+
+  Future<Tip?> recordTip(Tip tip) async {
+    try {
+      final response = await _client
+          .from('tips')
+          .insert(tip.toJson())
+          .select()
+          .single();
+      return Tip.fromJson(response);
+    } catch (e) {
+      return null;
+    }
+  }
+
+  Future<List<Tip>> getTips(String outletId, {String? shiftId}) async {
+    try {
+      final response = await _client
+          .from('tips')
+          .select()
+          .eq('outlet_id', outletId)
+          .order('created_at', ascending: false);
+      return (response as List)
+          .map((json) => Tip.fromJson(json as Map<String, dynamic>))
+          .toList();
+    } catch (e) {
+      return [];
+    }
+  }
+
+  // ==========================================
+  // PRODUCT VARIANTS & STOCK LOGS
+  // ==========================================
+
+  Future<List<ProductVariant>> getProductVariants(String productId) async {
+    try {
+      final response = await _client
+          .from('product_variants')
+          .select()
+          .eq('product_id', productId);
+      return (response as List)
+          .map((json) => ProductVariant.fromJson(json as Map<String, dynamic>))
+          .toList();
+    } catch (e) {
+      return [];
+    }
+  }
+
+  Future<ProductVariant?> createProductVariant(ProductVariant variant) async {
+    try {
+      final response = await _client
+          .from('product_variants')
+          .insert(variant.toJson())
+          .select()
+          .single();
+      return ProductVariant.fromJson(response);
+    } catch (e) {
+      return null;
+    }
+  }
+
+  Future<bool> recordStockLog(StockLog log) async {
+    try {
+      await _client.from('stock_logs').insert(log.toJson());
+      return true;
+    } catch (e) {
+      return false;
+    }
+  }
+
+  Future<List<StockLog>> getStockLogs(String outletId, {String? productId}) async {
+    try {
+      var query = _client.from('stock_logs').select().eq('outlet_id', outletId);
+      if (productId != null) {
+        query = query.eq('product_id', productId);
+      }
+      final response = await query.order('created_at', ascending: false).limit(100);
+      return (response as List)
+          .map((json) => StockLog.fromJson(json as Map<String, dynamic>))
+          .toList();
+    } catch (e) {
+      return [];
+    }
+  }
+
+  // ==========================================
+  // RECIPES & BOM
+  // ==========================================
+
+  Future<Recipe?> getRecipe(String productId) async {
+    try {
+      final response = await _client
+          .from('recipes')
+          .select('*, recipe_items(*)')
+          .eq('product_id', productId)
+          .maybeSingle();
+      if (response == null) return null;
+      return Recipe.fromJson(response);
+    } catch (e) {
+      return null;
+    }
+  }
+
+  Future<Recipe?> saveRecipe(Recipe recipe, List<RecipeItem> items) async {
+    try {
+      final recRes = await _client
+          .from('recipes')
+          .insert(recipe.toJson())
+          .select()
+          .single();
+      final savedRecipe = Recipe.fromJson(recRes);
+      if (items.isNotEmpty) {
+        final itemsPayload = items.map((i) => i.copyWith(recipeId: savedRecipe.id).toJson()).toList();
+        await _client.from('recipe_items').insert(itemsPayload);
+      }
+      return savedRecipe;
+    } catch (e) {
+      return null;
+    }
+  }
+
+  // ==========================================
+  // PPOB & RESTOCK ORDERS & FINTECH
+  // ==========================================
+
+  Future<List<PpobProduct>> getPpobProducts({String? category}) async {
+    try {
+      var query = _client.from('ppob_products').select();
+      if (category != null) {
+        query = query.eq('category', category);
+      }
+      final response = await query.order('name');
+      return (response as List)
+          .map((json) => PpobProduct.fromJson(json as Map<String, dynamic>))
+          .toList();
+    } catch (e) {
+      return [];
+    }
+  }
+
+  Future<PpobTransaction?> createPpobTransaction(PpobTransaction tx) async {
+    try {
+      final response = await _client
+          .from('ppob_transactions')
+          .insert(tx.toJson())
+          .select()
+          .single();
+      return PpobTransaction.fromJson(response);
+    } catch (e) {
+      return null;
+    }
+  }
+
+  Future<List<RestockOrder>> getRestockOrders(String outletId) async {
+    try {
+      final response = await _client
+          .from('restock_orders')
+          .select()
+          .eq('outlet_id', outletId)
+          .order('created_at', ascending: false);
+      return (response as List)
+          .map((json) => RestockOrder.fromJson(json as Map<String, dynamic>))
+          .toList();
+    } catch (e) {
+      return [];
+    }
+  }
+
+  Future<RestockOrder?> createRestockOrder(RestockOrder order) async {
+    try {
+      final response = await _client
+          .from('restock_orders')
+          .insert(order.toJson())
+          .select()
+          .single();
+      return RestockOrder.fromJson(response);
+    } catch (e) {
+      return null;
+    }
+  }
+
+  Future<bool> createFintechLead(String outletId, String partner, double amountRequested) async {
+    try {
+      await _client.from('fintech_leads').insert({
+        'outlet_id': outletId,
+        'partner': partner,
+        'amount_requested': amountRequested,
+        'status': 'lead',
+      });
+      return true;
+    } catch (e) {
+      return false;
+    }
+  }
+
 
   Future<List<Map<String, dynamic>>> getAiInsights(String outletId, {String? insightType}) async {
     try {

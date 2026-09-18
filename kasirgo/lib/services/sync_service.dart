@@ -2,6 +2,42 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:connectivity_plus/connectivity_plus.dart';
 import '../utils/offline_queue.dart';
 
+class SyncEvent {
+  final String eventId;
+  final String? deviceId;
+  final String operation;
+  final String entity;
+  final Map<String, dynamic> payload;
+  final DateTime timestamp;
+
+  const SyncEvent({
+    required this.eventId,
+    this.deviceId,
+    required this.operation,
+    required this.entity,
+    required this.payload,
+    required this.timestamp,
+  });
+
+  Map<String, dynamic> toMap() => {
+        'event_id': eventId,
+        'device_id': deviceId,
+        'operation': operation,
+        'entity': entity,
+        'payload': payload,
+        'timestamp': timestamp.toIso8601String(),
+      };
+
+  factory SyncEvent.fromMap(Map<String, dynamic> map) => SyncEvent(
+        eventId: map['event_id'] as String,
+        deviceId: map['device_id'] as String?,
+        operation: map['operation'] as String,
+        entity: map['entity'] as String,
+        payload: map['payload'] as Map<String, dynamic>,
+        timestamp: DateTime.parse(map['timestamp'] as String),
+      );
+}
+
 class SyncService {
   final SupabaseClient _client = Supabase.instance.client;
   final OfflineQueue _offlineQueue = OfflineQueue();
@@ -79,6 +115,23 @@ class SyncService {
               .update({'stock': stock})
               .eq('id', productId);
           return true;
+        case 'create_debt':
+          await _client.from('debts').insert(data);
+          return true;
+        case 'create_stock_log':
+          await _client.from('stock_logs').insert(data);
+          return true;
+        case 'create_ppob_transaction':
+          await _client.from('ppob_transactions').insert(data);
+          return true;
+        case 'sync_event':
+          // Event-sourcing delta log sync (pondasi 5.5C)
+          final entity = item['entity'] as String?;
+          if (entity != null) {
+            await _client.from(entity).upsert(data, onConflict: 'event_id');
+            return true;
+          }
+          return false;
         default:
           return false;
       }
@@ -89,6 +142,17 @@ class SyncService {
 
   Future<void> queueOperation(String operation, Map<String, dynamic> data) async {
     await _offlineQueue.addToQueue(operation, data);
+  }
+
+  Future<void> queueSyncEvent(SyncEvent event) async {
+    await _offlineQueue.addToQueue('sync_event', {
+      'entity': event.entity,
+      'data': {
+        ...event.payload,
+        'event_id': event.eventId,
+        'device_id': event.deviceId,
+      },
+    });
   }
 
   Future<int> getPendingQueueLength() async {

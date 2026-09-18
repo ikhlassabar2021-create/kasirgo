@@ -4,6 +4,9 @@ import 'package:sqlite3/sqlite3.dart';
 import '../models/product.dart';
 import '../models/transaction.dart';
 import '../models/customer.dart';
+import '../models/debt.dart';
+import '../models/variant.dart';
+import '../models/ppob.dart';
 
 class LocalDatabase {
   Database? _db;
@@ -53,6 +56,15 @@ class LocalDatabase {
         payment_status TEXT,
         notes TEXT,
         is_synced INTEGER DEFAULT 0,
+        sync_status TEXT DEFAULT 'synced',
+        event_id TEXT,
+        device_id TEXT,
+        gateway_ref TEXT,
+        settlement_status TEXT DEFAULT 'n/a',
+        tip_amount REAL DEFAULT 0,
+        shift_id TEXT,
+        debt_id TEXT,
+        channel TEXT DEFAULT 'offline',
         created_at TEXT NOT NULL
       )
     ''');
@@ -71,7 +83,54 @@ class LocalDatabase {
         created_at TEXT
       )
     ''');
+
+    _db!.execute('''
+      CREATE TABLE IF NOT EXISTS debts (
+        id TEXT PRIMARY KEY,
+        outlet_id TEXT NOT NULL,
+        customer_id TEXT,
+        transaction_id TEXT,
+        amount REAL NOT NULL,
+        paid_amount REAL DEFAULT 0,
+        status TEXT DEFAULT 'unpaid',
+        due_date TEXT,
+        note TEXT,
+        sync_status TEXT DEFAULT 'synced',
+        created_at TEXT NOT NULL
+      )
+    ''');
+
+    _db!.execute('''
+      CREATE TABLE IF NOT EXISTS stock_logs (
+        id TEXT PRIMARY KEY,
+        outlet_id TEXT NOT NULL,
+        product_id TEXT,
+        variant_id TEXT,
+        delta REAL NOT NULL,
+        reason TEXT NOT NULL,
+        ref_id TEXT,
+        device_id TEXT,
+        event_id TEXT UNIQUE,
+        sync_status TEXT DEFAULT 'synced',
+        created_at TEXT NOT NULL
+      )
+    ''');
+
+    _db!.execute('''
+      CREATE TABLE IF NOT EXISTS ppob_transactions (
+        id TEXT PRIMARY KEY,
+        outlet_id TEXT NOT NULL,
+        ppob_product_id TEXT,
+        customer_ref TEXT,
+        amount REAL NOT NULL,
+        status TEXT DEFAULT 'pending',
+        provider_ref TEXT,
+        sync_status TEXT DEFAULT 'synced',
+        created_at TEXT NOT NULL
+      )
+    ''');
   }
+
 
   Database get _ensureDb {
     if (_db == null) throw StateError('Database not initialized');
@@ -165,32 +224,164 @@ class LocalDatabase {
     _ensureDb.execute(
       '''INSERT INTO transactions 
       (id, outlet_id, cashier_id, customer_id, items, total_amount, discount_amount, 
-      tax_amount, final_amount, payment_method, payment_status, notes, is_synced, created_at) 
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)''',
+      tax_amount, final_amount, payment_method, payment_status, notes, is_synced, 
+      sync_status, event_id, device_id, gateway_ref, settlement_status, tip_amount, 
+      shift_id, debt_id, channel, created_at) 
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)''',
       [
         transaction.id, transaction.outletId, transaction.cashierId,
         transaction.customerId, transaction.toJson()['items'],
         transaction.totalAmount, transaction.discountAmount,
         transaction.taxAmount, transaction.finalAmount,
         transaction.paymentMethod, transaction.paymentStatus,
-        transaction.notes, 0, transaction.createdAt.toIso8601String(),
+        transaction.notes,
+        transaction.isSynced ? 1 : 0,
+        transaction.syncStatus,
+        transaction.eventId,
+        transaction.deviceId,
+        transaction.gatewayRef,
+        transaction.settlementStatus,
+        transaction.tipAmount,
+        transaction.shiftId,
+        transaction.debtId,
+        transaction.channel,
+        transaction.createdAt.toIso8601String(),
       ],
     );
   }
 
   List<Transaction> getUnsyncedTransactions() {
     final result = _ensureDb.select(
-      'SELECT * FROM transactions WHERE is_synced = 0',
+      "SELECT * FROM transactions WHERE is_synced = 0 OR sync_status = 'pending'",
     );
     return result.map((row) => Transaction.fromMap(_rowToMap(result.columnNames, row))).toList();
   }
 
   void markTransactionSynced(String id) {
     _ensureDb.execute(
-      'UPDATE transactions SET is_synced = 1 WHERE id = ?',
+      "UPDATE transactions SET is_synced = 1, sync_status = 'synced' WHERE id = ?",
       [id],
     );
   }
+
+  // ==========================================
+  // DEBTS (KASBON)
+  // ==========================================
+
+  List<Debt> getAllDebts(String outletId) {
+    final result = _ensureDb.select(
+      'SELECT * FROM debts WHERE outlet_id = ? ORDER BY created_at DESC',
+      [outletId],
+    );
+    return result.map((row) => Debt.fromMap(_rowToMap(result.columnNames, row))).toList();
+  }
+
+  void insertDebt(Debt debt) {
+    _ensureDb.execute(
+      '''INSERT OR REPLACE INTO debts 
+      (id, outlet_id, customer_id, transaction_id, amount, paid_amount, status, due_date, note, sync_status, created_at) 
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)''',
+      [
+        debt.id, debt.outletId, debt.customerId, debt.transactionId,
+        debt.amount, debt.paidAmount, debt.status,
+        debt.dueDate?.toIso8601String(), debt.note, 'pending',
+        debt.createdAt.toIso8601String(),
+      ],
+    );
+  }
+
+  List<Debt> getUnsyncedDebts() {
+    final result = _ensureDb.select(
+      "SELECT * FROM debts WHERE sync_status = 'pending'",
+    );
+    return result.map((row) => Debt.fromMap(_rowToMap(result.columnNames, row))).toList();
+  }
+
+  void markDebtSynced(String id) {
+    _ensureDb.execute(
+      "UPDATE debts SET sync_status = 'synced' WHERE id = ?",
+      [id],
+    );
+  }
+
+  // ==========================================
+  // STOCK LOGS
+  // ==========================================
+
+  List<StockLog> getStockLogs(String outletId) {
+    final result = _ensureDb.select(
+      'SELECT * FROM stock_logs WHERE outlet_id = ? ORDER BY created_at DESC',
+      [outletId],
+    );
+    return result.map((row) => StockLog.fromMap(_rowToMap(result.columnNames, row))).toList();
+  }
+
+  void insertStockLog(StockLog log) {
+    _ensureDb.execute(
+      '''INSERT OR REPLACE INTO stock_logs 
+      (id, outlet_id, product_id, variant_id, delta, reason, ref_id, device_id, event_id, sync_status, created_at) 
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)''',
+      [
+        log.id, log.outletId, log.productId, log.variantId,
+        log.delta, log.reason, log.refId, log.deviceId, log.eventId,
+        'pending', log.createdAt.toIso8601String(),
+      ],
+    );
+  }
+
+  List<StockLog> getUnsyncedStockLogs() {
+    final result = _ensureDb.select(
+      "SELECT * FROM stock_logs WHERE sync_status = 'pending'",
+    );
+    return result.map((row) => StockLog.fromMap(_rowToMap(result.columnNames, row))).toList();
+  }
+
+  void markStockLogSynced(String id) {
+    _ensureDb.execute(
+      "UPDATE stock_logs SET sync_status = 'synced' WHERE id = ?",
+      [id],
+    );
+  }
+
+  // ==========================================
+  // PPOB TRANSACTIONS
+  // ==========================================
+
+  List<PpobTransaction> getAllPpobTransactions(String outletId) {
+    final result = _ensureDb.select(
+      'SELECT * FROM ppob_transactions WHERE outlet_id = ? ORDER BY created_at DESC',
+      [outletId],
+    );
+    return result.map((row) => PpobTransaction.fromMap(_rowToMap(result.columnNames, row))).toList();
+  }
+
+  void insertPpobTransaction(PpobTransaction tx) {
+    _ensureDb.execute(
+      '''INSERT OR REPLACE INTO ppob_transactions 
+      (id, outlet_id, ppob_product_id, customer_ref, amount, status, provider_ref, sync_status, created_at) 
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)''',
+      [
+        tx.id, tx.outletId, tx.ppobProductId, tx.customerRef,
+        tx.amount, tx.status, tx.providerRef,
+        'pending', tx.createdAt.toIso8601String(),
+      ],
+    );
+  }
+
+  List<PpobTransaction> getUnsyncedPpobTransactions() {
+    final result = _ensureDb.select(
+      "SELECT * FROM ppob_transactions WHERE sync_status = 'pending'",
+    );
+    return result.map((row) => PpobTransaction.fromMap(_rowToMap(result.columnNames, row))).toList();
+  }
+
+  void markPpobTransactionSynced(String id) {
+    _ensureDb.execute(
+      "UPDATE ppob_transactions SET sync_status = 'synced' WHERE id = ?",
+      [id],
+    );
+  }
+
 
   List<Customer> getAllCustomers(String outletId) {
     final result = _ensureDb.select(
