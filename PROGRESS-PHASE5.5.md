@@ -1,4 +1,4 @@
 # PROGRESS PHASE 5.5
-SELESAI: ST5.5A-1 migration SQL
-BERIKUTNYA: ST5.5A-2 models
+SELESAI: ST5.5A-1 migration SQL, ST5.5A-2 models
+BERIKUTNYA: ST5.5A-3 services
 BLOCKER: -

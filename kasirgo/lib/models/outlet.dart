@@ -3,9 +3,9 @@ class Outlet {
   final String ownerId;
   final String businessName;
   final String? businessType;
+  final String? outletType;
   final String? address;
   final String? phone;
-  final String? subscriptionTier;
   final DateTime? createdAt;
   final DateTime? updatedAt;
 
@@ -14,9 +14,9 @@ class Outlet {
     required this.ownerId,
     required this.businessName,
     this.businessType,
+    this.outletType,
     this.address,
     this.phone,
-    this.subscriptionTier,
     this.createdAt,
     this.updatedAt,
   });
@@ -27,9 +27,9 @@ class Outlet {
       ownerId: json['owner_id'] ?? '',
       businessName: json['business_name'] ?? '',
       businessType: json['business_type'],
+      outletType: json['outlet_type'] ?? json['type'],
       address: json['address'],
       phone: json['phone'],
-      subscriptionTier: json['subscription_tier'],
       createdAt: json['created_at'] != null
           ? DateTime.parse(json['created_at'])
           : null,
@@ -45,9 +45,9 @@ class Outlet {
       'owner_id': ownerId,
       'business_name': businessName,
       'business_type': businessType,
+      'outlet_type': outletType,
       'address': address,
       'phone': phone,
-      'subscription_tier': subscriptionTier,
       'created_at': createdAt?.toIso8601String(),
       'updated_at': updatedAt?.toIso8601String(),
     };
@@ -59,9 +59,9 @@ class Outlet {
       'owner_id': ownerId,
       'business_name': businessName,
       'business_type': businessType,
+      'outlet_type': outletType,
       'address': address,
       'phone': phone,
-      'subscription_tier': subscriptionTier,
       'created_at': createdAt?.toIso8601String(),
       'updated_at': updatedAt?.toIso8601String(),
     };
@@ -73,9 +73,9 @@ class Outlet {
       ownerId: map['owner_id'] ?? '',
       businessName: map['business_name'] ?? '',
       businessType: map['business_type'],
+      outletType: map['outlet_type'] ?? map['type'],
       address: map['address'],
       phone: map['phone'],
-      subscriptionTier: map['subscription_tier'],
       createdAt: map['created_at'] != null
           ? DateTime.parse(map['created_at'])
           : null,
@@ -90,9 +90,9 @@ class Outlet {
     String? ownerId,
     String? businessName,
     String? businessType,
+    String? outletType,
     String? address,
     String? phone,
-    String? subscriptionTier,
     DateTime? createdAt,
     DateTime? updatedAt,
   }) {
@@ -101,9 +101,9 @@ class Outlet {
       ownerId: ownerId ?? this.ownerId,
       businessName: businessName ?? this.businessName,
       businessType: businessType ?? this.businessType,
+      outletType: outletType ?? this.outletType,
       address: address ?? this.address,
       phone: phone ?? this.phone,
-      subscriptionTier: subscriptionTier ?? this.subscriptionTier,
       createdAt: createdAt ?? this.createdAt,
       updatedAt: updatedAt ?? this.updatedAt,
     );
