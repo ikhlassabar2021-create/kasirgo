@@ -701,11 +701,14 @@ class SupabaseService {
   // DEBTS & DEBT PAYMENTS (Kasbon / Piutang)
   // ==========================================
 
-  Future<List<Debt>> getDebts(String outletId, {String? status}) async {
+  Future<List<Debt>> getDebts(String outletId, {String? status, String? customerId}) async {
     try {
       var query = _client.from('debts').select().eq('outlet_id', outletId);
       if (status != null) {
         query = query.eq('status', status);
+      }
+      if (customerId != null) {
+        query = query.eq('customer_id', customerId);
       }
       final response = await query.order('created_at', ascending: false);
       return (response as List)

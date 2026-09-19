@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:url_launcher/url_launcher.dart';
 import '../../config/app_theme.dart';
 import '../../models/customer.dart';
+import '../../models/debt.dart';
 import '../../models/transaction.dart';
 import '../../providers/auth_provider.dart';
 import '../../services/supabase_service.dart';
@@ -172,6 +174,7 @@ class _CustomerListScreenState extends ConsumerState<CustomerListScreen> {
   }
 
   void _showCustomerDetail(Customer customer) {
+    final outletId = ref.read(currentUserProvider)?.outletId ?? '';
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
@@ -186,25 +189,17 @@ class _CustomerListScreenState extends ConsumerState<CustomerListScreen> {
           maxChildSize: 0.95,
           expand: false,
           builder: (sheetContext, scrollController) {
-            return FutureBuilder<List<Transaction>>(
-              future: _supabaseService.getCustomerTransactions(customer.id),
+            return FutureBuilder<List<dynamic>>(
+              future: Future.wait([
+                _supabaseService.getCustomerTransactions(customer.id),
+                _supabaseService.getDebts(outletId, customerId: customer.id),
+              ]),
               builder: (context, snapshot) {
-                final txList = snapshot.data ?? [];
-                final unpaidList = txList.where((t) {
-                  final status = (t.paymentStatus ?? '').toLowerCase();
-                  final method = t.paymentMethod.toLowerCase();
-                  return status == 'pending' ||
-                      status == 'unpaid' ||
-                      status == 'tempo' ||
-                      status == 'hutang' ||
-                      method == 'tempo' ||
-                      method == 'hutang' ||
-                      method == 'piutang';
-                }).toList();
-                final totalPiutang = unpaidList.fold<double>(
-                  0.0,
-                  (sum, t) => sum + t.finalAmount,
-                );
+                final txList = (snapshot.data?[0] as List<Transaction>?) ?? [];
+                final debtList = (snapshot.data?[1] as List<Debt>?) ?? [];
+                final totalPiutang = debtList
+                    .where((d) => d.status.toLowerCase() != 'paid')
+                    .fold<double>(0.0, (sum, d) => sum + d.remainingAmount);
 
                 return ListView(
                   controller: scrollController,
@@ -370,6 +365,140 @@ class _CustomerListScreenState extends ConsumerState<CustomerListScreen> {
                         ),
                       ],
                     ),
+                    const SizedBox(height: 24),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        const Text(
+                          'Riwayat Piutang / Kasbon',
+                          style: TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.bold,
+                            color: AppTheme.textPrimary,
+                          ),
+                        ),
+                        if (totalPiutang > 0 && customer.phone != null && customer.phone!.isNotEmpty)
+                          TextButton.icon(
+                            style: TextButton.styleFrom(
+                              foregroundColor: AppTheme.successColor,
+                              padding: EdgeInsets.zero,
+                              visualDensity: VisualDensity.compact,
+                            ),
+                            icon: const Icon(Icons.chat, size: 14),
+                            label: const Text('Tagih WA', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
+                            onPressed: () async {
+                              String formattedPhone = customer.phone!.replaceAll(RegExp(r'[^0-9]'), '');
+                              if (formattedPhone.startsWith('0')) {
+                                formattedPhone = '62${formattedPhone.substring(1)}';
+                              } else if (!formattedPhone.startsWith('62')) {
+                                formattedPhone = '62$formattedPhone';
+                              }
+                              final message =
+                                  'Halo Kak ${customer.name}, ini pengingat kasbon di toko kami sebesar ${Formatters.currency(totalPiutang)}. Mohon konfirmasinya ya kak. Terima kasih!';
+                              final uri = Uri.parse('https://wa.me/$formattedPhone?text=${Uri.encodeComponent(message)}');
+                              if (await canLaunchUrl(uri)) {
+                                await launchUrl(uri, mode: LaunchMode.externalApplication);
+                              }
+                            },
+                          ),
+                      ],
+                    ),
+                    const SizedBox(height: 8),
+                    if (debtList.isEmpty)
+                      Container(
+                        padding: const EdgeInsets.all(16),
+                        decoration: BoxDecoration(
+                          color: AppTheme.surfaceColor,
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: const Center(
+                          child: Text(
+                            'Tidak ada catatan piutang aktif',
+                            style: TextStyle(color: AppTheme.textSecondary, fontSize: 12),
+                          ),
+                        ),
+                      )
+                    else
+                      ...debtList.map((debt) {
+                        final isPaid = debt.status.toLowerCase() == 'paid';
+                        final isPartial = debt.status.toLowerCase() == 'partial';
+                        final statusColor = isPaid
+                            ? AppTheme.successColor
+                            : isPartial
+                                ? Colors.orange
+                                : Colors.redAccent;
+                        final statusLabel = isPaid
+                            ? 'LUNAS'
+                            : isPartial
+                                ? 'SEBAGIAN'
+                                : 'BELUM LUNAS';
+
+                        return Container(
+                          margin: const EdgeInsets.only(bottom: 8),
+                          padding: const EdgeInsets.all(12),
+                          decoration: BoxDecoration(
+                            color: AppTheme.surfaceColor,
+                            borderRadius: BorderRadius.circular(12),
+                            border: Border.all(
+                              color: isPaid
+                                  ? AppTheme.borderColor.withValues(alpha: 0.4)
+                                  : statusColor.withValues(alpha: 0.4),
+                            ),
+                          ),
+                          child: Row(
+                            children: [
+                              CircleAvatar(
+                                radius: 16,
+                                backgroundColor: statusColor.withValues(alpha: 0.15),
+                                child: Icon(
+                                  isPaid ? Icons.check_circle : Icons.menu_book,
+                                  size: 16,
+                                  color: statusColor,
+                                ),
+                              ),
+                              const SizedBox(width: 10),
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      Formatters.dateTime(debt.createdAt),
+                                      style: const TextStyle(
+                                        fontSize: 12,
+                                        fontWeight: FontWeight.w600,
+                                        color: AppTheme.textPrimary,
+                                      ),
+                                    ),
+                                    const SizedBox(height: 2),
+                                    Text(
+                                      'Total: ${Formatters.currency(debt.amount)} | Sisa: ${Formatters.currency(debt.remainingAmount)}',
+                                      style: const TextStyle(
+                                        fontSize: 11,
+                                        color: AppTheme.textSecondary,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                              Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                decoration: BoxDecoration(
+                                  color: statusColor.withValues(alpha: 0.15),
+                                  borderRadius: BorderRadius.circular(4),
+                                ),
+                                child: Text(
+                                  statusLabel,
+                                  style: TextStyle(
+                                    fontSize: 9,
+                                    fontWeight: FontWeight.bold,
+                                    color: statusColor,
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                        );
+                      }),
                     const SizedBox(height: 24),
                     const Text(
                       'Riwayat Transaksi',

@@ -10,7 +10,7 @@ import '../../services/supabase_service.dart';
 import '../../utils/formatters.dart';
 import '../../utils/ai_engine.dart';
 import '../../widgets/common/app_drawer.dart';
-import '../modules/debt_screen.dart';
+import 'debt_screen.dart';
 import '../modules/kitchen_display_screen.dart';
 import '../modules/ppob_screen.dart';
 import '../modules/restock_screen.dart';
