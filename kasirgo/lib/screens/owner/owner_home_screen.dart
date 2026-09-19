@@ -4,10 +4,17 @@ import 'package:fl_chart/fl_chart.dart';
 import '../../config/app_theme.dart';
 import '../../models/product.dart';
 import '../../providers/auth_provider.dart';
+import '../../providers/outlet_provider.dart';
+import '../../providers/module_provider.dart';
 import '../../services/supabase_service.dart';
 import '../../utils/formatters.dart';
 import '../../utils/ai_engine.dart';
 import '../../widgets/common/app_drawer.dart';
+import '../modules/debt_screen.dart';
+import '../modules/kitchen_display_screen.dart';
+import '../modules/ppob_screen.dart';
+import '../modules/restock_screen.dart';
+import '../modules/supporter_screen.dart';
 import 'customer_list_screen.dart';
 import 'employee_screen.dart';
 import 'pos_screen.dart';
@@ -316,6 +323,8 @@ class _OwnerHomeScreenState extends ConsumerState<OwnerHomeScreen> {
               ),
             ),
             const SizedBox(height: 24),
+            _buildModularQuickActions(context, user.outletId ?? ''),
+            const SizedBox(height: 24),
             const Text(
               'Penjualan 7 Hari Terakhir',
               style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
@@ -463,6 +472,249 @@ class _OwnerHomeScreenState extends ConsumerState<OwnerHomeScreen> {
     );
   }
 
+  Widget _buildModularQuickActions(BuildContext context, String outletId) {
+    final outletType = ref.watch(outletTypeProvider(outletId));
+    final modules = ref.watch(activeModulesProvider(outletId));
+
+    String typeLabel;
+    switch (outletType.toLowerCase()) {
+      case 'warteg':
+        typeLabel = 'Warteg / Rumah Makan';
+        break;
+      case 'cafe':
+        typeLabel = 'Cafe & Resto';
+        break;
+      case 'retail':
+        typeLabel = 'Retail / Toko';
+        break;
+      case 'kelontong':
+      default:
+        typeLabel = 'Warung Kelontong';
+        break;
+    }
+
+    final quickActionItems = <Widget>[];
+
+    // Kelontong & Retail: Grosir
+    if (modules.contains(BusinessModule.wholesalePrice)) {
+      quickActionItems.add(
+        _ModuleCard(
+          icon: Icons.price_change,
+          title: 'Harga Grosir',
+          subtitle: 'Grosir berjenjang',
+          color: AppTheme.accentColor,
+          onTap: () {
+            setState(() => _currentIndex = 1); // Go to Produk
+          },
+        ),
+      );
+    }
+
+    // Kelontong & Warteg: Kasbon
+    if (modules.contains(BusinessModule.debt)) {
+      quickActionItems.add(
+        _ModuleCard(
+          icon: Icons.menu_book,
+          title: 'Buku Kasbon',
+          subtitle: 'Catat piutang',
+          color: Colors.amber,
+          onTap: () {
+            Navigator.push(context, MaterialPageRoute(builder: (_) => const DebtScreen()));
+          },
+        ),
+      );
+    }
+
+    // Kelontong & Retail: PPOB
+    if (modules.contains(BusinessModule.ppob)) {
+      quickActionItems.add(
+        _ModuleCard(
+          icon: Icons.phone_android,
+          title: 'PPOB & Pulsa',
+          subtitle: 'Token PLN, pulsa',
+          color: AppTheme.primaryColor,
+          onTap: () {
+            Navigator.push(context, MaterialPageRoute(builder: (_) => const PpobScreen()));
+          },
+        ),
+      );
+    }
+
+    // Kelontong & Retail: Kulakan B2B
+    if (modules.contains(BusinessModule.restockB2B)) {
+      quickActionItems.add(
+        _ModuleCard(
+          icon: Icons.local_shipping,
+          title: 'Kulakan B2B',
+          subtitle: 'Restock grosir',
+          color: AppTheme.successColor,
+          onTap: () {
+            Navigator.push(context, MaterialPageRoute(builder: (_) => const RestockScreen()));
+          },
+        ),
+      );
+    }
+
+    // Warteg: Resep / Bahan Baku Porsi
+    if (outletType.toLowerCase() == 'warteg' && modules.contains(BusinessModule.recipeIngredients)) {
+      quickActionItems.add(
+        _ModuleCard(
+          icon: Icons.soup_kitchen,
+          title: 'Porsi & Bahan',
+          subtitle: 'Pantau stok porsi',
+          color: Colors.orange,
+          onTap: () {
+            setState(() => _currentIndex = 1); // Produk/Menu
+          },
+        ),
+      );
+    }
+
+    // Warteg: Shift Kasir
+    if (outletType.toLowerCase() == 'warteg') {
+      quickActionItems.add(
+        _ModuleCard(
+          icon: Icons.schedule,
+          title: 'Shift Kasir',
+          subtitle: 'Rekap pergantian shift',
+          color: AppTheme.secondaryColor,
+          onTap: () {
+            setState(() => _currentIndex = 3); // Laporan/Shift
+          },
+        ),
+      );
+    }
+
+    // Cafe & Warteg: Kitchen KDS
+    if (modules.contains(BusinessModule.kitchenDisplay)) {
+      quickActionItems.add(
+        _ModuleCard(
+          icon: Icons.kitchen,
+          title: 'Kitchen (KDS)',
+          subtitle: 'Layar pesanan dapur',
+          color: AppTheme.secondaryColor,
+          onTap: () {
+            Navigator.push(context, MaterialPageRoute(builder: (_) => const KitchenDisplayScreen()));
+          },
+        ),
+      );
+    }
+
+    // Cafe: QR Meja & Table Management
+    if (modules.contains(BusinessModule.tableManagement)) {
+      quickActionItems.add(
+        _ModuleCard(
+          icon: Icons.table_restaurant,
+          title: 'QR Meja',
+          subtitle: 'Dine-in self order',
+          color: AppTheme.accentColor,
+          onTap: () {
+            setState(() => _currentIndex = 2); // Kasir / POS
+          },
+        ),
+      );
+    }
+
+    // Cafe: Split Bill & Tip
+    if (modules.contains(BusinessModule.splitBill)) {
+      quickActionItems.add(
+        _ModuleCard(
+          icon: Icons.call_split,
+          title: 'Split Bill & Tip',
+          subtitle: 'Bagi bayar pesanan',
+          color: Colors.pinkAccent,
+          onTap: () {
+            setState(() => _currentIndex = 2); // Kasir / POS
+          },
+        ),
+      );
+    }
+
+    // Retail & Cafe: Varian / Multi-variant
+    if (modules.contains(BusinessModule.variants)) {
+      quickActionItems.add(
+        _ModuleCard(
+          icon: Icons.style,
+          title: 'Multi Varian',
+          subtitle: 'Ukuran, rasa, warna',
+          color: Colors.teal,
+          onTap: () {
+            setState(() => _currentIndex = 1); // Produk
+          },
+        ),
+      );
+    }
+
+    // Retail: Barcode & CRM
+    if (outletType.toLowerCase() == 'retail') {
+      quickActionItems.add(
+        _ModuleCard(
+          icon: Icons.loyalty,
+          title: 'CRM Pelanggan',
+          subtitle: 'Poin & loyalitas',
+          color: AppTheme.successColor,
+          onTap: () {
+            setState(() => _currentIndex = 4); // Pelanggan
+          },
+        ),
+      );
+    }
+
+    // Selalu tampilkan Program Pendukung
+    quickActionItems.add(
+      _ModuleCard(
+        icon: Icons.favorite,
+        title: 'Pendukung KasirGo',
+        subtitle: 'Rp0 tanpa paywall',
+        color: Colors.amber,
+        onTap: () {
+          Navigator.push(context, MaterialPageRoute(builder: (_) => const SupporterScreen()));
+        },
+      ),
+    );
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            const Text(
+              'Modul Bisnis',
+              style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
+            ),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+              decoration: BoxDecoration(
+                color: AppTheme.primaryColor.withValues(alpha: 0.15),
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(color: AppTheme.primaryColor.withValues(alpha: 0.3)),
+              ),
+              child: Text(
+                typeLabel,
+                style: const TextStyle(
+                  fontSize: 11,
+                  fontWeight: FontWeight.w600,
+                  color: AppTheme.accentColor,
+                ),
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 12),
+        GridView.count(
+          crossAxisCount: 2,
+          shrinkWrap: true,
+          physics: const NeverScrollableScrollPhysics(),
+          mainAxisSpacing: 10,
+          crossAxisSpacing: 10,
+          childAspectRatio: 2.2,
+          children: quickActionItems,
+        ),
+      ],
+    );
+  }
+
   Widget _buildBottomNav(BuildContext context, int currentIndex) {
     return BottomNavigationBar(
       currentIndex: currentIndex,
@@ -577,6 +829,82 @@ class _AICard extends StatelessWidget {
             ),
           ),
         ],
+      ),
+    );
+  }
+}
+
+class _ModuleCard extends StatelessWidget {
+  final IconData icon;
+  final String title;
+  final String subtitle;
+  final Color color;
+  final VoidCallback onTap;
+
+  const _ModuleCard({
+    required this.icon,
+    required this.title,
+    required this.subtitle,
+    required this.color,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(12),
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+          decoration: BoxDecoration(
+            color: AppTheme.surfaceColor.withValues(alpha: 0.8),
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(color: color.withValues(alpha: 0.3)),
+          ),
+          child: Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(6),
+                decoration: BoxDecoration(
+                  color: color.withValues(alpha: 0.15),
+                  shape: BoxShape.circle,
+                ),
+                child: Icon(icon, color: color, size: 18),
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      title,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(
+                        fontSize: 12,
+                        fontWeight: FontWeight.bold,
+                        color: AppTheme.textPrimary,
+                      ),
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      subtitle,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(
+                        fontSize: 10,
+                        color: AppTheme.textSecondary,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
       ),
     );
   }
