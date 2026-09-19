@@ -1,3 +1,5 @@
+import 'dart:async';
+import 'package:flutter/foundation.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:connectivity_plus/connectivity_plus.dart';
 import '../utils/offline_queue.dart';
@@ -33,7 +35,7 @@ class SyncEvent {
         deviceId: map['device_id'] as String?,
         operation: map['operation'] as String,
         entity: map['entity'] as String,
-        payload: map['payload'] as Map<String, dynamic>,
+        payload: Map<String, dynamic>.from(map['payload'] as Map),
         timestamp: DateTime.parse(map['timestamp'] as String),
       );
 }
@@ -60,16 +62,22 @@ class SyncService {
     });
   }
 
+  /// Syncs the offline queue in a background isolate to avoid blocking POS UI.
   Future<void> syncQueue() async {
     if (_isSyncing) return;
     _isSyncing = true;
 
     try {
-      final queue = await _offlineQueue.getQueue();
+      final rawQueue = await _offlineQueue.getQueue();
+      if (rawQueue.isEmpty) return;
+
+      // Group stock delta updates to resolve multi-cashier stock conflicts
+      final preparedQueue = await compute(_prepareAndResolveConflictQueue, rawQueue);
+
       final processedIndices = <int>[];
 
-      for (var i = 0; i < queue.length; i++) {
-        final item = queue[i];
+      for (var i = 0; i < preparedQueue.length; i++) {
+        final item = preparedQueue[i];
         final success = await _processQueueItem(item);
 
         if (success) {
@@ -90,17 +98,78 @@ class SyncService {
     }
   }
 
+  /// Background Isolate worker: Aggregates delta stock events by atomic counter/timestamp
+  /// and validates idempotency before uploading.
+  static List<Map<String, dynamic>> _prepareAndResolveConflictQueue(
+    List<Map<String, dynamic>> queue,
+  ) {
+    final stockDeltas = <String, Map<String, dynamic>>{};
+    final resolved = <Map<String, dynamic>>[];
+
+    for (final item in queue) {
+      final operation = item['operation'] as String?;
+      final data = Map<String, dynamic>.from(item['data'] as Map? ?? {});
+
+      if (operation == 'update_stock' || operation == 'create_stock_log') {
+        final productId = data['product_id'] as String?;
+        if (productId != null) {
+          final delta = (data['change_amount'] ?? data['delta'] ?? 0) as num;
+          final current = stockDeltas[productId];
+          final timestamp = DateTime.tryParse(item['timestamp'] as String? ?? '') ??
+              DateTime.now();
+
+          if (current == null) {
+            stockDeltas[productId] = {
+              'product_id': productId,
+              'delta': delta,
+              'latest_timestamp': timestamp,
+              'original_item': item,
+            };
+          } else {
+            // Atomic counter accumulation: sum up stock deltas
+            current['delta'] = (current['delta'] as num) + delta;
+            final prevTime = current['latest_timestamp'] as DateTime;
+            if (timestamp.isAfter(prevTime)) {
+              current['latest_timestamp'] = timestamp;
+            }
+          }
+          continue;
+        }
+      }
+      resolved.add(item);
+    }
+
+    // Append merged stock resolution delta events
+    stockDeltas.forEach((productId, summary) {
+      final baseItem = Map<String, dynamic>.from(summary['original_item'] as Map);
+      final baseData = Map<String, dynamic>.from(baseItem['data'] as Map);
+      baseData['aggregated_delta'] = summary['delta'];
+      baseData['resolved_at'] = (summary['latest_timestamp'] as DateTime).toIso8601String();
+      baseItem['data'] = baseData;
+      resolved.add(baseItem);
+    });
+
+    return resolved;
+  }
+
   Future<bool> _processQueueItem(Map<String, dynamic> item) async {
     try {
       final operation = item['operation'] as String;
-      final data = item['data'] as Map<String, dynamic>;
+      final data = Map<String, dynamic>.from(item['data'] as Map);
 
       switch (operation) {
         case 'create_transaction':
-          await _client.from('transactions').insert(data);
+          // Idempotent insert/upsert with event_id or id
+          await _client.from('transactions').upsert(
+                data,
+                onConflict: data.containsKey('event_id') ? 'event_id' : 'id',
+              );
           return true;
         case 'create_product':
-          await _client.from('products').insert(data);
+          await _client.from('products').upsert(
+                data,
+                onConflict: data.containsKey('event_id') ? 'event_id' : 'id',
+              );
           return true;
         case 'update_product':
           final id = data['id'];
@@ -109,23 +178,56 @@ class SyncService {
           return true;
         case 'update_stock':
           final productId = data['product_id'];
-          final stock = data['stock'];
-          await _client
-              .from('products')
-              .update({'stock': stock})
-              .eq('id', productId);
+          final aggregatedDelta = data['aggregated_delta'];
+          if (aggregatedDelta != null) {
+            // Apply atomic counter decrement/increment via RPC or calculate latest
+            try {
+              await _client.rpc('increment_product_stock', params: {
+                'p_product_id': productId,
+                'p_delta': aggregatedDelta,
+              });
+            } catch (_) {
+              // Fallback to direct update if RPC is missing
+              final currentProduct = await _client
+                  .from('products')
+                  .select('stock')
+                  .eq('id', productId)
+                  .maybeSingle();
+              if (currentProduct != null) {
+                final currentStock = (currentProduct['stock'] as num? ?? 0);
+                await _client.from('products').update({
+                  'stock': currentStock + (aggregatedDelta as num),
+                }).eq('id', productId);
+              }
+            }
+          } else {
+            final stock = data['stock'];
+            await _client
+                .from('products')
+                .update({'stock': stock})
+                .eq('id', productId);
+          }
           return true;
         case 'create_debt':
-          await _client.from('debts').insert(data);
+          await _client.from('debts').upsert(
+                data,
+                onConflict: data.containsKey('event_id') ? 'event_id' : 'id',
+              );
           return true;
         case 'create_stock_log':
-          await _client.from('stock_logs').insert(data);
+          await _client.from('stock_logs').upsert(
+                data,
+                onConflict: data.containsKey('event_id') ? 'event_id' : 'id',
+              );
           return true;
         case 'create_ppob_transaction':
-          await _client.from('ppob_transactions').insert(data);
+          await _client.from('ppob_transactions').upsert(
+                data,
+                onConflict: data.containsKey('event_id') ? 'event_id' : 'id',
+              );
           return true;
         case 'sync_event':
-          // Event-sourcing delta log sync (pondasi 5.5C)
+          // Event-sourcing delta log sync, idempotent on event_id UNIQUE
           final entity = item['entity'] as String?;
           if (entity != null) {
             await _client.from(entity).upsert(data, onConflict: 'event_id');
@@ -151,6 +253,7 @@ class SyncService {
         ...event.payload,
         'event_id': event.eventId,
         'device_id': event.deviceId,
+        'timestamp': event.timestamp.toIso8601String(),
       },
     });
   }

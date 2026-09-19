@@ -1,4 +1,4 @@
 # PROGRESS PHASE 5.5
-SELESAI: Phase 5.5A (ST5.5A-1, ST5.5A-2, ST5.5A-3, ST5.5A-4), Phase 5.5B (ST5.5B-1, ST5.5B-2, ST5.5B-3), ST5.5C-1
-BERIKUTNYA: ST5.5C-2
+SELESAI: Phase 5.5A, Phase 5.5B, Phase 5.5C (ST5.5C-1, ST5.5C-2) - akhir retrofit KasirGo 3.0
+BERIKUTNYA: Phase 6 (WhatsApp + social commerce + QR meja + health score)
 BLOCKER: -
