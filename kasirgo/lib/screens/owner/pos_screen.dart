@@ -5,7 +5,6 @@ import '../../config/app_theme.dart';
 import '../../models/product.dart';
 import '../../models/transaction.dart';
 import '../../services/supabase_service.dart';
-import '../../utils/subscription_gate.dart';
 import '../owner/product_list_screen.dart';
 import '../../widgets/pos/product_grid.dart';
 import '../../widgets/pos/cart_panel.dart';
@@ -225,21 +224,6 @@ class _PosScreenState extends ConsumerState<PosScreen> {
   Future<void> _handleCheckout(List<Product> products) async {
     if (_cart.isEmpty) return;
 
-    final outletId = products.isNotEmpty ? products.first.outletId : null;
-    if (outletId != null) {
-      final canTransact = await SubscriptionGate.canCreateTransaction(outletId: outletId);
-      if (!canTransact) {
-        if (!mounted) return;
-        SubscriptionGate.showUpgradeDialog(
-          context,
-          title: 'Batas Transaksi Tercapai',
-          message: 'Batas transaksi bulanan paket gratis (500 transaksi) sudah tercapai. Upgrade ke Basic atau Pro untuk transaksi tanpa batas.',
-        );
-        return;
-      }
-    }
-
-    if (!mounted) return;
     final result = await showDialog<CheckoutResult>(
       context: context,
       builder: (ctx) => CheckoutDialog(

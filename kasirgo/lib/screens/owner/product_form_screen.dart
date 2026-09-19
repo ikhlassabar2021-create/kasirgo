@@ -10,7 +10,6 @@ import 'package:barcode/barcode.dart' as bc;
 import 'package:path_provider/path_provider.dart';
 import 'package:supabase_flutter/supabase_flutter.dart' as sb;
 import '../../config/app_theme.dart';
-import '../../config/constants.dart';
 import '../../models/product.dart';
 import '../../providers/auth_provider.dart';
 import '../../services/supabase_service.dart';
@@ -373,27 +372,6 @@ class _ProductFormScreenState extends ConsumerState<ProductFormScreen> {
         const SnackBar(content: Text('Outlet ID tidak valid'), backgroundColor: AppTheme.errorColor),
       );
       return;
-    }
-
-    final isNew = widget.product == null || widget.product!.id.isEmpty;
-    if (isNew) {
-      final existingProducts = ref.read(productsProvider).valueOrNull ?? [];
-      if (existingProducts.length >= AppConstants.freeTierMaxProducts) {
-        final outlet = await SupabaseService().getOutlet(outletId);
-        final tier = outlet?.subscriptionTier ?? 'free';
-        if (tier == 'free') {
-          if (mounted) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(
-                content: Text('Batas produk paket gratis (500 produk) tercapai. Silakan upgrade paket.'),
-                backgroundColor: AppTheme.errorColor,
-                duration: Duration(seconds: 4),
-              ),
-            );
-          }
-          return;
-        }
-      }
     }
 
     setState(() => _isLoading = true);

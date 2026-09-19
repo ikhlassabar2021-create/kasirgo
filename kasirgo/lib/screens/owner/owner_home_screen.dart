@@ -7,9 +7,7 @@ import '../../providers/auth_provider.dart';
 import '../../services/supabase_service.dart';
 import '../../utils/formatters.dart';
 import '../../utils/ai_engine.dart';
-import '../../utils/subscription_gate.dart';
 import '../../widgets/common/app_drawer.dart';
-import '../../widgets/common/ad_banner_widget.dart';
 import 'customer_list_screen.dart';
 import 'employee_screen.dart';
 import 'pos_screen.dart';
@@ -29,7 +27,6 @@ final homeSummaryProvider = FutureProvider<Map<String, dynamic>>((ref) async {
 
   final products = await service.getProducts(user.outletId!);
   final customers = await service.getCustomers(user.outletId!);
-  final tier = await SubscriptionGate.getOutletTier(user.outletId!);
 
   final todaySales = todayFiltered.fold<double>(0, (sum, t) => sum + t.finalAmount);
   final todayCount = todayFiltered.length;
@@ -99,7 +96,6 @@ final homeSummaryProvider = FutureProvider<Map<String, dynamic>>((ref) async {
     'notifications': notifications,
     'allTransactions': todayTransactions,
     'allProducts': products,
-    'tier': tier,
   };
 });
 
@@ -451,10 +447,6 @@ class _OwnerHomeScreenState extends ConsumerState<OwnerHomeScreen> {
                   ],
                 );
               },
-            ),
-            summaryAsync.maybeWhen(
-              data: (summary) => AdBannerWidget(tier: summary['tier'] as String?),
-              orElse: () => const SizedBox.shrink(),
             ),
           ],
         ),
