@@ -1,3 +1,6 @@
+import 'dart:convert';
+import 'dart:math';
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:path/path.dart' as p;
 import 'package:sqlite3/sqlite3.dart';
@@ -11,12 +14,29 @@ import '../models/ppob.dart';
 class LocalDatabase {
   Database? _db;
   bool _initialized = false;
+  static const _storage = FlutterSecureStorage();
+  static const _keyStorageKey = 'kasirgo_sqlcipher_key';
+
+  Future<String> _getOrCreateEncryptionKey() async {
+    String? key = await _storage.read(key: _keyStorageKey);
+    if (key == null || key.isEmpty) {
+      final random = Random.secure();
+      final values = List<int>.generate(32, (i) => random.nextInt(256));
+      key = base64Url.encode(values);
+      await _storage.write(key: _keyStorageKey, value: key);
+    }
+    return key;
+  }
 
   Future<void> initialize() async {
     if (_initialized) return;
     final dbFolder = await getApplicationDocumentsDirectory();
     final path = p.join(dbFolder.path, 'kasirgo_local.db');
+    final encryptionKey = await _getOrCreateEncryptionKey();
+
     _db = sqlite3.open(path);
+    // Apply SQLCipher encryption key via pragma
+    _db!.execute("PRAGMA key = '$encryptionKey';");
     _createTables();
     _initialized = true;
   }
