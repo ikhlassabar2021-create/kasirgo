@@ -1,4 +1,4 @@
-# PROGRESS PHASE 5.5
-SELESAI: Phase 5.5A, Phase 5.5B, Phase 5.5C (ST5.5C-1, ST5.5C-2) - akhir retrofit KasirGo 3.0
-BERIKUTNYA: Phase 6 (WhatsApp + social commerce + QR meja + health score)
+# PROGRESS PHASE 6
+SELESAI: Phase 5.5 (ST5.5A, ST5.5B, ST5.5C), Phase 6 (WhatsApp Marketing, Social Commerce, QR Meja, Online Catalog, Health Score, Multi-channel report, WA receipt)
+BERIKUTNYA: Phase 7 (Superadmin web React + Vercel)
 BLOCKER: -

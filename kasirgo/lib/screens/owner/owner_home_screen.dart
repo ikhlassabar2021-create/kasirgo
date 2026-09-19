@@ -11,6 +11,11 @@ import '../../utils/formatters.dart';
 import '../../utils/ai_engine.dart';
 import '../../widgets/common/app_drawer.dart';
 import 'debt_screen.dart';
+import 'social_commerce_screen.dart';
+import 'whatsapp_broadcast_screen.dart';
+import 'qr_table_screen.dart';
+import 'online_catalog_screen.dart';
+import 'health_score_screen.dart';
 import '../modules/kitchen_display_screen.dart';
 import '../modules/ppob_screen.dart';
 import '../modules/restock_screen.dart';
@@ -659,6 +664,73 @@ class _OwnerHomeScreenState extends ConsumerState<OwnerHomeScreen> {
         ),
       );
     }
+
+    // Integrasi Phase 6: WhatsApp Broadcast & CRM
+    quickActionItems.add(
+      _ModuleCard(
+        icon: Icons.mark_chat_unread,
+        title: 'WhatsApp Marketing',
+        subtitle: 'Broadcast & Retensi',
+        color: const Color(0xFF25D366),
+        onTap: () {
+          Navigator.push(context, MaterialPageRoute(builder: (_) => const WhatsappBroadcastScreen()));
+        },
+      ),
+    );
+
+    // Integrasi Phase 6: Social Commerce
+    quickActionItems.add(
+      _ModuleCard(
+        icon: Icons.hub,
+        title: 'Social Commerce',
+        subtitle: 'Sync Tokopedia/Shopee',
+        color: Colors.deepOrange,
+        onTap: () {
+          Navigator.push(context, MaterialPageRoute(builder: (_) => const SocialCommerceScreen()));
+        },
+      ),
+    );
+
+    // Integrasi Phase 6: QR Meja
+    if (outletType.toLowerCase() == 'cafe' || outletType.toLowerCase() == 'warteg') {
+      quickActionItems.add(
+        _ModuleCard(
+          icon: Icons.qr_code_scanner,
+          title: 'QR Meja Dine-in',
+          subtitle: 'Scan & Order Meja',
+          color: AppTheme.accentColor,
+          onTap: () {
+            Navigator.push(context, MaterialPageRoute(builder: (_) => const QrTableScreen()));
+          },
+        ),
+      );
+    }
+
+    // Integrasi Phase 6: Toko Online Katalog
+    quickActionItems.add(
+      _ModuleCard(
+        icon: Icons.store,
+        title: 'Katalog Online',
+        subtitle: 'Web katalog & WA',
+        color: Colors.blueAccent,
+        onTap: () {
+          Navigator.push(context, MaterialPageRoute(builder: (_) => const OnlineCatalogScreen()));
+        },
+      ),
+    );
+
+    // Integrasi Phase 6: Health Score & Cashflow
+    quickActionItems.add(
+      _ModuleCard(
+        icon: Icons.health_and_safety,
+        title: 'Health Score',
+        subtitle: 'Diagnosa & Cashflow',
+        color: AppTheme.successColor,
+        onTap: () {
+          Navigator.push(context, MaterialPageRoute(builder: (_) => const HealthScoreScreen()));
+        },
+      ),
+    );
 
     // Selalu tampilkan Program Pendukung
     quickActionItems.add(

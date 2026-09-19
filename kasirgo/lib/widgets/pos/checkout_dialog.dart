@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import '../../config/app_theme.dart';
 import '../../models/transaction.dart';
+import '../../utils/wa_helper.dart';
 
 class CheckoutResult {
   final String paymentMethod;
@@ -9,6 +10,7 @@ class CheckoutResult {
   final double change;
   final double cashPaid;
   final String? notes;
+  final bool sendWhatsApp;
 
   const CheckoutResult({
     required this.paymentMethod,
@@ -16,6 +18,7 @@ class CheckoutResult {
     required this.change,
     required this.cashPaid,
     this.notes,
+    this.sendWhatsApp = false,
   });
 }
 
@@ -45,6 +48,8 @@ class _CheckoutDialogState extends State<CheckoutDialog> {
   final _cashController = TextEditingController();
   final _qrisAmountController = TextEditingController();
   final _notesController = TextEditingController();
+  final _customerWaController = TextEditingController();
+  bool _sendWaReceipt = false;
 
   double get _cashPaid => double.tryParse(_cashController.text.replaceAll(RegExp(r'[^0-9]'), '')) ?? 0.0;
   double get _change => (_cashPaid - widget.totalAmount).clamp(0.0, double.infinity);
@@ -61,6 +66,7 @@ class _CheckoutDialogState extends State<CheckoutDialog> {
     _cashController.dispose();
     _qrisAmountController.dispose();
     _notesController.dispose();
+    _customerWaController.dispose();
     super.dispose();
   }
 
@@ -87,7 +93,28 @@ class _CheckoutDialogState extends State<CheckoutDialog> {
       change: _paymentMethod == 'cash' ? _change : 0.0,
       cashPaid: _paymentMethod == 'cash' ? _cashPaid : widget.totalAmount,
       notes: _notesController.text.trim().isNotEmpty ? _notesController.text.trim() : null,
+      sendWhatsApp: _sendWaReceipt,
     );
+
+    if (_sendWaReceipt && _customerWaController.text.trim().isNotEmpty) {
+      final dummyTx = Transaction(
+        id: DateTime.now().millisecondsSinceEpoch.toString(),
+        outletId: 'current',
+        items: widget.items,
+        totalAmount: widget.totalAmount,
+        finalAmount: widget.totalAmount,
+        paymentMethod: _paymentMethod,
+        createdAt: DateTime.now(),
+      );
+      final msg = WaHelper.formatReceiptMessage(
+        storeName: 'KasirGo Store',
+        transaction: dummyTx,
+      );
+      WaHelper.sendWhatsAppMessage(
+        phone: _customerWaController.text.trim(),
+        message: msg,
+      );
+    }
 
     if (widget.onConfirm != null) {
       widget.onConfirm!(
@@ -175,6 +202,52 @@ class _CheckoutDialogState extends State<CheckoutDialog> {
               if (_paymentMethod == 'cash') _buildCashSection(),
               if (_paymentMethod == 'qris') _buildQrisSection(),
               if (_paymentMethod == 'bank_transfer') _buildTransferSection(),
+              const SizedBox(height: 16),
+              Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: AppTheme.backgroundColor,
+                  borderRadius: BorderRadius.circular(10),
+                  border: Border.all(color: AppTheme.borderColor),
+                ),
+                child: Column(
+                  children: [
+                    Row(
+                      children: [
+                        Checkbox(
+                          value: _sendWaReceipt,
+                          activeColor: const Color(0xFF25D366),
+                          onChanged: (val) {
+                            setState(() => _sendWaReceipt = val ?? false);
+                          },
+                        ),
+                        const Expanded(
+                          child: Text(
+                            'Kirim Struk via WhatsApp',
+                            style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600),
+                          ),
+                        ),
+                        const Icon(Icons.receipt_long, color: Color(0xFF25D366), size: 20),
+                      ],
+                    ),
+                    if (_sendWaReceipt)
+                      Padding(
+                        padding: const EdgeInsets.only(top: 8),
+                        child: TextField(
+                          controller: _customerWaController,
+                          keyboardType: TextInputType.phone,
+                          style: const TextStyle(fontSize: 13),
+                          decoration: const InputDecoration(
+                            labelText: 'Nomor WhatsApp Pelanggan',
+                            hintText: '0812xxxxxxxx',
+                            prefixIcon: Icon(Icons.phone, size: 18),
+                            isDense: true,
+                          ),
+                        ),
+                      ),
+                  ],
+                ),
+              ),
               const SizedBox(height: 16),
               TextField(
                 controller: _notesController,

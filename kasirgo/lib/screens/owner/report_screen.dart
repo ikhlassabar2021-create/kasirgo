@@ -35,7 +35,7 @@ class _ReportScreenState extends ConsumerState<ReportScreen> with SingleTickerPr
   @override
   void initState() {
     super.initState();
-    _tabController = TabController(length: 3, vsync: this);
+    _tabController = TabController(length: 4, vsync: this);
     _loadData();
   }
 
@@ -166,6 +166,7 @@ class _ReportScreenState extends ConsumerState<ReportScreen> with SingleTickerPr
             Tab(text: 'Ringkasan'),
             Tab(text: 'Penjualan'),
             Tab(text: 'Produk'),
+            Tab(text: 'Per Channel'),
           ],
         ),
       ),
@@ -181,6 +182,7 @@ class _ReportScreenState extends ConsumerState<ReportScreen> with SingleTickerPr
                       _buildSummaryTab(),
                       _buildSalesTab(),
                       _buildProductsTab(),
+                      _buildChannelTab(),
                     ],
                   ),
           ),
@@ -950,6 +952,78 @@ class _ReportScreenState extends ConsumerState<ReportScreen> with SingleTickerPr
           ),
         ],
       ),
+    );
+  }
+
+  Widget _buildChannelTab() {
+    if (_transactions.isEmpty) {
+      return const Center(
+        child: Text('Belum ada transaksi pada periode ini', style: TextStyle(color: AppTheme.textSecondary)),
+      );
+    }
+
+    final channelStats = <String, Map<String, dynamic>>{};
+    for (final tx in _transactions) {
+      final ch = tx.channel.isEmpty ? 'offline' : tx.channel;
+      final cur = channelStats[ch] ?? {'count': 0, 'revenue': 0.0, 'fee': 0.0};
+      cur['count'] = (cur['count'] as int) + 1;
+      cur['revenue'] = (cur['revenue'] as double) + tx.finalAmount;
+      cur['fee'] = (cur['fee'] as double) + (tx.discountAmount ?? 0.0);
+      channelStats[ch] = cur;
+    }
+
+    final channels = channelStats.keys.toList();
+
+    return ListView.builder(
+      padding: const EdgeInsets.all(16),
+      itemCount: channels.length,
+      itemBuilder: (context, index) {
+        final ch = channels[index];
+        final stat = channelStats[ch]!;
+        final count = stat['count'] as int;
+        final rev = stat['revenue'] as double;
+        final fee = stat['fee'] as double;
+
+        return Card(
+          color: AppTheme.surfaceColor,
+          margin: const EdgeInsets.only(bottom: 12),
+          child: Padding(
+            padding: const EdgeInsets.all(16),
+            child: Row(
+              children: [
+                CircleAvatar(
+                  backgroundColor: AppTheme.primaryColor.withValues(alpha: 0.2),
+                  child: Icon(
+                    ch == 'offline' ? Icons.store : Icons.shopping_bag,
+                    color: AppTheme.accentColor,
+                  ),
+                ),
+                const SizedBox(width: 14),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        ch.toUpperCase(),
+                        style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15),
+                      ),
+                      const SizedBox(height: 2),
+                      Text(
+                        '$count Transaksi • Potongan Platform: ${Formatters.currency(fee)}',
+                        style: const TextStyle(color: AppTheme.textSecondary, fontSize: 11),
+                      ),
+                    ],
+                  ),
+                ),
+                Text(
+                  Formatters.currency(rev),
+                  style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14, color: AppTheme.successColor),
+                ),
+              ],
+            ),
+          ),
+        );
+      },
     );
   }
 }
