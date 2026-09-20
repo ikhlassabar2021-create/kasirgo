@@ -692,19 +692,17 @@ class _OwnerHomeScreenState extends ConsumerState<OwnerHomeScreen> {
     );
 
     // Integrasi Phase 6: QR Meja
-    if (outletType.toLowerCase() == 'cafe' || outletType.toLowerCase() == 'warteg') {
-      quickActionItems.add(
-        _ModuleCard(
-          icon: Icons.qr_code_scanner,
-          title: 'QR Meja Dine-in',
-          subtitle: 'Scan & Order Meja',
-          color: AppTheme.accentColor,
-          onTap: () {
-            Navigator.push(context, MaterialPageRoute(builder: (_) => const QrTableScreen()));
-          },
-        ),
-      );
-    }
+    quickActionItems.add(
+      _ModuleCard(
+        icon: Icons.qr_code_scanner,
+        title: 'QR Meja Dine-in',
+        subtitle: 'Scan & Order Meja',
+        color: AppTheme.accentColor,
+        onTap: () {
+          Navigator.push(context, MaterialPageRoute(builder: (_) => const QrTableScreen()));
+        },
+      ),
+    );
 
     // Integrasi Phase 6: Toko Online Katalog
     quickActionItems.add(
