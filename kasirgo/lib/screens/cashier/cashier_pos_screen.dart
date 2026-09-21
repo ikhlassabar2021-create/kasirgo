@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../widgets/common/centennial_background.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:supabase_flutter/supabase_flutter.dart' as sb;
 import '../../config/app_theme.dart';
@@ -180,23 +181,29 @@ class _CashierPosScreenState extends ConsumerState<CashierPosScreen> {
     final productsAsync = ref.watch(productsProvider);
 
     return Scaffold(
+      backgroundColor: Colors.transparent,
+      extendBodyBehindAppBar: true,
       appBar: AppBar(
+        backgroundColor: Colors.transparent,
+        elevation: 0,
+        scrolledUnderElevation: 0,
         title: const Text('Kasir POS'),
       ),
-      body: productsAsync.when(
-        loading: () => const Center(child: CircularProgressIndicator()),
-        error: (err, _) => Center(
-          child: Text('Gagal memuat produk: $err', style: const TextStyle(color: AppTheme.errorColor)),
-        ),
-        data: (products) {
-          final filtered = products.where((p) {
-            final matchSearch = _searchQuery.isEmpty ||
-                p.name.toLowerCase().contains(_searchQuery.toLowerCase()) ||
-                (p.barcode != null && p.barcode!.contains(_searchQuery));
-            return matchSearch;
-          }).toList();
+      body: CentennialBackground(
+        child: productsAsync.when(
+          loading: () => const Center(child: CircularProgressIndicator()),
+          error: (err, _) => Center(
+            child: Text('Gagal memuat produk: $err', style: const TextStyle(color: AppTheme.errorColor)),
+          ),
+          data: (products) {
+            final filtered = products.where((p) {
+              final matchSearch = _searchQuery.isEmpty ||
+                  p.name.toLowerCase().contains(_searchQuery.toLowerCase()) ||
+                  (p.barcode != null && p.barcode!.contains(_searchQuery));
+              return matchSearch;
+            }).toList();
 
-          return Stack(
+            return Stack(
             children: [
               Column(
                 children: [
@@ -246,6 +253,7 @@ class _CashierPosScreenState extends ConsumerState<CashierPosScreen> {
             ],
           );
         },
+      ),
       ),
     );
   }

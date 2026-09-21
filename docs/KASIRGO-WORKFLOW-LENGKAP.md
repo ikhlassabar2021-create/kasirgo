@@ -1,1370 +1,1107 @@
-# KASIRGO -- WORKFLOW LENGKAP (Copy-Paste ke MonkeyCode)
+# KASIRGO 3.0 - WORKFLOW LENGKAP (MASTER SINGLE FILE)
 
-> Copy prompt Phase yang ingin dikerjakan, paste ke session MonkeyCode baru. Satu session = satu Phase.
-> Sebelum memulai: pastikan repo sudah di-push ke GitHub dan `AGENTS.md` ada di root.
-
----
-
-## MASTER CHECKLIST
-
-| Phase | Nama | Status | Session |
-|-------|------|--------|---------|
-| 0 | Design docs + PRD + workflow | [x] SELESAI | - |
-| 1 | Supabase DB + Auth | [x] SELESAI | - |
-| 2 | Flutter App Shell + Auth + Offline Engine | [ ] SEDANG | Session 2 |
-| 3 | Produk + POS + QRIS + AI Co-Pilot | [ ] | Session 3 |
-| 4 | Laporan + Pelanggan + Karyawan | [ ] | Session 4 |
-| 5 | Premium Features + Subscription Gate | [ ] | Session 5 |
-| 6 | WhatsApp + Social Commerce + QR Meja + Health Score | [ ] | Session 6 |
-| 7 | Superadmin Web (React + Cloudflare Pages) | [ ] | Session 7 |
-| 8 | Polish + Testing + Final Deploy | [ ] | Session 8 |
+> Versi: 3.0 (selaras dengan STRATEGI INDUK KASIRGO 3.0, 18 September 2026)
+> File ini menggantikan dokumen workflow versi sebelumnya. Semua konteks proyek, schema,
+> roadmap, prompt siap pakai, aturan hemat token, dan test checklist ada di sini.
+> Satu session = satu sub-task. Copy prompt, tempel, kerjakan, commit, push, Compact.
 
 ---
 
-## ATURAN UMUM (BACA SEKALI)
+## BAGIAN 1 - RINGKASAN PRODUK (SUMBER KEBENARAN)
 
-1. **Satu session = satu Phase.** Jangan kerjakan 2 Phase dalam 1 session.
-2. **Push tiap 1-2 file selesai.** Jangan tunggu semua selesai baru push.
-3. **Baca AGENTS.md dulu.** Itu sumber konteks proyek.
-4. **Update Progress Tracker** di AGENTS.md saat phase selesai.
-5. **Testing: HTML renderer.** `flutter run -d web-server --web-renderer html --web-hostname 0.0.0.0 --web-port 8080`
-6. **APK target <10MB per ABI.** `flutter build apk --release --split-per-abi --obfuscate --split-debug-info=build/debug-info`
-7. **Foto produk = LOKAL** (`image_local_path`). Tidak upload ke Supabase.
-8. **Jika kena limit context: push -> reset -> session baru** -> paste prompt Phase yang sama -> AI baca AGENTS.md + git log -> lanjut.
-9. **Compact hanya untuk debug 1 bug kecil.** Ganti Phase harus RESET.
-10. **Hemat token:** lihat bagian "HEMAT TOKEN (WAJIB)" di bawah -- satu task per pesan, jangan baca file tidak relevan, error sama >3x = reset.
-11. **Test LIVE setiap Phase selesai.** Jalankan dev server, minta URL preview, uji pakai klik -- jangan hanya percaya "build sukses". Lihat bagian "TEST LIVE PER PHASE".
+### 1.1 Doktrin Bisnis
+KasirGo adalah Operating System UMKM Indonesia yang 100% GRATIS SELAMANYA untuk pengguna.
+Tidak ada langganan bulanan. Pihak ketiga (Bank, Distributor FMCG, Brand, Platform Finansial)
+yang mendanai ekosistem di belakang layar. KasirGo = Software Orchestrator, bukan pemegang uang.
 
----
+Doktrin: KasirGo tidak menjual software; KasirGo menjual akses & ekosistem. Warung gratis
+selamanya, pihak ketiga membayar, arus kas mengalir otomatis.
 
----
+Prinsip Hukum & Finansial (WAJIB) - ZERO-TOUCH MONEY:
+- Patuh PBI No. 23/6/PBI/2021. KasirGo TIDAK PERNAH menampung/menyimpan uang warung di rekening internal.
+- Direct settlement via Escrow Account milik Payment Gateway (PG) resmi berizin PJP Bank Indonesia.
+- Komisi platform dipotong otomatis oleh PG lewat Split-Payment API (KasirGo tidak menagih/menampung).
+- Semua callback webhook transaksi diverifikasi Digital Signature HMAC SHA-256 di Supabase Edge Functions.
+- Model: Master Account / Payment Facilitator ke PG (Tripay/Xendit/Duitku/Midtrans).
 
-## PHASE 1: Supabase DB + Auth
+### 1.2 Segmentasi & Arsitektur Modular (`outlet_type`)
+Satu APK dengan modul dinamis berdasarkan `outlets.outlet_type`:
+- `kelontong` (warung): Grosir Mode, Catat Kasbon, Barcode Quick
+- `warteg` (warteg/warkop): Mode Porsi/Menu, Kitchen Display, Shift Kasir
+- `cafe` (cafe/resto): BOM & Resep HPP, QR Meja Order, Split Bill/Tip
+- `retail` (retail/fashion): Barcode Scan, Multi-Variant, Clienteling CRM
 
-### FILE LAMPIRAN
-| File | Status | Dibuat di Phase |
-|------|--------|-----------------|
-| `kasirgo/` (project Flutter) | BELUM | Phase 2 |
-| `kasirgo-admin/` (project React) | BELUM | Phase 7 |
-| `docs/KASIRGO-WORKFLOW-LENGKAP.md` | SUDAH | Phase 0 |
-| `docs/STRATEGI-KASIRGO.md` | SUDAH | Phase 0 |
-| `docs/PRD-KasirGo.md` | SUDAH | Phase 0 |
-| `AGENTS.md` | SUDAH | Phase 0 |
+### 1.3 12 Revenue Engine (pihak ketiga yang bayar)
+1. Dynamic QRIS Take-Rate (0.1-0.3% nilai transaksi) - Payment Gateway/Bank
+2. Brand-Sponsored Receipts (kupon FMCG di struk WA)
+3. Embedded B2B Restock Engine (komisi 1-3% belanja stok via WebView anti-bypass)
+4. Fintech & Credit Lead-Gen (1-2% nilai pinjaman cair)
+5. Margin PPOB API (pulsa/PLN/BPJS via Digiflazz/IAK/RCB)
+6. Micro-Insurance Toko (komisi 15-30% premi)
+7. B2B Clearance Marketplace (obral near-expiry, komisi 3-5%)
+8. DOOH Screen Display Ads
+9. Hyperlocal Data Intelligence (laporan tren agregat anonim)
+10. Hardware Bundling (margin 20-40%)
+11. WhatsApp Credit Margin (Rp100/pesan)
+12. Program Pendukung (kosmetik opsional)
 
-> Phase 1 dikerjakan di Supabase Dashboard (web). Tidak ada kode Flutter/React yang dibuat.
+### 1.4 Program Pendukung (BUKAN langganan)
+Semua fitur inti gratis. Hanya fitur kosmetik/bonus yang bisa didukung:
+- Pendukung Rp10.000: badge + Hall of Fame + hapus iklan kecil di struk
+- Pendukung Pro Rp25.000: + tema eksklusif + logo toko di struk + prioritas support
+- Pendukung Setia Rp50.000: + laporan lanjutan (cashflow/tren) + export Excel/PDF + backup harian
+- Kuota akun staf GRATIS per outlet: **1 Admin + 1 Kasir**. Owner bisa create & hapus sendiri.
+  Butuh lebih banyak akun staf -> buka Program Pendukung (bukan langganan, sekali dukung).
 
-### PROMPT (Copy-Paste)
+### 1.5 Roles
+| Role | Akses | Platform |
+|------|-------|----------|
+| Owner | Full akses semua modul outlet + kelola staf + affiliate | Flutter Mobile |
+| Admin | Tambah/edit produk + laporan (TIDAK bisa hapus produk) | Flutter Mobile |
+| Cashier | POS + shift + tip | Flutter Mobile |
+| Kitchen | Kitchen Display (KDS) | Flutter Mobile |
+| Customer | Scan QR meja -> order | Flutter Mobile |
+| Superadmin | 12 revenue engine, user mgmt, data | React Web |
 
+Aturan izin kunci (ditegakkan di RLS + UI, keduanya wajib):
+- **Produk**: Owner tambah/edit/HAPUS. Admin tambah/edit saja -- tombol hapus disembunyikan + RLS menolak DELETE.
+- **User staf**: hanya Owner yang create/delete Admin & Kasir (kuota gratis 1 Admin + 1 Kasir; lebih -> Program Pendukung).
+- **Affiliate**: hanya Owner melihat link affiliate, rekening bank pencairan, dan laporan closing komisi.
+- **Pembayaran**: Owner boleh pasang QRIS statis (upload gambar) atau aktifkan gateway dinamis (via superadmin).
+
+### 1.6 Design System v2 - "Centennial Modern Ocean White" (WAJIB, GANTI TOTAL)
+Menggantikan dark Glassmorphism. Referensi layout: pola dashboard kasirmurah.com
+(hero gradient, kartu stat, grid modul, drawer berkelompok, filter waktu), warna diganti
+ke palet Ocean White KasirGo. Semua role (Owner/Admin/Cashier/Kitchen/Customer + Superadmin
+Web) memakai sistem yang sama. Berlaku juga untuk produk, pelanggan, karyawan, laporan,
+pengaturan. UI-only: DILARANG mengubah fitur/logic/schema/provider/route.
+
+Gaya: Centennial Modern Ocean White + Clean Light Glassmorphism. Tujuan: bersih, terang,
+tidak melelahkan mata, proporsional di tablet & desktop (tidak melar/stretched).
+
+Token warna (satu sumber: `config/app_theme.dart` + `tailwind.config.js` admin):
+| Token | Nilai |
+|-------|-------|
+| background | `#F8FAFC` (Slate 50 / Centennial White) |
+| surface / card | `#FFFFFF` + border `#E2E8F0` |
+| primary | `#0284C7` s/d `#0369A1` (Ocean Sky / Deep Cyan) |
+| gradient sekunder | `#06B6D4` -> `#0284C7` |
+| text primer | `#0F172A` |
+| text sekunder | `#64748B` |
+| sukses / aman / untung | `#10B981` |
+| peringatan / kasbon / menipis | `#F59E0B` |
+| error / habis / void | `#EF4444` |
+| badge AI & Insight | gradient `#06B6D4` -> `#4F46E5` |
+Font Google Fonts Inter. Radius kartu 16, radius tombol 12, shadow halus elegan (bukan glow).
+Min touch target 56dp (primary), 48dp (secondary).
+
+Breakpoint responsif: Mobile 360-599dp, Tablet 600-859dp, Desktop >= 860dp.
+- Desktop (>=860dp): sidebar kiri tetap 240dp putih + border kanan `#E2E8F0` (Brand Header
+  icon-box gradient + label "KasirGo POS"; nav Dashboard, Produk, POS, Laporan, Pelanggan,
+  Karyawan, Pengaturan; footer profil user). Header bar atas 60dp (judul modul aktif + lonceng
+  notifikasi + badge counter AI/stok merah). Konten `Center(ConstrainedBox(maxWidth: 1100))`.
+  Form sub-screen (Tambah/Edit Produk dll) `maxWidth: 760` dan tetap di dalam shell
+  `OwnerHomeScreen` supaya sidebar tidak hilang. Bottom navigation = null.
+- Mobile (<860dp): Top bar glassmorphism translucent (tombol drawer + aksi cepat) + Drawer
+  dengan header profil, search "Mau cari menu apa?", seksi UTAMA / OPERASIONAL, tombol Keluar
+  (merah), footer versi. Bottom nav frosted glass (`BackdropFilter blur 20`) 7 item.
+
+Pola dashboard utama (semua role): hero card gradient (judul periode + nilai omzet besar +
+jumlah produk terjual), deret filter waktu chip (Hari Ini, Kemarin, Minggu Ini, Minggu lalu,
+Bulan Ini, Bulan lalu, 3 Bulan Terakhir), grid kartu statistik (Potensi Untung, Belum Bayar,
+Produk Terjual, Perlu Cek Stok), lalu grid kartu shortcut modul. Fitur yang belum aktif diberi
+badge "Segera" (tampil tapi disabled), bukan dihapus.
+
+Kartu katalog & POS: grid 4 kolom (`crossAxisCount: 4`), `childAspectRatio: 0.95`, thumbnail
+1:1, nama maks 2 baris (12-13px semi-bold), harga tebal format rupiah, badge stok di pojok
+(Hijau >10, Kuning 1-10, Merah 0). Tablet 3 kolom, Mobile 2 kolom.
+
+Pola layar kunci (mengikuti referensi):
+- Produk: baris chip pintasan (Kategori, Stok, Harga, Supplier, Penerimaan Stok), header
+  "N Jenis Produk" + tombol Urutkan, field cari, chip filter kategori (mis. "Semua"), lalu
+  daftar kartu produk (thumbnail, nama, badge status, harga tebal, barcode, info stok).
+- POS / Keranjang: pemilih outlet (kartu gradient), toggle Offline/Toko, baris Pelanggan +
+  tombol tambah, item (checkbox, thumbnail, nama, stok, harga + ikon edit, stepper qty),
+  "Total Tagihan", dan dua aksi: "Atur Belum Bayar" (outlined) + "Lanjut Pembayaran" (filled).
+- Warna hijau pada referensi diganti ke palet Ocean White (primary #0284C7 / gradient
+  #06B6D4->#0284C7); item bottom nav aktif memakai primary + label tebal.
+
+Elemen pendukung lain (semua dari 11 referensi):
+- Header sub-screen: panah kembali + judul tebal, permukaan putih.
+- Layar Kasir: kartu outlet + kartu toggle Offline/Toko, header "Pilih Produk/Paket" +
+  tombol Urutkan (mis. "Harga"), field cari, chip filter, baris produk dengan radio pilih;
+  bar aksi bawah tetap: "Scan Produk" (outlined) + "Keranjang" (filled, ada badge qty).
+- Layar Pembayaran: banner status penuh lebar (merah "BELUM LUNAS" / hijau "LUNAS"), daftar
+  baris info (Kasir, Tanggal Penjualan, Metode Pembayaran) masing-masing dengan tautan "Ubah",
+  blok "Informasi Pelanggan", lalu grid aksi 2x2 (Cetak Struk, Beranda, Kembali, Konfirmasi;
+  Konfirmasi = primary filled).
+- Modal struk: bottom sheet/modal (Cetak Struk, Convert PDF, Simpan Gambar), pilihan ukuran
+  kertas radio 58mm/80mm, tombol Kembali, plus preview struk.
+- Form Produk (Tambah/Edit, maxWidth 760): seksi berjudul tebal, OutlinedTextField, dropdown
+  kategori, input barcode dengan ikon scan, Harga Modal / Harga Jual Toko (Offline), deskripsi
+  multiline, kotak unggah "Gambar Produk" bergaris putus-putus, seksi "Opsi Lanjutan" yang bisa
+  dibuka (Harga Jual Online, toggle Produk Dijual), tombol primary penuh lebar (Tambah/Simpan)
+  menempel di bawah.
+- Scan Kasir: info Outlet, segmented toggle "Kamera" / "Alat Scanner", viewport kamera gelap
+  dengan hint, bar Total (N item) + nominal, tombol penuh lebar "Lanjut ke Keranjang".
+
+10 modul bisnis di grid dashboard utama: Buku Kasbon (`DebtScreen`), PPOB & Pulsa (`PpobScreen`),
+Kulakan B2B (`RestockScreen`), Kitchen Display (`KitchenDisplayScreen`), WA Marketing
+(`WhatsappBroadcastScreen`), Social Commerce (`SocialCommerceScreen`), QR Meja Dine-in
+(`QrTableScreen`), Katalog Online (`OnlineCatalogScreen`), Health Score Bisnis
+(`HealthScoreScreen`), Pendukung KasirGo (`SupporterScreen`).
+
+Aturan implementasi (feature-preserving retrofit - lihat Phase 7.6):
+- Utamakan komponen bersama di `widgets/common/` (`app_shell.dart`, `stat_card.dart`,
+  `hero_card.dart`, `module_tile.dart`, `section_header.dart`, `status_badge.dart`,
+  `empty_state.dart`, `price_text.dart`). Screen tidak boleh menyalin styling sendiri.
+- Ubah hanya lapisan visual (warna, layout, spacing, komponen). Jangan sentuh provider,
+  service, model, schema, query, route, atau alur bisnis.
+
+### 1.7 Tech Stack & Kebijakan Data
+- Flutter (Dart) single APK multi-role, offline-first
+- React.js + Vite + Tailwind superadmin (deploy Cloudflare Pages, BUKAN Vercel)
+- Supabase PostgreSQL + Auth (email + Anonymous) + RLS + Edge Functions + Realtime
+- Payment Gateway: Master Account / Payment Facilitator ke PG resmi berizin PJP BI
+  (Tripay/Xendit/Duitku/Midtrans); direct settlement via escrow + split-payment API
+- Arsitektur data 3 lapis: HOT (SQLite SQLCipher di HP) -> WARM (Supabase 30-90 hari) -> COLD (Cloudflare R2)
+- Foto produk LOKAL saja (`image_local_path`). Thumbnail online opt-in ke R2 (`thumb_key`) hanya untuk katalog/QR menu. R2, bukan Supabase Storage.
+- AI Co-Pilot 95% local compute (Edge AI, Rp0)
+- Sync pakai background Isolate + delta log (event-sourcing) untuk multi-kasir
+- Security: SQLCipher, flutter_secure_storage, obfuscation, `service_role` HANYA di Edge Function
+
+### 1.8 Dependencies (pubspec.yaml)
+Saat ini: supabase_flutter, drift, sqlite3_flutter_libs, path_provider, go_router,
+flutter_riverpod, shared_preferences, intl, mobile_scanner, qr_flutter, barcode, pdf,
+printing, excel, url_launcher, connectivity_plus, google_fonts, flutter_animate,
+flutter_slidable, fl_chart, cached_network_image, image_picker.
+
+Tambahan 3.0: `sqlcipher_flutter_libs` (enkripsi DB), `flutter_secure_storage` (token),
+`webview_flutter` (Embedded B2B Restock).
+
+### 1.9 File Structure
 ```
-=== KASIRGO: Aplikasi kasir UMKM (Flutter mobile + Supabase + React superadmin). 3 role: Owner (full), Admin (CRUD produk), Cashier (POS only). 3 paket: Gratis (500 tx/produk+iklan), 25rb (unlimited+barcode), 50rb (WA+social commerce+QR meja). AI Co-Pilot gratis local compute. Glassmorphism: #4F46E5 #7C3AED #06B6D4. Font Inter. Offline-first: SQLite lokal sync Supabase. 13 tabel DB+RLS. ===
-Buat project Supabase baru untuk aplikasi kasir UMKM bernama "KasirGo".
+kasirgo/lib/
+  main.dart, app.dart
+  config/ (supabase_config, app_theme, constants)
+  models/
+  services/
+  providers/
+  screens/auth|owner|admin|cashier|kitchen|customer/
+  widgets/common/pos/
+  utils/
+kasirgo/supabase/functions/
+  stock_alert/  webhook_qris/
+kasirgo-admin/src/
+```
 
-Setup database schema berikut di Supabase SQL Editor:
+### 1.10 Control Plane (SEMUA setting lewat Superadmin, TANPA ubah kodingan)
+Prinsip: nilai integrasi & margin disimpan di DB (`platform_integrations` + `platform_financial_configs`),
+di-cache app, ada fallback default. Ganti nilai = cukup edit di web superadmin.
 
--- ============================================
--- TABLES
--- ============================================
+Yang wajib bisa diset dari superadmin:
+| Grup | Isi setting |
+|------|-------------|
+| Payment Gateway | link/api key PG (Duitku dll), nomor biaya yang dikenakan, margin KasirGo, setting transfer pencairan |
+| PPOB | api key (Digiflazz/IAK/RCB), modal, **margin persentase** -> harga jual semua produk PPOB auto ikut harga terbaru |
+| B2B Kulakan | link affiliate distributor -> dipakai `RestockScreen` di dashboard owner; ubah link cukup edit di sini |
+| Affiliate | komisi dari pembayaran Program Pendukung (upgrade) + sistem pencairan komisi otomatis |
+| Fintech | link akun partner fintech/insurtech |
+| Storage/Hosting | koneksi Cloudflare R2 (bucket + key) |
+| Database | url, user, password, api key koneksi (mis. Supabase) |
+| WA Marketing | api key WA Business (Cloud API) |
+| Verifikasi | auto-verify pendaftar yang datanya lengkap (email, nohp, nama toko, alamat, KTP, selfie) |
 
-CREATE TABLE outlets (
+---
+
+## BAGIAN 2 - ATURAN UMUM & HEMAT TOKEN
+
+### 2.1 Aturan Umum
+1. Satu session = satu sub-task. Jangan gabung.
+2. Push tiap 1-2 file: `git add . && git commit -m "progress: [file]" && git push`.
+3. Baca `AGENTS.md` + `PROGRESS-PHASE*.md` saja sebagai konteks. Jangan baca semua file.
+4. Update Progress Tracker di `AGENTS.md` tiap phase selesai.
+5. Testing cepat: `flutter run -d web-server --web-renderer html --web-hostname 0.0.0.0 --web-port 8080`.
+6. APK target <10MB per ABI: `--split-per-abi --obfuscate --split-debug-info=build/debug-info`.
+7. Foto produk LOKAL (`image_local_path`), tidak upload Supabase.
+
+### 2.2 Hemat Token (WAJIB)
+- Flutter sudah terinstall. Jangan install ulang / flutter doctor / pub get / build APK.
+- Perintah panjang redirect ke file. Analyze per file: `dart analyze <file> 2>&1 | tail -20`.
+- JANGAN baca file/dokumen yang tidak relevan.
+- Output kode saja, tanpa penjelasan/komentar/echo isi file.
+- Edit targeted, jangan rewrite file penuh.
+- Jangan bolak-balik revisi file yang sama.
+- Ganti phase: push -> Compact. Pakai Reset hanya kalau Compact ngawur atau context penuh.
+- Di dalam phase: Compact tiap sub-task selesai (bukan reset).
+- Jangan paste output panjang (log build, dump file) ke chat.
+
+### 2.2b Budget Token Global (target: Phase 7.5 s/d 12 selesai < 10 juta token)
+- 1 sub-task = 1 session; Compact tiap sub-task, Reset saat ganti phase.
+- Baca HANYA file yang diedit + `PROGRESS-PHASE*.md`; jangan scan seluruh repo.
+- Wajib pakai komponen bersama (`widgets/common/`); retrofit tidak boleh styling ulang per screen.
+- Sub-task menyentuh >3 screen -> pecah; <1 file -> gabung dengan sub-task sebelah.
+- Transkrip 1 session > ~150k token -> STOP, push, Compact, lanjut.
+- Jangan ulang grep/analisa yang sama; catat temuan ke PROGRESS agar tidak dibaca berulang.
+- Output hanya diff/kode; screenshot & log disimpan ke file, bukan ditempel ke chat.
+- Realistis: retrofit 7.6 (8 sub-task) + sisa phase 8-12 harus tetap hemat; bila melebihi
+  budget, kurangi cakupan per session (bukan menaikkan budget).
+
+### 2.3 Error Playbook
+Tidak tahu lokasi error:
+```
+1. dart analyze lib 2>&1 | grep -i error | head -20          # compile: langsung file:baris
+2. grep -nE "Error|Exception|Failed" /tmp/run.log | head -15  # runtime
+3. Layar blank -> console browser F12, kirim 1 baris pertama saja
+4. Persempit: buka 1 screen langsung, isolasi per tab
+```
+Template perbaikan:
+```
+=== PERBAIKAN ===
+File: [path]
+Error: [1-3 baris saja]
+Perbaiki HANYA baris/fungsi ini. Jangan baca file lain, jangan refactor, jangan rewrite.
+Output hanya diff. dart analyze file itu. STOP.
+```
+Stop-loss: error sama >2x -> STOP, push, tulis `BLOCKER:` di PROGRESS, Compact/Reset.
+
+### 2.4 PROMPT PEMBUKA UNIVERSAL (tempel di awal SETIAP sub-task)
+```
+=== KONTEKS KASIRGO 3.0 ===
+KasirGo: OS UMKM Indonesia, GRATIS SELAMANYA (tanpa langganan). Flutter + Supabase + offline SQLite.
+Role: Owner(full)/Admin(produk+laporan)/Cashier(POS+shift+tip)/Kitchen(KDS)/Customer(QR meja)/Superadmin(web).
+Modular per outlet_type: kelontong/warteg/cafe/retail. Foto produk LOKAL (image_local_path).
+Design v2 "Centennial Modern Ocean White" (Bagian 1.6): bg #F8FAFC, surface #FFFFFF + border
+#E2E8F0, primary #0284C7, gradient #06B6D4->#0284C7, teks #0F172A/#64748B, font Inter.
+Pakai komponen bersama `widgets/common/`; DILARANG hardcode warna. UI-only: jangan ubah fitur/logic.
+Monetisasi dari pihak ketiga (QRIS gateway, sponsored receipt, B2B restock, PPOB, fintech), bukan user.
+
+=== ATURAN HEMAT TOKEN ===
+Flutter terinstall; jangan install/pub get/build APK. Baca HANYA PROGRESS file phase ini.
+Output hanya kode, tanpa komentar/penjelasan/echo file. Edit targeted, jangan rewrite.
+Perintah panjang redirect ke file. Analyze per file: dart analyze <f> 2>&1|tail -20.
+Selesai: git add . && git commit -m "progress: [f]" && git push, lalu STOP.
+
+=== ERROR ===
+analyze dulu; kirim HANYA file:baris:pesan (bukan stack trace/log penuh); 1 error/percobaan;
+error sama >2x -> STOP, push, tulis BLOCKER, laporkan.
+```
+Cara pakai: tempel PROMPT PEMBUKA UNIVERSAL, lalu blok `=== SUB-TASK ... ===` di bawahnya, jadi satu pesan.
+Prompt siap-tempel per sub-task (7.5 -> 7.7 -> 7.6 -> 8-12): `docs/PROMPT-GILIRAN.md`.
+
+---
+
+## BAGIAN 3 - DATABASE SCHEMA 3.0
+
+### 3.1 Perubahan tabel existing
+- `outlets`: rename `type` -> `outlet_type` (enum kelontong/warteg/cafe/retail); HAPUS `subscription_tier`, `subscription_expiry`; tambah `merchant_id UUID REFERENCES merchants(id)`, `device_uuid TEXT`.
+- `user_roles`: role CHECK tambah `kitchen`.
+- `products`: tetap. Tambah `has_variants BOOLEAN DEFAULT false`.
+- `transactions`: tambah `merchant_id UUID`, `pg_reference_id TEXT` (kanonik; `gateway_ref` alias lama), `qris_type TEXT` (STATIC/DYNAMIC), `payment_status TEXT DEFAULT 'PENDING'` (PENDING/PAID/EXPIRED/CANCELLED), `gross_amount DECIMAL(12,2)`, `mdr_fee_deducted DECIMAL(12,2) DEFAULT 0`, `kasirgo_margin_deducted DECIMAL(12,2) DEFAULT 0`, `net_amount_to_merchant DECIMAL(12,2) DEFAULT 0`, `settlement_status TEXT DEFAULT 'n/a'` (UNSETTLED/SETTLED/PPOB_USED), `tip_amount DECIMAL(12,2) DEFAULT 0`, `shift_id UUID`, `debt_id UUID`, `sync_status TEXT DEFAULT 'synced'`, `event_id TEXT`, `device_id TEXT`.
+- `transaction_items`: tambah `variant_id UUID`, `note TEXT`.
+- `employees`: tetap untuk absensi; shift pindah ke `shifts`.
+- `subscriptions`: OBSOLETE -> ganti `supporters` + `supporter_benefits`.
+- `affiliates` / `affiliate_referrals`: repurpose jadi referral Program Pendukung.
+- `customers`, `product_prices`, `product_discounts`, `ai_insights`: tetap.
+
+### 3.2 Tabel baru
+```
+CREATE TABLE supporters (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  owner_id UUID REFERENCES auth.users(id) ON DELETE CASCADE,
+  outlet_id UUID REFERENCES outlets(id) ON DELETE CASCADE,
+  tier TEXT NOT NULL CHECK (tier IN ('pendukung','pro','setia')),
+  start_date TIMESTAMPTZ DEFAULT NOW(),
+  end_date TIMESTAMPTZ,
+  amount DECIMAL(12,2) DEFAULT 0,
+  status TEXT DEFAULT 'active'
+);
+
+CREATE TABLE supporter_benefits (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  outlet_id UUID REFERENCES outlets(id) ON DELETE CASCADE,
+  benefit_key TEXT NOT NULL,
+  enabled BOOLEAN DEFAULT true,
+  UNIQUE(outlet_id, benefit_key)
+);
+
+CREATE TABLE product_variants (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  product_id UUID REFERENCES products(id) ON DELETE CASCADE,
   name TEXT NOT NULL,
-  type TEXT NOT NULL DEFAULT 'warung',
-  address TEXT,
-  phone TEXT,
-  subscription_tier TEXT NOT NULL DEFAULT 'free' CHECK (subscription_tier IN ('free', 'basic_25', 'pro_50')),
-  subscription_expiry TIMESTAMPTZ,
+  sku TEXT,
+  price_delta DECIMAL(12,2) DEFAULT 0,
+  stock DECIMAL(12,2) DEFAULT 0
+);
+
+CREATE TABLE stock_logs (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  outlet_id UUID REFERENCES outlets(id) ON DELETE CASCADE,
+  product_id UUID REFERENCES products(id),
+  variant_id UUID,
+  delta DECIMAL(12,2) NOT NULL,
+  reason TEXT NOT NULL,
+  ref_id UUID,
+  device_id TEXT,
+  event_id TEXT UNIQUE,
   created_at TIMESTAMPTZ DEFAULT NOW()
 );
 
-CREATE TABLE user_roles (
+CREATE TABLE debts (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  user_id UUID REFERENCES auth.users(id) ON DELETE CASCADE,
   outlet_id UUID REFERENCES outlets(id) ON DELETE CASCADE,
-  role TEXT NOT NULL CHECK (role IN ('admin', 'cashier')),
-  created_at TIMESTAMPTZ DEFAULT NOW(),
-  UNIQUE(user_id, outlet_id)
+  customer_id UUID REFERENCES customers(id),
+  transaction_id UUID REFERENCES transactions(id),
+  amount DECIMAL(12,2) NOT NULL,
+  paid_amount DECIMAL(12,2) DEFAULT 0,
+  status TEXT DEFAULT 'unpaid' CHECK (status IN ('unpaid','partial','paid')),
+  due_date DATE,
+  note TEXT,
+  created_at TIMESTAMPTZ DEFAULT NOW()
 );
 
-CREATE TABLE products (
+CREATE TABLE debt_payments (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  debt_id UUID REFERENCES debts(id) ON DELETE CASCADE,
+  amount DECIMAL(12,2) NOT NULL,
+  paid_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+CREATE TABLE shifts (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   outlet_id UUID REFERENCES outlets(id) ON DELETE CASCADE,
+  user_id UUID REFERENCES auth.users(id),
+  shift TEXT DEFAULT 'pagi',
+  opened_at TIMESTAMPTZ DEFAULT NOW(),
+  closed_at TIMESTAMPTZ,
+  opening_cash DECIMAL(12,2) DEFAULT 0,
+  closing_cash DECIMAL(12,2)
+);
+
+CREATE TABLE tips (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  outlet_id UUID REFERENCES outlets(id) ON DELETE CASCADE,
+  transaction_id UUID REFERENCES transactions(id),
+  user_id UUID REFERENCES auth.users(id),
+  amount DECIMAL(12,2) NOT NULL,
+  created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+CREATE TABLE recipes (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  outlet_id UUID REFERENCES outlets(id) ON DELETE CASCADE,
+  product_id UUID REFERENCES products(id) ON DELETE CASCADE,
+  yield_qty DECIMAL(12,2) DEFAULT 1
+);
+
+CREATE TABLE recipe_items (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  recipe_id UUID REFERENCES recipes(id) ON DELETE CASCADE,
+  ingredient_product_id UUID REFERENCES products(id),
+  qty DECIMAL(12,2) NOT NULL
+);
+
+CREATE TABLE ppob_products (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  sku TEXT UNIQUE NOT NULL,
   name TEXT NOT NULL,
-  category TEXT DEFAULT 'Umum',
-  barcode TEXT,
-  cost_price DECIMAL(12,2) DEFAULT 0,
-  base_price DECIMAL(12,2) NOT NULL DEFAULT 0,
-  stock DECIMAL(12,2) DEFAULT 0,
-  unit TEXT DEFAULT 'pcs',
-  expired_date DATE,
-  image_local_path TEXT NOT NULL DEFAULT '',
-  thumb_key TEXT,
-  min_stock_alert DECIMAL(12,2) DEFAULT 5,
-  created_at TIMESTAMPTZ DEFAULT NOW(),
+  category TEXT,
+  cost_price DECIMAL(12,2),
+  sell_price DECIMAL(12,2)
+);
+
+CREATE TABLE ppob_transactions (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  outlet_id UUID REFERENCES outlets(id) ON DELETE CASCADE,
+  ppob_product_id UUID REFERENCES ppob_products(id),
+  customer_ref TEXT,
+  amount DECIMAL(12,2) NOT NULL,
+  status TEXT DEFAULT 'pending',
+  provider_ref TEXT,
+  created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+CREATE TABLE restock_orders (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  outlet_id UUID REFERENCES outlets(id) ON DELETE CASCADE,
+  distributor TEXT,
+  tracking_id TEXT,
+  amount DECIMAL(12,2) DEFAULT 0,
+  status TEXT DEFAULT 'draft',
+  created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+CREATE TABLE fintech_leads (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  outlet_id UUID REFERENCES outlets(id) ON DELETE CASCADE,
+  partner TEXT,
+  amount_requested DECIMAL(12,2),
+  status TEXT DEFAULT 'lead',
+  created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+CREATE TABLE receipt_sponsors (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  brand TEXT NOT NULL,
+  image_key TEXT,
+  target_url TEXT,
+  region TEXT,
+  active_from TIMESTAMPTZ,
+  active_to TIMESTAMPTZ,
+  impression_count INTEGER DEFAULT 0
+);
+
+CREATE TABLE merchants (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  device_uuid VARCHAR(100) UNIQUE NOT NULL,
+  store_name VARCHAR(150) NOT NULL DEFAULT 'Warung Saya',
+  owner_name VARCHAR(100),
+  owner_ktp VARCHAR(20),
+  payout_bank_code VARCHAR(20),
+  payout_account_number VARCHAR(50),
+  payout_account_name VARCHAR(100),
+  is_verified BOOLEAN DEFAULT FALSE,
+  created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+CREATE TABLE platform_financial_configs (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  min_qris_amount NUMERIC DEFAULT 1000,
+  max_qris_amount NUMERIC DEFAULT 10000000,
+  qris_free_threshold NUMERIC DEFAULT 500000,
+  qris_base_mdr_percent NUMERIC DEFAULT 0.3,
+  kasirgo_margin_percent NUMERIC DEFAULT 0.1,
+  kasirgo_margin_flat NUMERIC DEFAULT 0,
+  fee_bearer VARCHAR(20) DEFAULT 'MERCHANT',
+  min_disbursement_amount NUMERIC DEFAULT 50000,
+  disbursement_fee_standard NUMERIC DEFAULT 2500,
+  disbursement_fee_instant NUMERIC DEFAULT 3500,
+  auto_settlement_schedules TEXT[] DEFAULT ARRAY['12:00','19:00'],
+  updated_at TIMESTAMPTZ DEFAULT NOW(),
+  updated_by UUID REFERENCES auth.users(id)
+);
+
+CREATE TABLE settlements (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  merchant_id UUID REFERENCES merchants(id) ON DELETE CASCADE,
+  batch_ref TEXT,
+  total_net NUMERIC DEFAULT 0,
+  status TEXT DEFAULT 'pending',
+  scheduled_at TIMESTAMPTZ,
+  settled_at TIMESTAMPTZ,
+  created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+CREATE TABLE disbursements (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  merchant_id UUID REFERENCES merchants(id) ON DELETE CASCADE,
+  amount NUMERIC NOT NULL,
+  mode TEXT DEFAULT 'standard' CHECK (mode IN ('standard','instant')),
+  fee NUMERIC DEFAULT 0,
+  status TEXT DEFAULT 'pending',
+  provider_ref TEXT,
+  created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- Control Plane: satu tempat semua konfigurasi integrasi (ganti di superadmin, tanpa kodingan)
+CREATE TABLE platform_integrations (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  key TEXT UNIQUE NOT NULL,          -- pg_duitku | ppob_digiflazz | b2b_distributor | fintech_partner
+                                     -- | cloudflare_r2 | db_connection | wa_business | affiliate
+  label TEXT,
+  base_url TEXT,
+  public_config JSONB DEFAULT '{}',  -- aman ke client (mis. link affiliate distributor B2B)
+  secret_config JSONB DEFAULT '{}',  -- api key/password; client TIDAK boleh baca
+  is_active BOOLEAN DEFAULT false,
+  updated_at TIMESTAMPTZ DEFAULT NOW(),
+  updated_by UUID REFERENCES auth.users(id)
+);
+
+CREATE TABLE outlet_kyc (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  outlet_id UUID REFERENCES outlets(id) ON DELETE CASCADE,
+  full_name TEXT, phone TEXT, email TEXT, store_name TEXT, store_address TEXT,
+  ktp_image_path TEXT,          -- LOKAL di HP (kebijakan foto lokal)
+  selfie_ktp_image_path TEXT,   -- LOKAL di HP
+  status TEXT DEFAULT 'pending' CHECK (status IN ('pending','verified','rejected')),
+  auto_verified BOOLEAN DEFAULT false,
+  verified_at TIMESTAMPTZ,
+  created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+CREATE TABLE outlet_staff_quota (
+  outlet_id UUID PRIMARY KEY REFERENCES outlets(id) ON DELETE CASCADE,
+  max_admin INT DEFAULT 1,
+  max_cashier INT DEFAULT 1,
+  extra_from_supporter BOOLEAN DEFAULT false,
   updated_at TIMESTAMPTZ DEFAULT NOW()
 );
 
-CREATE TABLE product_prices (
-  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  product_id UUID REFERENCES products(id) ON DELETE CASCADE,
-  channel TEXT NOT NULL CHECK (channel IN ('offline', 'tokopedia', 'shopee', 'blibli', 'gofood', 'grabfood', 'shopeefood')),
-  price DECIMAL(12,2) NOT NULL,
-  platform_fee_percent DECIMAL(5,2) DEFAULT 0
-);
-
-CREATE TABLE product_discounts (
-  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  product_id UUID REFERENCES products(id) ON DELETE CASCADE,
-  discount_percent DECIMAL(5,2),
-  discount_amount DECIMAL(12,2),
-  start_date TIMESTAMPTZ NOT NULL,
-  end_date TIMESTAMPTZ NOT NULL,
-  is_flash_sale BOOLEAN DEFAULT false
-);
-
-CREATE TABLE transactions (
+CREATE TABLE affiliate_payouts (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   outlet_id UUID REFERENCES outlets(id) ON DELETE CASCADE,
-  user_id UUID REFERENCES auth.users(id),
-  customer_id UUID,
-  channel TEXT NOT NULL DEFAULT 'offline',
-  payment_method TEXT NOT NULL DEFAULT 'cash' CHECK (payment_method IN ('cash', 'qris', 'bank_transfer')),
-  total_amount DECIMAL(12,2) NOT NULL,
-  total_discount DECIMAL(12,2) DEFAULT 0,
-  final_amount DECIMAL(12,2) NOT NULL,
-  status TEXT NOT NULL DEFAULT 'completed' CHECK (status IN ('completed', 'voided')),
+  amount NUMERIC DEFAULT 0,
+  bank_name TEXT, bank_account_no TEXT, bank_account_name TEXT,
+  status TEXT DEFAULT 'pending' CHECK (status IN ('pending','processing','paid')),
+  provider_ref TEXT,
   created_at TIMESTAMPTZ DEFAULT NOW()
 );
-
-CREATE TABLE transaction_items (
-  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  transaction_id UUID REFERENCES transactions(id) ON DELETE CASCADE,
-  product_id UUID REFERENCES products(id),
-  product_name TEXT NOT NULL,
-  quantity DECIMAL(12,2) NOT NULL,
-  unit_price DECIMAL(12,2) NOT NULL,
-  discount DECIMAL(12,2) DEFAULT 0,
-  subtotal DECIMAL(12,2) NOT NULL
-);
-
-CREATE TABLE customers (
-  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  outlet_id UUID REFERENCES outlets(id) ON DELETE CASCADE,
-  name TEXT NOT NULL,
-  phone_wa TEXT,
-  total_spent DECIMAL(12,2) DEFAULT 0,
-  loyalty_points INTEGER DEFAULT 0,
-  created_at TIMESTAMPTZ DEFAULT NOW()
-);
-
-CREATE TABLE employees (
-  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  outlet_id UUID REFERENCES outlets(id) ON DELETE CASCADE,
-  user_id UUID REFERENCES auth.users(id),
-  check_in_time TIMESTAMPTZ,
-  check_out_time TIMESTAMPTZ,
-  shift TEXT DEFAULT 'pagi',
-  date DATE NOT NULL DEFAULT CURRENT_DATE
-);
-
-CREATE TABLE subscriptions (
-  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  outlet_id UUID REFERENCES outlets(id) ON DELETE CASCADE,
-  tier TEXT NOT NULL CHECK (tier IN ('free', 'basic_25', 'pro_50')),
-  start_date TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-  end_date TIMESTAMPTZ NOT NULL,
-  payment_method TEXT,
-  payment_status TEXT DEFAULT 'pending' CHECK (payment_status IN ('pending', 'paid', 'expired')),
-  amount DECIMAL(12,2) NOT NULL DEFAULT 0
-);
-
-CREATE TABLE affiliates (
-  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  name TEXT NOT NULL,
-  email TEXT UNIQUE,
-  referral_code TEXT UNIQUE NOT NULL,
-  commission_percent DECIMAL(5,2) DEFAULT 10,
-  total_earned DECIMAL(12,2) DEFAULT 0,
-  created_at TIMESTAMPTZ DEFAULT NOW()
-);
-
-CREATE TABLE affiliate_referrals (
-  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  affiliate_id UUID REFERENCES affiliates(id) ON DELETE CASCADE,
-  referred_user_id UUID REFERENCES auth.users(id),
-  outlet_id UUID REFERENCES outlets(id),
-  commission_amount DECIMAL(12,2) DEFAULT 0,
-  status TEXT DEFAULT 'active',
-  created_at TIMESTAMPTZ DEFAULT NOW()
-);
-
-CREATE TABLE ai_insights (
-  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  outlet_id UUID REFERENCES outlets(id) ON DELETE CASCADE,
-  insight_type TEXT NOT NULL,
-  data JSONB NOT NULL DEFAULT '{}',
-  created_at TIMESTAMPTZ DEFAULT NOW()
-);
-
--- ============================================
--- TRIGGERS
--- ============================================
-
-CREATE OR REPLACE FUNCTION handle_new_user()
-RETURNS TRIGGER AS $$
-BEGIN
-  INSERT INTO outlets (owner_id, name, type)
-  VALUES (NEW.id, COALESCE(NEW.raw_user_meta_data->>'business_name', 'Toko Baru'), COALESCE(NEW.raw_user_meta_data->>'business_type', 'warung'));
-  RETURN NEW;
-END;
-$$ LANGUAGE plpgsql SECURITY DEFINER;
-
-CREATE TRIGGER on_auth_user_created
-  AFTER INSERT ON auth.users
-  FOR EACH ROW EXECUTE FUNCTION handle_new_user();
-
-CREATE OR REPLACE FUNCTION decrement_stock()
-RETURNS TRIGGER AS $$
-BEGIN
-  UPDATE products SET stock = stock - NEW.quantity WHERE id = NEW.product_id;
-  RETURN NEW;
-END;
-$$ LANGUAGE plpgsql SECURITY DEFINER;
-
-CREATE TRIGGER tr_decrement_stock
-  AFTER INSERT ON transaction_items
-  FOR EACH ROW EXECUTE FUNCTION decrement_stock();
-
--- ============================================
--- RLS POLICIES
--- ============================================
-
--- outlets: owner full access
-ALTER TABLE outlets ENABLE ROW LEVEL SECURITY;
-CREATE POLICY "Owner can manage own outlet" ON outlets FOR ALL USING (owner_id = auth.uid());
-CREATE POLICY "Admin/Cashier can view own outlet" ON outlets FOR SELECT USING (
-  EXISTS (SELECT 1 FROM user_roles WHERE user_id = auth.uid() AND outlet_id = outlets.id)
-);
-
--- user_roles: owner full access
-ALTER TABLE user_roles ENABLE ROW LEVEL SECURITY;
-CREATE POLICY "Owner can manage roles" ON user_roles FOR ALL USING (
-  EXISTS (SELECT 1 FROM outlets WHERE id = user_roles.outlet_id AND owner_id = auth.uid())
-);
-
--- products: owner/admin CRUD, cashier read
-ALTER TABLE products ENABLE ROW LEVEL SECURITY;
-CREATE POLICY "Owner/Admin can manage products" ON products FOR ALL USING (
-  EXISTS (SELECT 1 FROM outlets WHERE id = products.outlet_id AND owner_id = auth.uid())
-  OR EXISTS (SELECT 1 FROM user_roles WHERE user_id = auth.uid() AND outlet_id = products.outlet_id AND role = 'admin')
-);
-CREATE POLICY "Cashier can view products" ON products FOR SELECT USING (
-  EXISTS (SELECT 1 FROM user_roles WHERE user_id = auth.uid() AND outlet_id = products.outlet_id AND role = 'cashier')
-);
-
--- product_prices: same as products
-ALTER TABLE product_prices ENABLE ROW LEVEL SECURITY;
-CREATE POLICY "Owner/Admin can manage prices" ON product_prices FOR ALL USING (
-  EXISTS (SELECT 1 FROM products p JOIN outlets o ON p.outlet_id = o.id WHERE p.id = product_prices.product_id AND o.owner_id = auth.uid())
-  OR EXISTS (SELECT 1 FROM products p JOIN user_roles r ON p.outlet_id = r.outlet_id WHERE p.id = product_prices.product_id AND r.user_id = auth.uid() AND r.role = 'admin')
-);
-CREATE POLICY "Cashier can view prices" ON product_prices FOR SELECT USING (
-  EXISTS (SELECT 1 FROM products p JOIN user_roles r ON p.outlet_id = r.outlet_id WHERE p.id = product_prices.product_id AND r.user_id = auth.uid() AND r.role = 'cashier')
-);
-
--- product_discounts
-ALTER TABLE product_discounts ENABLE ROW LEVEL SECURITY;
-CREATE POLICY "Owner/Admin can manage discounts" ON product_discounts FOR ALL USING (
-  EXISTS (SELECT 1 FROM products p JOIN outlets o ON p.outlet_id = o.id WHERE p.id = product_discounts.product_id AND o.owner_id = auth.uid())
-  OR EXISTS (SELECT 1 FROM products p JOIN user_roles r ON p.outlet_id = r.outlet_id WHERE p.id = product_discounts.product_id AND r.user_id = auth.uid() AND r.role = 'admin')
-);
-
--- transactions: owner/admin read, cashier insert
-ALTER TABLE transactions ENABLE ROW LEVEL SECURITY;
-CREATE POLICY "Owner/Admin can view transactions" ON transactions FOR SELECT USING (
-  EXISTS (SELECT 1 FROM outlets WHERE id = transactions.outlet_id AND owner_id = auth.uid())
-  OR EXISTS (SELECT 1 FROM user_roles WHERE user_id = auth.uid() AND outlet_id = transactions.outlet_id AND role IN ('admin', 'cashier'))
-);
-CREATE POLICY "Any role can insert transactions" ON transactions FOR INSERT WITH CHECK (
-  EXISTS (SELECT 1 FROM outlets WHERE id = transactions.outlet_id AND owner_id = auth.uid())
-  OR EXISTS (SELECT 1 FROM user_roles WHERE user_id = auth.uid() AND outlet_id = transactions.outlet_id)
-);
-
--- transaction_items
-ALTER TABLE transaction_items ENABLE ROW LEVEL SECURITY;
-CREATE POLICY "View transaction items" ON transaction_items FOR SELECT USING (
-  EXISTS (SELECT 1 FROM transactions t JOIN outlets o ON t.outlet_id = o.id WHERE t.id = transaction_items.transaction_id AND o.owner_id = auth.uid())
-  OR EXISTS (SELECT 1 FROM transactions t JOIN user_roles r ON t.outlet_id = r.outlet_id WHERE t.id = transaction_items.transaction_id AND r.user_id = auth.uid())
-);
-CREATE POLICY "Insert transaction items" ON transaction_items FOR INSERT WITH CHECK (
-  EXISTS (SELECT 1 FROM transactions t JOIN outlets o ON t.outlet_id = o.id WHERE t.id = transaction_items.transaction_id AND o.owner_id = auth.uid())
-  OR EXISTS (SELECT 1 FROM transactions t JOIN user_roles r ON t.outlet_id = r.outlet_id WHERE t.id = transaction_items.transaction_id AND r.user_id = auth.uid())
-);
-
--- customers
-ALTER TABLE customers ENABLE ROW LEVEL SECURITY;
-CREATE POLICY "Manage customers" ON customers FOR ALL USING (
-  EXISTS (SELECT 1 FROM outlets WHERE id = customers.outlet_id AND owner_id = auth.uid())
-  OR EXISTS (SELECT 1 FROM user_roles WHERE user_id = auth.uid() AND outlet_id = customers.outlet_id AND role IN ('admin', 'cashier'))
-);
-
--- employees
-ALTER TABLE employees ENABLE ROW LEVEL SECURITY;
-CREATE POLICY "Manage employees" ON employees FOR ALL USING (
-  EXISTS (SELECT 1 FROM outlets WHERE id = employees.outlet_id AND owner_id = auth.uid())
-  OR (EXISTS (SELECT 1 FROM user_roles WHERE user_id = auth.uid() AND outlet_id = employees.outlet_id) AND employees.user_id = auth.uid())
-);
-
--- subscriptions
-ALTER TABLE subscriptions ENABLE ROW LEVEL SECURITY;
-CREATE POLICY "View own subscriptions" ON subscriptions FOR SELECT USING (
-  EXISTS (SELECT 1 FROM outlets WHERE id = subscriptions.outlet_id AND owner_id = auth.uid())
-);
-
--- affiliates (superadmin only via service key)
-ALTER TABLE affiliates ENABLE ROW LEVEL SECURITY;
-ALTER TABLE affiliate_referrals ENABLE ROW LEVEL SECURITY;
-
--- ai_insights
-ALTER TABLE ai_insights ENABLE ROW LEVEL SECURITY;
-CREATE POLICY "View own insights" ON ai_insights FOR SELECT USING (
-  EXISTS (SELECT 1 FROM outlets WHERE id = ai_insights.outlet_id AND owner_id = auth.uid())
-  OR EXISTS (SELECT 1 FROM user_roles WHERE user_id = auth.uid() AND outlet_id = ai_insights.outlet_id)
-);
-
--- ============================================
--- INDEXES
--- ============================================
-CREATE INDEX idx_products_outlet ON products(outlet_id);
-CREATE INDEX idx_products_category ON products(outlet_id, category);
-CREATE INDEX idx_products_barcode ON products(barcode);
-CREATE INDEX idx_transactions_outlet ON transactions(outlet_id);
-CREATE INDEX idx_transactions_date ON transactions(outlet_id, created_at DESC);
-CREATE INDEX idx_transaction_items_tx ON transaction_items(transaction_id);
-CREATE INDEX idx_customers_outlet ON customers(outlet_id);
-CREATE INDEX idx_employees_date ON employees(outlet_id, date);
-CREATE INDEX idx_ai_insights_outlet ON ai_insights(outlet_id, created_at DESC);
-
-PASTIKAN:
-- Semua 13 tabel terbuat tanpa error
-- RLS policies aktif untuk semua tabel
-- Trigger handle_new_user berfungsi (register user baru = outlet auto-create)
-- Trigger decrement_stock berfungsi
-- Register + login dari Supabase Auth UI berhasil
 ```
 
-### TEST CHECKLIST Phase 1
-- [ ] Semua 13 tabel terbuat tanpa error
-- [ ] RLS policies aktif
-- [ ] Trigger handle_new_user berfungsi (register user baru, outlet auto-create)
-- [ ] Trigger decrement_stock berfungsi
-- [ ] Register + login berhasil dari Supabase Auth UI
+### 3.3 Trigger/Function
+- `handle_new_user`: UBAH, isi `outlet_type` dari `user_metadata`.
+- Onboarding owner: Anonymous Auth + `device_uuid` -> auto-create `merchants` + default `outlets`
+  (<1 detik). **Wajib lengkapi KYC** sebelum transaksi: email, nohp, nama toko, alamat toko, upload KTP,
+  foto selfie memegang KTP (semua LOKAL di HP, hanya nilai verifikasi) -> `outlet_kyc`.
+- Auto-verify: jika 6 data KYC lengkap + format valid -> set `status='verified'`, `auto_verified=true`
+  (Edge Function). Tidak perlu review manual; admin hanya menangani kasus rejected.
+- `decrement_stock`: UBAH, tulis juga ke `stock_logs` (event-sourcing).
+- Edge Function `webhook_qris`: verifikasi HMAC SHA-256, update status transaksi LUNAS.
+- Edge Function `stock_alert`: cek stok menipis + expired, insert `ai_insights`.
+- Cron `auto_settlement`: batch settlement PG sesuai `auto_settlement_schedules` (default 12:00 & 19:00 WIB).
+
+### 3.4 RLS
+Pola tetap: Owner full akses outlet sendiri; Admin tambah/edit produk + laporan (DELETE produk DITOLAK);
+Cashier POS + insert; Kitchen read order; Superadmin via service key (Edge Function). Terapkan pola yang sama ke
+semua tabel baru berbasis `outlet_id`.
+- `platform_financial_configs`: superowner full access (`auth.jwt()->>'role'='superowner'`); app client SELECT-only.
+- `merchants` / `settlements` / `disbursements`: merchant hanya akses baris miliknya; superowner full access.
+- `platform_integrations`: superowner full access; app client hanya boleh SELECT `public_config` (kolom
+  `secret_config` TIDAK diekspos ke client -- akses via Edge Function/service key saja).
+- `outlet_kyc`: Owner hanya outlet sendiri (read/insert/update); Superadmin full.
+- `outlet_staff_quota` / `affiliate_payouts`: Owner read outlet sendiri; Superadmin full; tulis payout via Edge Function.
+- Produk DELETE policy: izinkan hanya jika `auth.jwt()->>'role' IN ('owner','superowner')`.
+- Kolom margin/fee (`mdr_fee_deducted`, `kasirgo_margin_deducted`, `net_amount_to_merchant`) hanya ditulis server (Edge Function), tidak dari client.
 
 ---
 
-## PHASE 2: Flutter App Shell + Auth + Offline Engine
+## BAGIAN 4 - ROADMAP PHASE
 
-### FILE LAMPIRAN (Dibuat di Phase Ini)
-```
-kasirgo/
-  pubspec.yaml
-  lib/
-    main.dart
-    app.dart
-    config/
-      supabase_config.dart
-      app_theme.dart
-      constants.dart
-    models/
-      user.dart
-      outlet.dart
-      product.dart
-      transaction.dart
-      customer.dart
-      employee.dart
-    services/
-      auth_service.dart
-      sync_service.dart
-      local_db_service.dart
-      supabase_service.dart
-    providers/
-      auth_provider.dart
-      outlet_provider.dart
-      sync_provider.dart
-    screens/
-      auth/
-        login_screen.dart
-        register_screen.dart
-      owner/
-        owner_home_screen.dart
-        product_list_screen.dart      (placeholder)
-        product_form_screen.dart      (placeholder)
-        pos_screen.dart               (placeholder)
-        report_screen.dart            (placeholder)
-        customer_list_screen.dart     (placeholder)
-        employee_screen.dart          (placeholder)
-        settings_screen.dart          (placeholder)
-      admin/
-        admin_home_screen.dart
-      cashier/
-        cashier_home_screen.dart
-        cashier_pos_screen.dart
-      customer/
-        customer_menu_screen.dart     (placeholder)
-    widgets/
-      common/
-        loading_widget.dart
-        error_widget.dart
-        empty_state_widget.dart
-        app_drawer.dart
-        search_bar.dart
-      pos/
-        cart_panel.dart               (placeholder)
-        product_grid.dart             (placeholder)
-        checkout_dialog.dart          (placeholder)
-    utils/
-      offline_queue.dart
-      ai_engine.dart                  (placeholder)
-      formatters.dart
-      validators.dart
-```
+| Phase | Nama | Status |
+|-------|------|--------|
+| 1 | Supabase DB + Auth | SELESAI |
+| 2 | Flutter App Shell + Auth + Offline Engine | SELESAI |
+| 3 | Produk + POS + QRIS manual + AI Co-Pilot | SELESAI |
+| 4 | Laporan + Pelanggan + Karyawan | SELESAI |
+| 5 | Premium Features + Subscription Gate | SELESAI (sebagian OBSOLETE) |
+| 5.5A | Retrofit 3.0: DB migration + models/services | SELESAI |
+| 5.5B | Retrofit 3.0: UI (hapus subscription, dynamic module, kasbon dasar) | SELESAI |
+| 5.5C | Retrofit 3.0: Security (SQLCipher + secure storage) + sync event-sourcing | SELESAI |
+| 6 | Kasbon/Piutang + WA + Sponsored Receipt | SELESAI |
+| 7 | Dynamic QRIS Payment Gateway + webhook HMAC | SELESAI |
+| **7.5** | **Zero-Friction Onboarding + Dual-Mode QRIS + Settlement/Disbursement + Superowner Financial Config** | **MULAI DI SINI** |
+| 7.6 | UI Retrofit "Centennial Modern Ocean White" (semua role + semua fitur) | |
+| 7.7 | Control Plane (setting superadmin tanpa kodingan) + KYC Auto-Verify + Izin Produk/Staf + Owner Affiliate | |
+| 8 | Modul outlet_type: BOM/Resep, KDS/QR Meja, Variant, Shift/Tip | |
+| 9 | PPOB + Closed-loop + Embedded B2B Restock | |
+| 10 | Fintech Lead + Hyperlocal Data + Micro-insurance | |
+| 11 | Superadmin Web (12 revenue engine) | |
+| 12 | Polish + Security Audit + Release | |
 
-### PROMPT (Copy-Paste)
-
-```
-=== KASIRGO: Aplikasi kasir UMKM (Flutter mobile + Supabase + React superadmin). 3 role: Owner (full), Admin (CRUD produk), Cashier (POS only). 3 paket: Gratis (500 tx/produk+iklan), 25rb (unlimited+barcode), 50rb (WA+social commerce+QR meja). AI Co-Pilot gratis local compute. Glassmorphism: #4F46E5 #7C3AED #06B6D4. Font Inter. Offline-first: SQLite lokal sync Supabase. 13 tabel DB+RLS. ===
-Clone repo [GITHUB_URL] lalu LANJUTKAN project Flutter kasirgo. Phase 1 selesai: Supabase DB + Auth. flutter pub get.
-ATURAN: SETIAP selesai 1-2 file, langsung git add . && git commit -m "progress: [nama file]" && git push. JANGAN tunggu semua selesai.
-SETELAH PHASE SELESAI: jalankan dev server + minta URL preview + uji live pakai klik (lihat bagian "TEST LIVE PER PHASE"). Jangan hanya bilang build sukses.
-SETELAH CLONE: baca file AGENTS.md di root repo untuk konteks lengkap proyek, lalu update checklist Progress Tracker di sana jika ada Phase yang selesai di session ini.
-TESTING CEPAT: flutter run -d web-server --web-renderer html --web-hostname 0.0.0.0 --web-port 8080 untuk preview instan (HTML renderer, tidak blank). APK build hanya untuk test final (kamera, SQLite).
-APK TARGET: di bawah 10MB per ABI (--split-per-abi --obfuscate).
-
-Buat project Flutter baru bernama "kasirgo" dengan struktur berikut.
-
-Gunakan dependencies ini di pubspec.yaml:
-- supabase_flutter: ^2.0.0
-- drift: ^2.15.0
-- sqlite3_flutter_libs: ^0.5.0
-- path_provider: ^2.1.0
-- go_router: ^13.0.0
-- flutter_riverpod: ^2.4.0
-- riverpod_annotation: ^2.3.0
-- shared_preferences: ^2.2.0
-- intl: ^0.19.0
-- mobile_scanner: ^4.0.0
-- qr_flutter: ^4.1.0
-- barcode: ^2.2.0
-- pdf: ^3.10.0
-- printing: ^5.12.0
-- excel: ^4.0.0
-- url_launcher: ^6.2.0
-- connectivity_plus: ^5.0.0
-- google_fonts: ^6.1.0
-- flutter_animate: ^4.3.0
-- flutter_slidable: ^3.0.0
-- fl_chart: ^0.66.0
-- cached_network_image: ^3.3.0
-- image_picker: ^1.0.0
-
-BUAT STRUKTUR FOLDER:
-lib/
-  main.dart
-  app.dart
-  config/
-    supabase_config.dart
-    app_theme.dart
-    constants.dart
-  models/
-    user.dart
-    outlet.dart
-    product.dart
-    transaction.dart
-    customer.dart
-    employee.dart
-  services/
-    auth_service.dart
-    sync_service.dart
-    local_db_service.dart
-    supabase_service.dart
-  providers/
-    auth_provider.dart
-    outlet_provider.dart
-    sync_provider.dart
-  screens/
-    auth/
-      login_screen.dart
-      register_screen.dart
-    owner/
-      owner_home_screen.dart
-      product_list_screen.dart
-      product_form_screen.dart
-      pos_screen.dart
-      report_screen.dart
-      customer_list_screen.dart
-      employee_screen.dart
-      settings_screen.dart
-    admin/
-      admin_home_screen.dart
-    cashier/
-      cashier_home_screen.dart
-      cashier_pos_screen.dart
-    customer/
-      customer_menu_screen.dart
-  widgets/
-    common/
-      loading_widget.dart
-      error_widget.dart
-      empty_state_widget.dart
-      app_drawer.dart
-      search_bar.dart
-    pos/
-      cart_panel.dart
-      product_grid.dart
-      checkout_dialog.dart
-  utils/
-    offline_queue.dart
-    ai_engine.dart
-    formatters.dart
-    validators.dart
-
-BUAT KODE BERIKUT:
-
-1. main.dart -- Entry point, init Supabase, run app
-2. app.dart -- MaterialApp.router dengan GoRouter, theme glassmorphism
-3. config/supabase_config.dart -- Supabase init dengan URL dan anon key (gunakan placeholder, user isi sendiri)
-4. config/app_theme.dart -- Theme glassmorphism: background gradient biru-ungu, card dengan blur + border putih transparan, rounded corners, font Inter
-5. config/constants.dart -- App name, version, channel list, payment methods
-6. models/ -- Semua model class dengan fromJson/toJson, fromMap/toMap (untuk SQLite)
-7. services/auth_service.dart -- Register, login, logout, getCurrentUser, getRole
-8. services/local_db_service.dart -- SQLite dengan drift, simpan produk lokal, transaksi offline
-9. services/sync_service.dart -- Cek koneksi, sync produk & transaksi ke Supabase saat online
-10. services/supabase_service.dart -- CRUD wrapper untuk semua tabel Supabase
-11. providers/auth_provider.dart -- Riverpod provider untuk auth state
-12. screens/auth/login_screen.dart -- Email + password login, glassmorphism card style
-13. screens/auth/register_screen.dart -- Register form dengan nama usaha + tipe usaha
-14. Owner/Admin/Cashier screens -- Shell dengan bottom navigation sesuai role
-
-DESIGN REQUIREMENTS:
-- Glassmorphism: background gradient, card dengan backdropFilter blur, border putih semi-transparan
-- Warna: primary biru (#4F46E5), secondary ungu (#7C3AED), accent cyan (#06B6D4)
-- Gunakan Google Fonts Inter
-- Semua screen harus responsive, bisa dipakai di HP ukuran 360dp width
-- Button besar minimal 48dp tinggi (touch-friendly)
-- Bottom navigation dengan icon yang jelas
-
-ROLE FLOW:
-- Setelah login, cek role user (owner/admin/cashier)
-- Owner: 5 tab (Dashboard, Produk, Kasir, Laporan, Pengaturan)
-- Admin: 2 tab (Produk, Laporan)
-- Cashier: 1 screen (POS) + profile
-
-OFFLINE ENGINE:
-- local_db_service.dart: simpan produk ke SQLite, transaksi ke SQLite
-- sync_service.dart: setiap 30 detik cek koneksi, jika online push data lokal ke Supabase
-- Conflict resolution: last-write-wins dengan timestamp
-
-PASTIKAN:
-- flutter analyze tidak ada error
-- flutter run -d web-server --web-renderer html --web-hostname 0.0.0.0 --web-port 8080 berjalan
-- flutter build apk --debug berhasil (cek ukuran APK: target per ABI <10MB)
-- Test: login dengan user yang sudah dibuat di Supabase, pastikan redirect ke screen sesuai role
-
-Laporkan hasil build dan test (web + APK).
-```
-
-### TEST CHECKLIST Phase 2
-- [ ] flutter analyze clean
-- [ ] flutter run web HTML renderer berhasil (tidak blank)
-- [ ] flutter build apk --debug berhasil, per ABI di bawah 10MB
-- [ ] Login screen muncul dengan glassmorphism design
-- [ ] Register user baru, outlet auto-create
-- [ ] Role detection berfungsi (owner/admin/cashier redirect berbeda)
-- [ ] Offline sync: matikan internet, buat transaksi, nyalakan internet, data sync
+Catatan: porsi yang OBSOLETE dari Phase 5 dan harus dibuang di 5.5B: subscription gate
+(free/basic_25/pro_50), iklan banner free tier, limit 500 produk/transaksi.
 
 ---
 
-## PHASE 3: Produk + POS + QRIS + AI Co-Pilot
+## BAGIAN 5 - PHASE 5.5A (DB MIGRATION + MODELS/SERVICES)
 
-### FILE LAMPIRAN (Dibuat/Diupdate di Phase Ini)
+PROGRESS-PHASE5.5.md:
 ```
-DIBUAT/DIISI:
-  lib/models/product.dart               (jika belum)
-  lib/services/supabase_service.dart     (CRUD lengkap)
-  lib/screens/owner/product_list_screen.dart
-  lib/screens/owner/product_form_screen.dart
-  lib/screens/owner/pos_screen.dart
-  lib/screens/cashier/cashier_pos_screen.dart
-  lib/widgets/pos/cart_panel.dart
-  lib/widgets/pos/product_grid.dart
-  lib/widgets/pos/checkout_dialog.dart
-  lib/utils/ai_engine.dart
-
-DIUPDATE:
-  lib/screens/owner/owner_home_screen.dart  (AI insight cards)
-  lib/app.dart                              (routing tambahan)
+# PROGRESS PHASE 5.5
+SELESAI: -
+BERIKUTNYA: ST5.5A-1 migration SQL
+BLOCKER: -
 ```
 
-### PROMPT (Copy-Paste)
+Sub-task:
 
+ST5.5A-1 (migration SQL)
 ```
-=== KASIRGO: Aplikasi kasir UMKM (Flutter mobile + Supabase + React superadmin). 3 role: Owner (full), Admin (CRUD produk), Cashier (POS only). 3 paket: Gratis (500 tx/produk+iklan), 25rb (unlimited+barcode), 50rb (WA+social commerce+QR meja). AI Co-Pilot gratis local compute. Glassmorphism: #4F46E5 #7C3AED #06B6D4. Font Inter. Offline-first: SQLite lokal sync Supabase. 13 tabel DB+RLS. ===
-Clone repo [GITHUB_URL] lalu LANJUTKAN project Flutter kasirgo. Phase 1-2 selesai: DB + Auth + App shell + navigation. flutter pub get.
-ATURAN: SETIAP selesai 1-2 file, langsung git add . && git commit -m "progress: [nama file]" && git push. JANGAN tunggu semua selesai.
-SETELAH PHASE SELESAI: jalankan dev server + minta URL preview + uji live pakai klik (lihat bagian "TEST LIVE PER PHASE"). Jangan hanya bilang build sukses.
-SETELAH CLONE: baca file AGENTS.md di root repo untuk konteks lengkap proyek, lalu update checklist Progress Tracker di sana jika ada Phase yang selesai di session ini.
-
-Lanjutkan project Flutter kasirgo. Tambahkan modul core berikut:
-
-1. PRODUK MODULE (product_list_screen.dart, product_form_screen.dart)
-   - List produk dengan search bar dan filter kategori
-   - Grid/List view toggle
-   - Swipe to delete
-   - Fab button untuk tambah produk
-   - Form produk: nama, kategori, harga modal, harga jual, stok, satuan, barcode, expired date, foto produk
-   - Foto produk: ambil dari kamera/galeri, simpan LOKAL saja (path disimpan di `image_local_path`). TIDAK upload ke Supabase. Thumbnail ke R2 hanya untuk produk yang dipublikasikan (opt-in).
-   - Tampilkan stok dengan warna: hijau (aman), kuning (menipis), merah (habis)
-   - Scan barcode untuk input produk (pakai mobile_scanner)
-   - Generate barcode dari text ke gambar (pakai library barcode)
-
-2. POS MODULE (pos_screen.dart, cart_panel.dart, product_grid.dart, checkout_dialog.dart)
-   - Mode: pilih channel (offline, tokopedia, shopee, dll)
-   - Tampilan produk dalam grid, tap untuk tambah ke cart
-   - Search bar untuk cari produk by nama/barcode
-   - Cart panel di bawah: list item, qty +/-, total, tombol checkout
-   - Checkout dialog: pilih payment method (cash, qris, bank_transfer)
-   - QRIS Manual: tampilkan QR code statis, input nominal manual
-   - Cash: input jumlah bayar, hitung kembalian
-   - Setelah checkout: kurangi stok, simpan transaksi
-   - Cetak struk (opsional, bisa share text)
-
-3. Pembatasan Paket Gratis
-   - Cek jumlah transaksi bulan ini, jika >= 500 tampilkan pesan upgrade
-   - Cek jumlah produk, jika >= 500 disable tombol tambah
-   - Tampilkan banner upgrade ke paket berbayar
-
-4. AI CO-PILOT (utils/ai_engine.dart)
-   - Prediksi Penjualan: moving average 7/14/30 hari dari histori transaksi
-   - Deteksi Anomali: z-score > 2.0 pada transaksi harian
-   - Rekomendasi Produk: "Pelanggan yang beli X juga beli Y" dari transaction_items
-   - ABC Ranking: Pareto top 20% = A, next 30% = B, rest = C
-   - Margin Alert: (harga jual - modal) / harga jual < threshold
-   - Tampilkan insight di dashboard owner sebagai card
-
-IMPLEMENTASI DETAIL:
-
-product_list_screen.dart:
-- AppBar dengan judul "Produk" dan tombol scan barcode
-- Search bar di bawah AppBar
-- Chip filter kategori horizontal scroll
-- GridView produk 2 kolom, setiap card: foto, nama, harga, stok badge
-- FAB untuk tambah produk
-- Swipe left untuk delete (dengan konfirmasi)
-
-pos_screen.dart:
-- AppBar dengan channel selector dropdown
-- Search bar produk
-- GridView produk 3 kolom, compact
-- Bottom sheet cart panel: list item, qty control, total
-- Checkout button di bottom sheet
-- Checkout dialog: payment method radio, nominal input, proses button
-
-cart_panel.dart:
-- DraggableScrollableSheet dari bawah
-- List item cart dengan qty +/- dan subtotal
-- Total section dengan diskon (jika ada)
-- Tombol checkout
-
-PASTIKAN:
-- flutter analyze tidak error
-- flutter build apk --debug berhasil
-- Test: tambah 3 produk, buka POS, pilih produk, checkout dengan QRIS, cek stok berkurang
-- Test: cek dashboard owner menampilkan AI insight
-
-Laporkan hasil build dan test.
+=== SUB-TASK ST5.5A-1 ===
+Buat docs/migrations/2026-09-18-kasirgo-3.0.sql berisi:
+- ALTER outlets: rename type -> outlet_type, drop subscription_tier & subscription_expiry
+- ALTER user_roles: tambah role 'kitchen'
+- ALTER products: tambah has_variants
+- ALTER transactions: tambah gateway_ref, settlement_status, tip_amount, shift_id, debt_id, sync_status, event_id, device_id
+- ALTER transaction_items: tambah variant_id, note
+- CREATE TABLE: supporters, supporter_benefits, product_variants, stock_logs, debts, debt_payments,
+  shifts, tips, recipes, recipe_items, ppob_products, ppob_transactions, restock_orders,
+  fintech_leads, receipt_sponsors (lihat BAGIAN 3 dokumen ini)
+- CREATE INDEX pada outlet_id tiap tabel baru
+File ini tidak perlu flutter analyze. commit+push, STOP.
 ```
 
-### TEST CHECKLIST Phase 3
-- [ ] Tambah produk dengan foto berhasil
-- [ ] Scan barcode berfungsi
-- [ ] Generate barcode berfungsi
-- [ ] POS: pilih produk, cart bertambah, checkout berhasil
-- [ ] QRIS manual: tampil QR, input nominal, transaksi tersimpan
-- [ ] Stok otomatis berkurang setelah transaksi
-- [ ] Paket gratis: limit 500 dicek dan tampil pesan
-- [ ] AI Co-Pilot insight muncul di dashboard
-- [ ] Semua fitur offline-compatible
+ST5.5A-2 (models)
+```
+=== SUB-TASK ST5.5A-2 ===
+Buat/ubah model Dart (fromJson/toJson, fromMap/toMap):
+- ubah models/outlet.dart -> tambah outletType, hapus subscriptionTier/Expiry
+- ubah models/transaction.dart -> tambah field gateway/settlement/tip/shift/debt/sync/event/device
+- ganti models/subscription.dart jadi models/supporter.dart (tier pendukung/pro/setia)
+- BARU: models/debt.dart, models/shift.dart, models/tip.dart, models/recipe.dart,
+  models/variant.dart, models/ppob.dart, models/restock.dart
+commit+push, analysis per file, STOP.
+```
+
+ST5.5A-3 (services)
+```
+=== SUB-TASK ST5.5A-3 ===
+- ubah services/supabase_service.dart: tambah CRUD tabel baru; subscriptions -> supporters
+- ubah services/local_db_service.dart: tambah tabel lokal debts, stock_logs, ppob_transactions; gate sync_status
+- ubah services/sync_service.dart: siapkan struktur delta log/event_id (implementasi penuh di 5.5C)
+commit+push, analysis per file, STOP.
+```
+
+ST5.5A-4 (providers)
+```
+=== SUB-TASK ST5.5A-4 ===
+- ganti providers/subscription_provider.dart -> supporter_provider.dart
+- ubah providers/outlet_provider.dart -> expose outletType untuk module switcher
+- BARU: providers/module_provider.dart (module aktif berdasarkan outletType)
+commit+push, analysis per file, STOP.
+```
 
 ---
 
-## PHASE 4: Laporan + Pelanggan + Karyawan
+## BAGIAN 6 - PHASE 5.5B (UI RETROFIT)
 
-### FILE LAMPIRAN (Dibuat/Diupdate di Phase Ini)
+ST5.5B-1 (buang subscription/iklan/limit)
 ```
-DIBUAT/DIISI:
-  lib/screens/owner/report_screen.dart
-  lib/screens/owner/customer_list_screen.dart
-  lib/screens/owner/employee_screen.dart
-
-DIUPDATE:
-  lib/screens/owner/owner_home_screen.dart  (IndexedStack update)
-```
-
-### PROMPT (Copy-Paste)
-
-```
-=== KASIRGO: Aplikasi kasir UMKM (Flutter mobile + Supabase + React superadmin). 3 role: Owner (full), Admin (CRUD produk), Cashier (POS only). 3 paket: Gratis (500 tx/produk+iklan), 25rb (unlimited+barcode), 50rb (WA+social commerce+QR meja). AI Co-Pilot gratis local compute. Glassmorphism: #4F46E5 #7C3AED #06B6D4. Font Inter. Offline-first: SQLite lokal sync Supabase. 13 tabel DB+RLS. ===
-Clone repo [GITHUB_URL] lalu LANJUTKAN project Flutter kasirgo. Phase 1-3 selesai: DB + Auth + App shell + Produk + POS + AI. flutter pub get.
-ATURAN: SETIAP selesai 1-2 file, langsung git add . && git commit -m "progress: [nama file]" && git push. JANGAN tunggu semua selesai.
-SETELAH PHASE SELESAI: jalankan dev server + minta URL preview + uji live pakai klik (lihat bagian "TEST LIVE PER PHASE"). Jangan hanya bilang build sukses.
-SETELAH CLONE: baca file AGENTS.md di root repo untuk konteks lengkap proyek, lalu update checklist Progress Tracker di sana jika ada Phase yang selesai di session ini.
-
-Lanjutkan project Flutter kasirgo. Tambahkan modul laporan, pelanggan, dan karyawan.
-
-1. REPORT MODULE (report_screen.dart)
-   - Tab: Ringkasan, Penjualan, Produk, Laba/Rugi
-   - Filter periode: Hari ini, 7 hari, 30 hari, Bulan ini, Custom range
-   - Ringkasan: total omzet, total untung, total transaksi, rata-rata transaksi
-   - Grafik penjualan harian (fl_chart bar chart)
-   - Top 10 produk terlaris (horizontal bar chart)
-   - Laba/Rugi: pendapatan - HPP = laba kotor
-   - Export ke Excel (pakai library excel)
-   - Laporan Bank-Ready (paket basic+): format laporan keuangan standar bank
-   - Kirim laporan via share (whatsapp, email)
-
-2. CUSTOMER MODULE (customer_list_screen.dart)
-   - List pelanggan dengan total belanja
-   - Tambah pelanggan: nama, nomor WA
-   - Detail pelanggan: riwayat transaksi, total belanja, loyalty points
-   - Piutang/tempo tracking: pelanggan yang belum bayar
-
-3. EMPLOYEE MODULE (employee_screen.dart)
-   - List karyawan
-   - Check-in / Check-out dengan tombol besar
-   - Riwayat absensi per tanggal
-   - Shift management: pagi/siang/malam
-
-IMPLEMENTASI DETAIL:
-
-report_screen.dart:
-- AppBar dengan judul "Laporan"
-- TabBar: Ringkasan | Penjualan | Produk
-- Filter chip horizontal di bawah tab
-- Ringkasan tab: 4 card metric (omzet, untung, transaksi, rata-rata)
-- Penjualan tab: bar chart harian, list transaksi di bawah
-- Produk tab: top 10 horizontal bar chart
-- FAB export Excel
-
-customer_list_screen.dart:
-- Search bar
-- List pelanggan dengan card: nama, WA, total belanja
-- FAB tambah pelanggan
-- Tap card untuk detail + riwayat transaksi
-
-employee_screen.dart:
-- Tanggal hari ini di header
-- Tombol Check-in besar (hijau) / Check-out (merah)
-- List absensi di bawah
-- Shift info
-
-PASTIKAN:
-- flutter analyze tidak error
-- flutter build apk --debug berhasil
-- Test: generate laporan, export Excel, share
-- Test: tambah pelanggan, lihat riwayat transaksi
-- Test: check-in karyawan, check-out, lihat history
-
-Laporkan hasil build dan test.
+=== SUB-TASK ST5.5B-1 ===
+- ubah screens/owner/settings_screen.dart: hapus subscription gate -> tampilkan Program Pendukung (Pendukung/Pro/Setia) + status
+- hapus banner iklan free tier dari owner_home dan screen lain (grep "iklan"/"banner")
+- hapus limit 500 produk (product_list) dan limit 500 transaksi (pos)
+- hapus utils/subscription_gate.dart atau repurpose ke supporter_gate
+commit+push, analysis per file, STOP.
 ```
 
-### TEST CHECKLIST Phase 4
-- [ ] Laporan ringkasan menampilkan data akurat
-- [ ] Grafik penjualan berfungsi
-- [ ] Export Excel berhasil
-- [ ] Laporan bank-ready menampilkan format yang benar
-- [ ] Pelanggan list, tambah, detail, riwayat berfungsi
-- [ ] Absensi check-in/check-out berfungsi
-- [ ] History absensi tersimpan
+ST5.5B-2 (dynamic module switcher)
+```
+=== SUB-TASK ST5.5B-2 ===
+- ubah screens/owner/owner_home_screen.dart: tampilkan modul sesuai outletType
+  (kelontong: Grosir+Kasbon+Barcode; warteg: Porsi+Kitchen+Shift; cafe: BOM+QR Meja+Split Bill/Tip; retail: Barcode+Multi-variant+CRM)
+- buat kerangka screen placeholder untuk modul baru (debt, kitchen_display, ppob, restock, supporter)
+commit+push, analysis per file, STOP.
+```
+
+ST5.5B-3 (kasbon dasar)
+```
+=== SUB-TASK ST5.5B-3 ===
+- buat screens/owner/debt_screen.dart: list piutang/kasbon, status (unpaid/partial/paid), tombol bayar
+- integrasi ke customer detail (riwayat piutang)
+- tombol "Tagih via WA" pakai url_launcher (pesan singkat)
+commit+push, analysis per file, STOP.
+```
 
 ---
 
-## PHASE 5: Premium Features + Subscription Gate
+## BAGIAN 7 - PHASE 5.5C (SECURITY + SYNC)
 
-### FILE LAMPIRAN (Dibuat/Diupdate di Phase Ini)
+ST5.5C-1 (SQLCipher + secure storage)
 ```
-DIBUAT:
-  lib/screens/owner/settings_screen.dart
-
-DIUPDATE:
-  lib/screens/owner/product_form_screen.dart   (multi-channel pricing + diskon)
-  lib/screens/owner/product_list_screen.dart    (tier limits)
-  lib/screens/owner/pos_screen.dart             (diskon badge)
-  lib/screens/owner/owner_home_screen.dart      (notifikasi, flash sale suggest)
-  lib/utils/ai_engine.dart                      (flash sale auto-suggest)
-
-SUPABASE EDGE FUNCTION:
-  supabase/functions/stock_alert/index.ts
+=== SUB-TASK ST5.5C-1 ===
+- tambah dependency sqlcipher_flutter_libs + flutter_secure_storage di pubspec
+- ubah services/local_db_service.dart: buka drift dengan enkripsi SQLCipher, key dari flutter_secure_storage (generate simpan di secure storage)
+- pindahkan simpanan token/session ke flutter_secure_storage
+CATATAN: perubahan pubspec memerlukan pub get - jalankan sekali, redirect ke file.
+commit+push, analysis per file, STOP.
 ```
 
-### PROMPT (Copy-Paste)
-
+ST5.5C-2 (event-sourcing sync)
 ```
-=== KASIRGO: Aplikasi kasir UMKM (Flutter mobile + Supabase + React superadmin). 3 role: Owner (full), Admin (CRUD produk), Cashier (POS only). 3 paket: Gratis (500 tx/produk+iklan), 25rb (unlimited+barcode), 50rb (WA+social commerce+QR meja). AI Co-Pilot gratis local compute. Glassmorphism: #4F46E5 #7C3AED #06B6D4. Font Inter. Offline-first: SQLite lokal sync Supabase. 13 tabel DB+RLS. ===
-Clone repo [GITHUB_URL] lalu LANJUTKAN project Flutter kasirgo. Phase 1-4 selesai: DB + Auth + App + Produk + POS + AI + Laporan. flutter pub get.
-ATURAN: SETIAP selesai 1-2 file, langsung git add . && git commit -m "progress: [nama file]" && git push. JANGAN tunggu semua selesai.
-SETELAH PHASE SELESAI: jalankan dev server + minta URL preview + uji live pakai klik (lihat bagian "TEST LIVE PER PHASE"). Jangan hanya bilang build sukses.
-SETELAH CLONE: baca file AGENTS.md di root repo untuk konteks lengkap proyek, lalu update checklist Progress Tracker di sana jika ada Phase yang selesai di session ini.
-
-Lanjutkan project Flutter kasirgo. Tambahkan fitur premium dan subscription gate.
-
-1. SUBSCRIPTION GATE
-   - Halaman settings: tampilkan tier saat ini, expiry date
-   - Tombol upgrade ke basic_25 atau pro_50
-   - Payment simulation (karena belum ada payment gateway, gunakan dummy flow: tap upgrade -> konfirmasi -> langsung aktif)
-   - Cek tier di setiap fitur premium: jika tidak eligible, tampilkan dialog upgrade
-   - Free tier: tampilkan iklan banner di bagian bawah screen (simulasi Adstera)
-
-2. MULTI-CHANNEL PRICING (product_form_screen.dart tambahan)
-   - Di form produk, tambahkan section "Harga per Channel"
-   - List channel: offline, tokopedia, shopee, blibli, gofood, grabfood, shopeefood
-   - Setiap channel: input harga + input platform fee %
-   - Auto-hitung margin per channel
-
-3. DISCOUNT & PROMO (product_form_screen.dart tambahan)
-   - Tambahkan section "Diskon & Promo"
-   - Input diskon % atau nominal
-   - Tanggal mulai dan selesai
-   - Toggle "Flash Sale"
-   - Di POS screen: jika produk ada diskon aktif, tampilkan badge diskon dan harga coret
-
-4. NOTIFICATION (Edge Function + Local)
-   - Buat Supabase Edge Function untuk cron job:
-     - Cek stok menipis (stock < min_stock_alert)
-     - Cek produk expired dalam 7 hari
-   - Di Flutter: tampilkan badge notifikasi di dashboard
-   - List notifikasi: stok menipis, expired, insight harian
-
-5. FLASH SALE AUTO-SUGGEST
-   - utils/ai_engine.dart: deteksi produk dengan stok tidak berubah > 30 hari
-   - Tampilkan card "Stok Menumpuk" di dashboard dengan saran diskon
-
-IMPLEMENTASI DETAIL:
-
-settings_screen.dart:
-- Card subscription tier saat ini dengan warna (free: abu, basic: biru, pro: ungu)
-- List fitur yang tersedia di tier saat ini
-- Tombol upgrade
-- Iklan banner (jika free tier, simulasi)
-
-BUAT SUPABASE EDGE FUNCTION (stock_alert):
-- Buka Supabase Dashboard > Edge Functions > New Function "stock_alert"
-- Kode:
-
-```typescript
-import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
-
-serve(async (req) => {
-  const supabase = createClient(
-    Deno.env.get("SUPABASE_URL")!,
-    Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
-  );
-
-  const { data: products } = await supabase
-    .from("products")
-    .select("id, outlet_id, name, stock, min_stock_alert, expired_date");
-
-  const alerts = [];
-  for (const p of products || []) {
-    if (p.stock <= p.min_stock_alert) {
-      alerts.push({ product_id: p.id, outlet_id: p.outlet_id, type: "low_stock", message: `Stok ${p.name} menipis: ${p.stock}` });
-    }
-    if (p.expired_date) {
-      const daysUntilExpiry = Math.ceil((new Date(p.expired_date).getTime() - Date.now()) / (1000 * 60 * 60 * 24));
-      if (daysUntilExpiry <= 7 && daysUntilExpiry > 0) {
-        alerts.push({ product_id: p.id, outlet_id: p.outlet_id, type: "expiring", message: `${p.name} kadaluarsa dalam ${daysUntilExpiry} hari` });
-      }
-    }
-  }
-
-  for (const alert of alerts) {
-    await supabase.from("ai_insights").insert({
-      outlet_id: alert.outlet_id,
-      insight_type: alert.type,
-      data: alert
-    });
-  }
-
-  return new Response(JSON.stringify({ alerts_count: alerts.length }), {
-    headers: { "Content-Type": "application/json" },
-  });
-});
+=== SUB-TASK ST5.5C-2 ===
+- ubah services/sync_service.dart: sync berbasis event_id/delta log, idempotent (event_id UNIQUE)
+- jalankan sync di background Isolate terpisah agar POS tidak loading
+- tangani konflik stok multi-kasir lewat agregasi event berdasarkan atomic counter/timestamp
+commit+push, analysis per file, STOP.
 ```
-
-PASTIKAN:
-- flutter analyze tidak error
-- flutter build apk --debug berhasil
-- Test: upgrade tier, cek fitur premium terbuka
-- Test: multi-channel pricing di form produk
-- Test: diskon muncul di POS
-- Test: notifikasi stok menipis
-- Test: flash sale auto-suggest di dashboard
-
-Laporkan hasil build dan test.
-```
-
-### TEST CHECKLIST Phase 5
-- [ ] Subscription gate berfungsi (free -> basic -> pro)
-- [ ] Multi-channel pricing tersimpan dan muncul di POS
-- [ ] Diskon produk muncul di POS dengan badge
-- [ ] Notifikasi stok menipis dan expired muncul
-- [ ] Flash sale auto-suggest berfungsi
-- [ ] Iklan muncul di free tier, hilang di berbayar
 
 ---
 
-## PHASE 6: WhatsApp + Social Commerce + QR Meja + Health Score
+## BAGIAN 7B - PHASE 7.5 (ZERO-FRICTION ONBOARDING + DUAL-MODE QRIS + SETTLEMENT + FINANCIAL CONFIG)
 
-### FILE LAMPIRAN (Dibuat/Diupdate di Phase Ini)
+Buat PROGRESS-PHASE7.5.md. Prasyarat eksternal: akun PG resmi berizin PJP BI
+(Tripay/Xendit/Duitku/Midtrans) + webhook secret HMAC. Sebelum tersedia, pakai mode sandbox/mock.
+
+ST7.5-1 (migration SQL)
 ```
-DIBUAT:
-  lib/utils/wa_helper.dart
-  lib/screens/owner/social_commerce_screen.dart
-  lib/screens/owner/whatsapp_broadcast_screen.dart
-  lib/screens/owner/qr_table_screen.dart
-  lib/screens/owner/online_catalog_screen.dart
-  lib/screens/owner/health_score_screen.dart
-  lib/screens/customer/customer_order_screen.dart
-
-DIUPDATE:
-  lib/screens/owner/owner_home_screen.dart      (navigation tambahan)
-  lib/screens/owner/report_screen.dart           (per-channel reporting)
-  lib/widgets/pos/checkout_dialog.dart           (tombol kirim struk WA)
-```
-
-### PROMPT (Copy-Paste)
-
-```
-=== KASIRGO: Aplikasi kasir UMKM (Flutter mobile + Supabase + React superadmin). 3 role: Owner (full), Admin (CRUD produk), Cashier (POS only). 3 paket: Gratis (500 tx/produk+iklan), 25rb (unlimited+barcode), 50rb (WA+social commerce+QR meja). AI Co-Pilot gratis local compute. Glassmorphism: #4F46E5 #7C3AED #06B6D4. Font Inter. Offline-first: SQLite lokal sync Supabase. 13 tabel DB+RLS. ===
-Clone repo [GITHUB_URL] lalu LANJUTKAN project Flutter kasirgo. Phase 1-5 selesai. flutter pub get.
-ATURAN: SETIAP selesai 1-2 file, langsung git add . && git commit -m "progress: [nama file]" && git push. JANGAN tunggu semua selesai.
-SETELAH PHASE SELESAI: jalankan dev server + minta URL preview + uji live pakai klik (lihat bagian "TEST LIVE PER PHASE"). Jangan hanya bilang build sukses.
-SETELAH CLONE: baca file AGENTS.md di root repo untuk konteks lengkap proyek, lalu update checklist Progress Tracker di sana jika ada Phase yang selesai di session ini.
-
-Lanjutkan project Flutter kasirgo. Tambahkan integrasi dan fitur premium lanjutan.
-
-1. WHATSAPP INTEGRATION
-   - Kirim struk digital via WhatsApp: gunakan url_launcher dengan format wa.me
-   - Format struk: nama toko, tanggal, item, total, terima kasih
-   - Broadcast promosi: pilih pelanggan, tulis pesan, kirim via WA (buka intent WA)
-   - WA CRM Auto-Retensi (pro tier): deteksi pelanggan tidak transaksi > 30 hari, tampilkan saran kirim WA
-
-2. SOCIAL COMMERCE SYNC (simulasi dashboard)
-   - Halaman "Social Commerce": card per channel (Shopee, Tokopedia, GoFood, dll)
-   - Setiap card: input transaksi manual dari channel tersebut
-   - Form: nama produk, qty, harga, platform fee, tanggal
-   - Transaksi tersimpan dengan channel tag, stok auto-kurang
-   - Laporan per channel di report screen
-
-3. TOKO ONLINE KATALOG (PWA ringan)
-   - Halaman "Toko Online" di settings: generate link katalog
-   - Katalog web ringan: daftar produk, foto, harga, tombol order via WA
-   - Buat sebagai Flutter Web build terpisah atau halaman statis
-   - Untuk simplifikasi: gunakan halaman Flutter yang menampilkan produk dalam format katalog
-
-4. QR MEJA (Cafe/Restoran)
-   - Generate QR code per meja (pakai qr_flutter)
-   - QR berisi deep link ke halaman menu
-   - Customer scan QR -> buka halaman menu -> pilih item -> submit order
-   - Order muncul di screen owner/admin sebagai notifikasi
-
-5. HEALTH SCORE DASHBOARD
-   - Dashboard owner tambahan: health score card
-   - Health score (0-100) dihitung dari:
-     - Revenue trend (30 hari vs 30 hari sebelumnya): 30%
-     - Customer retention: 25%
-     - Inventory turnover: 20%
-     - Margin health: 15%
-     - Transaction growth: 10%
-   - Cashflow projection: piutang - tagihan + tren 7 hari
-   - Tampilkan dengan gauge chart dan card metric
-
-IMPLEMENTASI DETAIL:
-
-Buat screen baru:
-- screens/owner/social_commerce_screen.dart
-- screens/owner/health_score_screen.dart
-- screens/owner/whatsapp_broadcast_screen.dart
-- screens/owner/qr_table_screen.dart
-- screens/owner/online_catalog_screen.dart
-- screens/customer/customer_order_screen.dart
-
-Tambahkan ke navigation owner.
-
-PASTIKAN:
-- flutter analyze tidak error
-- flutter build apk --debug berhasil
-- Test: kirim struk via WA, buka intent WA
-- Test: input transaksi social commerce, cek stok berkurang
-- Test: generate QR meja, scan, order
-- Test: health score dashboard menampilkan data
-- Test: katalog online tampil
-
-Laporkan hasil build dan test.
+=== SUB-TASK ST7.5-1 ===
+Buat docs/migrations/2026-09-21-kasirgo-7.5.sql berisi:
+- CREATE TABLE merchants, platform_financial_configs, settlements, disbursements (lihat BAGIAN 3)
+- ALTER outlets: tambah merchant_id, device_uuid
+- ALTER transactions: tambah merchant_id, pg_reference_id, qris_type, payment_status,
+  gross_amount, mdr_fee_deducted, kasirgo_margin_deducted, net_amount_to_merchant
+- RLS: platform_financial_configs (superowner full, client SELECT-only);
+  merchants/settlements/disbursements (merchant baris sendiri, superowner full)
+- Seed 1 baris platform_financial_configs dengan nilai default (lihat BAGIAN 3)
+- INDEX pada merchant_id/outlet_id + kolom status
+File .sql tidak perlu flutter analyze. commit+push, STOP.
 ```
 
-### TEST CHECKLIST Phase 6
-- [ ] Struk WhatsApp terkirim (intent terbuka)
-- [ ] Broadcast promosi ke pelanggan terpilih
-- [ ] Social commerce: input transaksi, stok berkurang
-- [ ] QR meja: generate, scan, order muncul
-- [ ] Health score dashboard akurat
-- [ ] Katalog online bisa diakses
+ST7.5-2 (zero-friction onboarding)
+```
+=== SUB-TASK ST7.5-2 ===
+- services/auth_service.dart: onboarding Anonymous Auth + device_uuid (device_info/path),
+  auto-create merchants + default outlet TANPA form, target <1 detik
+- simpan device_uuid aman via flutter_secure_storage
+- first-run lewati login; menu Pengaturan sediakan "Tautkan Akun" (Google/No. HP) voluntary untuk backup cloud
+- KYC wajib owner (email/nohp/nama toko/alamat/KTP/selfie) TIDAK di sini -- dikerjakan Phase 7.7 (ST7.7-2)
+- pembuatan merchant+outlet via Edge Function (jangan service_role di client)
+Update PROGRESS-PHASE7.5.md: SELESAI ST7.5-2 + BERIKUTNYA ST7.5-3. commit+push, analysis per file, STOP.
+```
+
+ST7.5-3 (dual-mode QRIS)
+```
+=== SUB-TASK ST7.5-3 ===
+- POS: pilih mode QRIS -> STATIC atau DYNAMIC; simpan qris_type & payment_status di transaksi
+- STATIC: input nominal -> instruksi scan stiker bank warung -> tombol "LUNAS (Statis)" -> set PAID
+- DYNAMIC: panggil payment_service create charge -> tampil QR ber-nominal pas -> webhook set PAID
+- Validasi nominal dari platform_financial_configs (min/max/free threshold), baca + cache
+Update PROGRESS-PHASE7.5.md: SELESAI ST7.5-3 + BERIKUTNYA ST7.5-4. commit+push, analysis per file, STOP.
+```
+
+ST7.5-4 (settlement & disbursement + BI-FAST)
+```
+=== SUB-TASK ST7.5-4 ===
+- services/settlement_service.dart: hitung net (gross - mdr - margin) dari config; catat settlements
+- UI saldo dipisah: "QRIS Diproses (Cair Nanti Malam)" vs "Total Ditransfer"
+- Tarik Kilat (BI-FAST): buat disbursements mode 'instant' + fee dari config
+- Edge Function cron auto_settlement: batch sesuai auto_settlement_schedules (12:00 & 19:00 WIB)
+- Hook closed-loop: settlement_status='PPOB_USED' saat saldo dipakai beli PPOB (dipakai Phase 9)
+Update PROGRESS-PHASE7.5.md: SELESAI ST7.5-4 + BERIKUTNYA ST7.5-5. commit+push, analysis per file, STOP.
+```
+
+ST7.5-5 (superowner financial config)
+```
+=== SUB-TASK ST7.5-5 ===
+- Superadmin web: form kelola platform_financial_configs (threshold, MDR, margin, fee_bearer,
+  jadwal settlement, biaya disbursement); simpan + catat updated_by
+- App mobile: baca config untuk validasi nominal + tampilkan rincian biaya transparan
+Update PROGRESS-PHASE7.5.md: SELESAI Phase 7.5 + BERIKUTNYA Phase 7.6. commit+push, analysis per file, STOP.
+```
 
 ---
 
-## PHASE 7: Superadmin Web (React.js + Cloudflare Pages)
+## BAGIAN 7C - PHASE 7.6 (UI RETROFIT CENTENNIAL MODERN OCEAN WHITE)
 
-### FILE LAMPIRAN (Dibuat di Phase Ini)
+Tujuan: menyamakan SELURUH tampilan (Superadmin web, Owner, Admin, Cashier, Kitchen,
+Customer, serta fitur Produk/Pelanggan/Karyawan/Laporan/Pengaturan) ke Design System v2
+(Bagian 1.6). Referensi layout kasirmurah.com, palet Ocean White. Aturan mutlak:
+UI-ONLY, feature-preserving. DILARANG mengubah logic, provider, service, model, schema,
+query, route, atau alur bisnis. Hanya lapisan visual.
+
+PROGRESS-PHASE7.6.md:
 ```
-kasirgo-admin/
-  package.json
-  tsconfig.json
-  vite.config.ts
-  tailwind.config.js
-  index.html
-  src/
-    main.tsx
-    App.tsx
-    config/
-      supabase.ts
-    components/
-      Layout.tsx
-      Sidebar.tsx
-      StatCard.tsx
-    pages/
-      Login.tsx
-      Dashboard.tsx
-      Users.tsx
-      UserDetail.tsx
-      Affiliates.tsx
-      Backup.tsx
-      Revenue.tsx
+# PROGRESS PHASE 7.6
+SELESAI: -
+BERIKUTNYA: ST7.6-1 token & tema dasar
+BLOCKER: -
 ```
 
-### PROMPT (Copy-Paste)
-
+ST7.6-1 (token & tema dasar)
 ```
-=== KASIRGO: Aplikasi kasir UMKM (Flutter mobile + Supabase + React superadmin). 3 role: Owner (full), Admin (CRUD produk), Cashier (POS only). 3 paket: Gratis (500 tx/produk+iklan), 25rb (unlimited+barcode), 50rb (WA+social commerce+QR meja). AI Co-Pilot gratis local compute. Glassmorphism: #4F46E5 #7C3AED #06B6D4. Font Inter. Offline-first: SQLite lokal sync Supabase. 13 tabel DB+RLS. ===
-Clone repo [GITHUB_URL] lalu LANJUTKAN project React kasirgo-admin. Phase 1-6 selesai (Flutter app). npm install.
-ATURAN: SETIAP selesai 1-2 file, langsung git add . && git commit -m "progress: [nama file]" && git push. JANGAN tunggu semua selesai.
-SETELAH PHASE SELESAI: jalankan dev server + minta URL preview + uji live pakai klik (lihat bagian "TEST LIVE PER PHASE"). Jangan hanya bilang build sukses.
-SETELAH CLONE: baca file AGENTS.md di root repo untuk konteks lengkap proyek, lalu update checklist Progress Tracker di sana jika ada Phase yang selesai di session ini.
-
-Buat project React.js baru untuk superadmin dashboard KasirGo. Deploy ke Cloudflare Pages.
-
-Buat dengan Vite + React + TypeScript + Tailwind CSS:
-
-npm create vite@latest kasirgo-admin -- --template react-ts
-cd kasirgo-admin
-npm install @supabase/supabase-js react-router-dom recharts lucide-react
-npm install -D tailwindcss @tailwindcss/vite
-
-STRUKTUR FOLDER:
-src/
-  main.tsx
-  App.tsx
-  config/
-    supabase.ts
-  components/
-    Layout.tsx
-    Sidebar.tsx
-    StatCard.tsx
-  pages/
-    Login.tsx
-    Dashboard.tsx
-    Users.tsx
-    UserDetail.tsx
-    Affiliates.tsx
-    Backup.tsx
-    Revenue.tsx
-
-FITUR:
-
-1. Login (pages/Login.tsx)
-   - Email + password login
-   - Hanya user dengan role superadmin yang bisa akses
-   - Redirect ke dashboard setelah login
-
-2. Dashboard (pages/Dashboard.tsx)
-   - Total users, active subscriptions, revenue bulan ini, total affiliates
-   - Grafik pie: distribusi tier (free/basic/pro)
-   - Grafik line: revenue per bulan
-
-3. User Management (pages/Users.tsx)
-   - Table semua users dengan: nama, email, outlet, tier, status
-   - Search dan filter
-   - Tombol "Masuk sebagai Owner" (impersonate)
-   - Tombol suspend/activate
-
-4. User Detail (pages/UserDetail.tsx)
-   - Detail outlet, subscription history
-   - Product count, transaction count
-   - Tombol impersonate
-   - Tombol backup data outlet ini
-
-5. Affiliate Management (pages/Affiliates.tsx)
-   - Table affiliates: nama, email, referral code, commission, total earned
-   - Tambah affiliate form
-   - Track referrals per affiliate
-
-6. Backup & Restore (pages/Backup.tsx)
-   - List backup per outlet
-   - Tombol create backup (export data outlet ke JSON)
-   - Tombol restore (upload JSON)
-
-7. Revenue (pages/Revenue.tsx)
-   - Total revenue per bulan
-   - Revenue by tier
-   - Pending payments
-   - Affiliate commission summary
-
-DESIGN:
-- Dark theme admin panel
-- Sidebar navigation
-- Tabel dengan sorting dan pagination
-- Responsive design
-
-SUPABASE SETUP:
-- Tambahkan kolom role ke auth.users metadata: role = 'superadmin' untuk superadmin
-- Buat user superadmin pertama manual via Supabase dashboard
-
-DEPLOY:
-- Push ke GitHub
-- Deploy ke Cloudflare Pages (connect repo)
-- Set environment variables: VITE_SUPABASE_URL, VITE_SUPABASE_ANON_KEY
-
-PASTIKAN:
-- npm run build tidak error
-- Deploy ke Cloudflare Pages berhasil
-- Test: login superadmin, lihat dashboard, impersonate owner, manage affiliates, backup
-
-Laporkan hasil deploy.
+=== SUB-TASK ST7.6-1 ===
+- config/app_theme.dart: ganti total ke palet Ocean White (Bagian 1.6) - ColorScheme light,
+  scaffold #F8FAFC, card #FFFFFF + border #E2E8F0, primary #0284C7, gradient #06B6D4->#0284C7,
+  text #0F172A/#64748B, status #10B981/#F59E0B/#EF4444, font Inter, radius/shadow, breakpoint.
+- themes AppBar/Card/Input/ElevatedButton/BottomNav/Chip/TabBar ikut token.
+- kasirgo-admin: tailwind.config.js + index.css tema light Ocean (warna & radius sama).
+- grep dan hapus hardcode warna lama (#4F46E5,#0F172A bg,#1E293B) di seluruh lib/ dan src/;
+  arahkan ke token. TIDAK menyentuh widget logic.
+Update PROGRESS-PHASE7.6.md: SELESAI ST7.6-1 + BERIKUTNYA ST7.6-2. commit+push, analysis per file, STOP.
 ```
 
-### TEST CHECKLIST Phase 7
-- [ ] Login superadmin berfungsi
-- [ ] Dashboard menampilkan stats
-- [ ] User list, search, filter berfungsi
-- [ ] Impersonate owner berfungsi
-- [ ] Affiliate CRUD berfungsi
-- [ ] Backup/restore berfungsi
-- [ ] Revenue dashboard akurat
-- [ ] Deploy Cloudflare Pages sukses
+ST7.6-2 (shared widget kit)
+```
+=== SUB-TASK ST7.6-2 ===
+Buat widgets/common/ (komponen bersama, dipakai semua role):
+- app_shell.dart: OwnerHomeScreen shell adaptif - Desktop sidebar 240dp + header 60dp +
+  Center(ConstrainedBox(maxWidth:1100)); Mobile app bar glass + drawer (profil, search,
+  seksi UTAMA/OPERASIONAL, Keluar, versi) + bottom nav frosted blur 20 (7 item).
+  Ekspos param `child`, `title`, `activeIndex`, `bottomNav`.
+- hero_card.dart, stat_card.dart, module_tile.dart (ikon+label, dukung badge "Segera"),
+  section_header.dart, status_badge.dart (aman/menipis/habis, kasbon, AI), empty_state.dart,
+  price_text.dart, filter_chips.dart (periode 7 pilihan).
+- Terapkan di 1 screen pilot (owner_home) untuk validasi; sisanya di sub-task berikut.
+Update PROGRESS-PHASE7.6.md: SELESAI ST7.6-2 + BERIKUTNYA ST7.6-3. commit+push, analysis per file, STOP.
+```
+
+ST7.6-3 (dashboard Owner + grid 10 modul)
+```
+=== SUB-TASK ST7.6-3 ===
+- screens/owner/owner_home.dart: pakai AppShell + HeroCard (omzet periode + produk terjual) +
+  FilterChips + 4 StatCard (Potensi Untung, Belum Bayar, Produk Terjual, Perlu Cek Stok) +
+  grid kartu shortcut 10 modul bisnis (Bagian 1.6) dengan badge "Segera" untuk yang belum ada.
+- Data tetap dari provider/state yang sudah ada; jangan ubah query/logic.
+Update PROGRESS-PHASE7.6.md: SELESAI ST7.6-3 + BERIKUTNYA ST7.6-4. commit+push, analysis per file, STOP.
+```
+
+ST7.6-4 (Produk, POS, Pelanggan, Karyawan)
+```
+=== SUB-TASK ST7.6-4 ===
+- product_list: chip pintasan (Kategori/Stok/Harga/Supplier/Penerimaan Stok) + header
+  "N Jenis Produk" + Urutkan + cari + chip "Semua" + kartu produk (thumbnail, nama, badge
+  status, harga tebal, barcode, info stok). Grid 4 kolom / rasio 0.95 / badge stok
+  (Hijau>10, Kuning1-10, Merah0). Tablet 3 kolom, mobile 2 kolom.
+- product_form (di dalam shell, `maxWidth: 760`): seksi berjudul, OutlinedTextField, dropdown
+  kategori, barcode + ikon scan, Harga Modal/Harga Jual, deskripsi multiline, kotak unggah
+  "Gambar Produk" dashed, "Opsi Lanjutan" expandable, tombol primary penuh lebar di bawah.
+- pos: grid katalog 4 kolom + cart panel tetap fungsional (tidak ubah logika cart/checkout).
+- customer_list + employee: list/kartu + status_badge + empty_state v2.
+Update PROGRESS-PHASE7.6.md: SELESAI ST7.6-4 + BERIKUTNYA ST7.6-5. commit+push, analysis per file, STOP.
+```
+
+ST7.6-5 (Laporan, Pengaturan, Health Score, modul bisnis)
+```
+=== SUB-TASK ST7.6-5 ===
+- report: kartu ringkas + chart fl_chart palet Ocean (tanpa ubah kalkulasi laporan).
+- settings: seksi bertoken v2 (Program Pendukung, outlet, printer, dsb tetap utuh).
+- health_score + screens modul: debt, ppob, restock, kitchen_display, whatsapp_broadcast,
+  social_commerce, qr_table, online_catalog, supporter -> seragamkan via AppShell + kit.
+- Belum ada screen-nya: tampilkan kartu "Segera" (jangan buat logic baru di fase ini).
+Update PROGRESS-PHASE7.6.md: SELESAI ST7.6-5 + BERIKUTNYA ST7.6-6. commit+push, analysis per file, STOP.
+```
+
+ST7.6-6 (Cashier, Admin, Kitchen, Customer)
+```
+=== SUB-TASK ST7.6-6 ===
+- cashier_home: kartu outlet + toggle Offline/Toko, header "Pilih Produk/Paket" + Urutkan +
+  cari + chip, baris produk radio; bar aksi "Scan Produk" (outlined) + "Keranjang" (filled).
+  Alur bayar/QRIS tidak berubah.
+- checkout/pembayaran: banner status lebar (merah BELUM LUNAS / hijau LUNAS), baris info
+  (Kasir/Tanggal/Metode) + "Ubah", Informasi Pelanggan, grid aksi 2x2 (Cetak Struk, Beranda,
+  Kembali, Konfirmasi).
+- modal struk: Cetak Struk / Convert PDF / Simpan Gambar + radio 58mm/80mm + Kembali + preview.
+- scan: segmented "Kamera"/"Alat Scanner" + viewport + bar Total (N item) + "Lanjut ke Keranjang".
+- admin_home, kitchen KDS, customer_menu: shell + kit yang sama; status order pakai status_badge.
+Update PROGRESS-PHASE7.6.md: SELESAI ST7.6-6 + BERIKUTNYA ST7.6-7. commit+push, analysis per file, STOP.
+```
+
+ST7.6-7 (Superadmin Web React)
+```
+=== SUB-TASK ST7.6-7 ===
+- kasirgo-admin/src: Layout.jsx sidebar putih 240dp + header, semua pages (Login, Dashboard,
+  Users, UserDetail, Affiliates, Backup, Revenue) pakai token Tailwind Ocean; tabel/kartu/
+  badge/button seragam. Tidak ubah API call, auth, atau logic data.
+Update PROGRESS-PHASE7.6.md: SELESAI ST7.6-7 + BERIKUTNYA ST7.6-8. commit+push, analysis per file, STOP.
+```
+
+ST7.6-8 (QA regresi + progress)
+```
+=== SUB-TASK ST7.6-8 ===
+- flutter analyze bersih; build web html + npm run build admin sukses.
+- Checklist fitur utuh: auth, CRUD produk, POS+QRIS, laporan, pelanggan, karyawan, pengaturan,
+  kasbon, WA, modul lain - pastikan tidak ada yang hilang/berubah fungsi akibat retrofit.
+- Uji tampilan 3 breakpoint (360/768/1280): tidak stretched, sidebar muncul di >=860dp,
+  bottom nav hanya mobile, kartu stat & grid rapi.
+- Simpan screenshot; update PROGRESS-PHASE7.6.md SELESAI + BERIKUTNYA Phase 8.
+- Update tracker AGENTS.md (Design System v2 + Phase 7.6 SELESAI). commit+push, STOP.
+```
+
+Catatan: bila screen modul bisnis baru dibuat di Phase 8/9, WAJIB langsung memakai
+AppShell + kit v2 (tidak boleh mulai dari tema lama).
 
 ---
 
-## PHASE 8: Polish + Testing + Final Deploy
+## BAGIAN 7D - PHASE 7.7 (CONTROL PLANE + KYC + IZIN + SETTING SUPERADMIN)
 
-### FILE LAMPIRAN (Diupdate di Phase Ini)
+Buat PROGRESS-PHASE7.7.md. Tujuan: semua integrasi/margin/limit bisa diubah dari superadmin
+TANPA menyentuh kodingan (lihat Bagian 1.10). Satu sub-task = satu session.
+
+ST7.7-1 (migration + models)
 ```
-FLUTTER (semua screen di-update polish):
-  lib/screens/              (semua: loading/error/empty state, pull-to-refresh, animasi)
-  lib/main.dart             (splash screen)
-  lib/config/app_theme.dart (konsistensi glassmorphism)
-
-REACT:
-  kasirgo-admin/src/        (final polish + responsive)
-
-BUILD:
-  build/app/outputs/        (APK release)
-  build/web/                (Flutter web untuk katalog)
-```
-
-### PROMPT (Copy-Paste)
-
-```
-=== KASIRGO: Aplikasi kasir UMKM (Flutter mobile + Supabase + React superadmin). 3 role: Owner (full), Admin (CRUD produk), Cashier (POS only). 3 paket: Gratis (500 tx/produk+iklan), 25rb (unlimited+barcode), 50rb (WA+social commerce+QR meja). AI Co-Pilot gratis local compute. Glassmorphism: #4F46E5 #7C3AED #06B6D4. Font Inter. Offline-first: SQLite lokal sync Supabase. 13 tabel DB+RLS. ===
-Clone repo [GITHUB_URL] lalu LANJUTKAN project. Phase 1-7 selesai: Flutter app + React admin. flutter pub get && npm install.
-ATURAN: SETIAP selesai 1-2 file, langsung git add . && git commit -m "progress: [nama file]" && git push. JANGAN tunggu semua selesai.
-SETELAH PHASE SELESAI: jalankan dev server + minta URL preview + uji live pakai klik (lihat bagian "TEST LIVE PER PHASE"). Jangan hanya bilang build sukses.
-SETELAH CLONE: baca file AGENTS.md di root repo untuk konteks lengkap proyek, lalu update checklist Progress Tracker di sana jika ada Phase yang selesai di session ini.
-
-Lakukan finalisasi project KasirGo:
-
-1. UI POLISH (Flutter)
-   - Cek semua screen: pastikan glassmorphism theme konsisten
-   - Add loading states, error states, empty states di semua screen
-   - Add pull-to-refresh di semua list screen
-   - Add haptic feedback di tombol-tombol penting
-   - Animasi transisi antar screen (slide, fade)
-   - Splash screen dengan logo KasirGo
-
-2. PWA SETUP (Flutter Web untuk katalog)
-   - Build Flutter web untuk katalog online
-   - Tambahkan manifest.json dan service worker
-   - Deploy ke Cloudflare Pages sebagai static site
-
-3. ADSTERA INTEGRATION (Free Tier)
-   - Tambahkan banner ad di bagian bawah screen untuk free tier
-   - Simulasi: gunakan container dengan teks "Iklan" dan warna abu-abu
-
-4. FINAL TESTING
-   - Test flow lengkap: register -> buat produk -> transaksi -> laporan
-   - Test semua role: owner, admin, cashier
-   - Test offline: matikan internet, transaksi, nyalakan internet, sync
-   - Test upgrade: free -> basic -> pro
-   - Test semua fitur premium
-
-5. GITHUB SETUP
-   - Buat repo GitHub: kasirgo-app (Flutter) dan kasirgo-admin (React)
-   - Push semua kode
-   - Tambahkan README dengan setup instructions
-
-6. CLOUDFLARE PAGES DEPLOY
-   - Deploy React admin ke Cloudflare Pages
-   - Deploy Flutter web katalog ke Cloudflare Pages (jika ada)
-
-7. APK BUILD
-   - flutter build apk --release --split-per-abi --obfuscate --split-debug-info=build/debug-info
-   - Upload APK sebagai GitHub release
-
-PASTIKAN:
-- Tidak ada error di flutter analyze
-- Tidak ada error di npm run build (React)
-- Semua flow berjalan lancar
-- APK release bisa diinstall dan berfungsi
-
-Laporkan semua hasil final.
+=== SUB-TASK ST7.7-1 ===
+Buat docs/migrations/2026-09-21-kasirgo-7.7.sql berisi:
+- CREATE TABLE platform_integrations, outlet_kyc, outlet_staff_quota, affiliate_payouts (BAGIAN 3)
+- RLS sesuai BAGIAN 3.4 (secret_config TIDAK ke client; DELETE produk owner-only)
+- Seed platform_integrations baris kosong (is_active=false) untuk: pg_duitku, ppob_digiflazz,
+  b2b_distributor, fintech_partner, cloudflare_r2, db_connection, wa_business, affiliate
+- models/platform_config.dart + services/config_service.dart: fetch semua config aktif,
+  cache di shared_preferences/sqlite, fallback ke nilai default bila offline
+File .sql tidak perlu flutter analyze. commit+push, STOP.
 ```
 
-### TEST CHECKLIST Phase 8
-- [ ] UI konsisten di semua screen
-- [ ] Loading/error/empty states ada
-- [ ] Pull-to-refresh berfungsi
-- [ ] Animasi transisi halus
-- [ ] Splash screen muncul
-- [ ] PWA katalog berfungsi
-- [ ] Iklan muncul di free tier
-- [ ] Full flow test: register -> produk -> transaksi -> laporan
-- [ ] Role test: owner, admin, cashier
-- [ ] Offline test: transaksi offline -> sync online
-- [ ] Upgrade test: semua tier
-- [ ] GitHub repo terisi kode
-- [ ] Cloudflare Pages deploy sukses
-- [ ] APK release berfungsi, per ABI <10MB
+ST7.7-2 (KYC owner + auto-verify)
+```
+=== SUB-TASK ST7.7-2 ===
+- screens/auth/onboarding_kyc_screen.dart: form email, nohp, nama toko, alamat toko,
+  upload KTP + selfie memegang KTP (image_picker, simpan LOKAL -> image path saja)
+- gate: sebelum KYC verified, blokir POS/transaksi; tampilkan banner "Lengkapi verifikasi"
+- Edge Function verify_kyc: validasi 6 field + format -> set status verified + auto_verified
+- Owner lihat status verifikasi di Pengaturan
+Update PROGRESS-PHASE7.7.md: SELESAI ST7.7-2 + BERIKUTNYA ST7.7-3. commit+push, analysis per file, STOP.
+```
+
+ST7.7-3 (izin + kelola staf)
+```
+=== SUB-TASK ST7.7-3 ===
+- produk: sembunyikan tombol hapus untuk Admin (UI) + andalkan RLS menolak DELETE (server)
+- screens/owner/staff_management_screen.dart: Owner create/delete Admin & Kasir;
+  enforce outlet_staff_quota (default 1 Admin + 1 Kasir); kelebihan -> ajakan Program Pendukung
+Update PROGRESS-PHASE7.7.md: SELESAI ST7.7-3 + BERIKUTNYA ST7.7-4. commit+push, analysis per file, STOP.
+```
+
+ST7.7-4 (owner affiliate + pembayaran statis)
+```
+=== SUB-TASK ST7.7-4 ===
+- screens/owner/affiliate_screen.dart: tampilkan link affiliate, setting rekening bank pencairan,
+  laporan closing komisi (total, pending, cair)
+- Pengaturan > Pembayaran: opsi QRIS STATIS (upload gambar QRIS yang sudah ada) atau DINAMIS
+  (aktif via superadmin); simpan pilihan + gambar lokal
+Update PROGRESS-PHASE7.7.md: SELESAI ST7.7-4 + BERIKUTNYA ST7.7-5. commit+push, analysis per file, STOP.
+```
+
+ST7.7-5 (superadmin control plane web)
+```
+=== SUB-TASK ST7.7-5 ===
+kasirgo-admin: halaman Settings (tab) mengelola platform_integrations + financial config:
+- Payment Gateway: link, api key, nominal biaya, margin KasirGo, setting pencairan
+- PPOB: api key Digiflazz/IAK/RCB, modal, margin persen -> harga jual semua produk auto
+- B2B Kulakan: link affiliate distributor (public_config) dipakai RestockScreen owner
+- Affiliate: komisi upgrade Program Pendukung + pencairan otomatis
+- Fintech: link akun partner fintech/insurtech
+- Storage: koneksi Cloudflare R2 (bucket+key)
+- Database: url/user/password/apikey koneksi (mis. Supabase)
+- WA Bisnis: api key WA Cloud API
+Pakai token Tailwind v2; secret di-mask. commit+push, STOP.
+```
+
+ST7.7-6 (app baca config dinamis + QA)
+```
+=== SUB-TASK ST7.7-6 ===
+- pastikan PPOB/Restock/WA/upload thumbnail membaca config dari config_service (cache+fallback),
+  tidak ada nilai integrasi yang di-hardcode
+- QA: ubah link distributor & margin persen di superadmin -> app ikut berubah tanpa rebuild backend
+- Update tracker AGENTS.md (Phase 7.7 SELESAI). commit+push, STOP.
+```
+
+Catatan: Phase 7.8/9 lanjut memakai config yang sama; jangan hardcode ulang nilai integrasi.
 
 ---
 
-## CONTEXT WINDOW RECOVERY (WAJIB TAHU)
+## BAGIAN 8 - PHASE 6-12 (MODUL 3.0)
 
-### Tanda Kena Limit
-AI mulai lupa / respon lambat / error "context window full"
+Gunakan pola yang sama: tempel PROMPT PEMBUKA UNIVERSAL + SUB-TASK, satu per sesi, commit+push, Compact.
 
-### Prosedur Recovery
-```
-LANGKAH 1: PUSH DULU
-   git add . && git commit -m "checkpoint: [fitur terakhir]" && git push
+### PHASE 6 - Kasbon/Piutang + WA + Sponsored Receipt  [SELESAI]
+- ST6-1: `utils/wa_helper.dart` (sendReceipt, sendBroadcast, openChat) + tombol kirim struk WA di checkout
+- ST6-2: struk WhatsApp tampilkan banner kupon sponsor dari `receipt_sponsors` + increment impression
+- ST6-3: CRM auto-retensi (deteksi pelanggan tidak aktif >30 hari) + broadcast
+- Test: kirim struk, banner sponsor muncul, broadcast terkirim.
 
-LANGKAH 2: RESET SESSION (jangan compact)
-   Tutup session. Buka session BARU.
+### PHASE 7 - Dynamic QRIS Payment Gateway  [SELESAI]
+- ST7-1: `services/payment_service.dart` (create QRIS charge via REST API gateway) + tampil QR dinamis di POS
+- ST7-2: Edge Function `webhook_qris` verifikasi HMAC SHA-256 -> update transaksi LUNAS
+- ST7-3: direct settlement + split-payment logic (komisi platform dipotong gateway, bukan ditampung KasirGo)
+- Test: QR dinamis tampil, webhook set LUNAS, settlement tercatat.
 
-LANGKAH 3: PASTE PROMPT PHASE YANG SAMA
-   Copy prompt phase yang sedang dikerjakan dari dokumen ini.
-   AI akan clone repo, baca AGENTS.md + git log, lalu LANJUT dari commit terakhir.
+### PHASE 7.6 - UI Retrofit "Centennial Modern Ocean White"
+Lihat BAGIAN 7C (ST7.6-1 s/d ST7.6-8). UI-only, semua role + semua fitur.
 
-LANGKAH 4: VERIFIKASI
-   Katakan: "Lanjutkan dari commit terakhir. Cek git log."
-```
+### PHASE 7.7 - Control Plane + KYC + Izin + Setting Superadmin
+Lihat BAGIAN 7D (ST7.7-1 s/d ST7.7-6). Semua setting integrasi/margin lewat superadmin, tanpa kodingan.
 
-### Kapan Reset vs Compact
-| Situasi | Tindakan |
-|---------|----------|
-| Ganti Phase / mulai fitur baru | RESET |
-| Debug 1 bug kecil (progress belum bisa push) | Compact, selesaikan, push, lalu reset |
-| AI mulai lupa / ngawur | Push + RESET |
-| Baru push 1-2 file, masih banyak kerjaan | Lanjutkan (belum penuh) |
-| Sudah 10+ file push dalam 1 session | Pertimbangkan reset |
+### PHASE 8 - Modul per outlet_type
+- ST8-1: Variant produk (product_form + product_list + POS pilih varian) - retail
+- ST8-2: BOM/Resep HPP (recipe + recipe_items) + kalkulasi HPP otomatis - cafe
+- ST8-3: Kitchen Display (KDS): daftar order masuk, status, tandai selesai - cafe/warteg
+- ST8-4: Shift kasir (open/close + opening/closing cash) + Tip + split bill
+- Test: sesuai outlet_type.
 
----
+### PHASE 9 - PPOB + Embedded B2B Restock
+- ST9-1: `services/ppob_service.dart` + `screens/owner/ppob_screen.dart` (pulsa/PLN/BPJS/game);
+  api key + **margin persen dari `platform_integrations`/config** -> harga jual semua produk PPOB auto
+- ST9-2: Closed-loop settlement (saldo QRIS -> beli PPOB real-time)
+- ST9-3: Embedded B2B Restock via WebView anti-bypass + tracking_id + komisi;
+  **link distributor diambil dari config superadmin** (ganti link = tanpa ubah koding)
+- Test: transaksi PPOB, restock order tercatat.
 
-## HEMAT TOKEN (WAJIB)
+### PHASE 10 - Fintech + Data + Insurance
+- ST10-1: Fintech lead-gen (ajukan modal berdasarkan data arus kas)
+- ST10-2: Hyperlocal data report (agregat anonim)
+- ST10-3: Micro-insurance toko
+- Test: lead tercatat.
 
-Context window terbatas. Ikuti aturan ini supaya tidak cepat penuh:
+### PHASE 11 - Superadmin Web (React + Cloudflare Pages)
+- ST11-1: Dashboard 12 revenue engine + supporters + user mgmt
+- ST11-2: Impersonate, backup/restore, data intelligence
+- ST11-3: Control Plane lengkap (PG, PPOB, B2B, Affiliate, Fintech, R2, DB, WA) -- lihat BAGIAN 7D/1.10
+- Test: login superadmin, statistik tampil.
 
-1. **Push tiap 1-2 file**, bukan tiap 5-10 file.
-2. **Jangan minta AI baca file yang tidak relevan** ke task saat ini.
-3. **Satu task per pesan.** Jangan gabung banyak perintah dalam 1 pesan.
-4. **Jangan bolak-balik revisi file yang sama** berulang kali dalam 1 session.
-5. **Kalau error sama kena >3x -> push + RESET.** Jangan debug terus-menerus.
-6. **Jangan paste output panjang** (log build besar, dump file) ke chat kalau tidak perlu.
-7. **AGENTS.md sudah merangkum konteks.** Tidak perlu cerita ulang proyek dari awal.
-8. **Ganti Phase = RESET, bukan lanjut.** Context bersih = token kembali penuh.
-
----
-
-## TOOLS PER PHASE
-
-| Phase | Tools | Perintah Install |
-|-------|-------|-----------------|
-| 1 | Supabase Dashboard (web) | - |
-| 2 | Flutter SDK | `flutter pub get` |
-| 3 | Flutter SDK | `flutter pub get` |
-| 4 | Flutter SDK | `flutter pub get` |
-| 5 | Flutter SDK + Supabase Dashboard | `flutter pub get` |
-| 6 | Flutter SDK | `flutter pub get` |
-| 7 | Node.js + npm | `npm install` |
-| 8 | Flutter SDK + Node.js | `flutter pub get && npm install` |
+### PHASE 12 - Polish + Security Audit + Release
+- ST12-1: Obfuscation + hardening + audit `service_role` tidak ada di APK
+- ST12-2: Stress test offline-online sync Isolate
+- ST12-3: Build APK release split-per-abi <10MB + deploy superadmin
+- Test: full flow end-to-end semua role + offline + Program Pendukung.
 
 ---
 
-## TEST LIVE PER PHASE (SETIAP PHASE SELESAI)
+## BAGIAN 9 - TEST LIVE PER PHASE
 
-Setelah phase selesai: **jalankan dev server -> minta URL preview -> uji pakai klik -> laporkan hasilnya.** Jangan hanya bilang "build sukses".
+Setelah phase selesai: jalankan dev server, minta URL preview, uji pakai klik, laporkan
+(URL + yang diklik + hasil + error). Jangan hanya bilang "build sukses".
 
-### Cara Jalankan Live Test
-
-**Flutter (Phase 2-6, 8):**
+Flutter:
 ```
 flutter run -d web-server --web-renderer html --web-hostname 0.0.0.0 --web-port 8080
 ```
-Lalu minta URL preview untuk port 8080 (gunakan tool preview/deploy bawaan).
-
-**React admin (Phase 7-8):**
+React admin:
 ```
 npm run dev
 ```
-Lalu minta URL preview untuk port yang muncul (biasanya 5173).
-
-### Yang Diuji Live per Phase
-
-| Phase | Yang diuji live di web preview |
-|-------|-------------------------------|
-| 1 | Tidak ada app. Cek di Supabase Dashboard: 13 tabel, RLS, trigger jalan |
-| 2 | Login/register, redirect per role, navigasi tab, sync online, tampilan glassmorphism |
-| 3 | Tambah produk, POS (pilih produk -> cart -> checkout), QRIS tampil, stok berkurang, AI insight card |
-| 4 | Laporan (grafik, filter), export Excel, tambah pelanggan, absensi check-in/out |
-| 5 | Upgrade tier, multi-channel pricing, diskon di POS, notifikasi, banner iklan free tier |
-| 6 | Kirim struk WA, social commerce input, generate QR meja, health score, katalog online |
-| 7 | Login superadmin, dashboard stats, user list, impersonate, affiliate, backup, revenue |
-| 8 | Full flow end-to-end semua role + offline + upgrade |
-
-### Catatan Penting
-
-- **Fitur native TIDAK jalan di web:** kamera (scan barcode/foto), SQLite drift, image_picker. Untuk fitur ini, build APK: `flutter build apk --debug` -> install ke HP -> uji manual.
-- **Yang bisa diuji di web:** UI, navigasi, auth, CRUD Supabase, chart, POS, laporan, WhatsApp intent.
-- **Kalau preview blank:** pastikan pakai `--web-renderer html` (bukan CanvasKit).
-- **Laporkan ke user:** URL preview + apa saja yang sudah diklik/diuji + error kalau ada.
+Catatan: fitur native (kamera/scan barcode, SQLite SQLCipher, image_picker) TIDAK jalan di web.
+Fitur ini diuji via APK debug di HP. Yang bisa diuji di web: UI, navigasi, auth, CRUD Supabase,
+chart, POS, PPOB mock, WA intent, Program Pendukung.
 
 ---
 
-## DOKUMEN REFERENSI (di folder docs/)
+## BAGIAN 10 - HANDOFF & GANTI PHASE
 
-| File | Isi |
-|------|-----|
-| `KASIRGO-WORKFLOW-LENGKAP.md` | DOKUMEN INI -- prompt lengkap + lampiran file per phase |
-| `STRATEGI-KASIRGO.md` | Strategi induk: visi, segmentasi, monetisasi, roadmap |
-| `PRD-KasirGo.md` | Product Requirements Document |
-| `superpowers/specs/2026-09-08-ui-ux-design.md` | Design system (warna, font, komponen, layout) |
-| `superpowers/specs/2026-09-08-pos-app-design.md` | POS design spec |
-| `superpowers/plans/2026-09-08-kasirgo-implementation.md` | Implementation plan detail per task |
+Setelah phase selesai:
+1. `git add . && git commit -m "docs: phase X selesai" && git push`
+2. Update Progress Tracker di `AGENTS.md`.
+3. Tulis status di `PROGRESS-PHASE[X].md` (SELESAI / BERIKUTNYA / CATATAN / BLOCKER).
+4. Ganti phase: push -> Compact (atau Reset jika context penuh / Compact ngawur).
+5. Buat `PROGRESS-PHASE[X+1].md` untuk phase berikutnya.
+
+Reset vs Compact (pilih satu):
+- Compact = ringkas, tetap ingat -> antar sub-task dalam phase.
+- Reset = kosong total, paling hemat -> saat ganti phase atau setelah Compact ngawur.
+- Jangan keduanya.
+
+---
+
+## BAGIAN 11 - DELTA vs VERSI LAMA (RINGKAS)
+
+| Aspek | Versi lama | 3.0 |
+|-------|-----------|-----|
+| Model | Langganan free/basic_25/pro_50 | Gratis selamanya + 12 revenue engine |
+| Monetisasi user | Subscription gate + iklan | Program Pendukung (kosmetik opsional) |
+| QRIS | Manual | Dynamic QRIS + webhook HMAC + split settlement |
+| QRIS mode | 1 mode (manual) | Dual-Mode: Statis (MDR 0%) + Dinamis (auto LUNAS) |
+| Onboarding | Form/email/OTP + login | Zero-friction: Anonymous Auth + Device UUID, lalu **KYC wajib** (email/nohp/toko/alamat/KTP/selfie) auto-verify |
+| Dana | Tidak diatur eksplisit | Zero-touch money: escrow PG PJP BI + direct settlement + BI-FAST |
+| Biaya/margin | Hardcode | Dinamis via `platform_financial_configs` (superowner real-time) |
+| Integrasi | Hardcode di koding | Control Plane `platform_integrations` (PG/PPOB/B2B/Fintech/R2/DB/WA) -- edit superadmin tanpa koding |
+| Izin | Sama rata | Owner hapus produk + kelola staf (kuota 1 Admin + 1 Kasir); Admin tanpa hapus |
+| Arsitektur | POS generik | Modular `outlet_type` |
+| Modul | Produk/POS/AI/laporan/pelanggan/karyawan | + Kasbon, BOM/Resep, KDS/QR meja, Variant, Shift/Tip, PPOB, B2B Restock, Fintech |
+| Keamanan | SQLite biasa | SQLCipher + flutter_secure_storage |
+| Sync | Last-write-wins | Event-sourcing / delta log + background Isolate |
+| Superadmin | Subscription/revenue/affiliate | 12 revenue engine + supporters + data + Control Plane (setting semua integrasi) |
+| UI/Theme | Dark Glassmorphism (indigo) | Centennial Modern Ocean White (light) - Phase 7.6 |
+
+OBSOLETE (buang di 5.5B): subscription tier, iklan banner free, limit 500.
+
+---
+
+## BAGIAN 12 - PRASYARAT EKSTERNAL (belum ada)
+- Akun Payment Gateway resmi berizin PJP BI (Tripay/Xendit/Duitku/Midtrans) + kredensial sandbox + webhook secret HMAC -> Phase 7.5
+- Persetujuan Master Account / Payment Facilitator (split-payment + escrow) -> Phase 7.5
+- API key PPOB (Digiflazz/IAK/RCB) -> Phase 9
+- Akun partner fintech/insurtech -> Phase 10
+- Cloudflare R2 bucket -> thumbnail opt-in (koneksi diset di superadmin, Phase 7.7)
+- Link affiliate distributor B2B (kulakan) -> Phase 7.7 (set di superadmin)
+- Kredensial koneksi database (url/user/password/apikey, mis. Supabase) -> Phase 7.7 (set di superadmin)
+- API key WA Business (Cloud API) untuk WA Marketing -> Phase 7.7 (set di superadmin)
+- Isi `config/supabase_config.dart` + kredensial Edge Function (service_role hanya di server)
+- Aktifkan Supabase Anonymous Auth (untuk onboarding zero-friction) -> Phase 7.5

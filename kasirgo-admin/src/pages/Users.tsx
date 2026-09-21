@@ -1,177 +1,155 @@
-import React, { useEffect, useState } from 'react'
-import { supabase } from '../config/supabase'
-import { Search, UserCheck, ShieldAlert, LogIn } from 'lucide-react'
+import { useState } from 'react';
+import { Search, Plus, Edit2, Trash2, Eye, Shield, UserX } from 'lucide-react';
 
-export const UsersPage: React.FC = () => {
-  const [outlets, setOutlets] = useState<any[]>([])
-  const [loading, setLoading] = useState(true)
-  const [search, setSearch] = useState('')
-  const [selectedType, setSelectedType] = useState('ALL')
+const mockUsers = [
+  { id: 1, name: 'Budi Santoso', email: 'budi@warung.com', outlet: 'Warung Bakso Mbok Sum', tier: 'Basic', status: 'active', transactions: 847 },
+  { id: 2, name: 'Siti Aminah', email: 'siti@warteg.com', outlet: 'Warteg Pak Joe', tier: 'Premium', status: 'active', transactions: 1234 },
+  { id: 3, name: 'Ahmad Rizki', email: 'ahmad@cafe.com', outlet: 'Kopi Senja Cafe', tier: 'Pro', status: 'active', transactions: 567 },
+  { id: 4, name: 'Dewi Lestari', email: 'dewi@retail.com', outlet: 'Minimarket Ceria', tier: 'Basic', status: 'suspended', transactions: 234 },
+  { id: 5, name: 'Eko Prasetyo', email: 'eko@shop.com', outlet: 'Toko Elektronik', tier: 'Premium', status: 'active', transactions: 890 },
+];
 
-  useEffect(() => {
-    fetchUsers()
-  }, [])
-
-  const fetchUsers = async () => {
-    setLoading(true)
-    try {
-      const { data } = await supabase
-        .from('outlets')
-        .select('id, name, business_type, address, phone, created_at')
-        .order('created_at', { ascending: false })
-
-      setOutlets(data || [])
-    } catch (err) {
-      console.error('Failed to fetch outlets:', err)
-    } finally {
-      setLoading(false)
-    }
-  }
-
-  const handleImpersonate = (outlet: any) => {
-    alert(
-      `Mode Penyamaran (Impersonate):\nAnda masuk ke session outlet: ${outlet.name} (ID: ${outlet.id})\nRedirecting ke mobile POS dashboard...`
-    )
-    window.open(`https://8080-efbfe193ef269dd3.monkeycode-ai.live/owner`, '_blank')
-  }
-
-  const filtered = outlets.filter((o) => {
-    const matchSearch =
-      o.name?.toLowerCase().includes(search.toLowerCase()) ||
-      o.phone?.includes(search) ||
-      o.id?.includes(search)
-
-    const matchType =
-      selectedType === 'ALL' ||
-      (o.business_type || 'kelontong').toLowerCase() === selectedType.toLowerCase()
-
-    return matchSearch && matchType
-  })
+export function UsersPage() {
+  const [searchTerm, setSearchTerm] = useState('');
+  
+  const filteredUsers = mockUsers.filter(user =>
+    user.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    user.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    user.outlet.toLowerCase().includes(searchTerm.toLowerCase())
+  );
 
   return (
-    <div className="space-y-6">
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+    <div className="p-3 sm:p-6 max-w-[1920px] mx-auto fade-in">
+      {/* Header */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-6">
         <div>
-          <h1 className="text-2xl font-bold tracking-tight text-white">Kelola Mitra & Outlets</h1>
-          <p className="text-sm text-slate-400">
-            Daftar seluruh outlet UMKM di KasirGo OS beserta akses impersonate superadmin.
-          </p>
+          <h1 className="text-xl sm:text-2xl font-bold text-gray-800 mb-1">Manajemen Pengguna & Staf</h1>
+          <p className="text-xs sm:text-sm text-gray-500">Kelola akun pemilik outlet, kasir, dan hak akses staf</p>
         </div>
-        <div className="flex items-center gap-3">
-          <span className="rounded-xl border border-slate-700 bg-[#1E293B] px-4 py-2 text-xs font-semibold text-slate-300">
-            Total: {outlets.length} Merchant
-          </span>
+        
+        <button 
+          onClick={() => alert('Form Tambah Pengguna Baru')}
+          className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2.5 sm:px-5 sm:py-3 rounded-xl font-semibold text-xs sm:text-sm flex items-center justify-center gap-2 shadow-md shadow-blue-600/20 active:scale-95 transition self-start sm:self-auto"
+        >
+          <Plus className="w-4 h-4" />
+          Tambah Pengguna
+        </button>
+      </div>
+
+      {/* Search & Filter */}
+      <div className="bg-white rounded-[20px] sm:rounded-[24px] p-4 sm:p-6 card-shadow border border-gray-100 mb-6">
+        <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 sm:gap-4">
+          <div className="relative flex-1">
+            <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />
+            <input
+              type="text"
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              placeholder="Cari nama, email, atau warung..."
+              className="w-full pl-12 pr-4 py-2.5 sm:py-3 text-sm bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-600 outline-none"
+            />
+          </div>
+          
+          <select className="border border-gray-200 rounded-xl px-4 py-2.5 sm:py-3 text-sm bg-white text-gray-700">
+            <option>Semua Status</option>
+            <option>Aktif</option>
+            <option>Ditangguhkan</option>
+          </select>
         </div>
       </div>
 
-      {/* Filter & Search Bar */}
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-        <div className="relative w-full sm:w-80">
-          <Search className="absolute left-3.5 top-3 text-slate-500" size={16} />
-          <input
-            type="text"
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            placeholder="Cari nama warung, telepon, atau ID..."
-            className="w-full rounded-xl border border-slate-700/80 bg-[#1E293B]/70 py-2.5 pl-10 pr-4 text-xs text-white placeholder-slate-500 focus:border-[#4F46E5] focus:outline-none"
-          />
-        </div>
-
-        <div className="flex items-center gap-2 overflow-x-auto">
-          {['ALL', 'kelontong', 'warteg', 'cafe', 'retail'].map((type) => (
-            <button
-              key={type}
-              onClick={() => setSelectedType(type)}
-              className={`rounded-lg px-3 py-1.5 text-xs font-medium transition-all ${
-                selectedType === type
-                  ? 'bg-[#4F46E5] text-white shadow-sm'
-                  : 'border border-slate-700 bg-[#1E293B]/60 text-slate-400 hover:text-white'
-              }`}
-            >
-              {type.toUpperCase()}
-            </button>
-          ))}
-        </div>
-      </div>
-
-      {/* Table */}
-      <div className="overflow-hidden rounded-2xl border border-slate-700/60 bg-[#1E293B]/70 backdrop-blur-md">
+      {/* Users Table */}
+      <div className="bg-white rounded-[20px] sm:rounded-[24px] card-shadow border border-gray-100 overflow-hidden">
         <div className="overflow-x-auto">
-          <table className="w-full text-left text-xs">
-            <thead className="bg-slate-900/60 text-slate-400 uppercase tracking-wider">
+          <table className="w-full min-w-[640px]">
+            <thead className="bg-gray-50 border-b border-gray-100">
               <tr>
-                <th className="px-6 py-4">Nama Usaha</th>
-                <th className="px-6 py-4">Tipe Modul</th>
-                <th className="px-6 py-4">Telepon / Kontak</th>
-                <th className="px-6 py-4">Tier Akses</th>
-                <th className="px-6 py-4">Bergabung</th>
-                <th className="px-6 py-4 text-right">Aksi</th>
+                <th className="text-left px-4 sm:px-6 py-3.5 text-xs font-semibold text-gray-600 uppercase tracking-wide">Pengguna</th>
+                <th className="text-left px-4 sm:px-6 py-3.5 text-xs font-semibold text-gray-600 uppercase tracking-wide">Outlet</th>
+                <th className="text-left px-4 sm:px-6 py-3.5 text-xs font-semibold text-gray-600 uppercase tracking-wide">Tier</th>
+                <th className="text-left px-4 sm:px-6 py-3.5 text-xs font-semibold text-gray-600 uppercase tracking-wide">Transaksi</th>
+                <th className="text-left px-4 sm:px-6 py-3.5 text-xs font-semibold text-gray-600 uppercase tracking-wide">Status</th>
+                <th className="text-right px-4 sm:px-6 py-3.5 text-xs font-semibold text-gray-600 uppercase tracking-wide">Aksi</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-slate-800 text-slate-300">
-              {loading ? (
-                <tr>
-                  <td colSpan={6} className="px-6 py-12 text-center text-slate-500">
-                    Memuat data mitra...
-                  </td>
-                </tr>
-              ) : filtered.length === 0 ? (
-                <tr>
-                  <td colSpan={6} className="px-6 py-12 text-center text-slate-500">
-                    Tidak ditemukan outlet yang cocok.
-                  </td>
-                </tr>
-              ) : (
-                filtered.map((o) => (
-                  <tr key={o.id} className="hover:bg-slate-800/40 transition-colors">
-                    <td className="px-6 py-4">
-                      <div className="font-semibold text-white">{o.name}</div>
-                      <div className="font-mono text-[10px] text-slate-500">{o.id}</div>
-                    </td>
-                    <td className="px-6 py-4">
-                      <span className="rounded-md bg-indigo-500/10 px-2.5 py-1 text-[10px] font-semibold uppercase text-[#06B6D4]">
-                        {o.business_type || 'kelontong'}
-                      </span>
-                    </td>
-                    <td className="px-6 py-4 text-slate-400">{o.phone || '-'}</td>
-                    <td className="px-6 py-4">
-                      <span className="inline-flex items-center gap-1 rounded-full bg-emerald-500/10 px-2.5 py-0.5 text-[10px] font-semibold text-emerald-400">
-                        <UserCheck size={12} />
-                        Gratis Selamanya
-                      </span>
-                    </td>
-                    <td className="px-6 py-4 text-slate-400">
-                      {new Date(o.created_at).toLocaleDateString('id-ID', {
-                        day: 'numeric',
-                        month: 'short',
-                        year: 'numeric',
-                      })}
-                    </td>
-                    <td className="px-6 py-4 text-right">
-                      <div className="flex items-center justify-end gap-2">
-                        <button
-                          onClick={() => handleImpersonate(o)}
-                          className="flex items-center gap-1.5 rounded-lg bg-indigo-600/80 px-3 py-1.5 text-[11px] font-semibold text-white transition-all hover:bg-indigo-600"
-                        >
-                          <LogIn size={13} />
-                          Impersonate
-                        </button>
-                        <button
-                          onClick={() => alert(`Status outlet ${o.name} diamankan.`)}
-                          className="rounded-lg border border-slate-700 bg-slate-800 p-1.5 text-slate-400 hover:text-rose-400"
-                          title="Suspend/Inspect"
-                        >
-                          <ShieldAlert size={14} />
-                        </button>
+            <tbody className="divide-y divide-gray-100">
+              {filteredUsers.map((user) => (
+                <tr key={user.id} className="hover:bg-gray-50 transition-colors">
+                  <td className="px-4 sm:px-6 py-4">
+                    <div className="flex items-center gap-3">
+                      <div className="w-9 h-9 sm:w-10 sm:h-10 bg-blue-100 rounded-full flex items-center justify-center shrink-0">
+                        <span className="text-xs sm:text-sm font-semibold text-blue-600">
+                          {user.name.split(' ').map(n => n[0]).join('').slice(0, 2)}
+                        </span>
                       </div>
-                    </td>
-                  </tr>
-                ))
-              )}
+                      <div className="min-w-0">
+                        <p className="font-medium text-sm text-gray-800 truncate">{user.name}</p>
+                        <p className="text-xs text-gray-400 truncate">{user.email}</p>
+                      </div>
+                    </div>
+                  </td>
+                  <td className="px-4 sm:px-6 py-4 text-xs sm:text-sm text-gray-600">{user.outlet}</td>
+                  <td className="px-4 sm:px-6 py-4">
+                    <span className={`px-2.5 py-1 rounded-lg text-xs font-semibold ${
+                      user.tier === 'Free' ? 'bg-gray-100 text-gray-600' :
+                      user.tier === 'Basic' ? 'bg-blue-50 text-blue-600' :
+                      user.tier === 'Premium' ? 'bg-purple-50 text-purple-600' :
+                      'bg-orange-50 text-orange-600'
+                    }`}>
+                      {user.tier}
+                    </span>
+                  </td>
+                  <td className="px-4 sm:px-6 py-4 text-xs sm:text-sm text-gray-600">{user.transactions.toLocaleString()}</td>
+                  <td className="px-4 sm:px-6 py-4">
+                    <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold ${
+                      user.status === 'active' 
+                        ? 'bg-green-50 text-green-600' 
+                        : 'bg-red-50 text-red-600'
+                    }`}>
+                      <span className={`w-1.5 h-1.5 rounded-full ${
+                        user.status === 'active' ? 'bg-green-500' : 'bg-red-500'
+                      }`} />
+                      {user.status === 'active' ? 'Active' : 'Suspended'}
+                    </span>
+                  </td>
+                  <td className="px-4 sm:px-6 py-4 text-right">
+                    <div className="flex items-center justify-end gap-1 sm:gap-2">
+                      <button 
+                        onClick={() => alert(`Detail Pengguna: ${user.name}`)}
+                        className="p-1.5 sm:p-2 hover:bg-gray-100 rounded-lg transition-colors text-blue-600"
+                        title="Lihat Detail"
+                      >
+                        <Eye className="w-4 h-4" />
+                      </button>
+                      <button 
+                        onClick={() => alert(`Edit: ${user.name}`)}
+                        className="p-1.5 sm:p-2 hover:bg-gray-100 rounded-lg transition-colors text-gray-600"
+                        title="Ubah"
+                      >
+                        <Edit2 className="w-4 h-4" />
+                      </button>
+                      <button 
+                        onClick={() => alert(`Tangguhkan: ${user.name}`)}
+                        className="p-1.5 sm:p-2 hover:bg-red-50 rounded-lg transition-colors text-red-600"
+                        title="Tangguhkan"
+                      >
+                        {user.status === 'active' ? <Shield className="w-4 h-4" /> : <UserX className="w-4 h-4" />}
+                      </button>
+                      <button 
+                        onClick={() => alert(`Hapus: ${user.name}`)}
+                        className="p-1.5 sm:p-2 hover:bg-red-50 rounded-lg transition-colors text-red-400"
+                        title="Hapus"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </button>
+                    </div>
+                  </td>
+                </tr>
+              ))}
             </tbody>
           </table>
         </div>
       </div>
     </div>
-  )
+  );
 }

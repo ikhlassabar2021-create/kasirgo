@@ -1,5 +1,7 @@
 backupcode_coding-high/
 task.md
 kasirgo/android/build/
+node_modules/
+**/node_modules/
 *.sql
 !docs/migrations/*.sql

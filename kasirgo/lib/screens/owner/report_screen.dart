@@ -170,23 +170,28 @@ class _ReportScreenState extends ConsumerState<ReportScreen> with SingleTickerPr
           ],
         ),
       ),
-      body: Column(
-        children: [
-          _buildPeriodFilterChips(),
-          Expanded(
-            child: _isLoading
-                ? const Center(child: CircularProgressIndicator())
-                : TabBarView(
-                    controller: _tabController,
-                    children: [
-                      _buildSummaryTab(),
-                      _buildSalesTab(),
-                      _buildProductsTab(),
-                      _buildChannelTab(),
-                    ],
-                  ),
+      body: Center(
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 1100),
+          child: Column(
+            children: [
+              _buildPeriodFilterChips(),
+              Expanded(
+                child: _isLoading
+                    ? const Center(child: CircularProgressIndicator())
+                    : TabBarView(
+                        controller: _tabController,
+                        children: [
+                          _buildSummaryTab(),
+                          _buildSalesTab(),
+                          _buildProductsTab(),
+                          _buildChannelTab(),
+                        ],
+                      ),
+              ),
+            ],
           ),
-        ],
+        ),
       ),
       floatingActionButton: FloatingActionButton.extended(
         backgroundColor: AppTheme.primaryColor,

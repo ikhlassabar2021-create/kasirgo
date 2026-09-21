@@ -838,12 +838,17 @@ class _EmployeeScreenState extends ConsumerState<EmployeeScreen> with SingleTick
         label: const Text('Karyawan', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
         onPressed: _showAddEmployeeDialog,
       ),
-      body: TabBarView(
-        controller: _tabController,
-        children: [
-          _buildAttendanceTab(),
-          _buildStaffTab(),
-        ],
+      body: Center(
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 1000),
+          child: TabBarView(
+            controller: _tabController,
+            children: [
+              _buildAttendanceTab(),
+              _buildStaffTab(),
+            ],
+          ),
+        ),
       ),
     );
   }

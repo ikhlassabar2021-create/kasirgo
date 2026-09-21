@@ -212,38 +212,43 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
       drawer: user != null ? AppDrawer(user: user) : null,
       body: _isLoading
           ? const Center(child: CircularProgressIndicator())
-          : RefreshIndicator(
-              onRefresh: _loadData,
-              child: ListView(
-                padding: const EdgeInsets.all(16),
-                children: [
-                  _buildForeverFreeBanner(),
-                  const SizedBox(height: 16),
-                  _buildSupporterProgramCard(),
-                  const SizedBox(height: 16),
-                  _buildBusinessProfileCard(user),
-                  const SizedBox(height: 16),
-                  _buildAccountMenuCard(),
-                  const SizedBox(height: 24),
-                  SizedBox(
-                    height: 48,
-                    child: OutlinedButton(
-                      onPressed: () async {
-                        await ref.read(currentUserProvider.notifier).signOut();
-                        if (context.mounted) {
-                          context.go('/login');
-                        }
-                      },
-                      style: OutlinedButton.styleFrom(
-                        foregroundColor: AppTheme.errorColor,
-                        side: const BorderSide(color: AppTheme.errorColor),
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+          : Center(
+              child: ConstrainedBox(
+                constraints: const BoxConstraints(maxWidth: 860),
+                child: RefreshIndicator(
+                  onRefresh: _loadData,
+                  child: ListView(
+                    padding: const EdgeInsets.all(16),
+                    children: [
+                      _buildForeverFreeBanner(),
+                      const SizedBox(height: 16),
+                      _buildSupporterProgramCard(),
+                      const SizedBox(height: 16),
+                      _buildBusinessProfileCard(user),
+                      const SizedBox(height: 16),
+                      _buildAccountMenuCard(),
+                      const SizedBox(height: 24),
+                      SizedBox(
+                        height: 48,
+                        child: OutlinedButton(
+                          onPressed: () async {
+                            await ref.read(currentUserProvider.notifier).signOut();
+                            if (context.mounted) {
+                              context.go('/login');
+                            }
+                          },
+                          style: OutlinedButton.styleFrom(
+                            foregroundColor: AppTheme.errorColor,
+                            side: const BorderSide(color: AppTheme.errorColor),
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                          ),
+                          child: const Text('Keluar dari Akun', style: TextStyle(fontWeight: FontWeight.bold)),
+                        ),
                       ),
-                      child: const Text('Keluar dari Akun', style: TextStyle(fontWeight: FontWeight.bold)),
-                    ),
+                      const SizedBox(height: 24),
+                    ],
                   ),
-                  const SizedBox(height: 24),
-                ],
+                ),
               ),
             ),
     );

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:google_fonts/google_fonts.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../../config/app_theme.dart';
 import '../../models/customer.dart';
@@ -7,6 +8,8 @@ import '../../models/debt.dart';
 import '../../providers/auth_provider.dart';
 import '../../services/supabase_service.dart';
 import '../../utils/formatters.dart';
+import '../../widgets/common/centennial_background.dart';
+import '../../widgets/common/glass_card.dart';
 
 class DebtScreen extends ConsumerStatefulWidget {
   const DebtScreen({super.key});
@@ -186,21 +189,28 @@ class _DebtScreenState extends ConsumerState<DebtScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: Colors.transparent,
       appBar: AppBar(
-        title: const Text('Buku Kasbon / Piutang'),
+        backgroundColor: Colors.transparent,
+        elevation: 0,
+        scrolledUnderElevation: 0,
+        title: Text(
+          'Buku Kasbon / Piutang',
+          style: GoogleFonts.inter(
+            fontSize: 18,
+            fontWeight: FontWeight.w800,
+            color: AppTheme.textPrimary,
+          ),
+        ),
       ),
-      body: RefreshIndicator(
-        onRefresh: _loadData,
-        child: Column(
-          children: [
-            Container(
+      body: CentennialBackground(
+        child: RefreshIndicator(
+          onRefresh: _loadData,
+          child: Column(
+            children: [
+            GlassCard(
               margin: const EdgeInsets.all(16),
               padding: const EdgeInsets.all(16),
-              decoration: BoxDecoration(
-                color: AppTheme.surfaceColor,
-                borderRadius: BorderRadius.circular(16),
-                border: Border.all(color: AppTheme.borderColor.withValues(alpha: 0.5)),
-              ),
               child: Row(
                 children: [
                   Container(
@@ -221,13 +231,10 @@ class _DebtScreenState extends ConsumerState<DebtScreen> {
                           style: TextStyle(color: AppTheme.textSecondary, fontSize: 12),
                         ),
                         const SizedBox(height: 4),
-                        Text(
-                          Formatters.currency(_totalRemaining),
-                          style: const TextStyle(
-                            fontSize: 20,
-                            fontWeight: FontWeight.bold,
-                            color: Colors.amber,
-                          ),
+                        MoneyText(
+                          value: Formatters.currency(_totalRemaining),
+                          size: 22,
+                          color: Colors.amber,
                         ),
                       ],
                     ),
@@ -269,7 +276,25 @@ class _DebtScreenState extends ConsumerState<DebtScreen> {
             const SizedBox(height: 12),
             Expanded(
               child: _isLoading
-                  ? const Center(child: CircularProgressIndicator())
+                  ? ListView(
+                      padding: const EdgeInsets.all(16),
+                      children: const [
+                        CentennialSkeleton(
+                          height: 96,
+                          borderRadius: BorderRadius.all(Radius.circular(16)),
+                        ),
+                        SizedBox(height: 12),
+                        CentennialSkeleton(
+                          height: 132,
+                          borderRadius: BorderRadius.all(Radius.circular(14)),
+                        ),
+                        SizedBox(height: 12),
+                        CentennialSkeleton(
+                          height: 132,
+                          borderRadius: BorderRadius.all(Radius.circular(14)),
+                        ),
+                      ],
+                    )
                   : _filteredDebts.isEmpty
                       ? ListView(
                           children: [
@@ -318,15 +343,9 @@ class _DebtScreenState extends ConsumerState<DebtScreen> {
                                 break;
                             }
 
-                            return Container(
+                            return GlassCard(
                               padding: const EdgeInsets.all(14),
-                              decoration: BoxDecoration(
-                                color: AppTheme.surfaceColor,
-                                borderRadius: BorderRadius.circular(14),
-                                border: Border.all(
-                                  color: AppTheme.borderColor.withValues(alpha: 0.5),
-                                ),
-                              ),
+                              borderRadius: 14,
                               child: Column(
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
@@ -376,15 +395,12 @@ class _DebtScreenState extends ConsumerState<DebtScreen> {
                                                 fontSize: 11, color: AppTheme.textSecondary),
                                           ),
                                           const SizedBox(height: 2),
-                                          Text(
-                                            Formatters.currency(debt.remainingAmount),
-                                            style: TextStyle(
-                                              fontSize: 14,
-                                              fontWeight: FontWeight.bold,
-                                              color: debt.remainingAmount > 0
-                                                  ? Colors.amber
-                                                  : AppTheme.textPrimary,
-                                            ),
+                                          MoneyText(
+                                            value: Formatters.currency(debt.remainingAmount),
+                                            size: 15,
+                                            color: debt.remainingAmount > 0
+                                                ? Colors.amber
+                                                : AppTheme.textPrimary,
                                           ),
                                         ],
                                       ),
@@ -479,6 +495,7 @@ class _DebtScreenState extends ConsumerState<DebtScreen> {
                         ),
             ),
           ],
+        ),
         ),
       ),
     );

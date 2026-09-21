@@ -14,7 +14,7 @@ import '../../models/product.dart';
 import '../../providers/auth_provider.dart';
 import '../../services/supabase_service.dart';
 import '../../utils/validators.dart';
-import 'product_list_screen.dart';
+import 'product_list_screen.dart' show productsProvider;
 
 class ProductFormScreen extends ConsumerStatefulWidget {
   final Product? product;
@@ -948,170 +948,167 @@ class _ProductFormScreenState extends ConsumerState<ProductFormScreen> {
       appBar: AppBar(
         title: Text(isEdit ? 'Edit Produk' : 'Tambah Produk'),
       ),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.all(16),
-        child: Form(
-          key: _formKey,
-          child: Container(
-            padding: const EdgeInsets.all(20),
-            decoration: BoxDecoration(
-              color: AppTheme.surfaceColor.withValues(alpha: 0.8),
-              borderRadius: BorderRadius.circular(20),
-              border: Border.all(
-                color: AppTheme.borderColor.withValues(alpha: 0.5),
-              ),
-            ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                _buildImagePreview(),
-                const SizedBox(height: 20),
-                TextFormField(
-                  controller: _nameController,
-                  validator: Validators.name,
-                  decoration: const InputDecoration(
-                    labelText: 'Nama Produk *',
-                    prefixIcon: Icon(Icons.inventory_2),
+      body: Center(
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 760),
+          child: SingleChildScrollView(
+            padding: const EdgeInsets.all(16),
+            child: Form(
+              key: _formKey,
+              child: Container(
+                padding: const EdgeInsets.all(20),
+                decoration: BoxDecoration(
+                  color: AppTheme.surfaceColor,
+                  borderRadius: BorderRadius.circular(20),
+                  border: Border.all(
+                    color: AppTheme.borderColor,
                   ),
                 ),
-                const SizedBox(height: 12),
-                DropdownButtonFormField<String>(
-                  initialValue: _selectedCategory,
-                  decoration: const InputDecoration(
-                    labelText: 'Kategori',
-                    prefixIcon: Icon(Icons.category),
-                  ),
-                  items: _categories
-                      .map((cat) => DropdownMenuItem(value: cat, child: Text(cat)))
-                      .toList(),
-                  onChanged: (v) => setState(() => _selectedCategory = v),
-                ),
-                const SizedBox(height: 12),
-                Row(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
-                    Expanded(
-                      child: TextFormField(
-                        controller: _priceController,
-                        keyboardType: TextInputType.number,
-                        validator: (v) => Validators.positiveNumber(v, 'Harga jual'),
-                        decoration: const InputDecoration(
-                          labelText: 'Harga Jual *',
-                          prefixIcon: Icon(Icons.sell),
-                        ),
+                    _buildImagePreview(),
+                    const SizedBox(height: 20),
+                    TextFormField(
+                      controller: _nameController,
+                      validator: Validators.name,
+                      decoration: const InputDecoration(
+                        labelText: 'Nama Produk *',
+                        prefixIcon: Icon(Icons.inventory_2),
                       ),
                     ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: TextFormField(
-                        controller: _costPriceController,
-                        keyboardType: TextInputType.number,
-                        decoration: const InputDecoration(
-                          labelText: 'Harga Modal',
-                          prefixIcon: Icon(Icons.money_off),
+                    const SizedBox(height: 12),
+                    DropdownButtonFormField<String>(
+                      initialValue: _selectedCategory,
+                      decoration: const InputDecoration(
+                        labelText: 'Kategori',
+                        prefixIcon: Icon(Icons.category),
+                      ),
+                      items: _categories
+                          .map((cat) => DropdownMenuItem(value: cat, child: Text(cat)))
+                          .toList(),
+                      onChanged: (v) => setState(() => _selectedCategory = v),
+                    ),
+                    const SizedBox(height: 12),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: TextFormField(
+                            controller: _priceController,
+                            keyboardType: TextInputType.number,
+                            validator: (v) => Validators.positiveNumber(v, 'Harga jual'),
+                            decoration: const InputDecoration(
+                              labelText: 'Harga Jual *',
+                              prefixIcon: Icon(Icons.sell),
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: TextFormField(
+                            controller: _costPriceController,
+                            keyboardType: TextInputType.number,
+                            decoration: const InputDecoration(
+                              labelText: 'Harga Modal',
+                              prefixIcon: Icon(Icons.shopping_bag_outlined),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 12),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: TextFormField(
+                            controller: _stockController,
+                            keyboardType: TextInputType.number,
+                            validator: (v) => Validators.positiveNumber(v, 'Stok'),
+                            decoration: const InputDecoration(
+                              labelText: 'Stok *',
+                              prefixIcon: Icon(Icons.warehouse),
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: TextFormField(
+                            controller: _unitController,
+                            decoration: const InputDecoration(
+                              labelText: 'Satuan (pcs/kg/porsi)',
+                              prefixIcon: Icon(Icons.straighten),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 12),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: TextFormField(
+                            controller: _barcodeController,
+                            decoration: InputDecoration(
+                              labelText: 'Barcode',
+                              prefixIcon: const Icon(Icons.qr_code),
+                              suffixIcon: IconButton(
+                                icon: const Icon(Icons.auto_awesome),
+                                tooltip: 'Generate Barcode EAN-13',
+                                onPressed: _generateBarcode,
+                              ),
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        IconButton(
+                          icon: const Icon(Icons.qr_code_scanner),
+                          tooltip: 'Scan Barcode',
+                          onPressed: _openBarcodeScanner,
+                        ),
+                      ],
+                    ),
+                    _buildBarcodePreview(),
+                    const SizedBox(height: 12),
+                    ListTile(
+                      contentPadding: EdgeInsets.zero,
+                      leading: const Icon(Icons.event, color: AppTheme.textSecondary),
+                      title: Text(
+                        _expiredDate != null
+                            ? 'Expired: ${_expiredDate!.day}/${_expiredDate!.month}/${_expiredDate!.year}'
+                            : 'Pilih Tanggal Kedaluwarsa (opsional)',
+                        style: TextStyle(
+                          color: _expiredDate != null ? AppTheme.textPrimary : AppTheme.textSecondary,
                         ),
                       ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 12),
-                Row(
-                  children: [
-                    Expanded(
-                      child: TextFormField(
-                        controller: _stockController,
-                        keyboardType: TextInputType.number,
-                        validator: (v) => Validators.number(v, 'Stok'),
-                        decoration: const InputDecoration(
-                          labelText: 'Stok',
-                          prefixIcon: Icon(Icons.numbers),
-                        ),
-                      ),
-                    ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: TextFormField(
-                        controller: _unitController,
-                        decoration: const InputDecoration(
-                          labelText: 'Satuan',
-                          prefixIcon: Icon(Icons.square_foot),
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 12),
-                Row(
-                  children: [
-                    Expanded(
-                      child: TextFormField(
-                        controller: _barcodeController,
-                        onChanged: (_) => setState(() {}),
-                        decoration: const InputDecoration(
-                          labelText: 'Barcode',
-                          prefixIcon: Icon(Icons.qr_code),
-                        ),
-                      ),
-                    ),
-                    const SizedBox(width: 6),
-                    IconButton.filledTonal(
-                      onPressed: _openBarcodeScanner,
-                      tooltip: 'Scan Barcode',
-                      icon: const Icon(Icons.qr_code_scanner),
-                    ),
-                    const SizedBox(width: 4),
-                    IconButton.filledTonal(
-                      onPressed: _generateBarcode,
-                      tooltip: 'Generate Barcode',
-                      icon: const Icon(Icons.auto_awesome),
-                    ),
-                  ],
-                ),
-                _buildBarcodePreview(),
-                const SizedBox(height: 12),
-                InkWell(
-                  onTap: _selectExpiredDate,
-                  borderRadius: BorderRadius.circular(12),
-                  child: InputDecorator(
-                    decoration: InputDecoration(
-                      labelText: 'Expired Date',
-                      prefixIcon: const Icon(Icons.calendar_today),
-                      suffixIcon: _expiredDate != null
+                      trailing: _expiredDate != null
                           ? IconButton(
-                              icon: const Icon(Icons.clear, size: 18),
+                              icon: const Icon(Icons.clear),
                               onPressed: () => setState(() => _expiredDate = null),
                             )
                           : null,
+                      onTap: _selectExpiredDate,
                     ),
-                    child: Text(
-                      _expiredDate != null
-                          ? '${_expiredDate!.day.toString().padLeft(2, '0')}/${_expiredDate!.month.toString().padLeft(2, '0')}/${_expiredDate!.year}'
-                          : 'Pilih Tanggal Kedaluwarsa (opsional)',
-                      style: TextStyle(
-                        color: _expiredDate != null ? Colors.white : AppTheme.textSecondary,
-                        fontSize: 14,
+                    const SizedBox(height: 20),
+                    _buildChannelPricingSection(),
+                    const SizedBox(height: 20),
+                    _buildDiscountSection(),
+                    const SizedBox(height: 24),
+                    SizedBox(
+                      height: 48,
+                      child: ElevatedButton(
+                        onPressed: _isLoading ? null : _save,
+                        child: _isLoading
+                            ? const SizedBox(
+                                width: 22,
+                                height: 22,
+                                child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                              )
+                            : Text(isEdit ? 'Simpan Perubahan' : 'Simpan Produk'),
                       ),
                     ),
-                  ),
+                  ],
                 ),
-                const SizedBox(height: 20),
-                _buildChannelPricingSection(),
-                const SizedBox(height: 20),
-                _buildDiscountSection(),
-                const SizedBox(height: 24),
-                SizedBox(
-                  height: 48,
-                  child: ElevatedButton(
-                    onPressed: _isLoading ? null : _save,
-                    child: _isLoading
-                        ? const SizedBox(
-                            width: 22,
-                            height: 22,
-                            child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
-                          )
-                        : Text(isEdit ? 'Simpan Perubahan' : 'Simpan Produk'),
-                  ),
-                ),
-              ],
+              ),
             ),
           ),
         ),

@@ -135,12 +135,12 @@ class _OnlineCatalogScreenState extends ConsumerState<OnlineCatalogScreen> {
                   child: filtered.isEmpty
                       ? const Center(child: Text('Belum ada produk untuk ditampilkan di katalog'))
                       : GridView.builder(
-                          padding: const EdgeInsets.all(16),
+                          padding: const EdgeInsets.all(12),
                           gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                            crossAxisCount: 2,
-                            childAspectRatio: 0.72,
-                            crossAxisSpacing: 12,
-                            mainAxisSpacing: 12,
+                            crossAxisCount: 4,
+                            childAspectRatio: 0.95,
+                            crossAxisSpacing: 8,
+                            mainAxisSpacing: 8,
                           ),
                           itemCount: filtered.length,
                           itemBuilder: (context, index) {
@@ -149,60 +149,63 @@ class _OnlineCatalogScreenState extends ConsumerState<OnlineCatalogScreen> {
                             return Container(
                               decoration: BoxDecoration(
                                 color: AppTheme.surfaceColor,
-                                borderRadius: BorderRadius.circular(16),
-                                border: Border.all(color: AppTheme.borderColor.withValues(alpha: 0.5)),
+                                borderRadius: BorderRadius.circular(12),
+                                border: Border.all(color: AppTheme.borderColor),
                               ),
                               clipBehavior: Clip.antiAlias,
                               child: Column(
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
                                   Expanded(
+                                    flex: 5,
                                     child: Container(
-                                      color: AppTheme.primaryColor.withValues(alpha: 0.1),
+                                      color: AppTheme.primaryColor.withValues(alpha: 0.08),
                                       width: double.infinity,
                                       child: const Icon(
                                         Icons.inventory_2,
-                                        size: 48,
+                                        size: 28,
                                         color: AppTheme.primaryColor,
                                       ),
                                     ),
                                   ),
-                                  Padding(
-                                    padding: const EdgeInsets.all(10),
-                                    child: Column(
-                                      crossAxisAlignment: CrossAxisAlignment.start,
-                                      children: [
-                                        Text(
-                                          p.name,
-                                          maxLines: 1,
-                                          overflow: TextOverflow.ellipsis,
-                                          style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
-                                        ),
-                                        const SizedBox(height: 2),
-                                        Text(
-                                          Formatters.currency(p.price),
-                                          style: const TextStyle(
-                                            color: AppTheme.accentColor,
-                                            fontWeight: FontWeight.w600,
-                                            fontSize: 13,
+                                  Expanded(
+                                    flex: 4,
+                                    child: Padding(
+                                      padding: const EdgeInsets.fromLTRB(8, 4, 8, 4),
+                                      child: Column(
+                                        crossAxisAlignment: CrossAxisAlignment.start,
+                                        mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                                        children: [
+                                          Text(
+                                            p.name,
+                                            maxLines: 1,
+                                            overflow: TextOverflow.ellipsis,
+                                            style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 11),
                                           ),
-                                        ),
-                                        const SizedBox(height: 8),
-                                        SizedBox(
-                                          width: double.infinity,
-                                          height: 32,
-                                          child: ElevatedButton.icon(
-                                            style: ElevatedButton.styleFrom(
-                                              backgroundColor: const Color(0xFF25D366),
-                                              foregroundColor: Colors.white,
-                                              padding: EdgeInsets.zero,
+                                          Text(
+                                            Formatters.currency(p.price),
+                                            style: const TextStyle(
+                                              color: AppTheme.accentColor,
+                                              fontWeight: FontWeight.w700,
+                                              fontSize: 10.5,
                                             ),
-                                            icon: const Icon(Icons.chat, size: 14),
-                                            label: const Text('Pesan WA', style: TextStyle(fontSize: 11)),
-                                            onPressed: () => _orderViaWhatsApp(p),
                                           ),
-                                        ),
-                                      ],
+                                          SizedBox(
+                                            width: double.infinity,
+                                            height: 24,
+                                            child: ElevatedButton.icon(
+                                              style: ElevatedButton.styleFrom(
+                                                backgroundColor: const Color(0xFF25D366),
+                                                foregroundColor: Colors.white,
+                                                padding: EdgeInsets.zero,
+                                              ),
+                                              icon: const Icon(Icons.chat, size: 12),
+                                              label: const Text('Pesan WA', style: TextStyle(fontSize: 10)),
+                                              onPressed: () => _orderViaWhatsApp(p),
+                                            ),
+                                          ),
+                                        ],
+                                      ),
                                     ),
                                   ),
                                 ],

@@ -1,10 +1,13 @@
+import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:google_fonts/google_fonts.dart';
 import 'package:supabase_flutter/supabase_flutter.dart' as sb;
 import '../../config/app_theme.dart';
 import '../../models/product.dart';
 import '../../models/transaction.dart';
 import '../../services/supabase_service.dart';
+import '../../widgets/common/centennial_background.dart';
 import '../owner/product_list_screen.dart';
 import '../../widgets/pos/product_grid.dart';
 import '../../widgets/pos/cart_panel.dart';
@@ -305,104 +308,262 @@ class _PosScreenState extends ConsumerState<PosScreen> {
     final productsAsync = ref.watch(productsProvider);
 
     return Scaffold(
+      backgroundColor: Colors.transparent,
       appBar: AppBar(
-        title: const Text('Kasir POS (Owner)'),
+        backgroundColor: Colors.transparent,
+        elevation: 0,
+        scrolledUnderElevation: 0,
+        title: Text(
+          'Kasir POS',
+          style: GoogleFonts.inter(fontSize: 18, fontWeight: FontWeight.w800, color: AppTheme.textPrimary),
+        ),
         actions: [
-          DropdownButtonHideUnderline(
-            child: DropdownButton<String>(
-              value: _selectedChannel,
-              dropdownColor: AppTheme.surfaceColor,
-              icon: const Icon(Icons.arrow_drop_down, color: AppTheme.accentColor),
-              style: const TextStyle(color: AppTheme.textPrimary, fontSize: 12, fontWeight: FontWeight.bold),
-              items: _channels.map((ch) {
-                return DropdownMenuItem(
-                  value: ch,
-                  child: Text(ch),
-                );
-              }).toList(),
-              onChanged: (val) {
-                if (val != null) setState(() => _selectedChannel = val);
-              },
-            ),
-          ),
-          const SizedBox(width: 8),
+          _buildChannelSelector(),
+          const SizedBox(width: 12),
         ],
       ),
-      body: productsAsync.when(
-        loading: () => const Center(child: CircularProgressIndicator()),
-        error: (err, _) => Center(
-          child: Text('Gagal memuat produk: $err', style: const TextStyle(color: AppTheme.errorColor)),
-        ),
-        data: (products) {
-          final filtered = products.where((p) {
-            final matchSearch = _searchQuery.isEmpty ||
-                p.name.toLowerCase().contains(_searchQuery.toLowerCase()) ||
-                (p.barcode != null && p.barcode!.contains(_searchQuery));
-            return matchSearch;
-          }).toList();
+      body: CentennialBackground(
+        child: productsAsync.when(
+          loading: () => const _PosSkeleton(),
+          error: (err, _) => Center(
+            child: Padding(
+              padding: const EdgeInsets.all(24),
+              child: Text(
+                'Gagal memuat produk: $err',
+                textAlign: TextAlign.center,
+                style: const TextStyle(color: AppTheme.errorColor),
+              ),
+            ),
+          ),
+          data: (products) {
+            final filtered = products.where((p) {
+              final matchSearch = _searchQuery.isEmpty ||
+                  p.name.toLowerCase().contains(_searchQuery.toLowerCase()) ||
+                  (p.barcode != null && p.barcode!.contains(_searchQuery));
+              return matchSearch;
+            }).toList();
 
-          return Stack(
-            children: [
-              Column(
-                children: [
-                  Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                    child: TextField(
-                      controller: _searchController,
-                      style: const TextStyle(color: AppTheme.textPrimary, fontSize: 14),
-                      onChanged: (v) => setState(() => _searchQuery = v),
-                      decoration: InputDecoration(
-                        hintText: 'Cari produk / barcode...',
-                        prefixIcon: const Icon(Icons.search, color: AppTheme.textSecondary),
-                        suffixIcon: _searchQuery.isNotEmpty
-                            ? IconButton(
-                                icon: const Icon(Icons.clear, color: AppTheme.textSecondary),
-                                onPressed: () {
-                                  _searchController.clear();
-                                  setState(() => _searchQuery = '');
-                                },
-                              )
-                            : null,
+            return LayoutBuilder(
+              builder: (context, constraints) {
+                final isTablet = constraints.maxWidth >= 600;
+                return Stack(
+                  children: [
+                    if (isTablet)
+                      Row(
+                        children: [
+                          Expanded(
+                            flex: 65,
+                            child: _buildCatalog(filtered, products, bottomPadding: 16),
+                          ),
+                          SizedBox(
+                            width: constraints.maxWidth * 0.35,
+                            child: _buildPersistentCart(products),
+                          ),
+                        ],
+                      )
+                    else
+                      Column(
+                        children: [
+                          Expanded(child: _buildCatalog(filtered, products, bottomPadding: 220)),
+                        ],
                       ),
-                    ),
-                  ),
-                  Expanded(
-                    child: ProductGrid(
-                      products: filtered,
-                      onProductTap: _addToCart,
-                      cartQuantities: {
-                        for (final item in _cart) item.productId: item.quantity,
-                      },
-                      customPrices: {
-                        for (final p in filtered) p.id: _getProductEffectivePrice(p),
-                      },
-                      originalPrices: {
-                        for (final p in filtered) p.id: _getProductBasePrice(p),
-                      },
-                      discountBadges: {
-                        for (final p in filtered)
-                          if (_getDiscountBadge(p) != null) p.id: _getDiscountBadge(p)!,
-                      },
-                    ),
-                  ),
-                ],
-              ),
-              CartPanel(
-                items: _cart,
-                discountAmount: _discountAmount,
-                onCheckout: () => _handleCheckout(products),
-                onRemoveItem: _removeItem,
-                onUpdateQty: (entry) => _updateQty(entry, products),
-              ),
-              if (_isLoading)
-                Container(
-                  color: Colors.black45,
-                  child: const Center(child: CircularProgressIndicator()),
-                ),
-            ],
-          );
-        },
+                    if (!isTablet)
+                      CartPanel(
+                        items: _cart,
+                        discountAmount: _discountAmount,
+                        onCheckout: () => _handleCheckout(products),
+                        onRemoveItem: _removeItem,
+                        onUpdateQty: (entry) => _updateQty(entry, products),
+                      ),
+                    if (_isLoading) const _SyncingOverlay(),
+                  ],
+                );
+              },
+            );
+          },
+        ),
       ),
+    );
+  }
+
+  Widget _buildCatalog(List<Product> filtered, List<Product> products, {required double bottomPadding}) {
+    return Column(
+      children: [
+        Padding(
+          padding: const EdgeInsets.fromLTRB(12, 10, 12, 6),
+          child: ClipRRect(
+            borderRadius: BorderRadius.circular(14),
+            child: BackdropFilter(
+              filter: ImageFilter.blur(sigmaX: 12, sigmaY: 12),
+              child: TextField(
+                controller: _searchController,
+                style: const TextStyle(color: AppTheme.textPrimary, fontSize: 14),
+                onChanged: (v) => setState(() => _searchQuery = v),
+                decoration: InputDecoration(
+                  hintText: 'Cari produk / barcode...',
+                  filled: true,
+                  fillColor: AppTheme.surfaceColor.withValues(alpha: 0.7),
+                  prefixIcon: const Icon(Icons.search_rounded, color: AppTheme.textSecondary),
+                  suffixIcon: _searchQuery.isNotEmpty
+                      ? IconButton(
+                          icon: const Icon(Icons.clear_rounded, color: AppTheme.textSecondary),
+                          onPressed: () {
+                            _searchController.clear();
+                            setState(() => _searchQuery = '');
+                          },
+                        )
+                      : null,
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(14),
+                    borderSide: BorderSide(color: Colors.white.withValues(alpha: 0.07)),
+                  ),
+                  enabledBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(14),
+                    borderSide: BorderSide(color: Colors.white.withValues(alpha: 0.07)),
+                  ),
+                  focusedBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(14),
+                    borderSide: const BorderSide(color: AppTheme.accentColor, width: 1.5),
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ),
+        Expanded(
+          child: ProductGrid(
+            products: filtered,
+            bottomPadding: bottomPadding,
+            onProductTap: _addToCart,
+            cartQuantities: {
+              for (final item in _cart) item.productId: item.quantity,
+            },
+            customPrices: {
+              for (final p in filtered) p.id: _getProductEffectivePrice(p),
+            },
+            originalPrices: {
+              for (final p in filtered) p.id: _getProductBasePrice(p),
+            },
+            discountBadges: {
+              for (final p in filtered)
+                if (_getDiscountBadge(p) != null) p.id: _getDiscountBadge(p)!,
+            },
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildPersistentCart(List<Product> products) {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(0, 10, 10, 10),
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(20),
+        child: Container(
+          decoration: BoxDecoration(
+            color: AppTheme.surfaceColor.withValues(alpha: 0.6),
+            borderRadius: BorderRadius.circular(20),
+            border: Border.all(color: Colors.white.withValues(alpha: 0.07)),
+          ),
+          child: CartContent(
+            items: _cart,
+            showDragHandle: false,
+            discountAmount: _discountAmount,
+            onCheckout: () => _handleCheckout(products),
+            onRemoveItem: _removeItem,
+            onUpdateQty: (entry) => _updateQty(entry, products),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildChannelSelector() {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12),
+      decoration: BoxDecoration(
+        color: AppTheme.surfaceColor.withValues(alpha: 0.7),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: Colors.white.withValues(alpha: 0.08)),
+      ),
+      child: DropdownButtonHideUnderline(
+        child: DropdownButton<String>(
+          value: _selectedChannel,
+          isDense: true,
+          dropdownColor: AppTheme.surfaceColor,
+          borderRadius: BorderRadius.circular(12),
+          icon: const Icon(Icons.keyboard_arrow_down_rounded, color: AppTheme.accentColor),
+          style: GoogleFonts.inter(color: AppTheme.textPrimary, fontSize: 12, fontWeight: FontWeight.w700),
+          items: _channels
+              .map((ch) => DropdownMenuItem(value: ch, child: Text(ch)))
+              .toList(),
+          onChanged: (val) {
+            if (val != null) setState(() => _selectedChannel = val);
+          },
+        ),
+      ),
+    );
+  }
+}
+
+class _SyncingOverlay extends StatelessWidget {
+  const _SyncingOverlay();
+
+  @override
+  Widget build(BuildContext context) {
+    return Positioned.fill(
+      child: ClipRRect(
+        child: BackdropFilter(
+          filter: ImageFilter.blur(sigmaX: 6, sigmaY: 6),
+          child: Container(
+            color: Colors.black.withValues(alpha: 0.45),
+            child: Center(
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 22, vertical: 18),
+                decoration: BoxDecoration(
+                  color: AppTheme.surfaceColor.withValues(alpha: 0.95),
+                  borderRadius: BorderRadius.circular(18),
+                  border: Border.all(color: AppTheme.accentColor.withValues(alpha: 0.3)),
+                ),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    const SizedBox(
+                      width: 26,
+                      height: 26,
+                      child: CircularProgressIndicator(strokeWidth: 2.4, color: AppTheme.accentColor),
+                    ),
+                    const SizedBox(height: 12),
+                    Text(
+                      'Memproses pembayaran...',
+                      style: GoogleFonts.inter(color: AppTheme.textPrimary, fontSize: 13, fontWeight: FontWeight.w600),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _PosSkeleton extends StatelessWidget {
+  const _PosSkeleton();
+
+  @override
+  Widget build(BuildContext context) {
+    return GridView.builder(
+      padding: const EdgeInsets.all(12),
+      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+        crossAxisCount: 3,
+        childAspectRatio: 0.72,
+        crossAxisSpacing: 10,
+        mainAxisSpacing: 10,
+      ),
+      itemCount: 9,
+      itemBuilder: (_, _) => const CentennialSkeleton(borderRadius: BorderRadius.all(Radius.circular(16))),
     );
   }
 }

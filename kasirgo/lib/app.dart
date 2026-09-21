@@ -43,7 +43,10 @@ final _router = GoRouter(
     ),
     GoRoute(
       path: '/owner/products/add',
-      builder: (context, state) => ProductFormScreen(product: state.extra as Product?),
+      builder: (context, state) => OwnerHomeScreen(
+        initialIndex: 1,
+        subScreen: ProductFormScreen(product: state.extra as Product?),
+      ),
     ),
     GoRoute(
       path: '/owner/pos',
@@ -133,7 +136,7 @@ class _KasirGoAppState extends ConsumerState<KasirGoApp> {
     return MaterialApp.router(
       title: 'KasirGo',
       debugShowCheckedModeBanner: false,
-      theme: AppTheme.darkTheme,
+      theme: AppTheme.lightTheme,
       routerConfig: _router,
     );
   }
