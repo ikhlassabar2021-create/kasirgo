@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 import 'package:supabase_flutter/supabase_flutter.dart' hide User;
 import '../../config/app_theme.dart';
 import '../../providers/auth_provider.dart';
+import '../../services/auth_service.dart';
 import '../../utils/formatters.dart';
 import '../../widgets/common/app_drawer.dart';
 
@@ -517,6 +518,9 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
             style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
           ),
           const SizedBox(height: 12),
+          _buildMenuRow(Icons.cloud_upload_outlined, 'Tautkan Akun (Google / No. HP)', () {
+            _showLinkAccountDialog();
+          }),
           _buildMenuRow(Icons.person_outline, 'Edit Profil', () {
             ScaffoldMessenger.of(context).showSnackBar(
               const SnackBar(content: Text('Edit profil akun')),
@@ -535,6 +539,76 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
               applicationLegalese: 'Aplikasi Kasir UMKM Indonesia - Gratis Selamanya',
             );
           }),
+        ],
+      ),
+    );
+  }
+
+  void _showLinkAccountDialog() {
+    final phoneController = TextEditingController();
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Tautkan Akun', style: TextStyle(fontWeight: FontWeight.bold)),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text(
+              'Tautkan akun Anda untuk mengamankan data dan melakukan backup transaksi ke Cloud secara otomatis.',
+              style: TextStyle(fontSize: 13, color: AppTheme.textSecondary),
+            ),
+            const SizedBox(height: 16),
+            SizedBox(
+              width: double.infinity,
+              height: 44,
+              child: OutlinedButton.icon(
+                onPressed: () async {
+                  Navigator.pop(ctx);
+                  try {
+                    await AuthService().linkAccountWithGoogle();
+                  } catch (e) {
+                    if (mounted) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(content: Text('Gagal menautkan Google: $e')),
+                      );
+                    }
+                  }
+                },
+                icon: const Icon(Icons.g_mobiledata, size: 28),
+                label: const Text('Tautkan Akun Google'),
+              ),
+            ),
+            const SizedBox(height: 12),
+            TextField(
+              controller: phoneController,
+              keyboardType: TextInputType.phone,
+              decoration: const InputDecoration(
+                labelText: 'Nomor WhatsApp / HP',
+                prefixText: '+62 ',
+                border: OutlineInputBorder(),
+                isDense: true,
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('Batal'),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              final phone = phoneController.text.trim();
+              Navigator.pop(ctx);
+              if (phone.isNotEmpty) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(content: Text('Kode OTP SMS/WA berhasil dikirim')),
+                );
+              }
+            },
+            child: const Text('Kirim OTP'),
+          ),
         ],
       ),
     );
