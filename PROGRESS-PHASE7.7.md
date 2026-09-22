@@ -3,9 +3,9 @@ SELESAI: ST7.7-1 (schema migrations, RLS policies, mandatory KYC registration)
 SELESAI: ST7.7-2 (Edge Function verify_kyc_flutter + auto-approve threshold + document upload UI)
 SELESAI: ST7.7-3 (KYC admin review workflow via Edge Function status webhook)
 SELESAI: ST7.7-4 (Control Plane configuration - implemented via superadmin web dashboard external to Flutter)
-PHASE 7.7 COMPLETE
+SELESAI: ST7.7-5 (owner settings KYC status + staff quota + platform financial config transparency)
 
-BERIKUTNYA: Phase 7.9 (KDS Kitchen Display System + WhatsApp Marketing Automation)
+BERIKUTNYA: ST7.7-6 (affiliate payout tracking + owner affiliate program)
 BLOCKER: -
 
 ## Completed Items:
@@ -21,6 +21,10 @@ BLOCKER: -
 ✅ Platform financial configs stored in database (readable by Flutter via SettlementService/PaymentService)
 ✅ KYC documents uploaded to Supabase Storage (kyc-documents bucket)
 ✅ Affiliate payouts tracking schema ready for implementation
+✅ Owner settings: outlet profile display (name, type, phone)
+✅ Owner settings: KYC status card (pending/verified/rejected + re-upload button)
+✅ Owner settings: staff quota card + upgrade modal when quota full
+✅ Owner settings: platform financial config transparency (MDR, margin, instant fee, min withdrawal)
 
 ## Phase 7.7 Summary:
 - ✅ Complete KYC verification workflow from registration to auto-approved status
@@ -40,4 +44,5 @@ Superadmin web dashboard for API key management is implemented externally (React
 - supabase/functions/verify_kyc_flutter/index.ts: KYC verification Edge Function
 - lib/services/kyc_verification_service.dart: Document upload + verification service
 - lib/screens/auth/kyc_upload_screen.dart: KYC document upload UI
+- lib/screens/owner/settings_screen.dart: KYC status + staff quota + financial config display
 - PROGRESS-PHASE7.7.md: Phase tracking document
