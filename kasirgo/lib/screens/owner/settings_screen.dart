@@ -5,6 +5,7 @@ import 'package:supabase_flutter/supabase_flutter.dart' hide User;
 import '../../config/app_theme.dart';
 import '../../providers/auth_provider.dart';
 import '../../services/auth_service.dart';
+import '../../services/settlement_service.dart';
 import '../../utils/formatters.dart';
 import '../../widgets/common/app_drawer.dart';
 
@@ -20,6 +21,11 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
   String? _activeSupporterTier;
   DateTime? _supporterEndDate;
   Map<String, dynamic>? _outletData;
+  Map<String, dynamic>? _kycData;
+  int? _staffQuotaCurrent;
+  int? _staffQuotaMax;
+  String? _kycStatus;
+  Map<String, dynamic>? _financialConfig;
 
   @override
   void initState() {
@@ -35,13 +41,17 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
 
       if (outletId != null && outletId.isNotEmpty) {
         final client = Supabase.instance.client;
+        final settlementService = SettlementService();
 
+        // Load outlet data
         final outletRes = await client
             .from('outlets')
             .select()
             .eq('id', outletId)
             .maybeSingle();
+        _outletData = outletRes;
 
+        // Load supporter data
         final supRes = await client
             .from('supporters')
             .select()
@@ -50,8 +60,6 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
             .order('start_date', ascending: false)
             .limit(1)
             .maybeSingle();
-
-        _outletData = outletRes;
 
         if (supRes != null) {
           _activeSupporterTier = supRes['tier'] as String?;
@@ -62,12 +70,38 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
           _activeSupporterTier = null;
           _supporterEndDate = null;
         }
+
+        // Load KYC data
+        final kycRes = await client
+            .from('outlet_kyc')
+            .select('*')
+            .eq('outlet_id', outletId.toString())
+            .maybeSingle();
+        
+        if (kycRes != null) {
+          _kycData = kycRes;
+          _kycStatus = kycRes['verification_status'] as String? ?? kycRes['kyc_status'] as String?;
+        } else {
+          _kycStatus = 'pending';
+        }
+
+        // Load staff quota
+        final quotaRes = await client
+            .from('outlet_staff_quota')
+            .select('*')
+            .eq('outlet_id', outletId.toString())
+            .maybeSingle();
+        
+        if (quotaRes != null) {
+          _staffQuotaMax = quotaRes['max_staff'] as int? ?? 5;
+          _staffQuotaCurrent = quotaRes['current_staff_count'] as int? ?? 0;
+        }
+
+        // Load financial config
+        _financialConfig = await settlementService.getFinancialConfig(int.parse(outletId.toString()));
       }
-    } catch (_) {
-    } finally {
-      if (mounted) {
-        setState(() => _isLoading = false);
-      }
+    } catch (_) {} finally {
+      if (mounted) setState(() => _isLoading = false);
     }
   }
 
@@ -220,14 +254,20 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                   onRefresh: _loadData,
                   child: ListView(
                     padding: const EdgeInsets.all(16),
-                    children: [
-                      _buildForeverFreeBanner(),
-                      const SizedBox(height: 16),
-                      _buildSupporterProgramCard(),
-                      const SizedBox(height: 16),
-                      _buildBusinessProfileCard(user),
-                      const SizedBox(height: 16),
-                      _buildAccountMenuCard(),
+                      children: [
+                        _buildForeverFreeBanner(),
+                        const SizedBox(height: 16),
+                        _buildSupporterProgramCard(),
+                        const SizedBox(height: 16),
+                        _buildKYCStatusCard(),
+                        const SizedBox(height: 16),
+                        _buildStaffQuotaCard(),
+                        const SizedBox(height: 16),
+                        _buildBusinessProfileCard(user),
+                        const SizedBox(height: 16),
+                        _buildFinancialConfigCard(),
+                        const SizedBox(height: 16),
+                        _buildAccountMenuCard(),
                       const SizedBox(height: 24),
                       SizedBox(
                         height: 48,
@@ -634,6 +674,287 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
       trailing: const Icon(Icons.chevron_right, color: AppTheme.textSecondary),
       onTap: onTap,
       visualDensity: VisualDensity.compact,
+    );
+  }
+
+  Widget _buildKYCStatusCard() {
+    if (_kycStatus == null) return const SizedBox();
+
+    bool isVerified = _kycStatus == 'verified';
+    bool isRejected = _kycStatus == 'rejected';
+    bool isPending = _kycStatus == 'pending' || _kycStatus == 'manual_review';
+
+    Color statusColor;
+    IconData statusIcon;
+    String statusText;
+
+    if (isVerified) {
+      statusColor = AppTheme.successColor;
+      statusIcon = Icons.check_circle_rounded;
+      statusText = 'Terverifikasi';
+    } else if (isRejected) {
+      statusColor = AppTheme.errorColor;
+      statusIcon = Icons.error_rounded;
+      statusText = 'Ditolak - Upload Ulang';
+    } else {
+      statusColor = AppTheme.warningColor;
+      statusIcon = Icons.hourglass_empty_rounded;
+      statusText = 'Sedang Ditinjau';
+    }
+
+    return Container(
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          colors: [
+            statusColor.withValues(alpha: 0.3),
+            AppTheme.surfaceColor,
+          ],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: statusColor.withValues(alpha: 0.4)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(statusIcon, color: statusColor, size: 24),
+              const SizedBox(width: 10),
+              Text(
+                statusText,
+                style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.white),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          Text(
+            _kycData?['notes'] ?? 
+            (isPending ? 'Tim kami sedang meninjau dokumen KYC Anda.' : 
+             isRejected ? 'Mohon perbaiki dan upload ulang dokumen.' : ''),
+            style: TextStyle(color: AppTheme.textSecondary, fontSize: 12, height: 1.4),
+          ),
+          const SizedBox(height: 12),
+          ElevatedButton.icon(
+            onPressed: () => context.push('/kyc-upload'),
+            icon: const Icon(Icons.upload_file_rounded, size: 18),
+            label: const Text('Upload / Update'),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: statusColor,
+              foregroundColor: Colors.white,
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildStaffQuotaCard() {
+    final quotaCurrent = _staffQuotaCurrent ?? 0;
+    final quotaMax = _staffQuotaMax ?? 5;
+    final quotaRemaining = quotaMax - quotaCurrent;
+    final percentage = quotaCurrent / quotaMax;
+
+    return Container(
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        color: AppTheme.surfaceColor.withValues(alpha: 0.8),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: AppTheme.borderColor.withValues(alpha: 0.5)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Row(
+            children: [
+              Icon(Icons.people_outline, color: AppTheme.primaryColor, size: 22),
+              SizedBox(width: 8),
+              Text(
+                'Kuota Staff',
+                style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: AppTheme.textPrimary),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          Row(
+            children: [
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      '${quotaCurrent} staff aktif dari ${quotaMax} maksimal',
+                      style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 15),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      quotaRemaining > 0 
+                          ? '$quotaRemaining slot tersedia' 
+                          : 'Quota penuh - Upgrade untuk tambah slot',
+                      style: TextStyle(color: AppTheme.textSecondary, fontSize: 12),
+                    ),
+                  ],
+                ),
+              ),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                decoration: BoxDecoration(
+                  color: quotaRemaining > 0 
+                      ? AppTheme.successColor.withValues(alpha: 0.2)
+                      : AppTheme.warningColor.withValues(alpha: 0.2),
+                  borderRadius: BorderRadius.circular(20),
+                ),
+                child: Text(
+                  quotaRemaining <= 0 ? 'PENUH' : 'OPEN',
+                  style: TextStyle(
+                    fontSize: 11,
+                    fontWeight: FontWeight.bold,
+                    color: quotaRemaining <= 0 ? AppTheme.warningColor : AppTheme.successColor,
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          LinearProgressIndicator(
+            value: percentage,
+            minHeight: 8,
+            backgroundColor: Colors.grey[200],
+            valueColor: AlwaysStoppedAnimation<Color>(
+              quotaRemaining > 0 ? AppTheme.primaryColor : AppTheme.warningColor,
+            ),
+          ),
+          const SizedBox(height: 8),
+          if (quotaRemaining <= 0) ...[
+            SizedBox(
+              width: double.infinity,
+              height: 42,
+              child: ElevatedButton.icon(
+                onPressed: () => _showUpgradeModal(),
+                icon: const Icon(Icons.upgrade, size: 18),
+                label: const Text('Upgrade Plan'),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: AppTheme.accentColor,
+                  foregroundColor: Colors.white,
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                ),
+              ),
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+
+  void _showUpgradeModal() {
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.white,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (ctx) => Padding(
+        padding: const EdgeInsets.all(24),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text(
+              'Upgrade Kuota Staff',
+              style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              'Unlimited staff dengan plan Pro atau Enterprise',
+              style: TextStyle(color: AppTheme.textSecondary, fontSize: 13),
+            ),
+            const SizedBox(height: 20),
+            _buildUpgradeOption('Pro Plan', 'Rp 50.000/bulan', 'Unlimited staff + advanced reports'),
+            const SizedBox(height: 12),
+            _buildUpgradeOption('Enterprise Plan', 'Custom', 'Unlimited + custom features'),
+            const SizedBox(height: 20),
+            SizedBox(
+              width: double.infinity,
+              height: 48,
+              child: ElevatedButton(
+                onPressed: () {
+                  Navigator.pop(ctx);
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text('Request upgrade akan diproses tim KasirGo')),
+                  );
+                },
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: AppTheme.primaryColor,
+                  foregroundColor: Colors.white,
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                ),
+                child: const Text('Ajukan Upgrade'),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildUpgradeOption(String title, String price, String benefits) {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        border: Border.all(color: AppTheme.borderColor.withValues(alpha: 0.5)),
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(title, style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+          const SizedBox(height: 4),
+          Text(price, style: const TextStyle(fontWeight: FontWeight.w700, color: AppTheme.primaryColor)),
+          const SizedBox(height: 4),
+          Text(benefits, style: TextStyle(color: AppTheme.textSecondary, fontSize: 12)),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildFinancialConfigCard() {
+    final mdrRate = (_financialConfig?['platform_margin_rate'] as num?)?.toDouble() ?? 0.02;
+    final instantFee = (_financialConfig?['instant_withdrawal_fee'] as num?)?.toDouble() ?? 0.005;
+    final minWithdrawal = (_financialConfig?['min_withdrawal'] as num?)?.toDouble() ?? 50000;
+
+    return Container(
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        color: AppTheme.surfaceColor.withValues(alpha: 0.8),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: AppTheme.borderColor.withValues(alpha: 0.5)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Text(
+            'Konfigurasi Platform',
+            style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: AppTheme.textPrimary),
+          ),
+          const SizedBox(height: 12),
+          _buildInfoRow(Icons.payment, 'MDR Base (QRIS)', '2% per transaksi'),
+          const SizedBox(height: 8),
+          _buildInfoRow(Icons.category, 'Margin Platform', '${(mdrRate * 100).toStringAsFixed(0)}%'),
+          const SizedBox(height: 8),
+          _buildInfoRow(Icons.swap_horiz, 'Tarik Kilat Fee', '${(instantFee * 100).toStringAsFixed(1)}%'),
+          const SizedBox(height: 8),
+          _buildInfoRow(Icons.attach_money, 'Min Withdrawal', Formatters.currency(minWithdrawal)),
+          const SizedBox(height: 8),
+          const Text(
+            'Konfigurasi ini dikelola oleh Superadmin via Control Plane.',
+            style: TextStyle(fontSize: 11, fontStyle: FontStyle.italic, color: AppTheme.textSecondary),
+          ),
+        ],
+      ),
     );
   }
 }
