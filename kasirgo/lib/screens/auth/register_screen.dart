@@ -9,6 +9,7 @@ import '../../providers/auth_provider.dart';
 import '../../utils/validators.dart';
 import '../../widgets/common/centennial_background.dart';
 import '../../widgets/common/glass_card.dart';
+import 'kyc_upload_screen.dart' as kyc;
 
 class RegisterScreen extends ConsumerStatefulWidget {
   const RegisterScreen({super.key});
@@ -62,11 +63,11 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
-            content: Text('Pendaftaran berhasil! Silakan cek email untuk verifikasi.'),
+            content: Text('Pendaftaran berhasil! Silakan upload dokumen KYC.'),
             backgroundColor: AppTheme.successColor,
           ),
         );
-        context.go('/login');
+        context.go('/kyc-upload');
       }
     } catch (e) {
       if (mounted) {

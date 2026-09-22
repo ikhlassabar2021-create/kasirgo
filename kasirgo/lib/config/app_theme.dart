@@ -14,6 +14,23 @@ class AppTheme {
   static const Color textSecondary = Color(0xFF64748B); // Slate 500
   static const Color borderColor = Color(0xFFE2E8F0); // Slate 200
 
+  static const LinearGradient primaryGradient = LinearGradient(
+    begin: Alignment.topLeft,
+    end: Alignment.bottomRight,
+    colors: [Color(0xFF06B6D4), Color(0xFF0284C7)],
+  );
+
+  static const LinearGradient aiBadgeGradient = LinearGradient(
+    begin: Alignment.topLeft,
+    end: Alignment.bottomRight,
+    colors: [Color(0xFF06B6D4), Color(0xFF4F46E5)],
+  );
+
+  static const double radiusLarge = 16;
+  static const double radiusMedium = 12;
+  static const double touchTargetLarge = 56;
+  static const double touchTargetMedium = 48;
+
   static ThemeData get lightTheme {
     return ThemeData(
       useMaterial3: true,
