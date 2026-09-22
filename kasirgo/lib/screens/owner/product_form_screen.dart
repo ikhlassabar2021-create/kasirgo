@@ -900,7 +900,7 @@ class _ProductFormScreenState extends ConsumerState<ProductFormScreen> {
         padding: const EdgeInsets.only(top: 8),
         child: Text(
           'Format barcode tidak valid untuk Code128',
-          style: TextStyle(color: Colors.amber.shade300, fontSize: 11),
+          style: TextStyle(color: AppTheme.warningColor, fontSize: 11),
         ),
       );
     }
@@ -909,9 +909,9 @@ class _ProductFormScreenState extends ConsumerState<ProductFormScreen> {
       margin: const EdgeInsets.only(top: 10),
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: AppTheme.surfaceColor,
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: Colors.grey.shade300),
+        border: Border.all(color: AppTheme.borderColor),
       ),
       child: Column(
         children: [

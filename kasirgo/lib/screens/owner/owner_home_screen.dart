@@ -80,7 +80,7 @@ final homeSummaryProvider = FutureProvider<Map<String, dynamic>>((ref) async {
       'title': isPassed ? 'Produk Kedaluwarsa: ${p.name}' : 'Mendekati Kedaluwarsa: ${p.name}',
       'message': 'Expired: ${p.expiredDate.toString().split(' ')[0]}',
       'icon': Icons.timer_outlined,
-      'color': Colors.redAccent,
+      'color': AppTheme.errorColor,
     });
   }
   for (final fs in flashSale) {
@@ -733,7 +733,7 @@ class _OwnerHomeScreenState extends ConsumerState<OwnerHomeScreen> {
         if (lowMargin.isNotEmpty)
           _AICard(
             icon: Icons.trending_down_rounded,
-            color: Colors.orange,
+            color: AppTheme.warningColor,
             title: 'Margin Rendah (${lowMargin.length} produk)',
             body: lowMargin.take(3).map((p) => p.name as String).join(', '),
           ),
@@ -841,7 +841,7 @@ class _OwnerHomeScreenState extends ConsumerState<OwnerHomeScreen> {
         icon: Icons.storefront_rounded,
         title: 'Katalog Online',
         subtitle: 'Web Katalog WA',
-        color: Colors.blueAccent,
+        color: AppTheme.primaryColor,
         onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const OnlineCatalogScreen())),
       ),
     );

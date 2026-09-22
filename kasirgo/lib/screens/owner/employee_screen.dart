@@ -408,7 +408,7 @@ class _EmployeeScreenState extends ConsumerState<EmployeeScreen> with SingleTick
   Color _getRoleColor(String role) {
     switch (role.toLowerCase()) {
       case 'admin':
-        return Colors.orangeAccent;
+        return AppTheme.warningColor;
       case 'owner':
         return AppTheme.accentColor;
       default:
@@ -498,7 +498,7 @@ class _EmployeeScreenState extends ConsumerState<EmployeeScreen> with SingleTick
                   height: 54,
                   child: ElevatedButton.icon(
                     style: ElevatedButton.styleFrom(
-                      backgroundColor: isCheckedIn ? Colors.redAccent : Colors.green,
+                      backgroundColor: isCheckedIn ? AppTheme.errorColor : AppTheme.successColor,
                       foregroundColor: Colors.white,
                       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
                       elevation: 2,
@@ -530,7 +530,7 @@ class _EmployeeScreenState extends ConsumerState<EmployeeScreen> with SingleTick
                   Center(
                     child: Text(
                       'Check-in aktif: ${DateFormat('HH:mm').format(DateTime.parse(activeAttendance['check_in_time']))} WIB (Shift ${activeAttendance['shift']?.toString().toUpperCase()})',
-                      style: const TextStyle(fontSize: 12, color: Colors.greenAccent),
+                      style: const TextStyle(fontSize: 12, color: AppTheme.successColor),
                     ),
                   ),
                 ],
@@ -591,7 +591,7 @@ class _EmployeeScreenState extends ConsumerState<EmployeeScreen> with SingleTick
                   border: Border.all(
                     color: isCompleted
                         ? AppTheme.borderColor.withValues(alpha: 0.4)
-                        : Colors.green.withValues(alpha: 0.4),
+                        : AppTheme.successColor.withValues(alpha: 0.4),
                   ),
                 ),
                 child: Row(
@@ -600,10 +600,10 @@ class _EmployeeScreenState extends ConsumerState<EmployeeScreen> with SingleTick
                       radius: 20,
                       backgroundColor: isCompleted
                           ? AppTheme.primaryColor.withValues(alpha: 0.15)
-                          : Colors.green.withValues(alpha: 0.15),
+                          : AppTheme.successColor.withValues(alpha: 0.15),
                       child: Icon(
                         isCompleted ? Icons.check_circle_outline : Icons.timelapse,
-                        color: isCompleted ? AppTheme.accentColor : Colors.greenAccent,
+                        color: isCompleted ? AppTheme.accentColor : AppTheme.successColor,
                         size: 20,
                       ),
                     ),
@@ -636,7 +636,7 @@ class _EmployeeScreenState extends ConsumerState<EmployeeScreen> with SingleTick
                       decoration: BoxDecoration(
                         color: isCompleted
                             ? AppTheme.borderColor.withValues(alpha: 0.2)
-                            : Colors.green.withValues(alpha: 0.2),
+                            : AppTheme.successColor.withValues(alpha: 0.2),
                         borderRadius: BorderRadius.circular(6),
                       ),
                       child: Text(
@@ -644,7 +644,7 @@ class _EmployeeScreenState extends ConsumerState<EmployeeScreen> with SingleTick
                         style: TextStyle(
                           fontSize: 10,
                           fontWeight: FontWeight.bold,
-                          color: isCompleted ? AppTheme.textSecondary : Colors.greenAccent,
+                          color: isCompleted ? AppTheme.textSecondary : AppTheme.successColor,
                         ),
                       ),
                     ),

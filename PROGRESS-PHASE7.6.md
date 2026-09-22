@@ -1,7 +1,18 @@
 # PROGRESS PHASE 7.6
 SELESAI: ST7.6-1 (design system v2 tokens + shared components + Inter font)
-BERIKUTNYA: ST7.6-2 (retrofit screens batch 1: auth + owner core)
+SELESAI: ST7.6-2 (retrofit Owner core: dashboard, product mgmt, staff mgmt, KYC/settings)
+BERIKUTNYA: ST7.6-3 (retrofit batch 2: owner pendukung + channel/modules)
 BLOCKER: -
+
+## Completed Items ST7.6-2:
+- owner_home_screen.dart: notification/AI card colors -> AppTheme tokens (error/warning/primary)
+- product_list_screen.dart: stock badge -> error/warning/success tokens (Hijau>5, Kuning1-5, Merah0)
+- product_form_screen.dart: barcode warning -> warningColor, surface/border -> tokens
+- employee_screen.dart: role color, check-in/out button, attendance status -> error/success tokens
+- settings_screen.dart: supporter tier + AKTIF badge -> success/primary tokens
+- Semua file lulus `dart analyze` (0 error)
+- Dashboard/Home: gradient accents sudah memakai AppTheme.primaryGradient/secondaryColor (verified)
+- Staff Management: status aktif/shift ditampilkan (quota dari Phase 7.7 sudah di settings_screen)
 
 ## Completed Items ST7.6-1:
 - app_theme.dart: bg #F8FAFC, primary #0284C7, gradient #06B6D4->#0284C7, border #E2E8F0, text #0F172A/#64748B
@@ -71,3 +82,8 @@ Shared widgets (hormati token, tanpa hardcode warna):
 - kasirgo/lib/widgets/common/app_button.dart: shared button component
 - kasirgo/lib/widgets/common/app_text_field.dart: shared input component
 - kasirgo/lib/widgets/common/app_card.dart: shared card + section title component
+- kasirgo/lib/screens/owner/owner_home_screen.dart: token compliance
+- kasirgo/lib/screens/owner/product_list_screen.dart: token compliance
+- kasirgo/lib/screens/owner/product_form_screen.dart: token compliance
+- kasirgo/lib/screens/owner/employee_screen.dart: token compliance
+- kasirgo/lib/screens/owner/settings_screen.dart: token compliance

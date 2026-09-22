@@ -121,16 +121,16 @@ class _ProductListScreenState extends ConsumerState<ProductListScreen> {
     String label;
 
     if (stock <= 0) {
-      bg = Colors.red.withValues(alpha: 0.18);
-      text = Colors.redAccent;
+      bg = AppTheme.errorColor.withValues(alpha: 0.18);
+      text = AppTheme.errorColor;
       label = 'Habis (0)';
     } else if (stock <= 5) {
-      bg = Colors.amber.withValues(alpha: 0.18);
-      text = Colors.amberAccent;
+      bg = AppTheme.warningColor.withValues(alpha: 0.18);
+      text = AppTheme.warningColor;
       label = 'Stok: $stock';
     } else {
-      bg = Colors.green.withValues(alpha: 0.18);
-      text = Colors.greenAccent;
+      bg = AppTheme.successColor.withValues(alpha: 0.18);
+      text = AppTheme.successColor;
       label = 'Stok: $stock ${unit ?? "pcs"}';
     }
 

@@ -204,7 +204,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text('Terima kasih! Dukungan $tierLabel berhasil diaktifkan.'),
-            backgroundColor: Colors.green,
+            backgroundColor: AppTheme.successColor,
           ),
         );
       }
@@ -328,7 +328,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                 decoration: BoxDecoration(
-                  color: Colors.green.shade700,
+                  color: AppTheme.successColor,
                   borderRadius: BorderRadius.circular(20),
                 ),
                 child: const Text(
@@ -413,7 +413,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
             tier: 'pendukung',
             amount: 25000,
             desc: 'Badge Kawan KasirGo di profil & akses awal fitur eksperimental.',
-            color: Colors.blue.shade600,
+            color: AppTheme.primaryColor,
           ),
           const SizedBox(height: 12),
           _buildSupporterTierTile(
@@ -454,7 +454,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
         color: AppTheme.backgroundColor,
         borderRadius: BorderRadius.circular(12),
         border: Border.all(
-          color: isCurrent ? Colors.greenAccent : color.withValues(alpha: 0.5),
+          color: isCurrent ? AppTheme.successColor : color.withValues(alpha: 0.5),
           width: isCurrent ? 2 : 1,
         ),
       ),
@@ -472,7 +472,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                 Container(
                   padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
                   decoration: BoxDecoration(
-                    color: Colors.green.shade700,
+                    color: AppTheme.successColor,
                     borderRadius: BorderRadius.circular(12),
                   ),
                   child: const Text('AKTIF', style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: Colors.white)),
@@ -493,7 +493,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
             child: ElevatedButton(
               onPressed: () => _handleJoinSupporter(tier, amount, title),
               style: ElevatedButton.styleFrom(
-                backgroundColor: isCurrent ? Colors.green.shade700 : color,
+                backgroundColor: isCurrent ? AppTheme.successColor : color,
                 foregroundColor: Colors.white,
                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
               ),
