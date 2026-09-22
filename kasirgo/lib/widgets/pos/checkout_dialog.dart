@@ -4,6 +4,7 @@ import 'package:flutter/services.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../config/app_theme.dart';
 import '../../models/transaction.dart';
+import '../../services/payment_service.dart';
 import '../../utils/wa_helper.dart';
 
 class CheckoutResult {
@@ -47,11 +48,13 @@ class CheckoutDialog extends StatefulWidget {
 
 class _CheckoutDialogState extends State<CheckoutDialog> {
   String _paymentMethod = 'cash';
+  String _qrisMode = 'static'; // static | dynamic
   final _cashController = TextEditingController();
   final _qrisAmountController = TextEditingController();
   final _notesController = TextEditingController();
   final _customerWaController = TextEditingController();
   bool _sendWaReceipt = false;
+  bool _isLoadingQris = false;
 
   double get _cashPaid => double.tryParse(_cashController.text.replaceAll(RegExp(r'[^0-9]'), '')) ?? 0.0;
   double get _change => (_cashPaid - widget.totalAmount).clamp(0.0, double.infinity);
@@ -171,10 +174,107 @@ class _CheckoutDialogState extends State<CheckoutDialog> {
                           const SizedBox(height: 10),
                           _buildPaymentOption('cash', 'Tunai (Cash)', Icons.payments_rounded),
                           _buildPaymentOption('qris', 'QRIS Manual', Icons.qr_code_2_rounded),
+                          if (_paymentMethod == 'qris') ...[
+                            const SizedBox(height: 10),
+                            Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                              decoration: BoxDecoration(
+                                color: AppTheme.backgroundColor.withValues(alpha: 0.5),
+                                borderRadius: BorderRadius.circular(10),
+                                border: Border.all(color: Colors.white.withValues(alpha: 0.07)),
+                              ),
+                              child: Row(
+                                children: [
+                                  Text(
+                                    'Mode QRIS:',
+                                    style: GoogleFonts.inter(
+                                      color: AppTheme.textSecondary,
+                                      fontSize: 12,
+                                      fontWeight: FontWeight.w600,
+                                    ),
+                                  ),
+                                  const SizedBox(width: 8),
+                                  Expanded(
+                                    child: Row(
+                                      children: [
+                                        Expanded(
+                                          child: InkWell(
+                                            onTap: () => setState(() => _qrisMode = 'static'),
+                                            borderRadius: BorderRadius.circular(8),
+                                            child: Container(
+                                              padding: const EdgeInsets.symmetric(vertical: 10),
+                                              decoration: BoxDecoration(
+                                                color: _qrisMode == 'static'
+                                                    ? AppTheme.primaryColor.withValues(alpha: 0.25)
+                                                    : Colors.transparent,
+                                                borderRadius: BorderRadius.circular(8),
+                                                border: Border.all(
+                                                  color: _qrisMode == 'static'
+                                                      ? AppTheme.primaryColor
+                                                      : Colors.white.withValues(alpha: 0.07),
+                                                  width: 1.5,
+                                                ),
+                                              ),
+                                              child: Center(
+                                                child: Text(
+                                                  'Statis',
+                                                  style: GoogleFonts.inter(
+                                                    fontSize: 11,
+                                                    fontWeight: FontWeight.w700,
+                                                    color: _qrisMode == 'static'
+                                                        ? AppTheme.accentColor
+                                                        : AppTheme.textSecondary,
+                                                  ),
+                                                ),
+                                              ),
+                                            ),
+                                          ),
+                                        ),
+                                        const SizedBox(width: 8),
+                                        Expanded(
+                                          child: InkWell(
+                                            onTap: () => setState(() => _qrisMode = 'dynamic'),
+                                            borderRadius: BorderRadius.circular(8),
+                                            child: Container(
+                                              padding: const EdgeInsets.symmetric(vertical: 10),
+                                              decoration: BoxDecoration(
+                                                color: _qrisMode == 'dynamic'
+                                                    ? AppTheme.primaryColor.withValues(alpha: 0.25)
+                                                    : Colors.transparent,
+                                                borderRadius: BorderRadius.circular(8),
+                                                border: Border.all(
+                                                  color: _qrisMode == 'dynamic'
+                                                      ? AppTheme.primaryColor
+                                                      : Colors.white.withValues(alpha: 0.07),
+                                                  width: 1.5,
+                                                ),
+                                              ),
+                                              child: Center(
+                                                child: Text(
+                                                  'Dinamis',
+                                                  style: GoogleFonts.inter(
+                                                    fontSize: 11,
+                                                    fontWeight: FontWeight.w700,
+                                                    color: _qrisMode == 'dynamic'
+                                                        ? AppTheme.accentColor
+                                                        : AppTheme.textSecondary,
+                                                  ),
+                                                ),
+                                              ),
+                                            ),
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ],
                           _buildPaymentOption('bank_transfer', 'Transfer Bank', Icons.account_balance_rounded),
                           const SizedBox(height: 14),
                           if (_paymentMethod == 'cash') _buildCashSection(),
-                          if (_paymentMethod == 'qris') _buildQrisSection(),
+                          if (_paymentMethod == 'qris') _buildQrisSection(mode: _qrisMode),
                           if (_paymentMethod == 'bank_transfer') _buildTransferSection(),
                           const SizedBox(height: 16),
                           _buildWaReceiptSection(),
@@ -409,47 +509,219 @@ class _CheckoutDialogState extends State<CheckoutDialog> {
     );
   }
 
-  Widget _buildQrisSection() {
+  Widget _buildQrisSection({required String mode}) {
+    if (mode == 'static') {
+      return Column(children: _buildStaticQris());
+    } else {
+      return _buildDynamicQris();
+    }
+  }
+
+  List<Widget> _buildStaticQris() {
+    return [
+      Center(
+        child: Container(
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(16),
+          ),
+          child: Column(
+            children: [
+              const Icon(Icons.qr_code_2_rounded, size: 140, color: Colors.black),
+              const SizedBox(height: 6),
+              const Text(
+                'QRIS STANDAR PEMBAYARAN NASIONAL',
+                style: TextStyle(color: Colors.black54, fontSize: 8, fontWeight: FontWeight.bold),
+              ),
+              Text(
+                'NMID: ID1020038847291',
+                style: TextStyle(color: Colors.grey.shade600, fontSize: 8),
+              ),
+            ],
+          ),
+        ),
+      ),
+      const SizedBox(height: 10),
+      Text(
+        'Scan QRIS Statis Merchant',
+        style: GoogleFonts.inter(color: AppTheme.textSecondary, fontSize: 12),
+      ),
+      const SizedBox(height: 10),
+      TextField(
+        controller: _qrisAmountController,
+        keyboardType: TextInputType.number,
+        inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+        style: const TextStyle(color: AppTheme.textPrimary, fontSize: 14),
+        decoration: const InputDecoration(
+          labelText: 'Nominal Verifikasi QRIS',
+          prefixText: 'Rp ',
+        ),
+      ),
+      const SizedBox(height: 8),
+      Row(
+        children: [
+          Icon(Icons.info_outline_rounded, color: AppTheme.accentColor, size: 16),
+          const SizedBox(width: 6),
+          Expanded(
+            child: Text(
+              'Masukkan nominal setelah customer scan dan transfer',
+              style: const TextStyle(color: AppTheme.textSecondary, fontSize: 11),
+            ),
+          ),
+        ],
+      ),
+    ];
+  }
+
+  Widget _buildDynamicQris() {
+    if (_isLoadingQris) {
+      return Center(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const SizedBox(
+              width: 24,
+              height: 24,
+              child: CircularProgressIndicator(strokeWidth: 2.5, color: AppTheme.accentColor),
+            ),
+            const SizedBox(height: 10),
+            Text('Membuat QR dinamis...', style: TextStyle(color: AppTheme.textSecondary, fontSize: 12)),
+          ],
+        ),
+      );
+    }
+
+    final paymentService = PaymentService();
+    final config = paymentService.getFinancialConfig();
+    final amount = double.tryParse(_qrisAmountController.text.replaceAll(RegExp(r'[^0-9.]'), '')) ?? widget.totalAmount;
+    
+    if (amount < config['min_payment'] || amount > config['max_payment']) {
+      return Center(
+        child: Padding(
+          padding: const EdgeInsets.all(16),
+          child: Text(
+            'Nominal harus antara Rp ${config['min_payment'].toStringAsFixed(0)} - Rp ${config['max_payment'].toStringAsFixed(0)}',
+            textAlign: TextAlign.center,
+            style: TextStyle(color: AppTheme.errorColor, fontSize: 12),
+          ),
+        ),
+      );
+    }
+
+    if (amount >= config['free_threshold']) {
+      // Auto-pay untuk free payment threshold
+      return Container(
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: AppTheme.successColor.withValues(alpha: 0.15),
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: AppTheme.successColor.withValues(alpha: 0.4)),
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(Icons.check_circle_rounded, color: AppTheme.successColor, size: 32),
+            const SizedBox(height: 8),
+            const Text(
+              'Pembayaran Gratis!',
+              style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
+            ),
+            Text('Ambil alih dari tombol Konfirmasi', style: TextStyle(color: AppTheme.textSecondary, fontSize: 11)),
+          ],
+        ),
+      );
+    }
+
     return Column(
       children: [
-        Center(
-          child: Container(
-            padding: const EdgeInsets.all(16),
-            decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(16),
-            ),
-            child: Column(
-              children: [
-                const Icon(Icons.qr_code_2_rounded, size: 140, color: Colors.black),
-                const SizedBox(height: 6),
-                const Text(
-                  'QRIS STANDAR PEMBAYARAN NASIONAL',
-                  style: TextStyle(color: Colors.black54, fontSize: 8, fontWeight: FontWeight.bold),
-                ),
-                Text(
-                  'NMID: ID1020038847291',
-                  style: TextStyle(color: Colors.grey.shade600, fontSize: 8),
-                ),
-              ],
+        GestureDetector(
+           onTap: () async {
+             try {
+               setState(() => _isLoadingQris = true);
+               
+               await paymentService.createCharge(
+                 orderId: DateTime.now().millisecondsSinceEpoch.toString(),
+                 amount: amount,
+                 qrisType: 'dynamic',
+               );
+
+               if (mounted) {
+                Navigator.pop(context);
+                
+                showDialog(
+                  context: context,
+                  barrierDismissible: false,
+                  builder: (ctx) => AlertDialog(
+                    title: const Text('QRIS Dinamis'),
+                    content: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        const Text('Scan QR berikut untuk pembayaran otomatis:\n(Pembayaran akan terupdate via webhook)'),
+                        const SizedBox(height: 16),
+                        ClipRRect(
+                          borderRadius: BorderRadius.circular(12),
+                          child: Image.asset(
+                            'assets/qrcode_placeholder.png',
+                            width: 200,
+                            height: 200,
+                            errorBuilder: (_, __, ___) => const SizedBox(width: 200, height: 200, child: Icon(Icons.qr_code_2_rounded, size: 200)),
+                          ),
+                        ),
+                        const SizedBox(height: 8),
+                        Text('Total: Rp ${amount.toStringAsFixed(0)}', style: const TextStyle(fontWeight: FontWeight.bold)),
+                      ],
+                    ),
+                    actions: [
+                      TextButton(
+                        onPressed: () => Navigator.pop(ctx),
+                        child: const Text('Tutup'),
+                      ),
+                    ],
+                  ),
+                );
+              }
+            } catch (e) {
+              if (mounted) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(content: Text('Gagal generate QRIS dinamis: $e'), backgroundColor: AppTheme.errorColor),
+                );
+                setState(() => _isLoadingQris = false);
+              }
+            }
+          },
+          child: Center(
+            child: Container(
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(16),
+              ),
+              child: const Column(
+                children: [
+                  Icon(Icons.qr_code_2_rounded, size: 140, color: Colors.black),
+                  SizedBox(height: 6),
+                  Text(
+                    'TAP UNTUK BUAT QR',
+                    style: TextStyle(fontSize: 11, fontWeight: FontWeight.w700),
+                  ),
+                ],
+              ),
             ),
           ),
         ),
         const SizedBox(height: 10),
-        Text(
-          'Scan QRIS Statis Merchant',
-          style: GoogleFonts.inter(color: AppTheme.textSecondary, fontSize: 12),
-        ),
-        const SizedBox(height: 10),
-        TextField(
-          controller: _qrisAmountController,
-          keyboardType: TextInputType.number,
-          inputFormatters: [FilteringTextInputFormatter.digitsOnly],
-          style: const TextStyle(color: AppTheme.textPrimary, fontSize: 14),
-          decoration: const InputDecoration(
-            labelText: 'Nominal Verifikasi QRIS',
-            prefixText: 'Rp ',
-          ),
+        Row(
+          children: [
+            Icon(Icons.info_outline_rounded, color: AppTheme.accentColor, size: 16),
+            const SizedBox(width: 6),
+            Expanded(
+              child: Text(
+                'Klik QR untuk generate, pembayaran ter-update otomatis via webhook Midtrans',
+                style: const TextStyle(color: AppTheme.textSecondary, fontSize: 11),
+              ),
+            ),
+          ],
         ),
       ],
     );
