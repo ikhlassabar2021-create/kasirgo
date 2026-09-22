@@ -174,16 +174,37 @@ class AuthService {
     required String password,
     required String businessName,
     required String businessType,
+    Map<String, dynamic>? kycData,
   }) async {
     try {
+      final data = <String, dynamic>{
+        'business_name': businessName,
+        'business_type': businessType,
+      };
+      if (kycData != null && kycData.isNotEmpty) {
+        data['kyc_nik'] = kycData['nik'];
+        data['kyc_full_name'] = kycData['fullName'];
+        data['kyc_phone'] = kycData['phone'];
+        data['kyc_status'] = 'pending';
+      }
+
       final response = await _client.auth.signUp(
         email: email,
         password: password,
-        data: {
-          'business_name': businessName,
-          'business_type': businessType,
-        },
+        data: data,
       );
+
+      if (kycData != null && kycData.isNotEmpty && response.user != null) {
+        // Insert KYC record into database
+        await _client.from('outlet_kyc').insert({
+          'owner_nik': kycData['nik'],
+          'owner_full_name': kycData['fullName'],
+          'owner_phone': kycData['phone'],
+          'kyc_status': 'pending',
+          'created_at': DateTime.now().toIso8601String(),
+        });
+      }
+
       return response;
     } catch (e) {
       rethrow;

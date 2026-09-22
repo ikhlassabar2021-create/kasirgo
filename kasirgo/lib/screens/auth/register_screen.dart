@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
@@ -21,6 +22,9 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
   final _businessNameController = TextEditingController();
+  final _nikController = TextEditingController();
+  final _fullNameController = TextEditingController();
+  final _phoneController = TextEditingController();
   String _selectedBusinessType = 'Warung Sembako';
   bool _isLoading = false;
   bool _obscurePassword = true;
@@ -30,6 +34,9 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
     _emailController.dispose();
     _passwordController.dispose();
     _businessNameController.dispose();
+    _nikController.dispose();
+    _fullNameController.dispose();
+    _phoneController.dispose();
     super.dispose();
   }
 
@@ -45,6 +52,11 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
         password: _passwordController.text,
         businessName: _businessNameController.text.trim(),
         businessType: _selectedBusinessType,
+        kycData: {
+          'nik': _nikController.text.trim(),
+          'fullName': _fullNameController.text.trim(),
+          'phone': _phoneController.text.trim(),
+        },
       );
 
       if (mounted) {
@@ -165,6 +177,48 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                               labelText: 'Email',
                               prefixIcon: Icon(Icons.email_outlined),
                             ),
+                          ),
+                          const SizedBox(height: 16),
+                          Divider(),
+                          const SizedBox(height: 8),
+                          Text(
+                            'Data KYC Wajib',
+                            style: GoogleFonts.inter(fontSize: 14, fontWeight: FontWeight.w700, color: AppTheme.textPrimary),
+                          ),
+                          const SizedBox(height: 8),
+                          TextFormField(
+                            controller: _nikController,
+                            keyboardType: TextInputType.number,
+                            validator: (v) => v == null || v.length < 16 ? 'NIK harus 16 digit' : null,
+                            style: const TextStyle(color: AppTheme.textPrimary),
+                            decoration: InputDecoration(
+                              labelText: 'NIK (16 digit)',
+                              prefixIcon: const Icon(Icons.id_card_outlined),
+                            ),
+                            maxLength: 16,
+                          ),
+                          const SizedBox(height: 16),
+                          TextFormField(
+                            controller: _fullNameController,
+                            validator: (v) => Validators.required(v, 'Nama lengkap sesuai KTP'),
+                            style: const TextStyle(color: AppTheme.textPrimary),
+                            decoration: const InputDecoration(
+                              labelText: 'Nama Lengkap',
+                              prefixIcon: Icon(Icons.person_outline_rounded),
+                            ),
+                          ),
+                          const SizedBox(height: 16),
+                          TextFormField(
+                            controller: _phoneController,
+                            keyboardType: TextInputType.phone,
+                            validator: Validators.phoneNumber,
+                            style: const TextStyle(color: AppTheme.textPrimary),
+                            decoration: InputDecoration(
+                              labelText: 'Nomor Telepon',
+                              prefixIcon: const Icon(Icons.phone_outlined),
+                            ),
+                            maxLength: 13,
+                            inputFormatters: [FilteringTextInputFormatter.digitsOnly],
                           ),
                           const SizedBox(height: 16),
                           TextFormField(

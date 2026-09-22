@@ -26,6 +26,8 @@ class Validators {
     return null;
   }
 
+  static String? phoneNumber(String? value) => phone(value);
+
   static String? number(String? value, [String? fieldName]) {
     if (value == null || value.isEmpty) {
       return '${fieldName ?? 'Field ini'} wajib diisi';
