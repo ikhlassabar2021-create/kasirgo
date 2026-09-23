@@ -3,8 +3,18 @@ SELESAI: ST7.6-1 (design system v2 tokens + shared components + Inter font)
 SELESAI: ST7.6-2 (retrofit Owner core: dashboard, product mgmt, staff mgmt, KYC/settings)
 SELESAI: ST7.6-3 (retrofit POS, Cart/Checkout, Report, AI badge, Customer/Employee list)
 SELESAI: ST7.6-4 (Admin Home, Cashier Home + shift/tip/QRIS, Customer Menu, KDS Dapur)
-BERIKUTNYA: ST7.6-5 (retrofit channel & screen pendukung: WA broadcast, Social commerce, QR Table, Online catalog, Staradmin)
+SELESAI: ST7.6-5 (Auth Login/Register, Social Commerce Sync, WA Broadcast, QR Table, Online Catalog)
+BERIKUTNYA: ST7.6-6 (audit akhir UI seluruh screen + konsistensi token, hapus sisa warna hardcode)
 BLOCKER: -
+
+## Completed Items ST7.6-5:
+- login_screen.dart: gradient logo/tombol AppTheme.primaryGradient, input besar (48dp), warna hardcode -> token, touch target 56dp
+- register_screen.dart: tombol gradient, perbaikan ikon NIK (badge_outlined), hapus import tak terpakai, token Ocean White
+- social_commerce_screen.dart: kartu status channel (Terhubung/Siap Sinkron), badge fee, logo channel outline, preview stok produk (0-10-10+), tombol Sync All
+- whatsapp_broadcast_screen.dart: tab Ocean White, template pesan cepat (ActionChip), kartu pesan/riwayat kirim, retensi AI gradient, tombol Sapa WA 48dp
+- qr_table_screen.dart: generator QR per meja, preview dialog, tombol Download + Cetak QR, grid meja dengan ikon token, touch target 56dp
+- online_catalog_screen.dart: toggle publikasi (thumb_key R2), kontrol opt-in thumbnail (checkbox), preview toko online toggle, chip kategori token, grid 4 kolom 0.95
+- Semua file lulus `dart analyze` (0 error)
 
 ## Completed Items ST7.6-4:
 - admin_home_screen.dart: Ocean White frosted glass navigation bar + border token

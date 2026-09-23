@@ -9,7 +9,6 @@ import '../../providers/auth_provider.dart';
 import '../../utils/validators.dart';
 import '../../widgets/common/centennial_background.dart';
 import '../../widgets/common/glass_card.dart';
-import 'kyc_upload_screen.dart' as kyc;
 
 class RegisterScreen extends ConsumerStatefulWidget {
   const RegisterScreen({super.key});
@@ -192,9 +191,9 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                             keyboardType: TextInputType.number,
                             validator: (v) => v == null || v.length < 16 ? 'NIK harus 16 digit' : null,
                             style: const TextStyle(color: AppTheme.textPrimary),
-                            decoration: InputDecoration(
+                            decoration: const InputDecoration(
                               labelText: 'NIK (16 digit)',
-                              prefixIcon: const Icon(Icons.id_card_outlined),
+                              prefixIcon: Icon(Icons.badge_outlined),
                             ),
                             maxLength: 16,
                           ),
@@ -243,26 +242,39 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                           ),
                           const SizedBox(height: 24),
                           SizedBox(
-                            height: 56,
-                            child: ElevatedButton(
-                              onPressed: _isLoading ? null : _register,
-                              style: ElevatedButton.styleFrom(
-                                backgroundColor: AppTheme.primaryColor,
-                                foregroundColor: Colors.white,
-                                elevation: 8,
-                                shadowColor: AppTheme.primaryColor.withValues(alpha: 0.5),
-                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                            height: AppTheme.touchTargetLarge,
+                            child: Container(
+                              decoration: BoxDecoration(
+                                gradient: AppTheme.primaryGradient,
+                                borderRadius: BorderRadius.circular(AppTheme.radiusMedium),
+                                boxShadow: [
+                                  BoxShadow(
+                                    color: AppTheme.primaryColor.withValues(alpha: 0.25),
+                                    blurRadius: 12,
+                                    offset: const Offset(0, 4),
+                                  ),
+                                ],
                               ),
-                              child: _isLoading
-                                  ? const SizedBox(
-                                      height: 20,
-                                      width: 20,
-                                      child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
-                                    )
-                                  : Text(
-                                      'Daftar',
-                                      style: GoogleFonts.inter(fontSize: 16, fontWeight: FontWeight.w800),
-                                    ),
+                              child: ElevatedButton(
+                                onPressed: _isLoading ? null : _register,
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: Colors.transparent,
+                                  shadowColor: Colors.transparent,
+                                  foregroundColor: Colors.white,
+                                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppTheme.radiusMedium)),
+                                  elevation: 0,
+                                ),
+                                child: _isLoading
+                                    ? const SizedBox(
+                                        height: 20,
+                                        width: 20,
+                                        child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                                      )
+                                    : Text(
+                                        'Daftar',
+                                        style: GoogleFonts.inter(fontSize: 16, fontWeight: FontWeight.w800),
+                                      ),
+                              ),
                             ),
                           ),
                           const SizedBox(height: 8),

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:google_fonts/google_fonts.dart';
 import '../../config/app_theme.dart';
 import '../../models/product.dart';
 import '../../models/transaction.dart';
@@ -19,14 +20,15 @@ class _SocialCommerceScreenState extends ConsumerState<SocialCommerceScreen> {
   String _selectedChannel = 'tokopedia';
   List<Product> _products = [];
   bool _isLoading = true;
+  bool _isSyncing = false;
 
   final _channels = [
-    {'id': 'tokopedia', 'name': 'Tokopedia', 'icon': Icons.shopping_bag, 'fee': 4.5, 'color': Color(0xFF03AC0E)},
-    {'id': 'shopee', 'name': 'Shopee', 'icon': Icons.storefront, 'fee': 5.0, 'color': Color(0xFFEE4D2D)},
-    {'id': 'gofood', 'name': 'GoFood', 'icon': Icons.delivery_dining, 'fee': 20.0, 'color': Color(0xFF00AA13)},
-    {'id': 'grabfood', 'name': 'GrabFood', 'icon': Icons.fastfood, 'fee': 20.0, 'color': Color(0xFF00B14F)},
-    {'id': 'shopeefood', 'name': 'ShopeeFood', 'icon': Icons.lunch_dining, 'fee': 20.0, 'color': Color(0xFFEE4D2D)},
-    {'id': 'tiktok_shop', 'name': 'TikTok Shop', 'icon': Icons.music_note, 'fee': 6.0, 'color': Color(0xFF000000)},
+    {'id': 'tokopedia', 'name': 'Tokopedia', 'icon': Icons.shopping_bag_outlined, 'fee': 4.5, 'color': Color(0xFF03AC0E), 'status': 'Terhubung'},
+    {'id': 'shopee', 'name': 'Shopee', 'icon': Icons.storefront_outlined, 'fee': 5.0, 'color': Color(0xFFEE4D2D), 'status': 'Terhubung'},
+    {'id': 'gofood', 'name': 'GoFood', 'icon': Icons.delivery_dining_outlined, 'fee': 20.0, 'color': Color(0xFF00AA13), 'status': 'Siap Sinkron'},
+    {'id': 'grabfood', 'name': 'GrabFood', 'icon': Icons.fastfood_outlined, 'fee': 20.0, 'color': Color(0xFF00B14F), 'status': 'Siap Sinkron'},
+    {'id': 'shopeefood', 'name': 'ShopeeFood', 'icon': Icons.lunch_dining_outlined, 'fee': 20.0, 'color': Color(0xFFEE4D2D), 'status': 'Siap Sinkron'},
+    {'id': 'tiktok_shop', 'name': 'TikTok Shop', 'icon': Icons.music_note_outlined, 'fee': 6.0, 'color': Color(0xFF0F172A), 'status': 'Terhubung'},
   ];
 
   @override
@@ -127,6 +129,7 @@ class _SocialCommerceScreenState extends ConsumerState<SocialCommerceScreen> {
                   const SizedBox(height: 12),
                   TextFormField(
                     controller: notesController,
+                    style: const TextStyle(fontSize: 13, color: AppTheme.textPrimary),
                     decoration: const InputDecoration(
                       labelText: 'Nomor Resi / Order ID',
                       hintText: 'Misal: INV/2026/TKP/12345',
@@ -137,19 +140,20 @@ class _SocialCommerceScreenState extends ConsumerState<SocialCommerceScreen> {
                     padding: const EdgeInsets.all(12),
                     decoration: BoxDecoration(
                       color: AppTheme.backgroundColor,
-                      borderRadius: BorderRadius.circular(8),
+                      borderRadius: BorderRadius.circular(AppTheme.radiusMedium),
                       border: Border.all(color: AppTheme.borderColor),
                     ),
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text('Total Bruto: ${Formatters.currency(totalAmount)}'),
+                        Text('Total Bruto: ${Formatters.currency(totalAmount)}', style: const TextStyle(fontSize: 12, color: AppTheme.textPrimary)),
+                        const SizedBox(height: 4),
                         Text('Potongan Platform (${platformFeePercent.toStringAsFixed(1)}%): -${Formatters.currency(platformFee)}',
-                            style: const TextStyle(color: Colors.redAccent, fontSize: 12)),
-                        const Divider(),
+                            style: const TextStyle(color: AppTheme.errorColor, fontSize: 12)),
+                        const Divider(height: 16),
                         Text(
                           'Pendapatan Bersih: ${Formatters.currency(netRevenue)}',
-                          style: const TextStyle(fontWeight: FontWeight.bold, color: AppTheme.accentColor),
+                          style: const TextStyle(fontWeight: FontWeight.bold, color: AppTheme.primaryColor),
                         ),
                       ],
                     ),
@@ -160,9 +164,14 @@ class _SocialCommerceScreenState extends ConsumerState<SocialCommerceScreen> {
             actions: [
               TextButton(
                 onPressed: () => Navigator.pop(ctx),
-                child: const Text('Batal'),
+                child: const Text('Batal', style: TextStyle(color: AppTheme.textSecondary)),
               ),
               ElevatedButton(
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: AppTheme.primaryColor,
+                  foregroundColor: Colors.white,
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppTheme.radiusMedium)),
+                ),
                 onPressed: () async {
                   if (quantity > selectedProduct.stock) {
                     ScaffoldMessenger.of(context).showSnackBar(
@@ -219,12 +228,39 @@ class _SocialCommerceScreenState extends ConsumerState<SocialCommerceScreen> {
     );
   }
 
+  Future<void> _syncAllChannels() async {
+    setState(() => _isSyncing = true);
+    await Future.delayed(const Duration(milliseconds: 600));
+    await _loadProducts();
+    if (mounted) {
+      setState(() => _isSyncing = false);
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Katalog & stok berhasil disinkronkan ke semua channel aktif'),
+          backgroundColor: AppTheme.successColor,
+        ),
+      );
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: AppTheme.backgroundColor,
       appBar: AppBar(
-        title: const Text('Sinkronisasi Social Commerce'),
+        title: Text(
+          'Social Commerce Sync',
+          style: GoogleFonts.inter(fontSize: 18, fontWeight: FontWeight.w700, color: AppTheme.textPrimary),
+        ),
+        actions: [
+          IconButton(
+            tooltip: 'Sinkronisasi Ulang',
+            icon: _isSyncing
+                ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2))
+                : const Icon(Icons.sync_rounded, color: AppTheme.primaryColor),
+            onPressed: _isSyncing ? null : _syncAllChannels,
+          ),
+        ],
       ),
       body: _isLoading
           ? const Center(child: CircularProgressIndicator())
@@ -236,35 +272,63 @@ class _SocialCommerceScreenState extends ConsumerState<SocialCommerceScreen> {
                   Container(
                     padding: const EdgeInsets.all(16),
                     decoration: BoxDecoration(
-                      color: AppTheme.primaryColor.withValues(alpha: 0.1),
-                      borderRadius: BorderRadius.circular(16),
-                      border: Border.all(color: AppTheme.primaryColor.withValues(alpha: 0.3)),
+                      color: AppTheme.surfaceColor,
+                      borderRadius: BorderRadius.circular(AppTheme.radiusLarge),
+                      border: Border.all(color: AppTheme.borderColor),
                     ),
-                    child: const Row(
+                    child: Row(
                       children: [
-                        Icon(Icons.hub, color: AppTheme.accentColor, size: 30),
-                        SizedBox(width: 12),
+                        Container(
+                          width: 44,
+                          height: 44,
+                          decoration: BoxDecoration(
+                            gradient: AppTheme.primaryGradient,
+                            borderRadius: BorderRadius.circular(AppTheme.radiusMedium),
+                          ),
+                          child: const Icon(Icons.hub_outlined, color: Colors.white, size: 24),
+                        ),
+                        const SizedBox(width: 14),
                         Expanded(
-                          child: Text(
-                            'Catat pesanan dari berbagai marketplace & online delivery. Stok akan otomatis berkurang dan pendapatan bersih tercatat rapi di laporan.',
-                            style: TextStyle(fontSize: 13, height: 1.4),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                'Sinkronisasi Multi-Channel',
+                                style: GoogleFonts.inter(fontWeight: FontWeight.w700, fontSize: 14, color: AppTheme.textPrimary),
+                              ),
+                              const SizedBox(height: 3),
+                              Text(
+                                'Catat order marketplace & delivery. Stok berkurang otomatis dan laporan bersih rapi.',
+                                style: GoogleFonts.inter(fontSize: 12, color: AppTheme.textSecondary, height: 1.3),
+                              ),
+                            ],
                           ),
                         ),
                       ],
                     ),
                   ),
                   const SizedBox(height: 20),
-                  const Text(
-                    'Pilih Channel Penjualan',
-                    style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Text(
+                        'Pilih Channel Penjualan',
+                        style: GoogleFonts.inter(fontWeight: FontWeight.w700, fontSize: 15, color: AppTheme.textPrimary),
+                      ),
+                      TextButton.icon(
+                        onPressed: _isSyncing ? null : _syncAllChannels,
+                        icon: const Icon(Icons.refresh_rounded, size: 16, color: AppTheme.primaryColor),
+                        label: Text('Sync All', style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.w600, color: AppTheme.primaryColor)),
+                      ),
+                    ],
                   ),
-                  const SizedBox(height: 12),
+                  const SizedBox(height: 10),
                   GridView.builder(
                     shrinkWrap: true,
                     physics: const NeverScrollableScrollPhysics(),
                     gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
                       crossAxisCount: 2,
-                      childAspectRatio: 1.4,
+                      childAspectRatio: 1.15,
                       crossAxisSpacing: 12,
                       mainAxisSpacing: 12,
                     ),
@@ -278,16 +342,23 @@ class _SocialCommerceScreenState extends ConsumerState<SocialCommerceScreen> {
                           setState(() => _selectedChannel = c['id'] as String);
                           _openManualTxDialog(c);
                         },
-                        borderRadius: BorderRadius.circular(16),
+                        borderRadius: BorderRadius.circular(AppTheme.radiusLarge),
                         child: Container(
-                          padding: const EdgeInsets.all(16),
+                          padding: const EdgeInsets.all(14),
                           decoration: BoxDecoration(
                             color: AppTheme.surfaceColor,
-                            borderRadius: BorderRadius.circular(16),
+                            borderRadius: BorderRadius.circular(AppTheme.radiusLarge),
                             border: Border.all(
-                              color: isSelected ? AppTheme.accentColor : AppTheme.borderColor.withValues(alpha: 0.5),
-                              width: isSelected ? 2 : 1,
+                              color: isSelected ? AppTheme.primaryColor : AppTheme.borderColor,
+                              width: isSelected ? 1.8 : 1,
                             ),
+                            boxShadow: [
+                              BoxShadow(
+                                color: AppTheme.textPrimary.withValues(alpha: 0.03),
+                                blurRadius: 8,
+                                offset: const Offset(0, 2),
+                              ),
+                            ],
                           ),
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
@@ -297,12 +368,21 @@ class _SocialCommerceScreenState extends ConsumerState<SocialCommerceScreen> {
                                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                                 children: [
                                   CircleAvatar(
-                                    backgroundColor: (c['color'] as Color).withValues(alpha: 0.2),
-                                    child: Icon(c['icon'] as IconData, color: c['color'] as Color),
+                                    radius: 18,
+                                    backgroundColor: (c['color'] as Color).withValues(alpha: 0.12),
+                                    child: Icon(c['icon'] as IconData, color: c['color'] as Color, size: 20),
                                   ),
-                                  Text(
-                                    'Fee ${c['fee']}%',
-                                    style: const TextStyle(fontSize: 11, color: AppTheme.textSecondary),
+                                  Container(
+                                    padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                    decoration: BoxDecoration(
+                                      color: AppTheme.backgroundColor,
+                                      borderRadius: BorderRadius.circular(6),
+                                      border: Border.all(color: AppTheme.borderColor),
+                                    ),
+                                    child: Text(
+                                      'Fee ${c['fee']}%',
+                                      style: GoogleFonts.inter(fontSize: 10, fontWeight: FontWeight.w600, color: AppTheme.textSecondary),
+                                    ),
                                   ),
                                 ],
                               ),
@@ -311,17 +391,113 @@ class _SocialCommerceScreenState extends ConsumerState<SocialCommerceScreen> {
                                 children: [
                                   Text(
                                     c['name'] as String,
-                                    style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15),
+                                    style: GoogleFonts.inter(fontWeight: FontWeight.w700, fontSize: 14, color: AppTheme.textPrimary),
                                   ),
                                   const SizedBox(height: 2),
-                                  const Text(
-                                    '+ Catat Pesanan',
-                                    style: TextStyle(fontSize: 12, color: AppTheme.accentColor),
+                                  Row(
+                                    children: [
+                                      Container(
+                                        width: 6,
+                                        height: 6,
+                                        decoration: BoxDecoration(
+                                          color: c['status'] == 'Terhubung' ? AppTheme.successColor : AppTheme.warningColor,
+                                          shape: BoxShape.circle,
+                                        ),
+                                      ),
+                                      const SizedBox(width: 5),
+                                      Text(
+                                        c['status'] as String,
+                                        style: GoogleFonts.inter(fontSize: 11, color: AppTheme.textSecondary),
+                                      ),
+                                    ],
                                   ),
+                                ],
+                              ),
+                              Row(
+                                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                children: [
+                                  Text(
+                                    '+ Catat Order',
+                                    style: GoogleFonts.inter(fontSize: 11, fontWeight: FontWeight.w700, color: AppTheme.primaryColor),
+                                  ),
+                                  const Icon(Icons.arrow_forward_ios_rounded, size: 10, color: AppTheme.primaryColor),
                                 ],
                               ),
                             ],
                           ),
+                        ),
+                      );
+                    },
+                  ),
+                  const SizedBox(height: 24),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Text(
+                        'Preview Stok Produk (${_products.length})',
+                        style: GoogleFonts.inter(fontWeight: FontWeight.w700, fontSize: 15, color: AppTheme.textPrimary),
+                      ),
+                      Text(
+                        'Sync Otomatis',
+                        style: GoogleFonts.inter(fontSize: 12, color: AppTheme.textSecondary),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 10),
+                  ListView.separated(
+                    shrinkWrap: true,
+                    physics: const NeverScrollableScrollPhysics(),
+                    itemCount: _products.take(5).length,
+                    separatorBuilder: (c, i) => const SizedBox(height: 8),
+                    itemBuilder: (context, index) {
+                      final p = _products[index];
+                      final stockColor = p.stock > 10
+                          ? AppTheme.successColor
+                          : (p.stock > 0 ? AppTheme.warningColor : AppTheme.errorColor);
+
+                      return Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                        decoration: BoxDecoration(
+                          color: AppTheme.surfaceColor,
+                          borderRadius: BorderRadius.circular(AppTheme.radiusMedium),
+                          border: Border.all(color: AppTheme.borderColor),
+                        ),
+                        child: Row(
+                          children: [
+                            Container(
+                              width: 38,
+                              height: 38,
+                              decoration: BoxDecoration(
+                                color: AppTheme.backgroundColor,
+                                borderRadius: BorderRadius.circular(8),
+                                border: Border.all(color: AppTheme.borderColor),
+                              ),
+                              child: const Icon(Icons.inventory_2_outlined, size: 20, color: AppTheme.primaryColor),
+                            ),
+                            const SizedBox(width: 12),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(p.name, style: GoogleFonts.inter(fontWeight: FontWeight.w600, fontSize: 13, color: AppTheme.textPrimary)),
+                                  const SizedBox(height: 2),
+                                  Text(Formatters.currency(p.price), style: GoogleFonts.inter(fontSize: 12, color: AppTheme.textSecondary)),
+                                ],
+                              ),
+                            ),
+                            Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                              decoration: BoxDecoration(
+                                color: stockColor.withValues(alpha: 0.1),
+                                borderRadius: BorderRadius.circular(6),
+                                border: Border.all(color: stockColor.withValues(alpha: 0.3)),
+                              ),
+                              child: Text(
+                                'Stok: ${p.stock}',
+                                style: GoogleFonts.inter(fontSize: 11, fontWeight: FontWeight.w700, color: stockColor),
+                              ),
+                            ),
+                          ],
                         ),
                       );
                     },

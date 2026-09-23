@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:google_fonts/google_fonts.dart';
 import '../../config/app_theme.dart';
 import '../../models/customer.dart';
 import '../../providers/auth_provider.dart';
@@ -25,7 +26,41 @@ class _WhatsappBroadcastScreenState extends ConsumerState<WhatsappBroadcastScree
 
   List<Customer> _customers = [];
   final Set<String> _selectedCustomerIds = {};
+  final List<Map<String, String>> _sentHistory = [];
   bool _isLoading = true;
+
+  final List<Map<String, String>> _templates = [
+    {
+      'title': 'Diskon Gajian 20%',
+      'desc': 'Spesial gajian! Dapatkan diskon 20% untuk semua produk pilihan hari ini.',
+      'code': 'GAJIAN20',
+    },
+    {
+      'title': 'Beli 1 Gratis 1 Menu Favorit',
+      'desc': 'Khusus pelanggan setia, nikmati promo beli 1 gratis 1 untuk item terlaris.',
+      'code': 'BUY1GET1',
+    },
+    {
+      'title': 'Flash Sale Akhir Pekan',
+      'desc': 'Promo kilat cuma 2 hari! Belanja hemat dengan potongan harga langsung di kasir.',
+      'code': 'WEEKENDHEMAT',
+    },
+  ];
+
+  void _applyTemplate(Map<String, String> tpl) {
+    setState(() {
+      _promoTitleController.text = tpl['title'] ?? '';
+      _promoDescController.text = tpl['desc'] ?? '';
+      _promoCodeController.text = tpl['code'] ?? '';
+      _validUntilController.text = 'Akhir Bulan Ini';
+    });
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text('Template "${tpl['title']}" diterapkan'),
+        backgroundColor: AppTheme.primaryColor,
+      ),
+    );
+  }
 
   @override
   void initState() {
@@ -76,6 +111,15 @@ class _WhatsappBroadcastScreenState extends ConsumerState<WhatsappBroadcastScree
     );
 
     WaHelper.sendWhatsAppMessage(phone: customer.phone!, message: message);
+    setState(() {
+      _sentHistory.insert(0, {
+        'name': customer.name,
+        'message': _promoTitleController.text.trim().isNotEmpty
+            ? _promoTitleController.text.trim()
+            : 'Spesial Minggu Ini',
+        'time': _formatNow(),
+      });
+    });
   }
 
   void _sendRetention(Customer customer, String storeName, int daysInactive) {
@@ -93,6 +137,19 @@ class _WhatsappBroadcastScreenState extends ConsumerState<WhatsappBroadcastScree
     );
 
     WaHelper.sendWhatsAppMessage(phone: customer.phone!, message: message);
+    setState(() {
+      _sentHistory.insert(0, {
+        'name': customer.name,
+        'message': 'Sapaan retensi ($daysInactive hari tidak aktif)',
+        'time': _formatNow(),
+      });
+    });
+  }
+
+  String _formatNow() {
+    final now = DateTime.now();
+    String two(int v) => v.toString().padLeft(2, '0');
+    return '${two(now.day)}/${two(now.month)}/${now.year} ${two(now.hour)}:${two(now.minute)}';
   }
 
   @override
@@ -102,13 +159,19 @@ class _WhatsappBroadcastScreenState extends ConsumerState<WhatsappBroadcastScree
     return Scaffold(
       backgroundColor: AppTheme.backgroundColor,
       appBar: AppBar(
-        title: const Text('WhatsApp Marketing & CRM'),
+        title: Text(
+          'WhatsApp Marketing & CRM',
+          style: GoogleFonts.inter(fontSize: 18, fontWeight: FontWeight.w700, color: AppTheme.textPrimary),
+        ),
         bottom: TabBar(
           controller: _tabController,
-          indicatorColor: AppTheme.accentColor,
+          labelColor: AppTheme.primaryColor,
+          unselectedLabelColor: AppTheme.textSecondary,
+          indicatorColor: AppTheme.primaryColor,
+          indicatorWeight: 2.5,
           tabs: const [
-            Tab(icon: Icon(Icons.campaign), text: 'Broadcast Promo'),
-            Tab(icon: Icon(Icons.autorenew), text: 'Auto-Retensi (30+ Hari)'),
+            Tab(icon: Icon(Icons.campaign_outlined), text: 'Broadcast Promo'),
+            Tab(icon: Icon(Icons.autorenew_rounded), text: 'Auto-Retensi (30+ Hari)'),
           ],
         ),
       ),
@@ -136,19 +199,55 @@ class _WhatsappBroadcastScreenState extends ConsumerState<WhatsappBroadcastScree
             padding: const EdgeInsets.all(16),
             decoration: BoxDecoration(
               color: AppTheme.surfaceColor,
-              borderRadius: BorderRadius.circular(16),
-              border: Border.all(color: AppTheme.borderColor.withValues(alpha: 0.5)),
+              borderRadius: BorderRadius.circular(AppTheme.radiusLarge),
+              border: Border.all(color: AppTheme.borderColor),
             ),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Text(
-                  'Format Pesan Promosi',
-                  style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+                Row(
+                  children: [
+                    Container(
+                      width: 40,
+                      height: 40,
+                      decoration: BoxDecoration(
+                        color: const Color(0xFF25D366).withValues(alpha: 0.12),
+                        borderRadius: BorderRadius.circular(AppTheme.radiusMedium),
+                      ),
+                      child: const Icon(Icons.campaign_outlined, color: Color(0xFF25D366), size: 22),
+                    ),
+                    const SizedBox(width: 12),
+                    Text(
+                      'Format Pesan Promosi',
+                      style: GoogleFonts.inter(fontWeight: FontWeight.w700, fontSize: 15, color: AppTheme.textPrimary),
+                    ),
+                  ],
                 ),
                 const SizedBox(height: 12),
+                Text(
+                  'Template Cepat',
+                  style: GoogleFonts.inter(fontWeight: FontWeight.w600, fontSize: 12, color: AppTheme.textSecondary),
+                ),
+                const SizedBox(height: 8),
+                Wrap(
+                  spacing: 8,
+                  runSpacing: 8,
+                  children: _templates.map((tpl) {
+                    return ActionChip(
+                      backgroundColor: AppTheme.backgroundColor,
+                      side: const BorderSide(color: AppTheme.borderColor),
+                      label: Text(
+                        tpl['title'] ?? '',
+                        style: GoogleFonts.inter(fontSize: 11, fontWeight: FontWeight.w600, color: AppTheme.primaryColor),
+                      ),
+                      onPressed: () => _applyTemplate(tpl),
+                    );
+                  }).toList(),
+                ),
+                const SizedBox(height: 16),
                 TextField(
                   controller: _promoTitleController,
+                  style: const TextStyle(fontSize: 13, color: AppTheme.textPrimary),
                   decoration: const InputDecoration(
                     labelText: 'Judul Promo',
                     hintText: 'Misal: Diskon 20% Weekend Seru',
@@ -158,6 +257,7 @@ class _WhatsappBroadcastScreenState extends ConsumerState<WhatsappBroadcastScree
                 TextField(
                   controller: _promoDescController,
                   maxLines: 3,
+                  style: const TextStyle(fontSize: 13, color: AppTheme.textPrimary),
                   decoration: const InputDecoration(
                     labelText: 'Isi Deskripsi / Produk Promo',
                     hintText: 'Detail diskon produk atau paket hemat...',
@@ -169,6 +269,7 @@ class _WhatsappBroadcastScreenState extends ConsumerState<WhatsappBroadcastScree
                     Expanded(
                       child: TextField(
                         controller: _promoCodeController,
+                        style: const TextStyle(fontSize: 13, color: AppTheme.textPrimary),
                         decoration: const InputDecoration(
                           labelText: 'Kode Voucher (Opsional)',
                           hintText: 'HEMAT20',
@@ -179,6 +280,7 @@ class _WhatsappBroadcastScreenState extends ConsumerState<WhatsappBroadcastScree
                     Expanded(
                       child: TextField(
                         controller: _validUntilController,
+                        style: const TextStyle(fontSize: 13, color: AppTheme.textPrimary),
                         decoration: const InputDecoration(
                           labelText: 'Berlaku Hingga (Opsional)',
                           hintText: '30 September 2026',
@@ -229,12 +331,20 @@ class _WhatsappBroadcastScreenState extends ConsumerState<WhatsappBroadcastScree
                 final customer = validCustomers[index];
                 final isSelected = _selectedCustomerIds.contains(customer.id);
 
-                return Card(
-                  color: AppTheme.surfaceColor,
+                return Container(
                   margin: const EdgeInsets.only(bottom: 8),
+                  decoration: BoxDecoration(
+                    color: AppTheme.surfaceColor,
+                    borderRadius: BorderRadius.circular(AppTheme.radiusMedium),
+                    border: Border.all(
+                      color: isSelected ? AppTheme.primaryColor : AppTheme.borderColor,
+                      width: isSelected ? 1.5 : 1,
+                    ),
+                  ),
                   child: ListTile(
                     leading: Checkbox(
                       value: isSelected,
+                      activeColor: AppTheme.primaryColor,
                       onChanged: (val) {
                         setState(() {
                           if (val == true) {
@@ -245,10 +355,13 @@ class _WhatsappBroadcastScreenState extends ConsumerState<WhatsappBroadcastScree
                         });
                       },
                     ),
-                    title: Text(customer.name, style: const TextStyle(fontWeight: FontWeight.bold)),
-                    subtitle: Text('${customer.phone} - ${customer.totalTransactions ?? 0} Transaksi'),
+                    title: Text(customer.name, style: GoogleFonts.inter(fontWeight: FontWeight.w700, fontSize: 14, color: AppTheme.textPrimary)),
+                    subtitle: Text(
+                      '${customer.phone} - ${customer.totalTransactions ?? 0} Transaksi',
+                      style: GoogleFonts.inter(fontSize: 12, color: AppTheme.textSecondary),
+                    ),
                     trailing: IconButton(
-                      icon: const Icon(Icons.send, color: Colors.green),
+                      icon: const Icon(Icons.send_rounded, color: Color(0xFF25D366)),
                       onPressed: () => _sendSinglePromo(customer, storeName),
                       tooltip: 'Kirim WA ke pelanggan ini',
                     ),
@@ -260,14 +373,19 @@ class _WhatsappBroadcastScreenState extends ConsumerState<WhatsappBroadcastScree
           if (_selectedCustomerIds.isNotEmpty)
             SizedBox(
               width: double.infinity,
-              height: 50,
+              height: AppTheme.touchTargetLarge,
               child: ElevatedButton.icon(
                 style: ElevatedButton.styleFrom(
                   backgroundColor: const Color(0xFF25D366),
                   foregroundColor: Colors.white,
+                  elevation: 0,
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppTheme.radiusMedium)),
                 ),
-                icon: const Icon(Icons.mark_chat_unread),
-                label: Text('Kirim ke ${_selectedCustomerIds.length} Pelanggan Terpilih (Satu per Satu)'),
+                icon: const Icon(Icons.mark_chat_unread_outlined),
+                label: Text(
+                  'Kirim ke ${_selectedCustomerIds.length} Pelanggan Terpilih',
+                  style: GoogleFonts.inter(fontWeight: FontWeight.w700, fontSize: 13),
+                ),
                 onPressed: () {
                   final target = validCustomers.where((c) => _selectedCustomerIds.contains(c.id)).toList();
                   if (target.isNotEmpty) {
@@ -279,6 +397,54 @@ class _WhatsappBroadcastScreenState extends ConsumerState<WhatsappBroadcastScree
                 },
               ),
             ),
+          if (_sentHistory.isNotEmpty) ...[
+            const SizedBox(height: 24),
+            Text(
+              'Riwayat Kirim (${_sentHistory.length})',
+              style: GoogleFonts.inter(fontWeight: FontWeight.w700, fontSize: 15, color: AppTheme.textPrimary),
+            ),
+            const SizedBox(height: 10),
+            ..._sentHistory.map((h) => _buildHistoryCard(h)),
+          ],
+        ],
+      ),
+    );
+  }
+
+  Widget _buildHistoryCard(Map<String, String> h) {
+    return Container(
+      margin: const EdgeInsets.only(bottom: 8),
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: AppTheme.surfaceColor,
+        borderRadius: BorderRadius.circular(AppTheme.radiusMedium),
+        border: Border.all(color: AppTheme.borderColor),
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Container(
+            width: 36,
+            height: 36,
+            decoration: BoxDecoration(
+              color: const Color(0xFF25D366).withValues(alpha: 0.12),
+              borderRadius: BorderRadius.circular(8),
+            ),
+            child: const Icon(Icons.check_circle_outline, color: Color(0xFF25D366), size: 20),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(h['name'] ?? '', style: GoogleFonts.inter(fontWeight: FontWeight.w700, fontSize: 13, color: AppTheme.textPrimary)),
+                const SizedBox(height: 2),
+                Text(h['message'] ?? '', maxLines: 2, overflow: TextOverflow.ellipsis, style: GoogleFonts.inter(fontSize: 12, color: AppTheme.textSecondary)),
+                const SizedBox(height: 4),
+                Text(h['time'] ?? '', style: GoogleFonts.inter(fontSize: 10, color: AppTheme.textSecondary)),
+              ],
+            ),
+          ),
         ],
       ),
     );
@@ -301,18 +467,17 @@ class _WhatsappBroadcastScreenState extends ConsumerState<WhatsappBroadcastScree
           Container(
             padding: const EdgeInsets.all(16),
             decoration: BoxDecoration(
-              color: AppTheme.accentColor.withValues(alpha: 0.1),
-              borderRadius: BorderRadius.circular(16),
-              border: Border.all(color: AppTheme.accentColor.withValues(alpha: 0.3)),
+              gradient: AppTheme.aiBadgeGradient,
+              borderRadius: BorderRadius.circular(AppTheme.radiusLarge),
             ),
-            child: const Row(
+            child: Row(
               children: [
-                Icon(Icons.tips_and_updates, color: AppTheme.accentColor, size: 30),
-                SizedBox(width: 12),
+                const Icon(Icons.tips_and_updates_outlined, color: Colors.white, size: 26),
+                const SizedBox(width: 12),
                 Expanded(
                   child: Text(
                     'AI CRM Retensi: Pelanggan yang tidak mampir > 30 hari memiliki risiko hilang 70%. Kirim sapaan hangat untuk mengajak kembali belanja.',
-                    style: TextStyle(fontSize: 13, height: 1.4),
+                    style: GoogleFonts.inter(fontSize: 12, height: 1.4, color: Colors.white),
                   ),
                 ),
               ],
@@ -321,14 +486,17 @@ class _WhatsappBroadcastScreenState extends ConsumerState<WhatsappBroadcastScree
           const SizedBox(height: 16),
           Text(
             'Daftar Pelanggan Perlu Re-engagement (${inactiveCustomers.length})',
-            style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 15),
+            style: GoogleFonts.inter(fontWeight: FontWeight.w700, fontSize: 15, color: AppTheme.textPrimary),
           ),
           const SizedBox(height: 12),
           if (inactiveCustomers.isEmpty)
-            const Center(
+            Center(
               child: Padding(
-                padding: EdgeInsets.symmetric(vertical: 40),
-                child: Text('Hebat! Tidak ada pelanggan yang menghilang lebih dari 30 hari.'),
+                padding: const EdgeInsets.symmetric(vertical: 40),
+                child: Text(
+                  'Hebat! Tidak ada pelanggan yang menghilang lebih dari 30 hari.',
+                  style: GoogleFonts.inter(color: AppTheme.textSecondary),
+                ),
               ),
             )
           else
@@ -342,31 +510,60 @@ class _WhatsappBroadcastScreenState extends ConsumerState<WhatsappBroadcastScree
                     ? 30
                     : now.difference(customer.lastVisit!).inDays;
 
-                return Card(
-                  color: AppTheme.surfaceColor,
+                return Container(
                   margin: const EdgeInsets.only(bottom: 10),
-                  child: ListTile(
-                    title: Text(customer.name, style: const TextStyle(fontWeight: FontWeight.bold)),
-                    subtitle: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text('No WA: ${customer.phone}'),
-                        Text(
-                          'Terakhir belanja: $daysInactive hari lalu',
-                          style: const TextStyle(color: Colors.amber, fontSize: 12),
-                        ),
-                      ],
-                    ),
-                    trailing: ElevatedButton.icon(
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: const Color(0xFF25D366),
-                        foregroundColor: Colors.white,
-                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                  padding: const EdgeInsets.all(14),
+                  decoration: BoxDecoration(
+                    color: AppTheme.surfaceColor,
+                    borderRadius: BorderRadius.circular(AppTheme.radiusMedium),
+                    border: Border.all(color: AppTheme.borderColor),
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        children: [
+                          Expanded(
+                            child: Text(
+                              customer.name,
+                              style: GoogleFonts.inter(fontWeight: FontWeight.w700, fontSize: 14, color: AppTheme.textPrimary),
+                            ),
+                          ),
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                            decoration: BoxDecoration(
+                              color: AppTheme.warningColor.withValues(alpha: 0.12),
+                              borderRadius: BorderRadius.circular(6),
+                            ),
+                            child: Text(
+                              '$daysInactive hari',
+                              style: GoogleFonts.inter(fontSize: 11, fontWeight: FontWeight.w700, color: AppTheme.warningColor),
+                            ),
+                          ),
+                        ],
                       ),
-                      icon: const Icon(Icons.chat, size: 16),
-                      label: const Text('Sapa WA'),
-                      onPressed: () => _sendRetention(customer, storeName, daysInactive),
-                    ),
+                      const SizedBox(height: 4),
+                      Text(
+                        'No WA: ${customer.phone}',
+                        style: GoogleFonts.inter(fontSize: 12, color: AppTheme.textSecondary),
+                      ),
+                      const SizedBox(height: 10),
+                      SizedBox(
+                        width: double.infinity,
+                        height: AppTheme.touchTargetMedium,
+                        child: ElevatedButton.icon(
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: const Color(0xFF25D366),
+                            foregroundColor: Colors.white,
+                            elevation: 0,
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppTheme.radiusMedium)),
+                          ),
+                          icon: const Icon(Icons.chat_outlined, size: 16),
+                          label: Text('Sapa WA', style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.w700)),
+                          onPressed: () => _sendRetention(customer, storeName, daysInactive),
+                        ),
+                      ),
+                    ],
                   ),
                 );
               },

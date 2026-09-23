@@ -1,8 +1,9 @@
-// lib/screens/auth/login_screen.dart - STARADMIN EDITION
+// lib/screens/auth/login_screen.dart
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
+import '../../config/app_theme.dart';
 import '../../providers/auth_provider.dart';
 
 class LoginScreen extends ConsumerStatefulWidget {
@@ -47,7 +48,6 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
       final user = await authService.getCurrentUser();
       if (user != null && mounted) {
         ref.read(currentUserProvider.notifier).setUserDirectly(user);
-        // Navigate based on role
         switch (user.role) {
           case 'owner':
             context.go('/owner');
@@ -67,7 +67,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text('Login gagal: ${e.toString()}'),
-            backgroundColor: Colors.red[700],
+            backgroundColor: AppTheme.errorColor,
           ),
         );
       }
@@ -79,7 +79,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFF8FAFC),
+      backgroundColor: AppTheme.backgroundColor,
       body: SafeArea(
         child: Center(
           child: SingleChildScrollView(
@@ -91,17 +91,10 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  // LOGO & BRANDING
                   _buildLogo(),
-                  
                   const SizedBox(height: 28),
-                  
-                  // CARD LOGIN CENTENNIAL WHITE & OCEAN BLUE
-                  _buildStarAdminCard(),
-                  
+                  _buildCard(),
                   const SizedBox(height: 24),
-                  
-                  // FOOTER MESSAGE
                   _buildFooter(),
                 ],
               ),
@@ -119,17 +112,13 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
           width: 64,
           height: 64,
           decoration: BoxDecoration(
-            gradient: const LinearGradient(
-              colors: [Color(0xFF06B6D4), Color(0xFF0284C7)],
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
-            ),
-            borderRadius: BorderRadius.circular(18),
-            boxShadow: const [
+            gradient: AppTheme.primaryGradient,
+            borderRadius: BorderRadius.circular(AppTheme.radiusLarge),
+            boxShadow: [
               BoxShadow(
-                color: Color(0x2A0284C7),
+                color: AppTheme.primaryColor.withValues(alpha: 0.25),
                 blurRadius: 16,
-                offset: Offset(0, 6),
+                offset: const Offset(0, 6),
               ),
             ],
           ),
@@ -145,7 +134,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
           style: GoogleFonts.inter(
             fontSize: 24,
             fontWeight: FontWeight.w800,
-            color: const Color(0xFF0F172A),
+            color: AppTheme.textPrimary,
             letterSpacing: -0.5,
           ),
         ),
@@ -154,7 +143,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
           'Aplikasi Kasir UMKM Super-App',
           style: GoogleFonts.inter(
             fontSize: 13,
-            color: const Color(0xFF64748B),
+            color: AppTheme.textSecondary,
             fontWeight: FontWeight.w500,
           ),
         ),
@@ -162,21 +151,21 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
     );
   }
 
-  Widget _buildStarAdminCard() {
+  Widget _buildCard() {
     return Container(
       padding: const EdgeInsets.all(24),
       decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(24),
+        color: AppTheme.surfaceColor,
+        borderRadius: BorderRadius.circular(AppTheme.radiusLarge),
         border: Border.all(
-          color: const Color(0xFFE2E8F0),
+          color: AppTheme.borderColor,
           width: 1,
         ),
-        boxShadow: const [
+        boxShadow: [
           BoxShadow(
-            color: Color(0x0A0F172A),
+            color: AppTheme.textPrimary.withValues(alpha: 0.04),
             blurRadius: 20,
-            offset: Offset(0, 6),
+            offset: const Offset(0, 6),
           ),
         ],
       ),
@@ -190,7 +179,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
               style: GoogleFonts.inter(
                 fontSize: 18,
                 fontWeight: FontWeight.w700,
-                color: const Color(0xFF0F172A),
+                color: AppTheme.textPrimary,
               ),
               textAlign: TextAlign.center,
             ),
@@ -199,17 +188,15 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
               'Kelola produk, pos kasir, laporan, dan karyawan',
               style: GoogleFonts.inter(
                 fontSize: 12,
-                color: const Color(0xFF64748B),
+                color: AppTheme.textSecondary,
               ),
               textAlign: TextAlign.center,
             ),
             const SizedBox(height: 22),
-            
-            // EMAIL FIELD
             _buildTextField(
               controller: _emailController,
               label: 'Email Bisnis / Owner',
-              hint: 'fresh1789288641@testakhir.test',
+              hint: 'owner@kasirgo.com',
               prefixIcon: Icons.email_outlined,
               validator: (value) {
                 if (value == null || value.isEmpty) {
@@ -221,10 +208,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                 return null;
               },
             ),
-            
             const SizedBox(height: 16),
-            
-            // PASSWORD FIELD
             _buildTextField(
               controller: _passwordController,
               label: 'Password',
@@ -241,15 +225,9 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                 return null;
               },
             ),
-            
             const SizedBox(height: 22),
-            
-            // LOGIN BUTTON - OCEAN BLUE GRADIENT
             _buildPrimaryButton('MASUK KE KASIRGO'),
-            
             const SizedBox(height: 14),
-            
-            // REGISTER LINK
             Row(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
@@ -257,7 +235,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                   'Belum punya outlet? ',
                   style: GoogleFonts.inter(
                     fontSize: 13,
-                    color: const Color(0xFF64748B),
+                    color: AppTheme.textSecondary,
                   ),
                 ),
                 GestureDetector(
@@ -269,7 +247,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                     style: GoogleFonts.inter(
                       fontSize: 13,
                       fontWeight: FontWeight.w700,
-                      color: const Color(0xFF0284C7),
+                      color: AppTheme.primaryColor,
                     ),
                   ),
                 ),
@@ -293,48 +271,45 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
       controller: controller,
       obscureText: obscureText,
       validator: validator,
-      style: const TextStyle(fontSize: 13, color: Color(0xFF0F172A)),
+      style: const TextStyle(fontSize: 13, color: AppTheme.textPrimary),
       decoration: InputDecoration(
         labelText: label,
         hintText: hint,
-        prefixIcon: Icon(prefixIcon, color: const Color(0xFF94A3B8), size: 18),
+        prefixIcon: Icon(prefixIcon, color: AppTheme.textSecondary, size: 18),
         filled: true,
-        fillColor: const Color(0xFFF8FAFC),
+        fillColor: AppTheme.backgroundColor,
         border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(14),
-          borderSide: const BorderSide(color: Color(0xFFE2E8F0)),
+          borderRadius: BorderRadius.circular(AppTheme.radiusMedium),
+          borderSide: const BorderSide(color: AppTheme.borderColor),
         ),
         enabledBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(14),
-          borderSide: const BorderSide(color: Color(0xFFE2E8F0)),
+          borderRadius: BorderRadius.circular(AppTheme.radiusMedium),
+          borderSide: const BorderSide(color: AppTheme.borderColor),
         ),
         focusedBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(14),
-          borderSide: const BorderSide(color: Color(0xFF0284C7), width: 1.8),
+          borderRadius: BorderRadius.circular(AppTheme.radiusMedium),
+          borderSide: const BorderSide(color: AppTheme.primaryColor, width: 1.8),
         ),
         errorBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(14),
-          borderSide: const BorderSide(color: Color(0xFFEF4444)),
+          borderRadius: BorderRadius.circular(AppTheme.radiusMedium),
+          borderSide: const BorderSide(color: AppTheme.errorColor),
         ),
-        contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 13),
+        contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
       ),
     );
   }
 
   Widget _buildPrimaryButton(String text) {
     return Container(
+      height: AppTheme.touchTargetLarge,
       decoration: BoxDecoration(
-        gradient: const LinearGradient(
-          colors: [Color(0xFF06B6D4), Color(0xFF0284C7)],
-          begin: Alignment.centerLeft,
-          end: Alignment.centerRight,
-        ),
-        borderRadius: BorderRadius.circular(14),
-        boxShadow: const [
+        gradient: AppTheme.primaryGradient,
+        borderRadius: BorderRadius.circular(AppTheme.radiusMedium),
+        boxShadow: [
           BoxShadow(
-            color: Color(0x2E0284C7),
+            color: AppTheme.primaryColor.withValues(alpha: 0.25),
             blurRadius: 12,
-            offset: Offset(0, 4),
+            offset: const Offset(0, 4),
           ),
         ],
       ),
@@ -344,9 +319,8 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
           backgroundColor: Colors.transparent,
           shadowColor: Colors.transparent,
           foregroundColor: Colors.white,
-          padding: const EdgeInsets.symmetric(vertical: 14),
           shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(14),
+            borderRadius: BorderRadius.circular(AppTheme.radiusMedium),
           ),
           elevation: 0,
         ),
@@ -372,18 +346,14 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
   }
 
   Widget _buildFooter() {
-    return Column(
-      children: [
-        Text(
-          '100% Gratis Selamanya • Standar UMKM Indonesia',
-          textAlign: TextAlign.center,
-          style: GoogleFonts.inter(
-            fontSize: 11,
-            color: const Color(0xFF94A3B8),
-            fontWeight: FontWeight.w500,
-          ),
-        ),
-      ],
+    return Text(
+      '100% Gratis Selamanya • Standar UMKM Indonesia',
+      textAlign: TextAlign.center,
+      style: GoogleFonts.inter(
+        fontSize: 11,
+        color: AppTheme.textSecondary,
+        fontWeight: FontWeight.w500,
+      ),
     );
   }
 }

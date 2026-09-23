@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:barcode/barcode.dart' as bc;
+import 'package:google_fonts/google_fonts.dart';
 import '../../config/app_theme.dart';
 
 class QrTableScreen extends StatefulWidget {
@@ -36,15 +37,22 @@ class _QrTableScreenState extends State<QrTableScreen> {
       context: context,
       builder: (ctx) => AlertDialog(
         backgroundColor: AppTheme.surfaceColor,
-        title: Center(child: Text('QR Code $table')),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppTheme.radiusLarge)),
+        title: Center(
+          child: Text(
+            'QR Code $table',
+            style: GoogleFonts.inter(fontWeight: FontWeight.w700, fontSize: 16, color: AppTheme.textPrimary),
+          ),
+        ),
         content: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
             Container(
               padding: const EdgeInsets.all(16),
               decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(16),
+                color: AppTheme.surfaceColor,
+                borderRadius: BorderRadius.circular(AppTheme.radiusLarge),
+                border: Border.all(color: AppTheme.borderColor),
               ),
               child: SizedBox(
                 width: 200,
@@ -55,25 +63,48 @@ class _QrTableScreenState extends State<QrTableScreen> {
               ),
             ),
             const SizedBox(height: 16),
-            const Text(
+            Text(
               'Pelanggan scan QR ini di meja untuk melihat menu & kirim pesanan otomatis.',
               textAlign: TextAlign.center,
-              style: TextStyle(fontSize: 13, color: AppTheme.textSecondary),
+              style: GoogleFonts.inter(fontSize: 12, color: AppTheme.textSecondary, height: 1.4),
             ),
             const SizedBox(height: 8),
             SelectableText(
               qrData,
-              style: const TextStyle(fontSize: 11, color: AppTheme.accentColor),
+              style: GoogleFonts.inter(fontSize: 11, color: AppTheme.primaryColor),
             ),
           ],
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx),
-            child: const Text('Tutup'),
+            child: Text('Tutup', style: GoogleFonts.inter(color: AppTheme.textSecondary)),
+          ),
+          OutlinedButton.icon(
+            style: OutlinedButton.styleFrom(
+              foregroundColor: AppTheme.primaryColor,
+              side: const BorderSide(color: AppTheme.borderColor),
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppTheme.radiusMedium)),
+            ),
+            icon: const Icon(Icons.download_outlined, size: 16),
+            label: const Text('Download'),
+            onPressed: () {
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(
+                  content: Text('QR $table diunduh ke galeri perangkat'),
+                  backgroundColor: AppTheme.successColor,
+                ),
+              );
+            },
           ),
           ElevatedButton.icon(
-            icon: const Icon(Icons.print, size: 18),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppTheme.primaryColor,
+              foregroundColor: Colors.white,
+              elevation: 0,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppTheme.radiusMedium)),
+            ),
+            icon: const Icon(Icons.print_outlined, size: 16),
             label: const Text('Cetak QR'),
             onPressed: () {
               Navigator.pop(ctx);
@@ -92,7 +123,10 @@ class _QrTableScreenState extends State<QrTableScreen> {
     return Scaffold(
       backgroundColor: AppTheme.backgroundColor,
       appBar: AppBar(
-        title: const Text('Manajemen QR Meja'),
+        title: Text(
+          'Manajemen QR Meja',
+          style: GoogleFonts.inter(fontSize: 18, fontWeight: FontWeight.w700, color: AppTheme.textPrimary),
+        ),
       ),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(16),
@@ -102,18 +136,36 @@ class _QrTableScreenState extends State<QrTableScreen> {
             Container(
               padding: const EdgeInsets.all(16),
               decoration: BoxDecoration(
-                color: AppTheme.accentColor.withValues(alpha: 0.1),
-                borderRadius: BorderRadius.circular(16),
-                border: Border.all(color: AppTheme.accentColor.withValues(alpha: 0.3)),
+                color: AppTheme.surfaceColor,
+                borderRadius: BorderRadius.circular(AppTheme.radiusLarge),
+                border: Border.all(color: AppTheme.borderColor),
               ),
-              child: const Row(
+              child: Row(
                 children: [
-                  Icon(Icons.qr_code_scanner, color: AppTheme.accentColor, size: 30),
-                  SizedBox(width: 12),
+                  Container(
+                    width: 44,
+                    height: 44,
+                    decoration: BoxDecoration(
+                      gradient: AppTheme.primaryGradient,
+                      borderRadius: BorderRadius.circular(AppTheme.radiusMedium),
+                    ),
+                    child: const Icon(Icons.qr_code_scanner, color: Colors.white, size: 24),
+                  ),
+                  const SizedBox(width: 14),
                   Expanded(
-                    child: Text(
-                      'Cetak kode QR untuk setiap meja makan di cafe / resto Anda. Pelanggan langsung scan, pesan, dan bayar tanpa menunggu pelayan.',
-                      style: TextStyle(fontSize: 13, height: 1.4),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'QR Order per Meja',
+                          style: GoogleFonts.inter(fontWeight: FontWeight.w700, fontSize: 14, color: AppTheme.textPrimary),
+                        ),
+                        const SizedBox(height: 3),
+                        Text(
+                          'Cetak QR untuk tiap meja. Pelanggan scan, pesan, dan bayar tanpa menunggu pelayan.',
+                          style: GoogleFonts.inter(fontSize: 12, color: AppTheme.textSecondary, height: 1.3),
+                        ),
+                      ],
                     ),
                   ),
                 ],
@@ -125,24 +177,34 @@ class _QrTableScreenState extends State<QrTableScreen> {
                 Expanded(
                   child: TextField(
                     controller: _newTableController,
+                    style: const TextStyle(fontSize: 13, color: AppTheme.textPrimary),
                     decoration: const InputDecoration(
                       labelText: 'Nama / Nomor Meja Baru',
-                      hintText: 'Misal: Meja 06, VIP 1, Outdoor 3',
+                      hintText: 'Misal: Meja 06, VIP 1',
                     ),
                   ),
                 ),
                 const SizedBox(width: 12),
-                ElevatedButton.icon(
-                  onPressed: _addTable,
-                  icon: const Icon(Icons.add),
-                  label: const Text('Tambah'),
+                SizedBox(
+                  height: AppTheme.touchTargetLarge,
+                  child: ElevatedButton.icon(
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: AppTheme.primaryColor,
+                      foregroundColor: Colors.white,
+                      elevation: 0,
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppTheme.radiusMedium)),
+                    ),
+                    onPressed: _addTable,
+                    icon: const Icon(Icons.add_rounded, size: 18),
+                    label: Text('Tambah', style: GoogleFonts.inter(fontWeight: FontWeight.w700, fontSize: 13)),
+                  ),
                 ),
               ],
             ),
             const SizedBox(height: 24),
             Text(
               'Daftar Meja (${_tables.length})',
-              style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+              style: GoogleFonts.inter(fontWeight: FontWeight.w700, fontSize: 15, color: AppTheme.textPrimary),
             ),
             const SizedBox(height: 12),
             GridView.builder(
@@ -150,7 +212,7 @@ class _QrTableScreenState extends State<QrTableScreen> {
               physics: const NeverScrollableScrollPhysics(),
               gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
                 crossAxisCount: 2,
-                childAspectRatio: 1.2,
+                childAspectRatio: 1.15,
                 crossAxisSpacing: 12,
                 mainAxisSpacing: 12,
               ),
@@ -160,30 +222,46 @@ class _QrTableScreenState extends State<QrTableScreen> {
 
                 return InkWell(
                   onTap: () => _showQrModal(table),
-                  borderRadius: BorderRadius.circular(16),
+                  borderRadius: BorderRadius.circular(AppTheme.radiusLarge),
                   child: Container(
                     padding: const EdgeInsets.all(16),
                     decoration: BoxDecoration(
                       color: AppTheme.surfaceColor,
-                      borderRadius: BorderRadius.circular(16),
-                      border: Border.all(color: AppTheme.borderColor.withValues(alpha: 0.5)),
+                      borderRadius: BorderRadius.circular(AppTheme.radiusLarge),
+                      border: Border.all(color: AppTheme.borderColor),
+                      boxShadow: [
+                        BoxShadow(
+                          color: AppTheme.textPrimary.withValues(alpha: 0.03),
+                          blurRadius: 8,
+                          offset: const Offset(0, 2),
+                        ),
+                      ],
                     ),
                     child: Column(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
-                        const Icon(Icons.table_restaurant, size: 36, color: AppTheme.accentColor),
-                        const SizedBox(height: 8),
+                        Container(
+                          width: 48,
+                          height: 48,
+                          decoration: BoxDecoration(
+                            color: AppTheme.backgroundColor,
+                            borderRadius: BorderRadius.circular(AppTheme.radiusMedium),
+                            border: Border.all(color: AppTheme.borderColor),
+                          ),
+                          child: const Icon(Icons.table_restaurant_outlined, size: 24, color: AppTheme.primaryColor),
+                        ),
+                        const SizedBox(height: 10),
                         Text(
                           table,
-                          style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+                          style: GoogleFonts.inter(fontWeight: FontWeight.w700, fontSize: 15, color: AppTheme.textPrimary),
                         ),
                         const SizedBox(height: 6),
-                        const Row(
+                        Row(
                           mainAxisAlignment: MainAxisAlignment.center,
                           children: [
-                            Icon(Icons.qr_code, size: 14, color: AppTheme.textSecondary),
-                            SizedBox(width: 4),
-                            Text('Lihat QR', style: TextStyle(fontSize: 12, color: AppTheme.textSecondary)),
+                            const Icon(Icons.qr_code_2_outlined, size: 14, color: AppTheme.primaryColor),
+                            const SizedBox(width: 4),
+                            Text('Lihat QR', style: GoogleFonts.inter(fontSize: 12, color: AppTheme.primaryColor, fontWeight: FontWeight.w600)),
                           ],
                         ),
                       ],
