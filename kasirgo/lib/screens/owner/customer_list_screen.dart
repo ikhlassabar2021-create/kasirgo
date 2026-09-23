@@ -709,14 +709,15 @@ class _CustomerListScreenState extends ConsumerState<CustomerListScreen> {
                               margin: const EdgeInsets.only(bottom: 8),
                               shape: RoundedRectangleBorder(
                                 borderRadius: BorderRadius.circular(12),
-                                side: BorderSide(
-                                  color: AppTheme.borderColor.withValues(alpha: 0.5),
+                                side: const BorderSide(
+                                  color: AppTheme.borderColor,
                                 ),
                               ),
                               child: InkWell(
                                 borderRadius: BorderRadius.circular(12),
                                 onTap: () => _showCustomerDetail(customer),
-                                child: Padding(
+                                child: Container(
+                                  constraints: const BoxConstraints(minHeight: AppTheme.touchTargetLarge),
                                   padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
                                   child: Row(
                                     children: [

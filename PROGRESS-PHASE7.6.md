@@ -1,8 +1,18 @@
 # PROGRESS PHASE 7.6
 SELESAI: ST7.6-1 (design system v2 tokens + shared components + Inter font)
 SELESAI: ST7.6-2 (retrofit Owner core: dashboard, product mgmt, staff mgmt, KYC/settings)
-BERIKUTNYA: ST7.6-3 (retrofit batch 2: owner pendukung + channel/modules)
+SELESAI: ST7.6-3 (retrofit POS, Cart/Checkout, Report, AI badge, Customer/Employee list)
+BERIKUTNYA: ST7.6-4 (retrofit batch: modul operasional, channel, dan screen pendukung lainnya)
 BLOCKER: -
+
+## Completed Items ST7.6-3:
+- product_grid.dart: stock badge threshold tokens (Hijau>10, Kuning 1-10, Merah 0), corner stock badge layout
+- cart_panel.dart: Ocean White light surface + border token replacing legacy alpha white
+- checkout_dialog.dart: light surface styling, borderColor, chip selection tokens
+- report_screen.dart: dihapus ThemeData.dark() fallback -> AppTheme.lightTheme, fl_chart containers -> AppTheme.surfaceColor/borderColor
+- health_score_screen.dart & owner_home_screen.dart: AppTheme.aiBadgeGradient pada badge AI Co-Pilot / Diagnostics
+- customer_list_screen.dart & employee_screen.dart: solid AppTheme.borderColor pada card list, minHeight touch target 56dp (AppTheme.touchTargetLarge)
+- Semua file lulus `dart analyze` (0 error)
 
 ## Completed Items ST7.6-2:
 - owner_home_screen.dart: notification/AI card colors -> AppTheme tokens (error/warning/primary)

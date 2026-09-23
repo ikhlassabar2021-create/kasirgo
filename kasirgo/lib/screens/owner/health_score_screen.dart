@@ -193,9 +193,36 @@ class _HealthScoreScreenState extends ConsumerState<HealthScoreScreen> {
                     ),
                   ),
                   const SizedBox(height: 24),
-                  const Text(
-                    'Komponen Penilaian (AI Diagnostics)',
-                    style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      const Text(
+                        'Komponen Penilaian (AI Diagnostics)',
+                        style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+                      ),
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                        decoration: BoxDecoration(
+                          gradient: AppTheme.aiBadgeGradient,
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: const Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(Icons.auto_awesome, color: Colors.white, size: 12),
+                            SizedBox(width: 4),
+                            Text(
+                              'AI Engine',
+                              style: TextStyle(
+                                color: Colors.white,
+                                fontWeight: FontWeight.bold,
+                                fontSize: 11,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
                   ),
                   const SizedBox(height: 12),
                   _buildMetricRow('Tren Omset (30 hari)', _revenueTrendScore, 30),

@@ -216,11 +216,17 @@ class _ProductCard extends StatelessWidget {
                             ],
                             const SizedBox(height: 1),
                             Text(
-                              isOutOfStock ? 'Habis' : 'Stok ${product.stock}',
+                              isOutOfStock
+                                  ? 'Habis'
+                                  : 'Stok ${product.stock}',
                               style: GoogleFonts.inter(
-                                color: isOutOfStock ? AppTheme.errorColor : AppTheme.textSecondary,
+                                color: product.stock <= 0
+                                    ? AppTheme.errorColor
+                                    : product.stock <= 10
+                                        ? AppTheme.warningColor
+                                        : AppTheme.successColor,
                                 fontSize: 9,
-                                fontWeight: FontWeight.w500,
+                                fontWeight: FontWeight.w600,
                               ),
                             ),
                           ],
@@ -229,26 +235,45 @@ class _ProductCard extends StatelessWidget {
                     ),
                   ],
                 ),
-                  if (hasDiscount)
-                    Positioned(
-                      top: 6,
-                      left: 6,
-                      child: Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2.5),
-                        decoration: BoxDecoration(
-                          color: AppTheme.errorColor,
-                          borderRadius: BorderRadius.circular(6),
-                        ),
-                        child: Text(
-                          discountBadge!,
-                          style: GoogleFonts.inter(
-                            color: Colors.white,
-                            fontSize: 9,
-                            fontWeight: FontWeight.w800,
+                  Positioned(
+                    top: 6,
+                    left: 6,
+                    child: hasDiscount
+                        ? Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2.5),
+                            decoration: BoxDecoration(
+                              color: AppTheme.errorColor,
+                              borderRadius: BorderRadius.circular(6),
+                            ),
+                            child: Text(
+                              discountBadge!,
+                              style: GoogleFonts.inter(
+                                color: Colors.white,
+                                fontSize: 9,
+                                fontWeight: FontWeight.w800,
+                              ),
+                            ),
+                          )
+                        : Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 2),
+                            decoration: BoxDecoration(
+                              color: product.stock <= 0
+                                  ? AppTheme.errorColor
+                                  : product.stock <= 10
+                                      ? AppTheme.warningColor
+                                      : AppTheme.successColor,
+                              borderRadius: BorderRadius.circular(5),
+                            ),
+                            child: Text(
+                              product.stock <= 0 ? '0' : '${product.stock}',
+                              style: GoogleFonts.inter(
+                                color: Colors.white,
+                                fontSize: 8.5,
+                                fontWeight: FontWeight.w800,
+                              ),
+                            ),
                           ),
-                        ),
-                      ),
-                    ),
+                  ),
                   if (hasInCart)
                     Positioned(
                       top: 6,

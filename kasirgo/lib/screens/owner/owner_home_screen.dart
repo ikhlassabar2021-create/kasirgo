@@ -682,7 +682,35 @@ class _OwnerHomeScreenState extends ConsumerState<OwnerHomeScreen> {
                 ),
               ),
               const SizedBox(height: 28),
-              const _SectionHeader(title: 'AI Co-Pilot'),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  const _SectionHeader(title: 'AI Co-Pilot'),
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                    decoration: BoxDecoration(
+                      gradient: AppTheme.aiBadgeGradient,
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    child: const Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(Icons.auto_awesome, color: Colors.white, size: 11),
+                        SizedBox(width: 4),
+                        Text(
+                          'AI ACTIVE',
+                          style: TextStyle(
+                            color: Colors.white,
+                            fontSize: 10,
+                            fontWeight: FontWeight.w800,
+                            letterSpacing: 0.5,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
               const SizedBox(height: 12),
               _buildAiInsights(summary),
             ],

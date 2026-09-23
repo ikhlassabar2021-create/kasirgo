@@ -119,12 +119,7 @@ class _ReportScreenState extends ConsumerState<ReportScreen> with SingleTickerPr
       ),
       builder: (context, child) {
         return Theme(
-          data: ThemeData.dark().copyWith(
-            colorScheme: const ColorScheme.dark(
-              primary: AppTheme.primaryColor,
-              surface: AppTheme.surfaceColor,
-            ),
-          ),
+          data: AppTheme.lightTheme,
           child: child!,
         );
       },
@@ -595,9 +590,9 @@ class _ReportScreenState extends ConsumerState<ReportScreen> with SingleTickerPr
       height: 220,
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: AppTheme.surfaceColor.withValues(alpha: 0.8),
+        color: AppTheme.surfaceColor,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: AppTheme.borderColor.withValues(alpha: 0.5)),
+        border: Border.all(color: AppTheme.borderColor),
       ),
       child: spots.isEmpty
           ? const Center(child: Text('Tidak ada data', style: TextStyle(color: AppTheme.textSecondary)))
@@ -693,9 +688,9 @@ class _ReportScreenState extends ConsumerState<ReportScreen> with SingleTickerPr
             height: 200,
             padding: const EdgeInsets.all(16),
             decoration: BoxDecoration(
-              color: AppTheme.surfaceColor.withValues(alpha: 0.8),
+              color: AppTheme.surfaceColor,
               borderRadius: BorderRadius.circular(16),
-              border: Border.all(color: AppTheme.borderColor.withValues(alpha: 0.5)),
+              border: Border.all(color: AppTheme.borderColor),
             ),
             child: BarChart(
               BarChartData(
@@ -860,9 +855,9 @@ class _ReportScreenState extends ConsumerState<ReportScreen> with SingleTickerPr
           Container(
             padding: const EdgeInsets.all(16),
             decoration: BoxDecoration(
-              color: AppTheme.surfaceColor.withValues(alpha: 0.8),
+              color: AppTheme.surfaceColor,
               borderRadius: BorderRadius.circular(16),
-              border: Border.all(color: AppTheme.borderColor.withValues(alpha: 0.5)),
+              border: Border.all(color: AppTheme.borderColor),
             ),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -1051,9 +1046,9 @@ class _ReportCard extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: AppTheme.surfaceColor.withValues(alpha: 0.8),
+        color: AppTheme.surfaceColor,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: AppTheme.borderColor.withValues(alpha: 0.5)),
+        border: Border.all(color: AppTheme.borderColor),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,

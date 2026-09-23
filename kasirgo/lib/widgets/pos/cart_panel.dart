@@ -32,9 +32,9 @@ class CartContent extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       decoration: BoxDecoration(
-        color: AppTheme.surfaceColor.withValues(alpha: 0.92),
+        color: AppTheme.surfaceColor.withValues(alpha: 0.95),
         borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
-        border: Border.all(color: Colors.white.withValues(alpha: 0.08)),
+        border: Border.all(color: AppTheme.borderColor),
       ),
       child: ClipRRect(
         borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
@@ -84,7 +84,7 @@ class CartContent extends StatelessWidget {
                   ],
                 ),
               ),
-              Divider(height: 1, color: Colors.white.withValues(alpha: 0.06)),
+              Divider(height: 1, color: AppTheme.borderColor),
               Expanded(
                 child: items.isEmpty
                     ? const _EmptyCart()
@@ -197,7 +197,7 @@ class _EmptyCart extends StatelessWidget {
             decoration: BoxDecoration(
               color: AppTheme.surfaceColor,
               shape: BoxShape.circle,
-              border: Border.all(color: Colors.white.withValues(alpha: 0.06)),
+              border: Border.all(color: AppTheme.borderColor),
             ),
             child: const Icon(Icons.shopping_bag_outlined, color: AppTheme.textSecondary, size: 28),
           ),
@@ -229,9 +229,9 @@ class _CartItemRow extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
       decoration: BoxDecoration(
-        color: AppTheme.backgroundColor.withValues(alpha: 0.5),
+        color: AppTheme.backgroundColor,
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: Colors.white.withValues(alpha: 0.05)),
+        border: Border.all(color: AppTheme.borderColor),
       ),
       child: Row(
         children: [
@@ -330,9 +330,9 @@ class _CheckoutBar extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       padding: const EdgeInsets.fromLTRB(16, 12, 16, 12),
-      decoration: BoxDecoration(
-        color: AppTheme.surfaceColor.withValues(alpha: 0.6),
-        border: Border(top: BorderSide(color: Colors.white.withValues(alpha: 0.06))),
+      decoration: const BoxDecoration(
+        color: AppTheme.surfaceColor,
+        border: Border(top: BorderSide(color: AppTheme.borderColor)),
       ),
       child: SafeArea(
         top: false,

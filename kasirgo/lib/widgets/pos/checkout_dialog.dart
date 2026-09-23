@@ -144,9 +144,9 @@ class _CheckoutDialogState extends State<CheckoutDialog> {
           filter: ImageFilter.blur(sigmaX: 20, sigmaY: 20),
           child: Container(
             decoration: BoxDecoration(
-              color: AppTheme.surfaceColor.withValues(alpha: 0.94),
+              color: AppTheme.surfaceColor,
               borderRadius: BorderRadius.circular(24),
-              border: Border.all(color: Colors.white.withValues(alpha: 0.09)),
+              border: Border.all(color: AppTheme.borderColor),
             ),
             child: ConstrainedBox(
               constraints: const BoxConstraints(maxWidth: 460, maxHeight: 720),
@@ -179,9 +179,9 @@ class _CheckoutDialogState extends State<CheckoutDialog> {
                             Container(
                               padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                               decoration: BoxDecoration(
-                                color: AppTheme.backgroundColor.withValues(alpha: 0.5),
+                                color: AppTheme.backgroundColor,
                                 borderRadius: BorderRadius.circular(10),
-                                border: Border.all(color: Colors.white.withValues(alpha: 0.07)),
+                                border: Border.all(color: AppTheme.borderColor),
                               ),
                               child: Row(
                                 children: [
@@ -211,7 +211,7 @@ class _CheckoutDialogState extends State<CheckoutDialog> {
                                                 border: Border.all(
                                                   color: _qrisMode == 'static'
                                                       ? AppTheme.primaryColor
-                                                      : Colors.white.withValues(alpha: 0.07),
+                                                      : AppTheme.borderColor,
                                                   width: 1.5,
                                                 ),
                                               ),
@@ -245,7 +245,7 @@ class _CheckoutDialogState extends State<CheckoutDialog> {
                                                 border: Border.all(
                                                   color: _qrisMode == 'dynamic'
                                                       ? AppTheme.primaryColor
-                                                      : Colors.white.withValues(alpha: 0.07),
+                                                      : AppTheme.borderColor,
                                                   width: 1.5,
                                                 ),
                                               ),
@@ -330,8 +330,8 @@ class _CheckoutDialogState extends State<CheckoutDialog> {
   Widget _buildHeader() {
     return Container(
       padding: const EdgeInsets.fromLTRB(20, 16, 12, 14),
-      decoration: BoxDecoration(
-        border: Border(bottom: BorderSide(color: Colors.white.withValues(alpha: 0.06))),
+      decoration: const BoxDecoration(
+        border: Border(bottom: BorderSide(color: AppTheme.borderColor)),
       ),
       child: Row(
         children: [
@@ -376,7 +376,7 @@ class _CheckoutDialogState extends State<CheckoutDialog> {
           ],
         ),
         borderRadius: BorderRadius.circular(18),
-        border: Border.all(color: Colors.white.withValues(alpha: 0.12)),
+        border: Border.all(color: AppTheme.borderColor),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -384,7 +384,7 @@ class _CheckoutDialogState extends State<CheckoutDialog> {
           Text(
             'TOTAL TAGIHAN',
             style: GoogleFonts.inter(
-              color: Colors.white.withValues(alpha: 0.7),
+              color: AppTheme.textSecondary,
               fontSize: 11,
               fontWeight: FontWeight.w700,
               letterSpacing: 1.2,
@@ -420,7 +420,7 @@ class _CheckoutDialogState extends State<CheckoutDialog> {
             color: isSelected ? AppTheme.primaryColor.withValues(alpha: 0.15) : AppTheme.backgroundColor.withValues(alpha: 0.4),
             borderRadius: BorderRadius.circular(14),
             border: Border.all(
-              color: isSelected ? AppTheme.primaryColor : Colors.white.withValues(alpha: 0.07),
+              color: isSelected ? AppTheme.primaryColor : AppTheme.borderColor,
               width: isSelected ? 1.6 : 1,
             ),
           ),
@@ -733,7 +733,7 @@ class _CheckoutDialogState extends State<CheckoutDialog> {
       decoration: BoxDecoration(
         color: AppTheme.backgroundColor.withValues(alpha: 0.4),
         borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: Colors.white.withValues(alpha: 0.07)),
+        border: Border.all(color: AppTheme.borderColor),
       ),
       child: const Column(
         crossAxisAlignment: CrossAxisAlignment.start,
