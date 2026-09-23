@@ -5,6 +5,7 @@ import 'package:supabase_flutter/supabase_flutter.dart' as sb;
 import '../../config/app_theme.dart';
 import '../../models/product.dart';
 import '../../models/transaction.dart';
+import '../../models/tip.dart';
 import '../../services/supabase_service.dart';
 import '../owner/product_list_screen.dart';
 import '../../widgets/pos/product_grid.dart';
@@ -143,6 +144,21 @@ class _CashierPosScreenState extends ConsumerState<CashierPosScreen> {
       final created = await SupabaseService().createTransaction(tx);
       if (created == null) {
         throw Exception('Gagal menyimpan transaksi');
+      }
+
+      if (result.tipAmount > 0) {
+        try {
+          await SupabaseService().recordTip(
+            Tip(
+              id: '',
+              outletId: outletId,
+              transactionId: created.id.isNotEmpty ? created.id : null,
+              userId: user?.id,
+              amount: result.tipAmount,
+              createdAt: DateTime.now(),
+            ),
+          );
+        } catch (_) {}
       }
 
       ref.invalidate(productsProvider);

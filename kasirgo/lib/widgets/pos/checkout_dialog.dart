@@ -12,6 +12,7 @@ class CheckoutResult {
   final double amount;
   final double change;
   final double cashPaid;
+  final double tipAmount;
   final String? notes;
   final bool sendWhatsApp;
 
@@ -20,6 +21,7 @@ class CheckoutResult {
     required this.amount,
     required this.change,
     required this.cashPaid,
+    this.tipAmount = 0.0,
     this.notes,
     this.sendWhatsApp = false,
   });
@@ -51,13 +53,16 @@ class _CheckoutDialogState extends State<CheckoutDialog> {
   String _qrisMode = 'static'; // static | dynamic
   final _cashController = TextEditingController();
   final _qrisAmountController = TextEditingController();
+  final _tipController = TextEditingController();
   final _notesController = TextEditingController();
   final _customerWaController = TextEditingController();
   bool _sendWaReceipt = false;
   bool _isLoadingQris = false;
 
+  double get _tipAmount => double.tryParse(_tipController.text.replaceAll(RegExp(r'[^0-9]'), '')) ?? 0.0;
+  double get _grandTotal => widget.totalAmount + _tipAmount;
   double get _cashPaid => double.tryParse(_cashController.text.replaceAll(RegExp(r'[^0-9]'), '')) ?? 0.0;
-  double get _change => (_cashPaid - widget.totalAmount).clamp(0.0, double.infinity);
+  double get _change => (_cashPaid - _grandTotal).clamp(0.0, double.infinity);
 
   @override
   void initState() {
@@ -70,6 +75,7 @@ class _CheckoutDialogState extends State<CheckoutDialog> {
   void dispose() {
     _cashController.dispose();
     _qrisAmountController.dispose();
+    _tipController.dispose();
     _notesController.dispose();
     _customerWaController.dispose();
     super.dispose();
@@ -82,7 +88,7 @@ class _CheckoutDialogState extends State<CheckoutDialog> {
   }
 
   void _submit() {
-    if (_paymentMethod == 'cash' && _cashPaid < widget.totalAmount) {
+    if (_paymentMethod == 'cash' && _cashPaid < _grandTotal) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
           content: Text('Uang tunai kurang dari total pembayaran'),
@@ -94,9 +100,10 @@ class _CheckoutDialogState extends State<CheckoutDialog> {
 
     final result = CheckoutResult(
       paymentMethod: _paymentMethod,
-      amount: widget.totalAmount,
+      amount: _grandTotal,
       change: _paymentMethod == 'cash' ? _change : 0.0,
-      cashPaid: _paymentMethod == 'cash' ? _cashPaid : widget.totalAmount,
+      cashPaid: _paymentMethod == 'cash' ? _cashPaid : _grandTotal,
+      tipAmount: _tipAmount,
       notes: _notesController.text.trim().isNotEmpty ? _notesController.text.trim() : null,
       sendWhatsApp: _sendWaReceipt,
     );
@@ -278,6 +285,21 @@ class _CheckoutDialogState extends State<CheckoutDialog> {
                           if (_paymentMethod == 'bank_transfer') _buildTransferSection(),
                           const SizedBox(height: 16),
                           _buildWaReceiptSection(),
+                          const SizedBox(height: 16),
+                          TextField(
+                            controller: _tipController,
+                            keyboardType: TextInputType.number,
+                            inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+                            style: const TextStyle(color: AppTheme.textPrimary, fontSize: 13),
+                            onChanged: (_) => setState(() {}),
+                            decoration: const InputDecoration(
+                              labelText: 'Tip Tambahan / Sukarela (Opsional)',
+                              labelStyle: TextStyle(color: AppTheme.textSecondary, fontSize: 12),
+                              hintText: 'Contoh: 5000',
+                              prefixText: 'Rp ',
+                              prefixIcon: Icon(Icons.volunteer_activism_rounded, color: AppTheme.primaryColor, size: 20),
+                            ),
+                          ),
                           const SizedBox(height: 16),
                           TextField(
                             controller: _notesController,
@@ -472,12 +494,12 @@ class _CheckoutDialogState extends State<CheckoutDialog> {
           spacing: 8,
           runSpacing: 8,
           children: [
-            _QuickAmountChip(label: 'Uang Pas', onTap: () => _setCash(widget.totalAmount)),
-            if (widget.totalAmount < 50000)
+            _QuickAmountChip(label: 'Uang Pas', onTap: () => _setCash(_grandTotal)),
+            if (_grandTotal < 50000)
               _QuickAmountChip(label: '50.000', onTap: () => _setCash(50000)),
-            if (widget.totalAmount < 100000)
+            if (_grandTotal < 100000)
               _QuickAmountChip(label: '100.000', onTap: () => _setCash(100000)),
-            if (widget.totalAmount < 200000)
+            if (_grandTotal < 200000)
               _QuickAmountChip(label: '200.000', onTap: () => _setCash(200000)),
           ],
         ),

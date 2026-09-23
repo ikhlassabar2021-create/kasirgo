@@ -2,8 +2,18 @@
 SELESAI: ST7.6-1 (design system v2 tokens + shared components + Inter font)
 SELESAI: ST7.6-2 (retrofit Owner core: dashboard, product mgmt, staff mgmt, KYC/settings)
 SELESAI: ST7.6-3 (retrofit POS, Cart/Checkout, Report, AI badge, Customer/Employee list)
-BERIKUTNYA: ST7.6-4 (retrofit batch: modul operasional, channel, dan screen pendukung lainnya)
+SELESAI: ST7.6-4 (Admin Home, Cashier Home + shift/tip/QRIS, Customer Menu, KDS Dapur)
+BERIKUTNYA: ST7.6-5 (retrofit channel & screen pendukung: WA broadcast, Social commerce, QR Table, Online catalog, Staradmin)
 BLOCKER: -
+
+## Completed Items ST7.6-4:
+- admin_home_screen.dart: Ocean White frosted glass navigation bar + border token
+- product_list_screen.dart: tombol/swipe hapus produk hanya tampil untuk role Owner (Admin tidak bisa hapus produk)
+- cashier_home_screen.dart: POS terfokus, shift modal buka/tutup (open/close shift), pencatatan modal awal/akhir, tip input dialog, frosted bottom nav bar
+- cashier_pos_screen.dart & checkout_dialog.dart: tip input opsional terintegrasi di checkout, sinkronisasi Tip model & SupabaseService, QRIS statis & dinamis switch
+- customer_menu_screen.dart & customer_order_screen.dart: flow scan QR meja, pilih outlet/meja, katalog order ringan tanpa registrasi berat, card border & token Ocean White
+- kitchen_display_screen.dart: tiket antrean order masak, status badge (MENUNGGU/DIMASAK/SIAP SAJI), auto-load order transaksi aktif, touch target 56dp
+- Semua file lulus `dart analyze` (0 error)
 
 ## Completed Items ST7.6-3:
 - product_grid.dart: stock badge threshold tokens (Hijau>10, Kuning 1-10, Merah 0), corner stock badge layout

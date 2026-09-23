@@ -85,14 +85,14 @@ class _AdminHomeScreenState extends ConsumerState<AdminHomeScreen> {
           filter: ImageFilter.blur(sigmaX: 20, sigmaY: 20),
           child: Container(
             decoration: BoxDecoration(
-              color: AppTheme.surfaceColor.withValues(alpha: 0.72),
-              border: Border(top: BorderSide(color: Colors.white.withValues(alpha: 0.06))),
+              color: AppTheme.surfaceColor.withValues(alpha: 0.85),
+              border: const Border(top: BorderSide(color: AppTheme.borderColor)),
             ),
             child: BottomNavigationBar(
               backgroundColor: Colors.transparent,
               elevation: 0,
               currentIndex: _currentIndex,
-              selectedItemColor: AppTheme.accentColor,
+              selectedItemColor: AppTheme.primaryColor,
               unselectedItemColor: AppTheme.textSecondary,
               selectedLabelStyle: GoogleFonts.inter(fontWeight: FontWeight.w700, fontSize: 12),
               unselectedLabelStyle: GoogleFonts.inter(fontWeight: FontWeight.w500, fontSize: 11),
