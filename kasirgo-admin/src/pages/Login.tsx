@@ -69,7 +69,7 @@ export function Login({ onSuccess: _onSuccess }: LoginProps = {}) {
       <div className="max-w-md w-full relative z-10">
         {/* Logo and Brand */}
         <div className="text-center mb-6 fade-in">
-          <div className="inline-flex items-center justify-center w-14 h-14 rounded-2xl bg-gradient-to-tr from-cyan-500 via-sky-500 to-blue-600 p-0.5 shadow-lg shadow-sky-500/25 mb-3">
+          <div className="inline-flex items-center justify-center w-14 h-14 rounded-2xl bg-gradient-to-br from-cyan-500 to-sky-600 p-0.5 shadow-lg shadow-sky-500/25 mb-3">
             <div className="w-full h-full bg-white rounded-[14px] flex items-center justify-center">
               <Sparkles className="w-7 h-7 text-sky-600" />
             </div>
@@ -142,7 +142,7 @@ export function Login({ onSuccess: _onSuccess }: LoginProps = {}) {
               className={`w-full mt-2 py-2.5 rounded-xl font-bold text-xs tracking-wide transition-all duration-150 shadow-md ${
                 loading
                   ? 'bg-sky-400 cursor-not-allowed text-white'
-                  : 'bg-gradient-to-r from-cyan-500 via-sky-600 to-blue-600 hover:from-cyan-600 hover:via-sky-700 hover:to-blue-700 text-white shadow-sky-500/25 active:scale-[0.99]'
+                  : 'bg-gradient-to-r from-cyan-500 to-sky-600 hover:from-cyan-600 hover:to-sky-700 text-white shadow-sky-500/25 active:scale-[0.99]'
               }`}
             >
               {loading ? (

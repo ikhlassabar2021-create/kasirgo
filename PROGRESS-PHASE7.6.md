@@ -4,8 +4,25 @@ SELESAI: ST7.6-2 (retrofit Owner core: dashboard, product mgmt, staff mgmt, KYC/
 SELESAI: ST7.6-3 (retrofit POS, Cart/Checkout, Report, AI badge, Customer/Employee list)
 SELESAI: ST7.6-4 (Admin Home, Cashier Home + shift/tip/QRIS, Customer Menu, KDS Dapur)
 SELESAI: ST7.6-5 (Auth Login/Register, Social Commerce Sync, WA Broadcast, QR Table, Online Catalog)
-BERIKUTNYA: ST7.6-6 (audit akhir UI seluruh screen + konsistensi token, hapus sisa warna hardcode)
+SELESAI: ST7.6-6 (retrofit kasirgo-admin React+Vite+Tailwind ke Ocean White: tokens CSS, Layout, Login/Dashboard, Users/UserDetail, Control Plane, Affiliates/Backup/Revenue/OwnerDashboard)
+BERIKUTNYA: ST7.6-7 (audit akhir UI seluruh screen + konsistensi token, hapus sisa warna hardcode)
 BLOCKER: -
+
+## Completed Items ST7.6-6:
+- index.css: token Ocean White (bg #F8FAFC, surface #FFF, border #E2E8F0, primary #0284C7, ai-gradient #06B6D4->#4F46E5), utility .card-surface/.ocean-gradient/.ai-gradient, hapus glassmorphism gelap, scrollbar terang
+- Layout.tsx: sidebar 240dp tetap, header 60dp, konten maxWidth 1100; judul halaman Control Plane + Detail Pengguna
+- StarAdminSidebar.tsx: lebar 240dp, item nav Control Plane, aktif gradient cyan->sky
+- StarAdminMetricCard.tsx: kartu surface putih border #E2E8F0, teks slate, badge positif/negatif emerald/rose
+- Login.tsx: gradient Ocean (#06B6D4->#0284C7) logo + tombol, palet bersih
+- Dashboard.tsx: maxWidth 1100, kartu statistik revenue + chart Recharts token Ocean White
+- Users.tsx: tabel user/outlet maxWidth 1100, aksi Eye -> route detail, tombol gradient
+- UserDetail.tsx (baru): detail user/outlet, status KYC (verified/pending/rejected), impersonate, reset, aksi suspend/aktifkan, tabel transaksi terakhir
+- ControlPlane.tsx (baru): form integrasi/margin/settlement/affiliate payout (Payment, PPOB, B2B, Affiliate, Fintech, Storage, WA, Database), form maxWidth 760, sidebar grup 240dp
+- Affiliates.tsx & Backup.tsx: tabel affiliate/referral + snapshot backup/restore ke token Ocean White
+- Revenue.tsx: kartu finansial + line/pie chart token Ocean White, maxWidth 1100
+- OwnerDashboard.tsx: maxWidth 1100, gradient Ocean
+- App.tsx: route /users/:id, /control-plane, /settings -> ControlPlane, spinner gradient Ocean
+- `npm run build` (tsc -b && vite build) sukses
 
 ## Completed Items ST7.6-5:
 - login_screen.dart: gradient logo/tombol AppTheme.primaryGradient, input besar (48dp), warna hardcode -> token, touch target 56dp

@@ -26,7 +26,7 @@ export function StarAdminSidebar({ isOpen, onClose, onLogout }: StarAdminSidebar
     { name: 'Revenue & TX', href: '/revenue', icon: BarChart3 },
     { name: 'Affiliates', href: '/affiliates', icon: CreditCard },
     { name: 'Backup & Restore', href: '/backup', icon: CloudBackup },
-    { name: 'Pengaturan', href: '/settings', icon: Settings },
+    { name: 'Control Plane', href: '/control-plane', icon: Settings },
   ];
 
   return (
@@ -42,7 +42,7 @@ export function StarAdminSidebar({ isOpen, onClose, onLogout }: StarAdminSidebar
       {/* Sidebar Container - Clean White & Ocean Blue Gradient Centennial */}
       <aside 
         className={`
-          fixed top-0 left-0 z-50 h-screen w-64 bg-white border-r border-slate-200/80 shadow-sm transform transition-transform duration-300 ease-in-out flex flex-col text-slate-700
+          fixed top-0 left-0 z-50 h-screen w-60 bg-white border-r border-slate-200/80 shadow-sm transform transition-transform duration-300 ease-in-out flex flex-col text-slate-700
           ${isOpen ? 'translate-x-0' : '-translate-x-full'}
           lg:translate-x-0
         `}

@@ -20,7 +20,7 @@ export function StarAdminMetricCard({
   bgColor
 }: MetricCardProps) {
   return (
-    <div className="bg-white rounded-[20px] sm:rounded-[24px] p-4 sm:p-6 card-shadow hover:shadow-lg transition-all duration-200 border border-gray-100">
+    <div className="bg-white rounded-2xl p-4 sm:p-6 card-shadow hover:shadow-md transition-all duration-200 border border-slate-200/80">
       <div className="flex items-center justify-between mb-3 sm:mb-4">
         <div className={`w-10 h-10 sm:w-12 sm:h-12 ${bgColor} rounded-xl flex items-center justify-center shrink-0`}>
           <Icon className={`w-5 h-5 sm:w-6 sm:h-6 ${iconColor}`} />
@@ -28,8 +28,8 @@ export function StarAdminMetricCard({
         {percentage && (
           <span className={`px-2.5 py-1 sm:px-3 sm:py-1.5 rounded-lg text-xs font-semibold flex items-center gap-1 ${
             isPositive 
-              ? 'bg-green-50 text-green-600' 
-              : 'bg-red-50 text-red-600'
+              ? 'bg-emerald-50 text-emerald-600' 
+              : 'bg-rose-50 text-rose-600'
           }`}>
             <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               {isPositive ? (
@@ -43,8 +43,8 @@ export function StarAdminMetricCard({
         )}
       </div>
       
-      <p className="text-[11px] sm:text-xs font-medium text-gray-500 mb-1.5">{title}</p>
-      <p className="text-2xl sm:text-[2rem] font-bold leading-none text-gray-800">{value}</p>
+      <p className="text-[11px] sm:text-xs font-medium text-slate-500 mb-1.5">{title}</p>
+      <p className="text-2xl sm:text-[2rem] font-bold leading-none text-slate-900">{value}</p>
     </div>
   );
 }

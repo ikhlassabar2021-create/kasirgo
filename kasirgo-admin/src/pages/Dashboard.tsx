@@ -52,11 +52,11 @@ export function Dashboard() {
   ];
 
   return (
-    <div className="space-y-4 max-w-7xl mx-auto text-slate-800">
+    <div className="space-y-4 max-w-[1100px] mx-auto text-slate-800">
       {/* Header Profile Outlet / Superadmin - Centennial Clean White & Ocean Blue Gradient */}
       <div className="bg-white p-4 sm:p-5 rounded-2xl border border-slate-200/80 shadow-sm flex flex-col sm:flex-row sm:items-center justify-between gap-3 relative overflow-hidden">
         <div className="flex items-center gap-3 relative z-10">
-          <div className="w-11 h-11 sm:w-12 sm:h-12 rounded-xl bg-gradient-to-tr from-cyan-500 via-sky-500 to-blue-600 p-0.5 shadow-md shadow-sky-500/20 shrink-0">
+          <div className="w-11 h-11 sm:w-12 sm:h-12 rounded-xl bg-gradient-to-br from-cyan-500 to-sky-600 p-0.5 shadow-md shadow-sky-500/20 shrink-0">
             <div className="w-full h-full bg-white rounded-[10px] flex items-center justify-center text-sky-600 font-extrabold text-base sm:text-lg">
               KG
             </div>
@@ -80,7 +80,7 @@ export function Dashboard() {
         <div className="flex items-center gap-2">
           <a 
             href="/owner" 
-            className="flex items-center justify-center gap-1.5 px-3.5 py-2 rounded-xl bg-gradient-to-r from-cyan-500 via-sky-600 to-blue-600 hover:from-cyan-600 hover:via-sky-700 hover:to-blue-700 text-white font-semibold text-xs shadow-md shadow-sky-500/25 transition active:scale-95"
+            className="flex items-center justify-center gap-1.5 px-3.5 py-2 rounded-xl bg-gradient-to-r from-cyan-500 to-sky-600 hover:from-cyan-600 hover:to-sky-700 text-white font-semibold text-xs shadow-md shadow-sky-500/25 transition active:scale-95"
           >
             <Store className="w-3.5 h-3.5 shrink-0" />
             <span>Lihat Mode Owner</span>
@@ -119,7 +119,7 @@ export function Dashboard() {
             <div key={index} className="bg-white p-3.5 sm:p-4 rounded-xl border border-slate-200/80 shadow-sm hover:border-sky-300 transition duration-150">
               <div className="flex items-center justify-between mb-1.5">
                 <span className="text-[10px] font-bold tracking-wider text-slate-400 uppercase">{metric.title}</span>
-                <div className={`w-7 h-7 rounded-lg bg-gradient-to-tr from-cyan-500 to-blue-600 text-white flex items-center justify-center shrink-0 shadow-sm`}>
+                <div className={`w-7 h-7 rounded-lg bg-gradient-to-br from-cyan-500 to-sky-600 text-white flex items-center justify-center shrink-0 shadow-sm`}>
                   <metric.icon className="w-3.5 h-3.5" />
                 </div>
               </div>

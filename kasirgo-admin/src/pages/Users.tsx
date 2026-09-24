@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Search, Plus, Edit2, Trash2, Eye, Shield, UserX } from 'lucide-react';
 
 const mockUsers = [
@@ -11,6 +12,7 @@ const mockUsers = [
 
 export function UsersPage() {
   const [searchTerm, setSearchTerm] = useState('');
+  const navigate = useNavigate();
   
   const filteredUsers = mockUsers.filter(user =>
     user.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -19,17 +21,17 @@ export function UsersPage() {
   );
 
   return (
-    <div className="p-3 sm:p-6 max-w-[1920px] mx-auto fade-in">
+    <div className="p-3 sm:p-6 max-w-[1100px] mx-auto fade-in">
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-6">
         <div>
-          <h1 className="text-xl sm:text-2xl font-bold text-gray-800 mb-1">Manajemen Pengguna & Staf</h1>
-          <p className="text-xs sm:text-sm text-gray-500">Kelola akun pemilik outlet, kasir, dan hak akses staf</p>
+          <h1 className="text-xl sm:text-2xl font-bold text-slate-900 mb-1">Manajemen Pengguna & Staf</h1>
+          <p className="text-xs sm:text-sm text-slate-500">Kelola akun pemilik outlet, kasir, dan hak akses staf</p>
         </div>
         
         <button 
           onClick={() => alert('Form Tambah Pengguna Baru')}
-          className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2.5 sm:px-5 sm:py-3 rounded-xl font-semibold text-xs sm:text-sm flex items-center justify-center gap-2 shadow-md shadow-blue-600/20 active:scale-95 transition self-start sm:self-auto"
+          className="bg-gradient-to-r from-cyan-500 to-sky-600 hover:from-cyan-600 hover:to-sky-700 text-white px-4 py-2.5 sm:px-5 sm:py-3 rounded-xl font-semibold text-xs sm:text-sm flex items-center justify-center gap-2 shadow-md shadow-sky-500/25 active:scale-95 transition self-start sm:self-auto"
         >
           <Plus className="w-4 h-4" />
           Tambah Pengguna
@@ -37,20 +39,20 @@ export function UsersPage() {
       </div>
 
       {/* Search & Filter */}
-      <div className="bg-white rounded-[20px] sm:rounded-[24px] p-4 sm:p-6 card-shadow border border-gray-100 mb-6">
+      <div className="bg-white rounded-2xl p-4 sm:p-6 card-shadow border border-slate-200/80 mb-6">
         <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 sm:gap-4">
           <div className="relative flex-1">
-            <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />
+            <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 w-5 h-5 text-slate-400" />
             <input
               type="text"
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
               placeholder="Cari nama, email, atau warung..."
-              className="w-full pl-12 pr-4 py-2.5 sm:py-3 text-sm bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-600 outline-none"
+              className="w-full pl-12 pr-4 py-2.5 sm:py-3 text-sm bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-600 outline-none"
             />
           </div>
           
-          <select className="border border-gray-200 rounded-xl px-4 py-2.5 sm:py-3 text-sm bg-white text-gray-700">
+          <select className="border border-slate-200 rounded-xl px-4 py-2.5 sm:py-3 text-sm bg-white text-gray-700">
             <option>Semua Status</option>
             <option>Aktif</option>
             <option>Ditangguhkan</option>
@@ -59,22 +61,22 @@ export function UsersPage() {
       </div>
 
       {/* Users Table */}
-      <div className="bg-white rounded-[20px] sm:rounded-[24px] card-shadow border border-gray-100 overflow-hidden">
+      <div className="bg-white rounded-2xl card-shadow border border-slate-200/80 overflow-hidden">
         <div className="overflow-x-auto">
           <table className="w-full min-w-[640px]">
-            <thead className="bg-gray-50 border-b border-gray-100">
+            <thead className="bg-slate-50 border-b border-slate-200/80">
               <tr>
-                <th className="text-left px-4 sm:px-6 py-3.5 text-xs font-semibold text-gray-600 uppercase tracking-wide">Pengguna</th>
-                <th className="text-left px-4 sm:px-6 py-3.5 text-xs font-semibold text-gray-600 uppercase tracking-wide">Outlet</th>
-                <th className="text-left px-4 sm:px-6 py-3.5 text-xs font-semibold text-gray-600 uppercase tracking-wide">Tier</th>
-                <th className="text-left px-4 sm:px-6 py-3.5 text-xs font-semibold text-gray-600 uppercase tracking-wide">Transaksi</th>
-                <th className="text-left px-4 sm:px-6 py-3.5 text-xs font-semibold text-gray-600 uppercase tracking-wide">Status</th>
-                <th className="text-right px-4 sm:px-6 py-3.5 text-xs font-semibold text-gray-600 uppercase tracking-wide">Aksi</th>
+                <th className="text-left px-4 sm:px-6 py-3.5 text-xs font-semibold text-slate-600 uppercase tracking-wide">Pengguna</th>
+                <th className="text-left px-4 sm:px-6 py-3.5 text-xs font-semibold text-slate-600 uppercase tracking-wide">Outlet</th>
+                <th className="text-left px-4 sm:px-6 py-3.5 text-xs font-semibold text-slate-600 uppercase tracking-wide">Tier</th>
+                <th className="text-left px-4 sm:px-6 py-3.5 text-xs font-semibold text-slate-600 uppercase tracking-wide">Transaksi</th>
+                <th className="text-left px-4 sm:px-6 py-3.5 text-xs font-semibold text-slate-600 uppercase tracking-wide">Status</th>
+                <th className="text-right px-4 sm:px-6 py-3.5 text-xs font-semibold text-slate-600 uppercase tracking-wide">Aksi</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-gray-100">
+            <tbody className="divide-y divide-slate-100">
               {filteredUsers.map((user) => (
-                <tr key={user.id} className="hover:bg-gray-50 transition-colors">
+                <tr key={user.id} className="hover:bg-slate-50 transition-colors">
                   <td className="px-4 sm:px-6 py-4">
                     <div className="flex items-center gap-3">
                       <div className="w-9 h-9 sm:w-10 sm:h-10 bg-blue-100 rounded-full flex items-center justify-center shrink-0">
@@ -83,15 +85,15 @@ export function UsersPage() {
                         </span>
                       </div>
                       <div className="min-w-0">
-                        <p className="font-medium text-sm text-gray-800 truncate">{user.name}</p>
-                        <p className="text-xs text-gray-400 truncate">{user.email}</p>
+                        <p className="font-medium text-sm text-slate-900 truncate">{user.name}</p>
+                        <p className="text-xs text-slate-400 truncate">{user.email}</p>
                       </div>
                     </div>
                   </td>
-                  <td className="px-4 sm:px-6 py-4 text-xs sm:text-sm text-gray-600">{user.outlet}</td>
+                  <td className="px-4 sm:px-6 py-4 text-xs sm:text-sm text-slate-600">{user.outlet}</td>
                   <td className="px-4 sm:px-6 py-4">
                     <span className={`px-2.5 py-1 rounded-lg text-xs font-semibold ${
-                      user.tier === 'Free' ? 'bg-gray-100 text-gray-600' :
+                      user.tier === 'Free' ? 'bg-slate-100 text-slate-600' :
                       user.tier === 'Basic' ? 'bg-blue-50 text-blue-600' :
                       user.tier === 'Premium' ? 'bg-purple-50 text-purple-600' :
                       'bg-orange-50 text-orange-600'
@@ -99,7 +101,7 @@ export function UsersPage() {
                       {user.tier}
                     </span>
                   </td>
-                  <td className="px-4 sm:px-6 py-4 text-xs sm:text-sm text-gray-600">{user.transactions.toLocaleString()}</td>
+                  <td className="px-4 sm:px-6 py-4 text-xs sm:text-sm text-slate-600">{user.transactions.toLocaleString()}</td>
                   <td className="px-4 sm:px-6 py-4">
                     <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold ${
                       user.status === 'active' 
@@ -115,15 +117,15 @@ export function UsersPage() {
                   <td className="px-4 sm:px-6 py-4 text-right">
                     <div className="flex items-center justify-end gap-1 sm:gap-2">
                       <button 
-                        onClick={() => alert(`Detail Pengguna: ${user.name}`)}
-                        className="p-1.5 sm:p-2 hover:bg-gray-100 rounded-lg transition-colors text-blue-600"
+                        onClick={() => navigate(`/users/${user.id}`)}
+                        className="p-1.5 sm:p-2 hover:bg-slate-100 rounded-lg transition-colors text-sky-600"
                         title="Lihat Detail"
                       >
                         <Eye className="w-4 h-4" />
                       </button>
                       <button 
                         onClick={() => alert(`Edit: ${user.name}`)}
-                        className="p-1.5 sm:p-2 hover:bg-gray-100 rounded-lg transition-colors text-gray-600"
+                        className="p-1.5 sm:p-2 hover:bg-slate-100 rounded-lg transition-colors text-slate-600"
                         title="Ubah"
                       >
                         <Edit2 className="w-4 h-4" />
