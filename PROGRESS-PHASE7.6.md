@@ -5,8 +5,25 @@ SELESAI: ST7.6-3 (retrofit POS, Cart/Checkout, Report, AI badge, Customer/Employ
 SELESAI: ST7.6-4 (Admin Home, Cashier Home + shift/tip/QRIS, Customer Menu, KDS Dapur)
 SELESAI: ST7.6-5 (Auth Login/Register, Social Commerce Sync, WA Broadcast, QR Table, Online Catalog)
 SELESAI: ST7.6-6 (retrofit kasirgo-admin React+Vite+Tailwind ke Ocean White: tokens CSS, Layout, Login/Dashboard, Users/UserDetail, Control Plane, Affiliates/Backup/Revenue/OwnerDashboard)
-BERIKUTNYA: ST7.6-7 (audit akhir UI seluruh screen + konsistensi token, hapus sisa warna hardcode)
+SELESAI: ST7.6-7 (finalisasi shared widgets common/ + retrofit POS cart/checkout + responsive shell Mobile/Tablet/Desktop + animasi & shadow terpusat)
+BERIKUTNYA: ST7.6-8 (audit akhir UI seluruh screen + konsistensi token, hapus sisa warna hardcode)
 BLOCKER: -
+
+## Completed Items ST7.6-7:
+- app_theme.dart: token layout (breakpointTablet 600/breakpointDesktop 860, sidebarWidth 240, headerHeight 60, contentMaxWidth 1100, formMaxWidth 760), animasi (durationFast/Medium/Slow + curveDefault), shadowSoft/shadowMedium, whatsAppColor, qrInkColor, scrimColor, surfaceMutedColor, helper isMobile/isTablet/isDesktop
+- widgets/common/app_badge.dart (baru): AppBadge variant neutral/info/success/warning/danger/ai (gradient AI)
+- widgets/common/stock_badge.dart (baru): StockBadge ambang Hijau>10, Kuning 1-10, Merah 0; mode compact/label
+- widgets/common/app_empty_state.dart (baru): AppEmptyState (ikon bulat, judul, subtitle, aksi AppButton)
+- widgets/common/responsive.dart (baru): AppNavItem + AppResponsiveContent + AppShell (desktop sidebar 240 + header 60 + konten maxWidth 1100 + bottom nav null; Mobile/Tablet app bar + drawer + bottom nav frosted glass + animasi AnimatedContainer)
+- product_grid.dart: badge diskon -> AppBadge, badge stok -> StockBadge, empty state -> AppEmptyState, scrim -> AppTheme.scrimColor
+- cart_panel.dart: count pill -> AppBadge(ai), tombol Bayar -> AppButton touchTargetLarge
+- checkout_dialog.dart: tombol konfirmasi -> AppButton, warna WhatsApp -> AppTheme.whatsAppColor, QR ink/surface -> token qrInkColor/surfaceColor, hapus hardcode Colors.black/grey/white
+- glass_card.dart & centennial_background.dart: hapus seluruh warna hardcode -> AppTheme tokens
+- admin_home_screen.dart: memakai AppShell (sidebar 240/header 60/maxWidth 1100 desktop, app bar+drawer+bottom nav mobile)
+- cashier_home_screen.dart: memakai AppShell, token warningColor, hapus duplikasi scaffold/nav
+- owner_home_screen.dart: breakpoint & layout -> AppTheme.isDesktop/sidebarWidth/headerHeight/contentMaxWidth
+- Catatan: paket flutter_animate TIDAK ada di pubspec.yaml dan `pub get` dilarang, sehingga animasi transisi memakai token AppTheme (duration/curve) dengan widget animasi bawaan Flutter (AnimatedContainer) agar `dart analyze` tetap 0 error
+- Semua file lulus `dart analyze` (0 error) dan `npm run build` admin sukses
 
 ## Completed Items ST7.6-6:
 - index.css: token Ocean White (bg #F8FAFC, surface #FFF, border #E2E8F0, primary #0284C7, ai-gradient #06B6D4->#4F46E5), utility .card-surface/.ocean-gradient/.ai-gradient, hapus glassmorphism gelap, scrollbar terang

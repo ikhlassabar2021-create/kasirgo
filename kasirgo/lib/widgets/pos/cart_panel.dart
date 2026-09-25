@@ -3,6 +3,8 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../config/app_theme.dart';
 import '../../models/transaction.dart';
+import '../common/app_badge.dart';
+import '../common/app_button.dart';
 
 /// Isi keranjang murni (tanpa wrapper sheet) — dipakai di mobile sheet & tablet panel.
 class CartContent extends StatelessWidget {
@@ -167,17 +169,10 @@ class _CartCountPill extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-      decoration: BoxDecoration(
-        color: AppTheme.accentColor.withValues(alpha: 0.15),
-        borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: AppTheme.accentColor.withValues(alpha: 0.35)),
-      ),
-      child: Text(
-        '$count',
-        style: const TextStyle(color: AppTheme.accentColor, fontSize: 11, fontWeight: FontWeight.w800),
-      ),
+    return AppBadge(
+      label: '$count',
+      variant: AppBadgeVariant.ai,
+      compact: true,
     );
   }
 }
@@ -368,30 +363,11 @@ class _CheckoutBar extends StatelessWidget {
               ],
             ),
             const SizedBox(height: 10),
-            SizedBox(
-              width: double.infinity,
-              height: 56,
-              child: ElevatedButton(
-                onPressed: enabled ? onCheckout : null,
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: AppTheme.primaryColor,
-                  foregroundColor: Colors.white,
-                  disabledBackgroundColor: AppTheme.borderColor,
-                  elevation: 0,
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-                ),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    const Icon(Icons.lock_rounded, size: 18),
-                    const SizedBox(width: 8),
-                    Text(
-                      'Bayar Sekarang',
-                      style: GoogleFonts.inter(fontWeight: FontWeight.w800, fontSize: 15),
-                    ),
-                  ],
-                ),
-              ),
+            AppButton(
+              label: 'Bayar Sekarang',
+              icon: Icons.lock_rounded,
+              height: AppTheme.touchTargetLarge,
+              onPressed: enabled ? onCheckout : null,
             ),
           ],
         ),

@@ -7,6 +7,7 @@ class AppTheme {
   static const Color accentColor = Color(0xFF06B6D4); // Cyan
   static const Color backgroundColor = Color(0xFFF8FAFC); // Clean white background
   static const Color surfaceColor = Color(0xFFFFFFFF); // Pure white card
+  static const Color surfaceMutedColor = Color(0xFFF1F5F9); // Slate 100
   static const Color errorColor = Color(0xFFEF4444);
   static const Color successColor = Color(0xFF10B981);
   static const Color warningColor = Color(0xFFF59E0B);
@@ -26,10 +27,47 @@ class AppTheme {
     colors: [Color(0xFF06B6D4), Color(0xFF4F46E5)],
   );
 
+  static const Color whatsAppColor = Color(0xFF25D366);
+  static const Color qrInkColor = Color(0xFF0F172A);
+  static const Color scrimColor = Color(0x40000000);
+
   static const double radiusLarge = 16;
   static const double radiusMedium = 12;
   static const double touchTargetLarge = 56;
   static const double touchTargetMedium = 48;
+
+  // Layout responsif terpusat
+  static const double breakpointTablet = 600;
+  static const double breakpointDesktop = 860;
+  static const double sidebarWidth = 240;
+  static const double headerHeight = 60;
+  static const double contentMaxWidth = 1100;
+  static const double formMaxWidth = 760;
+
+  // Animasi terpusat
+  static const Duration durationFast = Duration(milliseconds: 180);
+  static const Duration durationMedium = Duration(milliseconds: 320);
+  static const Duration durationSlow = Duration(milliseconds: 520);
+  static const Curve curveDefault = Curves.easeOutCubic;
+
+  // Shadow lembut terpusat
+  static const List<BoxShadow> shadowSoft = [
+    BoxShadow(color: Color(0x0F0F172A), blurRadius: 12, offset: Offset(0, 4)),
+  ];
+  static const List<BoxShadow> shadowMedium = [
+    BoxShadow(color: Color(0x140F172A), blurRadius: 20, offset: Offset(0, 8)),
+  ];
+
+  static bool isMobile(BuildContext context) =>
+      MediaQuery.of(context).size.width < breakpointTablet;
+
+  static bool isTablet(BuildContext context) {
+    final width = MediaQuery.of(context).size.width;
+    return width >= breakpointTablet && width < breakpointDesktop;
+  }
+
+  static bool isDesktop(BuildContext context) =>
+      MediaQuery.of(context).size.width >= breakpointDesktop;
 
   static ThemeData get lightTheme {
     return ThemeData(

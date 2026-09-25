@@ -6,6 +6,7 @@ import '../../config/app_theme.dart';
 import '../../models/transaction.dart';
 import '../../services/payment_service.dart';
 import '../../utils/wa_helper.dart';
+import '../common/app_button.dart';
 
 class CheckoutResult {
   final String paymentMethod;
@@ -312,29 +313,11 @@ class _CheckoutDialogState extends State<CheckoutDialog> {
                             ),
                           ),
                           const SizedBox(height: 24),
-                          SizedBox(
-                            width: double.infinity,
-                            height: 56,
-                            child: ElevatedButton(
-                              onPressed: _submit,
-                              style: ElevatedButton.styleFrom(
-                                backgroundColor: AppTheme.primaryColor,
-                                foregroundColor: Colors.white,
-                                elevation: 0,
-                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-                              ),
-                              child: Row(
-                                mainAxisAlignment: MainAxisAlignment.center,
-                                children: [
-                                  const Icon(Icons.check_circle_rounded, size: 20),
-                                  const SizedBox(width: 8),
-                                  Text(
-                                    'Konfirmasi & Selesai',
-                                    style: GoogleFonts.inter(fontWeight: FontWeight.w800, fontSize: 15),
-                                  ),
-                                ],
-                              ),
-                            ),
+                          AppButton(
+                            label: 'Konfirmasi & Selesai',
+                            icon: Icons.check_circle_rounded,
+                            height: AppTheme.touchTargetLarge,
+                            onPressed: _submit,
                           ),
                         ],
                       ),
@@ -545,20 +528,21 @@ class _CheckoutDialogState extends State<CheckoutDialog> {
         child: Container(
           padding: const EdgeInsets.all(16),
           decoration: BoxDecoration(
-            color: Colors.white,
+            color: AppTheme.surfaceColor,
             borderRadius: BorderRadius.circular(16),
+            border: Border.all(color: AppTheme.borderColor),
           ),
           child: Column(
             children: [
-              const Icon(Icons.qr_code_2_rounded, size: 140, color: Colors.black),
+              const Icon(Icons.qr_code_2_rounded, size: 140, color: AppTheme.qrInkColor),
               const SizedBox(height: 6),
               const Text(
                 'QRIS STANDAR PEMBAYARAN NASIONAL',
-                style: TextStyle(color: Colors.black54, fontSize: 8, fontWeight: FontWeight.bold),
+                style: TextStyle(color: AppTheme.textSecondary, fontSize: 8, fontWeight: FontWeight.bold),
               ),
               Text(
                 'NMID: ID1020038847291',
-                style: TextStyle(color: Colors.grey.shade600, fontSize: 8),
+                style: TextStyle(color: AppTheme.textSecondary, fontSize: 8),
               ),
             ],
           ),
@@ -687,7 +671,7 @@ class _CheckoutDialogState extends State<CheckoutDialog> {
                             'assets/qrcode_placeholder.png',
                             width: 200,
                             height: 200,
-                            errorBuilder: (_, __, ___) => const SizedBox(width: 200, height: 200, child: Icon(Icons.qr_code_2_rounded, size: 200)),
+                            errorBuilder: (_, _, _) => const SizedBox(width: 200, height: 200, child: Icon(Icons.qr_code_2_rounded, size: 200)),
                           ),
                         ),
                         const SizedBox(height: 8),
@@ -716,12 +700,13 @@ class _CheckoutDialogState extends State<CheckoutDialog> {
             child: Container(
               padding: const EdgeInsets.all(16),
               decoration: BoxDecoration(
-                color: Colors.white,
+                color: AppTheme.surfaceColor,
                 borderRadius: BorderRadius.circular(16),
+                border: Border.all(color: AppTheme.borderColor),
               ),
               child: const Column(
                 children: [
-                  Icon(Icons.qr_code_2_rounded, size: 140, color: Colors.black),
+                  Icon(Icons.qr_code_2_rounded, size: 140, color: AppTheme.qrInkColor),
                   SizedBox(height: 6),
                   Text(
                     'TAP UNTUK BUAT QR',
@@ -778,7 +763,7 @@ class _CheckoutDialogState extends State<CheckoutDialog> {
       decoration: BoxDecoration(
         color: AppTheme.backgroundColor.withValues(alpha: 0.4),
         borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: const Color(0xFF25D366).withValues(alpha: 0.3)),
+        border: Border.all(color: AppTheme.whatsAppColor.withValues(alpha: 0.3)),
       ),
       child: Column(
         children: [
@@ -786,7 +771,7 @@ class _CheckoutDialogState extends State<CheckoutDialog> {
             children: [
               Checkbox(
                 value: _sendWaReceipt,
-                activeColor: const Color(0xFF25D366),
+                activeColor: AppTheme.whatsAppColor,
                 onChanged: (val) => setState(() => _sendWaReceipt = val ?? false),
               ),
               const Expanded(
@@ -795,7 +780,7 @@ class _CheckoutDialogState extends State<CheckoutDialog> {
                   style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600),
                 ),
               ),
-              const Icon(Icons.receipt_long_rounded, color: Color(0xFF25D366), size: 20),
+              const Icon(Icons.receipt_long_rounded, color: AppTheme.whatsAppColor, size: 20),
             ],
           ),
           if (_sendWaReceipt)

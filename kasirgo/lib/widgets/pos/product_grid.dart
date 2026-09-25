@@ -4,6 +4,9 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../config/app_theme.dart';
 import '../../models/product.dart';
+import '../common/app_badge.dart';
+import '../common/app_empty_state.dart';
+import '../common/stock_badge.dart';
 
 class ProductGrid extends StatelessWidget {
   final List<Product> products;
@@ -28,18 +31,10 @@ class ProductGrid extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     if (products.isEmpty) {
-      return Center(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(Icons.search_off_rounded, size: 56, color: AppTheme.textSecondary.withValues(alpha: 0.5)),
-            const SizedBox(height: 12),
-            Text(
-              'Produk tidak ditemukan',
-              style: GoogleFonts.inter(color: AppTheme.textSecondary, fontSize: 14, fontWeight: FontWeight.w600),
-            ),
-          ],
-        ),
+      return const AppEmptyState(
+        icon: Icons.search_off_rounded,
+        title: 'Produk tidak ditemukan',
+        subtitle: 'Coba kata kunci lain atau tambahkan produk baru',
       );
     }
 
@@ -239,40 +234,12 @@ class _ProductCard extends StatelessWidget {
                     top: 6,
                     left: 6,
                     child: hasDiscount
-                        ? Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2.5),
-                            decoration: BoxDecoration(
-                              color: AppTheme.errorColor,
-                              borderRadius: BorderRadius.circular(6),
-                            ),
-                            child: Text(
-                              discountBadge!,
-                              style: GoogleFonts.inter(
-                                color: Colors.white,
-                                fontSize: 9,
-                                fontWeight: FontWeight.w800,
-                              ),
-                            ),
+                        ? AppBadge(
+                            label: discountBadge!,
+                            variant: AppBadgeVariant.danger,
+                            compact: true,
                           )
-                        : Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 2),
-                            decoration: BoxDecoration(
-                              color: product.stock <= 0
-                                  ? AppTheme.errorColor
-                                  : product.stock <= 10
-                                      ? AppTheme.warningColor
-                                      : AppTheme.successColor,
-                              borderRadius: BorderRadius.circular(5),
-                            ),
-                            child: Text(
-                              product.stock <= 0 ? '0' : '${product.stock}',
-                              style: GoogleFonts.inter(
-                                color: Colors.white,
-                                fontSize: 8.5,
-                                fontWeight: FontWeight.w800,
-                              ),
-                            ),
-                          ),
+                        : StockBadge(stock: product.stock),
                   ),
                   if (hasInCart)
                     Positioned(
@@ -302,7 +269,7 @@ class _ProductCard extends StatelessWidget {
                 if (isOutOfStock)
                   Positioned.fill(
                     child: Container(
-                      color: Colors.black.withValues(alpha: 0.25),
+                      color: AppTheme.scrimColor,
                       alignment: Alignment.center,
                       child: Container(
                         padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),

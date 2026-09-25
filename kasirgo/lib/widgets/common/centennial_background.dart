@@ -19,9 +19,9 @@ class CentennialBackground extends StatelessWidget {
                 begin: Alignment.topLeft,
                 end: Alignment.bottomRight,
                 colors: [
-                  Color(0xFFF8FAFC),
-                  Color(0xFFF1F5F9),
-                  Color(0xFFF8FAFC),
+                  AppTheme.backgroundColor,
+                  AppTheme.surfaceMutedColor,
+                  AppTheme.backgroundColor,
                 ],
               ),
             ),
@@ -30,17 +30,17 @@ class CentennialBackground extends StatelessWidget {
         Positioned(
           top: -140,
           left: -100,
-          child: _Glow(color: const Color(0xFF0284C7).withValues(alpha: 0.10), size: 340),
+          child: _Glow(color: AppTheme.primaryColor.withValues(alpha: 0.10), size: 340),
         ),
         Positioned(
           top: 120,
           right: -140,
-          child: _Glow(color: const Color(0xFF06B6D4).withValues(alpha: 0.08), size: 320),
+          child: _Glow(color: AppTheme.accentColor.withValues(alpha: 0.08), size: 320),
         ),
         Positioned(
           bottom: -160,
           left: 40,
-          child: _Glow(color: const Color(0xFF0EA5E9).withValues(alpha: 0.06), size: 360),
+          child: _Glow(color: AppTheme.secondaryColor.withValues(alpha: 0.06), size: 360),
         ),
         child,
       ],

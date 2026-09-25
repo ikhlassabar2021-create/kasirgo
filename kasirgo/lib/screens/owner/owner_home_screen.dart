@@ -259,7 +259,7 @@ class _OwnerHomeScreenState extends ConsumerState<OwnerHomeScreen> {
       );
     }
 
-    final isDesktop = MediaQuery.of(context).size.width >= 860;
+    final isDesktop = AppTheme.isDesktop(context);
 
     final bodyContent = widget.subScreen ??
         IndexedStack(
@@ -283,7 +283,7 @@ class _OwnerHomeScreenState extends ConsumerState<OwnerHomeScreen> {
             children: [
               // Desktop Sidebar with Centennial Ocean Blue touch
               Container(
-                width: 240,
+                width: AppTheme.sidebarWidth,
                 decoration: const BoxDecoration(
                   color: Colors.white,
                   border: Border(right: BorderSide(color: AppTheme.borderColor)),
@@ -415,7 +415,7 @@ class _OwnerHomeScreenState extends ConsumerState<OwnerHomeScreen> {
                   children: [
                     // Top header bar on desktop
                     Container(
-                      height: 60,
+                      height: AppTheme.headerHeight,
                       padding: const EdgeInsets.symmetric(horizontal: 24),
                       decoration: const BoxDecoration(
                         color: Colors.white,
@@ -464,7 +464,7 @@ class _OwnerHomeScreenState extends ConsumerState<OwnerHomeScreen> {
                     Expanded(
                       child: Center(
                         child: ConstrainedBox(
-                          constraints: const BoxConstraints(maxWidth: 1100),
+                          constraints: const BoxConstraints(maxWidth: AppTheme.contentMaxWidth),
                           child: bodyContent,
                         ),
                       ),

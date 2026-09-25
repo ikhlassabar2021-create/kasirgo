@@ -1,4 +1,3 @@
-import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
@@ -6,7 +5,7 @@ import '../../config/app_theme.dart';
 import '../../providers/auth_provider.dart';
 import '../../providers/outlet_provider.dart';
 import '../../widgets/common/app_drawer.dart';
-import '../../widgets/common/centennial_background.dart';
+import '../../widgets/common/responsive.dart';
 import '../owner/product_list_screen.dart';
 import '../owner/report_screen.dart';
 
@@ -20,6 +19,11 @@ class AdminHomeScreen extends ConsumerStatefulWidget {
 class _AdminHomeScreenState extends ConsumerState<AdminHomeScreen> {
   int _currentIndex = 0;
 
+  static const _navItems = [
+    AppNavItem(icon: Icons.inventory_2_rounded, label: 'Produk'),
+    AppNavItem(icon: Icons.bar_chart_rounded, label: 'Laporan'),
+  ];
+
   @override
   Widget build(BuildContext context) {
     final user = ref.watch(currentUserProvider);
@@ -32,86 +36,98 @@ class _AdminHomeScreenState extends ConsumerState<AdminHomeScreen> {
 
     final outletType = ref.watch(outletTypeProvider(user.outletId ?? ''));
 
-    return Scaffold(
-      backgroundColor: Colors.transparent,
-      extendBodyBehindAppBar: true,
-      appBar: AppBar(
-        backgroundColor: Colors.transparent,
-        elevation: 0,
-        scrolledUnderElevation: 0,
-        title: Container(
-          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-          decoration: BoxDecoration(
-            color: AppTheme.secondaryColor.withValues(alpha: 0.15),
-            borderRadius: BorderRadius.circular(20),
-            border: Border.all(color: AppTheme.secondaryColor.withValues(alpha: 0.4)),
-          ),
-          child: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              const Icon(Icons.admin_panel_settings_rounded, size: 14, color: AppTheme.accentColor),
-              const SizedBox(width: 6),
-              Text(
-                'ADMIN • ${outletType.toUpperCase()}',
-                style: GoogleFonts.inter(
-                  fontSize: 11,
-                  fontWeight: FontWeight.w800,
-                  letterSpacing: 0.5,
-                  color: AppTheme.accentColor,
-                ),
-              ),
-            ],
-          ),
-        ),
-        leading: Builder(
-          builder: (context) => IconButton(
-            icon: const Icon(Icons.menu_rounded, color: AppTheme.textPrimary),
-            onPressed: () => Scaffold.of(context).openDrawer(),
-          ),
-        ),
-      ),
+    return AppShell(
+      navItems: _navItems,
+      currentIndex: _currentIndex,
+      onIndexChanged: (index) => setState(() => _currentIndex = index),
+      headerTitle: 'Panel Admin',
       drawer: AppDrawer(user: user),
-      body: CentennialBackground(
-        child: IndexedStack(
-          index: _currentIndex,
-          children: const [
-            ProductListScreen(),
-            ReportScreen(),
+      brand: const _AppBrand(),
+      mobileTitle: _RoleBadge(label: 'ADMIN • ${outletType.toUpperCase()}'),
+      body: IndexedStack(
+        index: _currentIndex,
+        children: const [
+          ProductListScreen(),
+          ReportScreen(),
+        ],
+      ),
+    );
+  }
+}
+
+class _AppBrand extends StatelessWidget {
+  const _AppBrand();
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      children: [
+        Container(
+          width: 38,
+          height: 38,
+          decoration: BoxDecoration(
+            gradient: AppTheme.primaryGradient,
+            borderRadius: BorderRadius.circular(10),
+          ),
+          child: const Icon(Icons.point_of_sale_rounded, color: Colors.white, size: 20),
+        ),
+        const SizedBox(width: 12),
+        Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'KasirGo',
+              style: GoogleFonts.inter(
+                fontSize: 18,
+                fontWeight: FontWeight.w800,
+                color: AppTheme.textPrimary,
+                letterSpacing: -0.5,
+              ),
+            ),
+            Text(
+              'Panel Admin',
+              style: GoogleFonts.inter(
+                fontSize: 11,
+                color: AppTheme.textSecondary,
+                fontWeight: FontWeight.w500,
+              ),
+            ),
           ],
         ),
+      ],
+    );
+  }
+}
+
+class _RoleBadge extends StatelessWidget {
+  final String label;
+
+  const _RoleBadge({required this.label});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+      decoration: BoxDecoration(
+        color: AppTheme.secondaryColor.withValues(alpha: 0.15),
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: AppTheme.secondaryColor.withValues(alpha: 0.4)),
       ),
-      bottomNavigationBar: ClipRRect(
-        child: BackdropFilter(
-          filter: ImageFilter.blur(sigmaX: 20, sigmaY: 20),
-          child: Container(
-            decoration: BoxDecoration(
-              color: AppTheme.surfaceColor.withValues(alpha: 0.85),
-              border: const Border(top: BorderSide(color: AppTheme.borderColor)),
-            ),
-            child: BottomNavigationBar(
-              backgroundColor: Colors.transparent,
-              elevation: 0,
-              currentIndex: _currentIndex,
-              selectedItemColor: AppTheme.primaryColor,
-              unselectedItemColor: AppTheme.textSecondary,
-              selectedLabelStyle: GoogleFonts.inter(fontWeight: FontWeight.w700, fontSize: 12),
-              unselectedLabelStyle: GoogleFonts.inter(fontWeight: FontWeight.w500, fontSize: 11),
-              onTap: (index) => setState(() => _currentIndex = index),
-              items: const [
-                BottomNavigationBarItem(
-                  icon: Icon(Icons.inventory_2_outlined),
-                  activeIcon: Icon(Icons.inventory_2_rounded),
-                  label: 'Produk',
-                ),
-                BottomNavigationBarItem(
-                  icon: Icon(Icons.bar_chart_outlined),
-                  activeIcon: Icon(Icons.bar_chart_rounded),
-                  label: 'Laporan',
-                ),
-              ],
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          const Icon(Icons.admin_panel_settings_rounded, size: 14, color: AppTheme.accentColor),
+          const SizedBox(width: 6),
+          Text(
+            label,
+            style: GoogleFonts.inter(
+              fontSize: 11,
+              fontWeight: FontWeight.w800,
+              letterSpacing: 0.5,
+              color: AppTheme.accentColor,
             ),
           ),
-        ),
+        ],
       ),
     );
   }

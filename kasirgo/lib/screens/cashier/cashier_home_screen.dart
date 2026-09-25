@@ -12,8 +12,8 @@ import '../../providers/outlet_provider.dart';
 import '../../services/supabase_service.dart';
 import '../../utils/formatters.dart';
 import '../../widgets/common/app_drawer.dart';
-import '../../widgets/common/centennial_background.dart';
 import '../../widgets/common/glass_card.dart';
+import '../../widgets/common/responsive.dart';
 
 final activeShiftProvider = FutureProvider.autoDispose<Shift?>((ref) async {
   final user = ref.watch(currentUserProvider);
@@ -288,123 +288,84 @@ class _CashierHomeScreenState extends ConsumerState<CashierHomeScreen> {
     final activeShiftAsync = ref.watch(activeShiftProvider);
     final tipsAsync = ref.watch(shiftTipsProvider);
 
-    return Scaffold(
-      backgroundColor: Colors.transparent,
-      extendBodyBehindAppBar: true,
-      appBar: AppBar(
-        backgroundColor: Colors.transparent,
-        elevation: 0,
-        scrolledUnderElevation: 0,
-        title: _RoleBadge(icon: Icons.badge_rounded, label: 'KASIR • ${outletType.toUpperCase()}'),
-        leading: Builder(
-          builder: (context) => IconButton(
-            icon: const Icon(Icons.menu_rounded, color: AppTheme.textPrimary),
-            onPressed: () => Scaffold.of(context).openDrawer(),
-          ),
-        ),
-      ),
+    return AppShell(
+      navItems: const [
+        AppNavItem(icon: Icons.dashboard_rounded, label: 'Home Kasir'),
+        AppNavItem(icon: Icons.point_of_sale_rounded, label: 'POS'),
+      ],
+      currentIndex: _bottomNavIndex,
+      onIndexChanged: (index) {
+        setState(() => _bottomNavIndex = index);
+        if (index == 1) {
+          context.push('/cashier/pos');
+        }
+      },
+      headerTitle: 'Home Kasir',
       drawer: AppDrawer(user: user),
-      body: CentennialBackground(
-        child: SafeArea(
-          child: SingleChildScrollView(
-            padding: const EdgeInsets.fromLTRB(20, 12, 20, 32),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                _buildHero(context, user.email, activeShiftAsync.value),
-                const SizedBox(height: 24),
-                _buildShiftAndTipSection(
-                  context,
-                  user.outletId ?? '',
-                  user.id,
-                  activeShiftAsync.value,
-                  tipsAsync.value ?? [],
-                ),
-                const SizedBox(height: 28),
-                const _SectionLabel(title: 'Aksi Cepat Kasir'),
-                const SizedBox(height: 14),
-                GridView.count(
-                  crossAxisCount: 2,
-                  shrinkWrap: true,
-                  physics: const NeverScrollableScrollPhysics(),
-                  mainAxisSpacing: 14,
-                  crossAxisSpacing: 14,
-                  childAspectRatio: 1.25,
-                  children: [
-                    _QuickActionCard(
-                      icon: Icons.point_of_sale_rounded,
-                      color: AppTheme.primaryColor,
-                      title: 'Buka POS',
-                      subtitle: 'Layar transaksi',
-                      onTap: () => context.push('/cashier/pos'),
-                    ),
-                    _QuickActionCard(
-                      icon: Icons.qr_code_2_rounded,
-                      color: AppTheme.secondaryColor,
-                      title: 'QRIS Manual',
-                      subtitle: 'Statis / Dinamis',
-                      onTap: () => context.push('/cashier/pos'),
-                    ),
-                    _QuickActionCard(
-                      icon: Icons.volunteer_activism_rounded,
-                      color: const Color(0xFFF59E0B),
-                      title: 'Input Tip',
-                      subtitle: 'Catat tip masuk',
-                      onTap: () => _showAddTipDialog(context, user.outletId ?? '', user.id),
-                    ),
-                    _QuickActionCard(
-                      icon: Icons.access_time_rounded,
-                      color: activeShiftAsync.value != null ? AppTheme.errorColor : AppTheme.successColor,
-                      title: activeShiftAsync.value != null ? 'Tutup Shift' : 'Buka Shift',
-                      subtitle: activeShiftAsync.value != null ? 'Hitung kas fisik' : 'Mulai shift baru',
-                      onTap: () {
-                        if (activeShiftAsync.value != null) {
-                          _handleCloseShift(context, activeShiftAsync.value!);
-                        } else {
-                          _handleOpenShift(context, user.outletId ?? '', user.id);
-                        }
-                      },
-                    ),
-                  ],
-                ),
-              ],
-            ),
-          ),
-        ),
-      ),
-      bottomNavigationBar: ClipRRect(
-        child: BackdropFilter(
-          filter: ImageFilter.blur(sigmaX: 20, sigmaY: 20),
-          child: Container(
-            decoration: BoxDecoration(
-              color: AppTheme.surfaceColor.withValues(alpha: 0.85),
-              border: const Border(top: BorderSide(color: AppTheme.borderColor)),
-            ),
-            child: BottomNavigationBar(
-              backgroundColor: Colors.transparent,
-              elevation: 0,
-              currentIndex: _bottomNavIndex,
-              selectedItemColor: AppTheme.primaryColor,
-              unselectedItemColor: AppTheme.textSecondary,
-              selectedLabelStyle: GoogleFonts.inter(fontWeight: FontWeight.w700, fontSize: 12),
-              unselectedLabelStyle: GoogleFonts.inter(fontWeight: FontWeight.w500, fontSize: 11),
-              onTap: (index) {
-                setState(() => _bottomNavIndex = index);
-                if (index == 1) {
-                  context.push('/cashier/pos');
-                }
-              },
-              items: const [
-                BottomNavigationBarItem(
-                  icon: Icon(Icons.dashboard_rounded),
-                  label: 'Home Kasir',
-                ),
-                BottomNavigationBarItem(
-                  icon: Icon(Icons.point_of_sale_rounded),
-                  label: 'POS',
-                ),
-              ],
-            ),
+      mobileTitle: _RoleBadge(icon: Icons.badge_rounded, label: 'KASIR • ${outletType.toUpperCase()}'),
+      body: SafeArea(
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.fromLTRB(20, 12, 20, 32),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              _buildHero(context, user.email, activeShiftAsync.value),
+              const SizedBox(height: 24),
+              _buildShiftAndTipSection(
+                context,
+                user.outletId ?? '',
+                user.id,
+                activeShiftAsync.value,
+                tipsAsync.value ?? [],
+              ),
+              const SizedBox(height: 28),
+              const _SectionLabel(title: 'Aksi Cepat Kasir'),
+              const SizedBox(height: 14),
+              GridView.count(
+                crossAxisCount: 2,
+                shrinkWrap: true,
+                physics: const NeverScrollableScrollPhysics(),
+                mainAxisSpacing: 14,
+                crossAxisSpacing: 14,
+                childAspectRatio: 1.25,
+                children: [
+                  _QuickActionCard(
+                    icon: Icons.point_of_sale_rounded,
+                    color: AppTheme.primaryColor,
+                    title: 'Buka POS',
+                    subtitle: 'Layar transaksi',
+                    onTap: () => context.push('/cashier/pos'),
+                  ),
+                  _QuickActionCard(
+                    icon: Icons.qr_code_2_rounded,
+                    color: AppTheme.secondaryColor,
+                    title: 'QRIS Manual',
+                    subtitle: 'Statis / Dinamis',
+                    onTap: () => context.push('/cashier/pos'),
+                  ),
+                  _QuickActionCard(
+                    icon: Icons.volunteer_activism_rounded,
+                    color: AppTheme.warningColor,
+                    title: 'Input Tip',
+                    subtitle: 'Catat tip masuk',
+                    onTap: () => _showAddTipDialog(context, user.outletId ?? '', user.id),
+                  ),
+                  _QuickActionCard(
+                    icon: Icons.access_time_rounded,
+                    color: activeShiftAsync.value != null ? AppTheme.errorColor : AppTheme.successColor,
+                    title: activeShiftAsync.value != null ? 'Tutup Shift' : 'Buka Shift',
+                    subtitle: activeShiftAsync.value != null ? 'Hitung kas fisik' : 'Mulai shift baru',
+                    onTap: () {
+                      if (activeShiftAsync.value != null) {
+                        _handleCloseShift(context, activeShiftAsync.value!);
+                      } else {
+                        _handleOpenShift(context, user.outletId ?? '', user.id);
+                      }
+                    },
+                  ),
+                ],
+              ),
+            ],
           ),
         ),
       ),
