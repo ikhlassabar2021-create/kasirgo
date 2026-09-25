@@ -33,10 +33,10 @@ class SupporterScreen extends StatelessWidget {
                 Container(
                   padding: const EdgeInsets.all(20),
                   decoration: BoxDecoration(
-                    color: Colors.amber.withValues(alpha: 0.15),
+                    color: AppTheme.warningColor.withValues(alpha: 0.15),
                     shape: BoxShape.circle,
                   ),
-                  child: const Icon(Icons.favorite, size: 48, color: Colors.amber),
+                  child: const Icon(Icons.favorite, size: 48, color: AppTheme.warningColor),
                 ),
                 const SizedBox(height: 16),
                 const Text(

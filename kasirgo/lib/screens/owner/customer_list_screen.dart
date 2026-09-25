@@ -312,53 +312,53 @@ class _CustomerListScreenState extends ConsumerState<CustomerListScreen> {
                                   style: TextStyle(fontSize: 11, color: AppTheme.textSecondary),
                                 ),
                                 const SizedBox(height: 4),
-                                Row(
-                                  children: [
-                                    const Icon(Icons.stars, size: 16, color: Colors.amber),
-                                    const SizedBox(width: 4),
-                                    Text(
-                                      '${customer.loyaltyPoints} Pts',
-                                      style: const TextStyle(
-                                        fontSize: 14,
-                                        fontWeight: FontWeight.bold,
-                                        color: Colors.amber,
+                                  Row(
+                                    children: [
+                                      const Icon(Icons.stars, size: 16, color: AppTheme.warningColor),
+                                      const SizedBox(width: 4),
+                                      Text(
+                                        '${customer.loyaltyPoints} Pts',
+                                        style: const TextStyle(
+                                          fontSize: 14,
+                                          fontWeight: FontWeight.bold,
+                                          color: AppTheme.warningColor,
+                                        ),
                                       ),
-                                    ),
-                                  ],
-                                ),
-                              ],
-                            ),
-                          ),
-                        ),
-                        const SizedBox(width: 8),
-                        Expanded(
-                          child: Container(
-                            padding: const EdgeInsets.all(12),
-                            decoration: BoxDecoration(
-                              color: AppTheme.surfaceColor,
-                              borderRadius: BorderRadius.circular(12),
-                              border: Border.all(
-                                color: totalPiutang > 0
-                                    ? Colors.redAccent.withValues(alpha: 0.5)
-                                    : AppTheme.borderColor.withValues(alpha: 0.5),
+                                    ],
+                                  ),
+                                ],
                               ),
                             ),
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                const Text(
-                                  'Piutang / Tempo',
-                                  style: TextStyle(fontSize: 11, color: AppTheme.textSecondary),
+                          ),
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: Container(
+                              padding: const EdgeInsets.all(12),
+                              decoration: BoxDecoration(
+                                color: AppTheme.surfaceColor,
+                                borderRadius: BorderRadius.circular(12),
+                                border: Border.all(
+                                  color: totalPiutang > 0
+                                      ? AppTheme.errorColor.withValues(alpha: 0.5)
+                                      : AppTheme.borderColor.withValues(alpha: 0.5),
                                 ),
-                                const SizedBox(height: 4),
-                                Text(
-                                  Formatters.currency(totalPiutang),
-                                  style: TextStyle(
-                                    fontSize: 14,
-                                    fontWeight: FontWeight.bold,
-                                    color: totalPiutang > 0 ? Colors.redAccent : AppTheme.textPrimary,
+                              ),
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  const Text(
+                                    'Piutang / Tempo',
+                                    style: TextStyle(fontSize: 11, color: AppTheme.textSecondary),
                                   ),
-                                ),
+                                  const SizedBox(height: 4),
+                                  Text(
+                                    Formatters.currency(totalPiutang),
+                                    style: TextStyle(
+                                      fontSize: 14,
+                                      fontWeight: FontWeight.bold,
+                                      color: totalPiutang > 0 ? AppTheme.errorColor : AppTheme.textPrimary,
+                                    ),
+                                  ),
                               ],
                             ),
                           ),
@@ -425,8 +425,8 @@ class _CustomerListScreenState extends ConsumerState<CustomerListScreen> {
                         final statusColor = isPaid
                             ? AppTheme.successColor
                             : isPartial
-                                ? Colors.orange
-                                : Colors.redAccent;
+                                ? AppTheme.warningColor
+                                : AppTheme.errorColor;
                         final statusLabel = isPaid
                             ? 'LUNAS'
                             : isPartial
@@ -546,7 +546,7 @@ class _CustomerListScreenState extends ConsumerState<CustomerListScreen> {
                             borderRadius: BorderRadius.circular(12),
                             border: Border.all(
                               color: isUnpaid
-                                  ? Colors.redAccent.withValues(alpha: 0.4)
+                                  ? AppTheme.errorColor.withValues(alpha: 0.4)
                                   : AppTheme.borderColor.withValues(alpha: 0.4),
                             ),
                           ),
@@ -555,12 +555,12 @@ class _CustomerListScreenState extends ConsumerState<CustomerListScreen> {
                               CircleAvatar(
                                 radius: 18,
                                 backgroundColor: isUnpaid
-                                    ? Colors.redAccent.withValues(alpha: 0.15)
+                                    ? AppTheme.errorColor.withValues(alpha: 0.15)
                                     : AppTheme.primaryColor.withValues(alpha: 0.15),
                                 child: Icon(
                                   isUnpaid ? Icons.warning_amber_rounded : Icons.receipt_long,
                                   size: 18,
-                                  color: isUnpaid ? Colors.redAccent : AppTheme.accentColor,
+                                  color: isUnpaid ? AppTheme.errorColor : AppTheme.accentColor,
                                 ),
                               ),
                               const SizedBox(width: 12),
@@ -595,7 +595,7 @@ class _CustomerListScreenState extends ConsumerState<CustomerListScreen> {
                                     style: TextStyle(
                                       fontSize: 13,
                                       fontWeight: FontWeight.bold,
-                                      color: isUnpaid ? Colors.redAccent : AppTheme.textPrimary,
+                                      color: isUnpaid ? AppTheme.errorColor : AppTheme.textPrimary,
                                     ),
                                   ),
                                   const SizedBox(height: 2),
@@ -603,8 +603,8 @@ class _CustomerListScreenState extends ConsumerState<CustomerListScreen> {
                                     padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                                     decoration: BoxDecoration(
                                       color: isUnpaid
-                                          ? Colors.redAccent.withValues(alpha: 0.2)
-                                          : Colors.green.withValues(alpha: 0.2),
+                                          ? AppTheme.errorColor.withValues(alpha: 0.2)
+                                          : AppTheme.successColor.withValues(alpha: 0.2),
                                       borderRadius: BorderRadius.circular(4),
                                     ),
                                     child: Text(
@@ -612,7 +612,7 @@ class _CustomerListScreenState extends ConsumerState<CustomerListScreen> {
                                       style: TextStyle(
                                         fontSize: 9,
                                         fontWeight: FontWeight.bold,
-                                        color: isUnpaid ? Colors.redAccent : Colors.greenAccent,
+                                        color: isUnpaid ? AppTheme.errorColor : AppTheme.successColor,
                                       ),
                                     ),
                                   ),

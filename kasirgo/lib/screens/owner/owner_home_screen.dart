@@ -792,7 +792,7 @@ class _OwnerHomeScreenState extends ConsumerState<OwnerHomeScreen> {
           icon: Icons.menu_book_rounded,
           title: 'Buku Kasbon',
           subtitle: 'Catat piutang',
-          color: Colors.amber,
+          color: AppTheme.warningColor,
           onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const DebtScreen())),
         ),
       );
@@ -839,7 +839,7 @@ class _OwnerHomeScreenState extends ConsumerState<OwnerHomeScreen> {
         icon: Icons.mark_chat_unread_rounded,
         title: 'WA Marketing',
         subtitle: 'Broadcast & CRM',
-        color: const Color(0xFF25D366),
+        color: AppTheme.whatsAppColor,
         onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const WhatsappBroadcastScreen())),
       ),
     );
@@ -849,7 +849,7 @@ class _OwnerHomeScreenState extends ConsumerState<OwnerHomeScreen> {
         icon: Icons.hub_rounded,
         title: 'Social Commerce',
         subtitle: 'Sync Marketplace',
-        color: Colors.deepOrange,
+        color: AppTheme.secondaryColor,
         onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const SocialCommerceScreen())),
       ),
     );
@@ -889,7 +889,7 @@ class _OwnerHomeScreenState extends ConsumerState<OwnerHomeScreen> {
         icon: Icons.favorite_rounded,
         title: 'Pendukung KasirGo',
         subtitle: 'Donasi Sukarela',
-        color: Colors.amber,
+        color: AppTheme.warningColor,
         onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const SupporterScreen())),
       ),
     );

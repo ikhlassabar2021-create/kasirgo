@@ -211,10 +211,10 @@ class _WhatsappBroadcastScreenState extends ConsumerState<WhatsappBroadcastScree
                       width: 40,
                       height: 40,
                       decoration: BoxDecoration(
-                        color: const Color(0xFF25D366).withValues(alpha: 0.12),
+                        color: AppTheme.whatsAppColor.withValues(alpha: 0.12),
                         borderRadius: BorderRadius.circular(AppTheme.radiusMedium),
                       ),
-                      child: const Icon(Icons.campaign_outlined, color: Color(0xFF25D366), size: 22),
+                      child: const Icon(Icons.campaign_outlined, color: AppTheme.whatsAppColor, size: 22),
                     ),
                     const SizedBox(width: 12),
                     Text(
@@ -361,7 +361,7 @@ class _WhatsappBroadcastScreenState extends ConsumerState<WhatsappBroadcastScree
                       style: GoogleFonts.inter(fontSize: 12, color: AppTheme.textSecondary),
                     ),
                     trailing: IconButton(
-                      icon: const Icon(Icons.send_rounded, color: Color(0xFF25D366)),
+                      icon: const Icon(Icons.send_rounded, color: AppTheme.whatsAppColor),
                       onPressed: () => _sendSinglePromo(customer, storeName),
                       tooltip: 'Kirim WA ke pelanggan ini',
                     ),
@@ -376,7 +376,7 @@ class _WhatsappBroadcastScreenState extends ConsumerState<WhatsappBroadcastScree
               height: AppTheme.touchTargetLarge,
               child: ElevatedButton.icon(
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: const Color(0xFF25D366),
+                          backgroundColor: AppTheme.whatsAppColor,
                   foregroundColor: Colors.white,
                   elevation: 0,
                   shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppTheme.radiusMedium)),
@@ -427,10 +427,10 @@ class _WhatsappBroadcastScreenState extends ConsumerState<WhatsappBroadcastScree
             width: 36,
             height: 36,
             decoration: BoxDecoration(
-              color: const Color(0xFF25D366).withValues(alpha: 0.12),
+              color: AppTheme.whatsAppColor.withValues(alpha: 0.12),
               borderRadius: BorderRadius.circular(8),
             ),
-            child: const Icon(Icons.check_circle_outline, color: Color(0xFF25D366), size: 20),
+            child: const Icon(Icons.check_circle_outline, color: AppTheme.whatsAppColor, size: 20),
           ),
           const SizedBox(width: 12),
           Expanded(
@@ -553,7 +553,7 @@ class _WhatsappBroadcastScreenState extends ConsumerState<WhatsappBroadcastScree
                         height: AppTheme.touchTargetMedium,
                         child: ElevatedButton.icon(
                           style: ElevatedButton.styleFrom(
-                            backgroundColor: const Color(0xFF25D366),
+                backgroundColor: AppTheme.whatsAppColor,
                             foregroundColor: Colors.white,
                             elevation: 0,
                             shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppTheme.radiusMedium)),

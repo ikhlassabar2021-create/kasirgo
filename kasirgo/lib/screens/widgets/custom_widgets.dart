@@ -1,6 +1,7 @@
 // lib/screens/widgets/custom_widgets.dart - Custom UI components
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import '../../config/app_theme.dart';
 
 class ActionButton extends StatelessWidget {
   final String label;
@@ -19,9 +20,9 @@ class ActionButton extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Material(
-      color: Colors.white,
+      color: AppTheme.surfaceColor,
       borderRadius: BorderRadius.circular(12),
-      shadowColor: const Color(0x08000000),
+      shadowColor: AppTheme.scrimColor,
       elevation: 2,
       child: InkWell(
         onTap: onTap,
@@ -38,7 +39,7 @@ class ActionButton extends StatelessWidget {
                 style: GoogleFonts.inter(
                   fontSize: 13,
                   fontWeight: FontWeight.w500,
-                  color: const Color(0xFF111827),
+                  color: AppTheme.textPrimary,
                 ),
               ),
             ],

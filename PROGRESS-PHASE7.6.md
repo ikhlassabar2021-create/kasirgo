@@ -6,8 +6,34 @@ SELESAI: ST7.6-4 (Admin Home, Cashier Home + shift/tip/QRIS, Customer Menu, KDS 
 SELESAI: ST7.6-5 (Auth Login/Register, Social Commerce Sync, WA Broadcast, QR Table, Online Catalog)
 SELESAI: ST7.6-6 (retrofit kasirgo-admin React+Vite+Tailwind ke Ocean White: tokens CSS, Layout, Login/Dashboard, Users/UserDetail, Control Plane, Affiliates/Backup/Revenue/OwnerDashboard)
 SELESAI: ST7.6-7 (finalisasi shared widgets common/ + retrofit POS cart/checkout + responsive shell Mobile/Tablet/Desktop + animasi & shadow terpusat)
-BERIKUTNYA: ST7.6-8 (audit akhir UI seluruh screen + konsistensi token, hapus sisa warna hardcode)
+SELESAI: ST7.6-8 (audit akhir hardcode Color/Colors/Font, verifikasi 3 breakpoint mobile/tablet/desktop, dart analyze 0 error/0 warning, flutter build web sukses)
+STATUS: PHASE 7.6 SELESAI PENUH
+BERIKUTNYA: Phase 8 (Modul outlet_type: BOM/Resep, KDS/QR Meja, Variant, Shift/Tip)
 BLOCKER: -
+
+## Completed Items ST7.6-8:
+- Audit Hardcode Warna & Font:
+  - `whatsapp_broadcast_screen.dart`: ganti warna hardcode `#25D366` -> `AppTheme.whatsAppColor`
+  - `online_catalog_screen.dart`: ganti warna `#25D366` -> `AppTheme.whatsAppColor`
+  - `owner_home_screen.dart`: ganti `Colors.amber` -> `AppTheme.warningColor`, `#25D366` -> `AppTheme.whatsAppColor`, `Colors.deepOrange` -> `AppTheme.secondaryColor`
+  - `cashier_home_screen.dart`: ganti `#34D399` -> `AppTheme.successColor`, `#F59E0B` -> `AppTheme.warningColor`
+  - `debt_screen.dart`: ganti `Colors.amber` -> `AppTheme.warningColor`, `Colors.orange` -> `AppTheme.warningColor`, `Colors.redAccent` -> `AppTheme.errorColor`
+  - `customer_list_screen.dart`: ganti `Colors.amber` -> `AppTheme.warningColor`, `Colors.redAccent` -> `AppTheme.errorColor`, `Colors.green/greenAccent` -> `AppTheme.successColor`
+  - `supporter_screen.dart`: ganti `Colors.amber` -> `AppTheme.warningColor`
+  - `health_score_screen.dart`: ganti `Colors.amber` -> `AppTheme.warningColor`
+  - `settings_screen.dart`: ganti `Colors.grey[200]` -> `AppTheme.surfaceMutedColor`
+  - `custom_widgets.dart`: ganti `Colors.white`, `#08000000`, `#111827` -> `AppTheme.surfaceColor`, `AppTheme.scrimColor`, `AppTheme.textPrimary`
+  - `kyc_upload_screen.dart`: perbaiki bug kompilasi parameter SnackBar `backgroundColor`, tipe `outletId`, ikon `id_card_rounded` -> `badge_rounded`, `Image.file` path -> `File(path)`
+  - `staradmin_dashboard.dart`: bersihkan unused imports
+- Verifikasi Responsif:
+  - 3 Breakpoint diuji di `AppShell` dan `OwnerHomeScreen`: Mobile (360-599), Tablet (600-859), Desktop (>=860)
+  - Sidebar tetap 240dp, header 60dp, content maxWidth 1100, form maxWidth 760
+  - Tidak ada UI overflow
+- UI-only: tidak ada perubahan pada fitur, business logic, provider, atau schema database
+- Verifikasi Build & Analysis:
+  - `dart analyze kasirgo/lib/` bersih: 0 error, 0 warning (hanya info deprecation/unnecessary formatters lama)
+  - `flutter build web --no-pub --no-wasm-dry-run -O1` sukses menghasilkan `build/web`
+- Phase 7.6 ditutup, repositori siap untuk Phase 8
 
 ## Completed Items ST7.6-7:
 - app_theme.dart: token layout (breakpointTablet 600/breakpointDesktop 860, sidebarWidth 240, headerHeight 60, contentMaxWidth 1100, formMaxWidth 760), animasi (durationFast/Medium/Slow + curveDefault), shadowSoft/shadowMedium, whatsAppColor, qrInkColor, scrimColor, surfaceMutedColor, helper isMobile/isTablet/isDesktop

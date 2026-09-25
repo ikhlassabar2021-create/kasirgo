@@ -424,7 +424,7 @@ class _CashierHomeScreenState extends ConsumerState<CashierHomeScreen> {
                               width: 8,
                               height: 8,
                               decoration: BoxDecoration(
-                                color: hasActiveShift ? const Color(0xFF34D399) : Colors.white70,
+                                color: hasActiveShift ? AppTheme.successColor : Colors.white70,
                                 shape: BoxShape.circle,
                               ),
                             ),
@@ -540,7 +540,7 @@ class _CashierHomeScreenState extends ConsumerState<CashierHomeScreen> {
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
                     Text('Total Tip', style: TextStyle(color: AppTheme.textSecondary, fontSize: 12)),
-                    Icon(Icons.volunteer_activism_rounded, size: 16, color: Color(0xFFF59E0B)),
+                    Icon(Icons.volunteer_activism_rounded, size: 16, color: AppTheme.warningColor),
                   ],
                 ),
                 const SizedBox(height: 6),

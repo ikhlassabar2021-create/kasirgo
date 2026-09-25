@@ -823,7 +823,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
           LinearProgressIndicator(
             value: percentage,
             minHeight: 8,
-            backgroundColor: Colors.grey[200],
+            backgroundColor: AppTheme.surfaceMutedColor,
             valueColor: AlwaysStoppedAnimation<Color>(
               quotaRemaining > 0 ? AppTheme.primaryColor : AppTheme.warningColor,
             ),

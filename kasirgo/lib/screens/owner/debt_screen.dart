@@ -216,10 +216,10 @@ class _DebtScreenState extends ConsumerState<DebtScreen> {
                   Container(
                     padding: const EdgeInsets.all(12),
                     decoration: BoxDecoration(
-                      color: Colors.amber.withValues(alpha: 0.15),
+                      color: AppTheme.warningColor.withValues(alpha: 0.15),
                       shape: BoxShape.circle,
                     ),
-                    child: const Icon(Icons.account_balance_wallet, color: Colors.amber, size: 28),
+                    child: const Icon(Icons.account_balance_wallet, color: AppTheme.warningColor, size: 28),
                   ),
                   const SizedBox(width: 16),
                   Expanded(
@@ -234,7 +234,7 @@ class _DebtScreenState extends ConsumerState<DebtScreen> {
                         MoneyText(
                           value: Formatters.currency(_totalRemaining),
                           size: 22,
-                          color: Colors.amber,
+                          color: AppTheme.warningColor,
                         ),
                       ],
                     ),
@@ -333,12 +333,12 @@ class _DebtScreenState extends ConsumerState<DebtScreen> {
                                 statusLabel = 'LUNAS';
                                 break;
                               case 'partial':
-                                statusColor = Colors.orange;
+                                statusColor = AppTheme.warningColor;
                                 statusLabel = 'SEBAGIAN';
                                 break;
                               case 'unpaid':
                               default:
-                                statusColor = Colors.redAccent;
+                                statusColor = AppTheme.errorColor;
                                 statusLabel = 'BELUM LUNAS';
                                 break;
                             }
@@ -399,7 +399,7 @@ class _DebtScreenState extends ConsumerState<DebtScreen> {
                                             value: Formatters.currency(debt.remainingAmount),
                                             size: 15,
                                             color: debt.remainingAmount > 0
-                                                ? Colors.amber
+                                                ? AppTheme.warningColor
                                                 : AppTheme.textPrimary,
                                           ),
                                         ],
@@ -432,7 +432,7 @@ class _DebtScreenState extends ConsumerState<DebtScreen> {
                                         fontSize: 11,
                                         color: debt.dueDate!.isBefore(DateTime.now()) &&
                                                 debt.status.toLowerCase() != 'paid'
-                                            ? Colors.redAccent
+                                            ? AppTheme.errorColor
                                             : AppTheme.textSecondary,
                                       ),
                                     ),

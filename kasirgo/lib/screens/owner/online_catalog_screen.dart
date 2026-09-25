@@ -260,7 +260,7 @@ class _OnlineCatalogScreenState extends ConsumerState<OnlineCatalogScreen> {
                                             height: 24,
                                             child: ElevatedButton.icon(
                                               style: ElevatedButton.styleFrom(
-                                                backgroundColor: const Color(0xFF25D366),
+                                                backgroundColor: AppTheme.whatsAppColor,
                                                 foregroundColor: Colors.white,
                                                 elevation: 0,
                                                 padding: EdgeInsets.zero,

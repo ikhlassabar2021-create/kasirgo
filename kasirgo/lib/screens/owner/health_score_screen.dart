@@ -118,7 +118,7 @@ class _HealthScoreScreenState extends ConsumerState<HealthScoreScreen> {
 
   Color _getScoreColor(double score) {
     if (score >= 80) return AppTheme.successColor;
-    if (score >= 60) return Colors.amber;
+    if (score >= 60) return AppTheme.warningColor;
     return AppTheme.errorColor;
   }
 
@@ -253,7 +253,7 @@ class _HealthScoreScreenState extends ConsumerState<HealthScoreScreen> {
                               const SizedBox(height: 6),
                               Text(
                                 Formatters.currency(_totalReceivables),
-                                style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15, color: Colors.amber),
+                                style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15, color: AppTheme.warningColor),
                               ),
                             ],
                           ),

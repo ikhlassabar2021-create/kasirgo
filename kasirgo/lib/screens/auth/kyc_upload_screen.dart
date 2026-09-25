@@ -1,3 +1,4 @@
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -42,8 +43,10 @@ class _KyCUploadScreenState extends ConsumerState<KyCUploadScreen> {
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Gagal memuat gambar: $e')),
-          backgroundColor: AppTheme.errorColor,
+          SnackBar(
+            content: Text('Gagal memuat gambar: $e'),
+            backgroundColor: AppTheme.errorColor,
+          ),
         );
       }
     }
@@ -69,13 +72,13 @@ class _KyCUploadScreenState extends ConsumerState<KyCUploadScreen> {
       final kycService = KyCVerificationService();
       
       // Get outlet ID from provider or user data
-      final outletId = user?.outletId ?? 1; // TODO: Replace with proper outlet_id
+      final outletId = int.tryParse(user?.outletId ?? '1') ?? 1;
       
       final result = await kycService.verifyKYC(
         ktpImage: _ktpImage!,
         selfieImage: _selfieImage!,
         outletId: outletId,
-        nik: user?.data['kyc_nik'] ?? '',
+        nik: '',
       );
 
       if (mounted) {
@@ -152,7 +155,7 @@ class _KyCUploadScreenState extends ConsumerState<KyCUploadScreen> {
                         ),
                       ],
                     ),
-                    child: const Icon(Icons.id_card_rounded, color: Colors.white, size: 36),
+                    child: const Icon(Icons.badge_rounded, color: Colors.white, size: 36),
                   ),
                   const SizedBox(height: 16),
                   Text(
@@ -207,23 +210,21 @@ class _KyCUploadScreenState extends ConsumerState<KyCUploadScreen> {
                             textAlign: TextAlign.center,
                             style: TextStyle(color: AppTheme.textSecondary, fontSize: 12),
                           ),
-                          if (_result!.faceMatchScore != null) ...[
-                            const SizedBox(height: 16),
-                            LinearProgressIndicator(
-                              value: _result!.faceMatchScore! / 100,
-                              backgroundColor: Colors.grey[200],
-                              valueColor: AlwaysStoppedAnimation<Color>(
-                                _result!.faceMatchScore! >= 85 
-                                    ? AppTheme.successColor 
-                                    : AppTheme.warningColor,
-                              ),
+                          const SizedBox(height: 16),
+                          LinearProgressIndicator(
+                            value: _result!.faceMatchScore / 100,
+                            backgroundColor: AppTheme.borderColor,
+                            valueColor: AlwaysStoppedAnimation<Color>(
+                              _result!.faceMatchScore >= 85 
+                                  ? AppTheme.successColor 
+                                  : AppTheme.warningColor,
                             ),
-                            const SizedBox(height: 4),
-                            Text(
-                              'Skore Kecocokan Wajah: ${_result!.faceMatchScore}%',
-                              style: TextStyle(color: AppTheme.textSecondary, fontSize: 11),
-                            ),
-                          ],
+                          ),
+                          const SizedBox(height: 4),
+                          Text(
+                            'Skore Kecocokan Wajah: ${_result!.faceMatchScore}%',
+                            style: const TextStyle(color: AppTheme.textSecondary, fontSize: 11),
+                          ),
                         ],
                       ),
                     ),
@@ -323,7 +324,7 @@ class _KyCUploadScreenState extends ConsumerState<KyCUploadScreen> {
                 )
               : ClipRRect(
                   borderRadius: BorderRadius.circular(14),
-                  child: Image.file(_ktpImage!.path, fit: BoxFit.cover),
+                  child: Image.file(File(_ktpImage!.path), fit: BoxFit.cover),
                 ),
         ),
       ),
@@ -369,7 +370,7 @@ class _KyCUploadScreenState extends ConsumerState<KyCUploadScreen> {
                 )
               : ClipRRect(
                   borderRadius: BorderRadius.circular(14),
-                  child: Image.file(_selfieImage!.path, fit: BoxFit.cover),
+                  child: Image.file(File(_selfieImage!.path), fit: BoxFit.cover),
                 ),
         ),
       ),

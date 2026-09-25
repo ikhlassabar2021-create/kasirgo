@@ -2,15 +2,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
-import '../../widgets/common/app_drawer.dart';
-import '../../providers/auth_provider.dart';
-import 'report_screen.dart';
-import 'product_list_screen.dart';
-import 'customer_list_screen.dart';
-import 'employee_screen.dart';
-import 'settings_screen.dart';
-import 'pos_screen.dart';
-import '../widgets/custom_widgets.dart' hide ActionButton;
 import '../../core/widgets/staradmin_widgets.dart';
 
 class StarAdminDashboard extends ConsumerStatefulWidget {
