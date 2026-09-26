@@ -1,0 +1,1 @@
+ /workspace/kasirgo/.dart_tool/flutter_build/7abfb8499d20a4b393844f78e67351cf/build_hooks_result.json:  /opt/flutter/bin/cache/dart-sdk/version /workspace/kasirgo/.dart_tool/package_config.json /workspace/kasirgo/pubspec.yaml
