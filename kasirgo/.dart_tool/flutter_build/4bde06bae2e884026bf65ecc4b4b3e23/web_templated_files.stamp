@@ -1,0 +1,1 @@
+{"inputs":["/workspace/kasirgo/web/*/index.html","/workspace/kasirgo/web/flutter_bootstrap.js","/opt/flutter/bin/cache/engine.stamp"],"outputs":["/workspace/kasirgo/build/web/*/index.html","/workspace/kasirgo/build/web/flutter_bootstrap.js"],"buildKey":"[{\"compileTarget\":\"dart2js\",\"renderer\":\"canvaskit\",\"mainJsPath\":\"main.dart.js\"},{}]"}
