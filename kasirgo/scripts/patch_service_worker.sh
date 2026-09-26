@@ -4,10 +4,15 @@
 
 FLUTTER_BS="/workspace/kasirgo/build/web/flutter_bootstrap.js"
 if [ -f "$FLUTTER_BS" ]; then
-  # Match the exact invocation at the bottom of the file
-  sed -i 's/serviceWorkerVersion: "[^"]*"/serviceWorkerVersion: null/g' "$FLUTTER_BS"
-  sed -i 's/serviceWorkerVersion: [0-9]*/serviceWorkerVersion: null/g' "$FLUTTER_BS"
-  echo "Service worker disabled in flutter_bootstrap.js"
+  # Only replace inside the final loader call at the bottom:
+  node -e '
+    const fs = require("fs");
+    let content = fs.readFileSync(process.argv[1], "utf8");
+    // Replace serviceWorkerSettings with empty object or null
+    content = content.replace(/serviceWorkerSettings:\s*\{[\s\S]*?\}/, "serviceWorkerSettings: null");
+    fs.writeFileSync(process.argv[1], content, "utf8");
+  ' "$FLUTTER_BS"
+  echo "Service worker disabled safely in flutter_bootstrap.js"
 else
   echo "flutter_bootstrap.js not found (build first?)"
 fi
