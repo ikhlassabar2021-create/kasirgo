@@ -51,6 +51,12 @@ class AuthService {
       final authUser = _client.auth.currentUser;
       final userId = authUser?.id;
 
+      if (userId == null) {
+        // No authenticated (or anonymous) session available.
+        // Anonymous sign-in is disabled on this project, so require login.
+        return null;
+      }
+
       try {
         final response = await _client.functions.invoke(
           'onboard_merchant',
@@ -67,8 +73,8 @@ class AuthService {
           final outletId = outlet['id'] as String?;
           final outletName = outlet['name'] as String? ?? 'Warung Saya';
           return User(
-            id: userId ?? deviceUuid,
-            email: authUser?.email ?? '',
+            id: userId,
+            email: authUser!.email ?? '',
             name: outletName,
             role: 'owner',
             outletId: outletId,
@@ -79,27 +85,27 @@ class AuthService {
         }
       } catch (_) {}
 
-      if (userId != null) {
-        final existingRole = await _client
-            .from('user_roles')
-            .select('*, outlets(*)')
-            .eq('user_id', userId)
-            .maybeSingle();
+      final existingRole = await _client
+          .from('user_roles')
+          .select('*, outlets(*)')
+          .eq('user_id', userId);
 
-        if (existingRole != null) {
-          return User(
-            id: userId,
-            email: authUser?.email ?? '',
-            name: existingRole['name'] as String?,
-            role: existingRole['role'] as String? ?? 'owner',
-            outletId: existingRole['outlet_id'] as String?,
-            createdAt: DateTime.tryParse(authUser?.createdAt ?? ''),
-          );
-        }
+      final roleList = (existingRole as List).cast<Map<String, dynamic>>();
+      final roleRow = roleList.isNotEmpty ? roleList.first : null;
+
+      if (roleRow != null) {
+        return User(
+          id: userId,
+          email: authUser?.email ?? '',
+          name: roleRow['name'] as String?,
+          role: roleRow['role'] as String? ?? 'owner',
+          outletId: roleRow['outlet_id'] as String?,
+          createdAt: DateTime.tryParse(authUser?.createdAt ?? ''),
+        );
       }
 
       return User(
-        id: userId ?? deviceUuid,
+        id: userId,
         email: authUser?.email ?? '',
         name: 'Warung Saya',
         role: 'owner',
@@ -149,21 +155,37 @@ class AuthService {
       }
 
       // 1. Try to find existing user_roles
-      final response = await _client
+      final rolesResponse = await _client
           .from('user_roles')
           .select('*, outlets(*)')
-          .eq('user_id', authUser.id)
-          .maybeSingle();
+          .eq('user_id', authUser.id);
 
-      if (response != null && response['outlet_id'] != null) {
-        return User(
-          id: authUser.id,
-          email: authUser.email ?? '',
-          name: response['name'] as String? ?? (response['outlets']?['name'] as String?),
-          role: response['role'] as String? ?? 'owner',
-          outletId: response['outlet_id'] as String?,
-          createdAt: DateTime.tryParse(authUser.createdAt),
+      final roles = (rolesResponse as List).cast<Map<String, dynamic>>();
+      if (roles.isNotEmpty) {
+        // Prefer a staff role (admin/cashier); otherwise use owner row.
+        Map<String, dynamic>? chosen;
+        for (final r in roles) {
+          final role = r['role']?.toString();
+          if (role == 'admin' || role == 'cashier') {
+            chosen = r;
+            break;
+          }
+        }
+        chosen ??= roles.firstWhere(
+          (r) => r['outlet_id'] != null,
+          orElse: () => roles.first,
         );
+
+        if (chosen['outlet_id'] != null) {
+          return User(
+            id: authUser.id,
+            email: authUser.email ?? '',
+            name: chosen['name'] as String? ?? (chosen['outlets']?['name'] as String?),
+            role: chosen['role'] as String? ?? 'owner',
+            outletId: chosen['outlet_id'] as String?,
+            createdAt: DateTime.tryParse(authUser.createdAt),
+          );
+        }
       }
 
       // 2. If no role or outlet_id is null, find outlet owned by this user
@@ -215,8 +237,13 @@ class AuthService {
         );
       } catch (_) {}
 
-      return (await initializeAnonymousOnboarding())?.copyWith(
-        outletId: authUser.id,
+      return User(
+        id: authUser.id,
+        email: authUser.email ?? '',
+        name: authUser.userMetadata?['business_name']?.toString() ?? 'Warung Saya',
+        role: 'owner',
+        outletId: null,
+        createdAt: DateTime.tryParse(authUser.createdAt),
       );
     } catch (_) {
       return null;

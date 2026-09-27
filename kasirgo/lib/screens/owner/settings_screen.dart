@@ -628,7 +628,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     );
   }
 
-  void _showQrisConfigDialog() {
+  void _showQrisConfigDialog() async {
     final user = ref.read(currentUserProvider);
     final outletId = user?.outletId;
     if (outletId == null || outletId.isEmpty) {
@@ -637,20 +637,16 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
       );
       return;
     }
-    final nameController = TextEditingController();
-    final nmidController = TextEditingController();
-    final walletController = TextEditingController();
-    final qrisStringController = TextEditingController();
-    bool isLoading = true;
+    QrisConfig existing = const QrisConfig();
+    try {
+      existing = await QrisConfig.load(outletId: outletId);
+    } catch (_) {}
+    if (!mounted) return;
 
-    QrisConfig.load(outletId: outletId).then((config) {
-      if (!mounted) return;
-      nameController.text = config.merchantName;
-      nmidController.text = config.nmid;
-      walletController.text = config.bankOrWallet;
-      qrisStringController.text = config.qrisString;
-      setState(() => isLoading = false);
-    });
+    final nameController = TextEditingController(text: existing.merchantName);
+    final nmidController = TextEditingController(text: existing.nmid);
+    final walletController = TextEditingController(text: existing.bankOrWallet);
+    final qrisStringController = TextEditingController(text: existing.qrisString);
 
     showDialog(
       context: context,
@@ -722,9 +718,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                   backgroundColor: AppTheme.primaryColor,
                   foregroundColor: Colors.white,
                 ),
-                onPressed: isLoading
-                    ? null
-                    : () async {
+                onPressed: () async {
                         final config = QrisConfig(
                           merchantName: nameController.text.trim(),
                           nmid: nmidController.text.trim(),
@@ -984,7 +978,14 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
           ),
           const SizedBox(height: 12),
           ElevatedButton.icon(
-            onPressed: () => context.push('/kyc-upload'),
+            onPressed: () {
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(
+                  content: Text('Upload dokumen KYC akan tersedia pada pembaruan berikutnya.'),
+                  backgroundColor: AppTheme.warningColor,
+                ),
+              );
+            },
             icon: const Icon(Icons.upload_file_rounded, size: 18),
             label: const Text('Upload / Update'),
             style: ElevatedButton.styleFrom(
