@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
+import { HashRouter, Routes, Route, Navigate } from 'react-router-dom'
 import { supabase } from './config/supabase'
 import { Layout } from './components/Layout'
 import { Login } from './pages/Login'
@@ -82,7 +82,7 @@ export default function App() {
   }
 
   return (
-    <BrowserRouter>
+    <HashRouter>
       <Routes>
         <Route path="/login" element={!session ? <Login /> : <Navigate to="/" replace />} />
         
@@ -104,6 +104,6 @@ export default function App() {
         
         <Route path="*" element={<Navigate to={session ? "/" : "/login"} replace />} />
       </Routes>
-    </BrowserRouter>
+    </HashRouter>
   )
 }
