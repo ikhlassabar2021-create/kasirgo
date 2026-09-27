@@ -182,6 +182,9 @@ class _EmployeeScreenState extends ConsumerState<EmployeeScreen> with SingleTick
     final nameController = TextEditingController();
     final phoneController = TextEditingController();
     final emailController = TextEditingController();
+    final passwordController = TextEditingController();
+    bool obscurePassword = true;
+    bool createLogin = false;
     String selectedRole = 'cashier';
     bool isSubmitting = false;
 
@@ -233,7 +236,67 @@ class _EmployeeScreenState extends ConsumerState<EmployeeScreen> with SingleTick
                           labelText: 'Email Akun (Opsional)',
                           prefixIcon: Icon(Icons.email, color: AppTheme.textSecondary),
                         ),
+                        validator: (v) {
+                          final val = (v ?? '').trim();
+                          if (val.isEmpty && createLogin) return 'Email wajib diisi untuk akun login';
+                          if (val.isNotEmpty && !val.contains('@')) return 'Format email tidak valid';
+                          return null;
+                        },
                       ),
+                      const SizedBox(height: 12),
+                      Row(
+                        children: [
+                          const Expanded(
+                            child: Text(
+                              'Buat akun login (Kasir/Admin)',
+                              style: TextStyle(fontSize: 13, color: AppTheme.textPrimary, fontWeight: FontWeight.w600),
+                            ),
+                          ),
+                          Switch(
+                            value: createLogin,
+                            activeColor: AppTheme.primaryColor,
+                            onChanged: (v) => setDialogState(() => createLogin = v),
+                          ),
+                        ],
+                      ),
+                      if (createLogin) ...[
+                        const SizedBox(height: 4),
+                        Container(
+                          padding: const EdgeInsets.all(12),
+                          decoration: BoxDecoration(
+                            color: AppTheme.primaryColor.withValues(alpha: 0.06),
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          child: const Text(
+                            'Karyawan bisa login dengan email & password ini untuk masuk ke aplikasi KasirGo sesuai role.',
+                            style: TextStyle(fontSize: 12, color: AppTheme.textSecondary, height: 1.4),
+                          ),
+                        ),
+                        const SizedBox(height: 12),
+                        TextFormField(
+                          controller: passwordController,
+                          obscureText: obscurePassword,
+                          decoration: InputDecoration(
+                            labelText: 'Password Akun *',
+                            prefixIcon: const Icon(Icons.lock_outline, color: AppTheme.textSecondary),
+                            suffixIcon: IconButton(
+                              icon: Icon(
+                                obscurePassword ? Icons.visibility_off : Icons.visibility,
+                                color: AppTheme.textSecondary,
+                              ),
+                              onPressed: () => setDialogState(() => obscurePassword = !obscurePassword),
+                            ),
+                          ),
+                          validator: createLogin
+                              ? (v) {
+                                  final val = v ?? '';
+                                  if (val.isEmpty) return 'Password wajib diisi';
+                                  if (val.length < 6) return 'Minimal 6 karakter';
+                                  return null;
+                                }
+                              : null,
+                        ),
+                      ],
                       const SizedBox(height: 16),
                       DropdownButtonFormField<String>(
                         initialValue: selectedRole,
@@ -282,10 +345,38 @@ class _EmployeeScreenState extends ConsumerState<EmployeeScreen> with SingleTick
                             return;
                           }
 
+                          String? newUserId = '';
+                          try {
+                            if (createLogin) {
+                              final authService = ref.read(authServiceProvider);
+                              final staffEmail = emailController.text.trim();
+                              final staffPassword = passwordController.text;
+                              final staffResp = await authService.createStaffAccount(
+                                email: staffEmail,
+                                password: staffPassword,
+                                outletId: outletId,
+                                role: selectedRole,
+                                name: nameController.text.trim(),
+                              );
+                              newUserId = staffResp.user?.id;
+                            }
+                          } catch (e) {
+                            setDialogState(() => isSubmitting = false);
+                            if (context.mounted) {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                SnackBar(
+                                  content: Text('Gagal membuat akun login: $e'),
+                                  backgroundColor: AppTheme.errorColor,
+                                ),
+                              );
+                            }
+                            return;
+                          }
+
                           final newEmployee = Employee(
                             id: '',
                             outletId: outletId,
-                            userId: '',
+                            userId: newUserId ?? '',
                             name: nameController.text.trim(),
                             role: selectedRole,
                             phone: phoneController.text.trim().isEmpty ? null : phoneController.text.trim(),
@@ -308,7 +399,15 @@ class _EmployeeScreenState extends ConsumerState<EmployeeScreen> with SingleTick
                           Navigator.pop(dialogCtx);
                           if (!mounted) return;
                           ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(content: Text('Karyawan berhasil ditambahkan')),
+                            SnackBar(
+                              content: Text(
+                                createLogin
+                                    ? 'Karyawan ditambahkan. Akun login dibuat: ${emailController.text.trim()}'
+                                    : 'Karyawan berhasil ditambahkan',
+                              ),
+                              backgroundColor: AppTheme.successColor,
+                              duration: const Duration(seconds: 5),
+                            ),
                           );
                           _loadEmployees();
                         },

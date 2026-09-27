@@ -159,25 +159,29 @@ class Transaction {
   }
 
   Map<String, dynamic> toJson() {
+    return toSupabaseJson()..addAll({
+      'id': id,
+    });
+  }
+
+  Map<String, dynamic> toSupabaseJson() {
     final data = <String, dynamic>{
       'outlet_id': outletId,
-      'user_id': cashierId,
-      'customer_id': customerId,
+      'user_id': (cashierId ?? '').isNotEmpty ? cashierId : null,
+      'customer_id': (customerId ?? '').isNotEmpty ? customerId : null,
       'channel': channel,
-      'payment_method': paymentMethod,
+      'payment_method': paymentMethod == 'Tunai' || paymentMethod == 'cash'
+          ? 'cash'
+          : (paymentMethod == 'qris' || paymentMethod.toLowerCase().contains('qris'))
+              ? 'qris'
+              : (paymentMethod == 'bank_transfer' || paymentMethod.toLowerCase().contains('transfer'))
+                  ? 'bank_transfer'
+                  : 'cash',
       'total_amount': totalAmount,
       'total_discount': discountAmount ?? 0,
       'final_amount': finalAmount,
       'status': paymentStatus == 'voided' ? 'voided' : 'completed',
       'created_at': createdAt.toIso8601String(),
-      'gateway_ref': gatewayRef,
-      'settlement_status': settlementStatus,
-      'tip_amount': tipAmount,
-      'shift_id': shiftId,
-      'debt_id': debtId,
-      'sync_status': syncStatus,
-      'event_id': eventId,
-      'device_id': deviceId,
     };
     if (id.isNotEmpty) {
       data['id'] = id;

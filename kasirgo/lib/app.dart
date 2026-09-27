@@ -105,6 +105,25 @@ class _KasirGoAppState extends ConsumerState<KasirGoApp> {
   void initState() {
     super.initState();
     _initialize();
+    _listenAuth();
+  }
+
+  void _listenAuth() {
+    final authService = AuthService();
+    authService.authStateChanges.listen((data) async {
+      if (data.session != null && mounted) {
+        final user = await authService.getCurrentUser();
+        if (user != null && mounted) {
+          ref.read(currentUserProvider.notifier).setUserDirectly(user);
+          final route = switch (user.role) {
+            'admin' => '/admin',
+            'cashier' => '/cashier',
+            _ => '/owner',
+          };
+          _router.go(route);
+        }
+      }
+    });
   }
 
   Future<void> _initialize() async {

@@ -13,6 +13,7 @@ import '../../providers/module_provider.dart';
 import '../../services/supabase_service.dart';
 import '../../utils/formatters.dart';
 import '../../utils/ai_engine.dart';
+import '../../utils/qris_config.dart';
 import '../../widgets/common/app_drawer.dart';
 import '../../widgets/common/glass_card.dart';
 import '../../widgets/common/centennial_background.dart';
@@ -37,84 +38,100 @@ final homeSummaryProvider = FutureProvider<Map<String, dynamic>>((ref) async {
   final user = ref.watch(currentUserProvider);
   if (user?.outletId == null) return {};
 
-  final service = SupabaseService();
-  final today = DateTime.now().toIso8601String().split('T')[0];
+  try {
+    final service = SupabaseService();
+    final today = DateTime.now().toIso8601String().split('T')[0];
 
-  final todayTransactions = await service.getTransactions(user!.outletId!, limit: 100);
-  final todayFiltered = todayTransactions.where((t) => t.createdAt.toIso8601String().startsWith(today)).toList();
+    final todayTransactions = await service.getTransactions(user!.outletId!, limit: 100);
+    final todayFiltered = todayTransactions.where((t) => t.createdAt.toIso8601String().startsWith(today)).toList();
 
-  final products = await service.getProducts(user.outletId!);
-  final customers = await service.getCustomers(user.outletId!);
+    final products = await service.getProducts(user.outletId!);
+    final customers = await service.getCustomers(user.outletId!);
 
-  final todaySales = todayFiltered.fold<double>(0, (sum, t) => sum + t.finalAmount);
-  final todayCount = todayFiltered.length;
+    final todaySales = todayFiltered.fold<double>(0, (sum, t) => sum + t.finalAmount);
+    final todayCount = todayFiltered.length;
 
-  final ai = AIEngine();
-  final lowStockProducts = products.where((p) => p.stock > 0 && p.stock <= 10).toList();
-  final lowMarginProducts = products.where((p) {
-    final m = ai.checkMargin(p);
-    return m['isLowMargin'] == true && p.costPrice != null && p.costPrice! > 0;
-  }).toList();
-  final flashSale = ai.suggestFlashSale(products, todayTransactions);
+    final ai = AIEngine();
+    final lowStockProducts = products.where((p) => p.stock > 0 && p.stock <= 10).toList();
+    final lowMarginProducts = products.where((p) {
+      final m = ai.checkMargin(p);
+      return m['isLowMargin'] == true && p.costPrice != null && p.costPrice! > 0;
+    }).toList();
+    final flashSale = ai.suggestFlashSale(products, todayTransactions);
 
-  final now = DateTime.now();
-  final expiredProducts = products.where((p) {
-    if (p.expiredDate == null) return false;
-    return p.expiredDate!.isBefore(now) || p.expiredDate!.difference(now).inDays <= 7;
-  }).toList();
+    final now = DateTime.now();
+    final expiredProducts = products.where((p) {
+      if (p.expiredDate == null) return false;
+      return p.expiredDate!.isBefore(now) || p.expiredDate!.difference(now).inDays <= 7;
+    }).toList();
 
-  final notifications = <Map<String, dynamic>>[];
-  for (final p in lowStockProducts) {
-    notifications.add({
-      'type': 'low_stock',
-      'title': 'Stok Menipis: ${p.name}',
-      'message': 'Sisa stok ${p.stock} ${p.unit ?? "pcs"}. Segera restock.',
-      'icon': Icons.warning_amber_rounded,
-      'color': AppTheme.errorColor,
-    });
+    final notifications = <Map<String, dynamic>>[];
+    for (final p in lowStockProducts) {
+      notifications.add({
+        'type': 'low_stock',
+        'title': 'Stok Menipis: ${p.name}',
+        'message': 'Sisa stok ${p.stock} ${p.unit ?? "pcs"}. Segera restock.',
+        'icon': Icons.warning_amber_rounded,
+        'color': AppTheme.errorColor,
+      });
+    }
+    for (final p in expiredProducts) {
+      final isPassed = p.expiredDate!.isBefore(now);
+      notifications.add({
+        'type': 'expired',
+        'title': isPassed ? 'Produk Kedaluwarsa: ${p.name}' : 'Mendekati Kedaluwarsa: ${p.name}',
+        'message': 'Expired: ${p.expiredDate.toString().split(' ')[0]}',
+        'icon': Icons.timer_outlined,
+        'color': AppTheme.errorColor,
+      });
+    }
+    for (final fs in flashSale) {
+      notifications.add({
+        'type': 'dead_stock',
+        'title': 'Stok Menumpuk: ${fs['productName']}',
+        'message': '${fs['reason']}. Disarankan diskon ${fs['suggestedDiscount']}%.',
+        'icon': Icons.inventory_2_outlined,
+        'color': AppTheme.accentColor,
+      });
+    }
+    if (todayFiltered.isNotEmpty) {
+      notifications.add({
+        'type': 'insight',
+        'title': 'Insight Harian AI',
+        'message': 'Total $todayCount transaksi bernilai Rp ${todaySales.toStringAsFixed(0)} hari ini.',
+        'icon': Icons.auto_graph,
+        'color': AppTheme.primaryColor,
+      });
+    }
+
+    return {
+      'todaySales': todaySales,
+      'todayTransactions': todayCount,
+      'products': products.length,
+      'customers': customers.length,
+      'lowStockProducts': lowStockProducts,
+      'lowMarginProducts': lowMarginProducts,
+      'flashSaleProducts': flashSale,
+      'expiredProducts': expiredProducts,
+      'notifications': notifications,
+      'allTransactions': todayTransactions,
+      'allProducts': products,
+    };
+  } catch (e) {
+    return {
+      'todaySales': 0.0,
+      'todayTransactions': 0,
+      'products': 0,
+      'customers': 0,
+      'lowStockProducts': [],
+      'lowMarginProducts': [],
+      'flashSaleProducts': [],
+      'expiredProducts': [],
+      'notifications': [],
+      'allTransactions': [],
+      'allProducts': [],
+    };
   }
-  for (final p in expiredProducts) {
-    final isPassed = p.expiredDate!.isBefore(now);
-    notifications.add({
-      'type': 'expired',
-      'title': isPassed ? 'Produk Kedaluwarsa: ${p.name}' : 'Mendekati Kedaluwarsa: ${p.name}',
-      'message': 'Expired: ${p.expiredDate.toString().split(' ')[0]}',
-      'icon': Icons.timer_outlined,
-      'color': AppTheme.errorColor,
-    });
-  }
-  for (final fs in flashSale) {
-    notifications.add({
-      'type': 'dead_stock',
-      'title': 'Stok Menumpuk: ${fs['productName']}',
-      'message': '${fs['reason']}. Disarankan diskon ${fs['suggestedDiscount']}%.',
-      'icon': Icons.inventory_2_outlined,
-      'color': AppTheme.accentColor,
-    });
-  }
-  if (todayFiltered.isNotEmpty) {
-    notifications.add({
-      'type': 'insight',
-      'title': 'Insight Harian AI',
-      'message': 'Total $todayCount transaksi bernilai Rp ${todaySales.toStringAsFixed(0)} hari ini.',
-      'icon': Icons.auto_graph,
-      'color': AppTheme.primaryColor,
-    });
-  }
-
-  return {
-    'todaySales': todaySales,
-    'todayTransactions': todayCount,
-    'products': products.length,
-    'customers': customers.length,
-    'lowStockProducts': lowStockProducts,
-    'lowMarginProducts': lowMarginProducts,
-    'flashSaleProducts': flashSale,
-    'expiredProducts': expiredProducts,
-    'notifications': notifications,
-    'allTransactions': todayTransactions,
-    'allProducts': products,
-  };
 });
 
 class OwnerHomeScreen extends ConsumerStatefulWidget {
@@ -134,6 +151,11 @@ class _OwnerHomeScreenState extends ConsumerState<OwnerHomeScreen> {
   void initState() {
     super.initState();
     _currentIndex = widget.initialIndex;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (ref.read(currentUserProvider) == null) {
+        ref.read(currentUserProvider.notifier).loadUser();
+      }
+    });
   }
 
   @override
@@ -610,15 +632,19 @@ class _OwnerHomeScreenState extends ConsumerState<OwnerHomeScreen> {
   Widget _buildDashboard(String displayName, AsyncValue<Map<String, dynamic>> summaryAsync) {
     return summaryAsync.when(
       loading: () => const _DashboardSkeleton(),
-      error: (_, _) => const SizedBox.shrink(),
-      data: (summary) {
-        final todaySales = (summary['todaySales'] as num?)?.toDouble() ?? 0;
-        final todayCount = (summary['todayTransactions'] as num?)?.toInt() ?? 0;
-        final productCount = (summary['products'] as num?)?.toInt() ?? 0;
-        final customerCount = (summary['customers'] as num?)?.toInt() ?? 0;
-        final allTransactions = (summary['allTransactions'] as List?) ?? [];
+      error: (_, __) => _buildDashboardContent(displayName, {}),
+      data: (summary) => _buildDashboardContent(displayName, summary),
+    );
+  }
 
-        return SingleChildScrollView(
+  Widget _buildDashboardContent(String displayName, Map<String, dynamic> summary) {
+    final todaySales = (summary['todaySales'] as num?)?.toDouble() ?? 0;
+    final todayCount = (summary['todayTransactions'] as num?)?.toInt() ?? 0;
+    final productCount = (summary['products'] as num?)?.toInt() ?? 0;
+    final customerCount = (summary['customers'] as num?)?.toInt() ?? 0;
+    final allTransactions = (summary['allTransactions'] as List?) ?? [];
+
+    return SingleChildScrollView(
           padding: EdgeInsets.fromLTRB(
             16,
             MediaQuery.of(context).padding.top + kToolbarHeight + 8,
@@ -661,6 +687,8 @@ class _OwnerHomeScreenState extends ConsumerState<OwnerHomeScreen> {
                 ],
               ),
               const SizedBox(height: 20),
+              _QrisSetupBanner(outletId: userOutletId()),
+              const SizedBox(height: 16),
               _HeroSalesCard(sales: todaySales, txCount: todayCount),
               const SizedBox(height: 12),
               Row(
@@ -739,8 +767,6 @@ class _OwnerHomeScreenState extends ConsumerState<OwnerHomeScreen> {
             ],
           ),
         );
-      },
-    );
   }
 
   String userOutletId() {
@@ -1078,6 +1104,94 @@ class _SectionHeader extends StatelessWidget {
           ),
         ),
       ],
+    );
+  }
+}
+
+class _QrisSetupBanner extends ConsumerStatefulWidget {
+  final String outletId;
+
+  const _QrisSetupBanner({required this.outletId});
+
+  @override
+  ConsumerState<_QrisSetupBanner> createState() => _QrisSetupBannerState();
+}
+
+class _QrisSetupBannerState extends ConsumerState<_QrisSetupBanner> {
+  bool? _configured;
+
+  @override
+  void initState() {
+    super.initState();
+    _load();
+  }
+
+  Future<void> _load() async {
+    final config = await QrisConfig.load(outletId: widget.outletId);
+    if (!mounted) return;
+    setState(() => _configured = config.isConfigured);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    if (_configured == null) return const SizedBox.shrink();
+    if (_configured == true) return const SizedBox.shrink();
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: AppTheme.warningColor.withValues(alpha: 0.12),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: AppTheme.warningColor.withValues(alpha: 0.4)),
+      ),
+      child: Row(
+        children: [
+          Container(
+            padding: const EdgeInsets.all(10),
+            decoration: BoxDecoration(
+              color: AppTheme.warningColor.withValues(alpha: 0.18),
+              borderRadius: BorderRadius.circular(14),
+            ),
+            child: const Icon(Icons.qr_code_2_rounded, color: AppTheme.warningColor, size: 26),
+          ),
+          const SizedBox(width: 12),
+          const Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Atur QRIS Toko Anda',
+                  style: TextStyle(
+                    color: AppTheme.textPrimary,
+                    fontSize: 14,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+                SizedBox(height: 3),
+                Text(
+                  'Supaya pelanggan bisa bayar QRIS. Isi Nama Merchant, NMID & Bank/E-Wallet.',
+                  style: TextStyle(color: AppTheme.textSecondary, fontSize: 12, height: 1.3),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(width: 8),
+          TextButton(
+            onPressed: () {
+              context.push('/owner/settings');
+            },
+            style: TextButton.styleFrom(
+              backgroundColor: AppTheme.warningColor,
+              foregroundColor: Colors.white,
+              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+            ),
+            child: const Text(
+              'Atur',
+              style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold),
+            ),
+          ),
+        ],
+      ),
     );
   }
 }

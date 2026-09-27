@@ -331,101 +331,99 @@ class _ProductListScreenState extends ConsumerState<ProductListScreen> {
                                 clipBehavior: Clip.antiAlias,
                                 child: InkWell(
                                   onTap: () => context.push('/owner/products/add', extra: product),
-                                  child: Column(
-                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                  child: Stack(
                                     children: [
-                                      Expanded(
-                                        flex: 5,
-                                        child: SizedBox(
-                                          width: double.infinity,
-                                          child: _buildProductImage(product),
-                                        ),
-                                      ),
-                                      Expanded(
-                                        flex: 4,
-                                        child: Padding(
-                                          padding: const EdgeInsets.fromLTRB(8, 4, 8, 4),
-                                          child: Column(
-                                            crossAxisAlignment: CrossAxisAlignment.start,
-                                            mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                                            children: [
-                                              Text(
-                                                product.name,
-                                                maxLines: 1,
-                                                overflow: TextOverflow.ellipsis,
-                                                style: const TextStyle(
-                                                  fontSize: 11.5,
-                                                  fontWeight: FontWeight.w700,
-                                                ),
-                                              ),
-                                              Row(
-                                                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                      Column(
+                                        crossAxisAlignment: CrossAxisAlignment.start,
+                                        children: [
+                                          Expanded(
+                                            flex: 5,
+                                            child: SizedBox(
+                                              width: double.infinity,
+                                              child: _buildProductImage(product),
+                                            ),
+                                          ),
+                                          Expanded(
+                                            flex: 4,
+                                            child: Padding(
+                                              padding: const EdgeInsets.fromLTRB(8, 4, 8, 4),
+                                              child: Column(
+                                                crossAxisAlignment: CrossAxisAlignment.start,
+                                                mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                                                 children: [
                                                   Text(
-                                                    Formatters.currency(product.price),
+                                                    product.name,
+                                                    maxLines: 1,
+                                                    overflow: TextOverflow.ellipsis,
                                                     style: const TextStyle(
-                                                      fontSize: 11,
-                                                      fontWeight: FontWeight.bold,
-                                                      color: AppTheme.accentColor,
+                                                      fontSize: 11.5,
+                                                      fontWeight: FontWeight.w700,
                                                     ),
                                                   ),
-                                                  _buildStockBadge(product.stock, product.unit),
+                                                  Row(
+                                                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                                    children: [
+                                                      Text(
+                                                        Formatters.currency(product.price),
+                                                        style: const TextStyle(
+                                                          fontSize: 11,
+                                                          fontWeight: FontWeight.bold,
+                                                          color: AppTheme.accentColor,
+                                                        ),
+                                                      ),
+                                                      _buildStockBadge(product.stock, product.unit),
+                                                    ],
+                                                  ),
                                                 ],
                                               ),
-                                            ],
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                      if (canDelete)
+                                        Positioned(
+                                          top: 4,
+                                          right: 4,
+                                          child: InkWell(
+                                            onTap: () async {
+                                              final confirm = await _confirmDelete(product);
+                                              if (confirm == true && context.mounted) {
+                                                final success = await SupabaseService().deleteProduct(product.id);
+                                                if (!context.mounted) return;
+                                                ScaffoldMessenger.of(context).showSnackBar(
+                                                  SnackBar(
+                                                    content: Text(
+                                                      success
+                                                          ? '${product.name} berhasil dihapus'
+                                                          : 'Gagal menghapus ${product.name}',
+                                                    ),
+                                                    backgroundColor: success ? AppTheme.surfaceColor : AppTheme.errorColor,
+                                                  ),
+                                                );
+                                                ref.invalidate(productsProvider);
+                                              }
+                                            },
+                                            child: Container(
+                                              padding: const EdgeInsets.all(5),
+                                              decoration: BoxDecoration(
+                                                color: Colors.white.withValues(alpha: 0.9),
+                                                shape: BoxShape.circle,
+                                                boxShadow: [
+                                                  BoxShadow(
+                                                    color: Colors.black.withValues(alpha: 0.1),
+                                                    blurRadius: 4,
+                                                  ),
+                                                ],
+                                              ),
+                                              child: const Icon(Icons.delete_outline, size: 16, color: AppTheme.errorColor),
+                                            ),
                                           ),
                                         ),
-                                      ),
                                     ],
                                   ),
                                 ),
                               );
-
-                              if (!canDelete) {
-                                return cardContent;
-                              }
-
-                              return Dismissible(
-                                key: ValueKey(product.id),
-                                direction: DismissDirection.endToStart,
-                                confirmDismiss: (direction) => _confirmDelete(product),
-                                onDismissed: (direction) async {
-                                  final success = await SupabaseService().deleteProduct(product.id);
-                                  if (context.mounted) {
-                                    ScaffoldMessenger.of(context).showSnackBar(
-                                      SnackBar(
-                                        content: Text(
-                                          success
-                                              ? '${product.name} berhasil dihapus'
-                                              : 'Gagal menghapus ${product.name}',
-                                        ),
-                                        backgroundColor: success ? AppTheme.surfaceColor : AppTheme.errorColor,
-                                      ),
-                                    );
-                                  }
-                                  ref.invalidate(productsProvider);
-                                },
-                                background: Container(
-                                  alignment: Alignment.centerRight,
-                                  padding: const EdgeInsets.only(right: 20),
-                                  decoration: BoxDecoration(
-                                    color: AppTheme.errorColor,
-                                    borderRadius: BorderRadius.circular(12),
-                                  ),
-                                  child: const Column(
-                                    mainAxisAlignment: MainAxisAlignment.center,
-                                    children: [
-                                      Icon(Icons.delete, color: Colors.white, size: 28),
-                                      SizedBox(height: 4),
-                                      Text(
-                                        'Hapus',
-                                        style: TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.bold),
-                                      ),
-                                    ],
-                                  ),
-                                ),
-                                child: cardContent,
-                              );
+                              return cardContent;
                             },
                           ),
                         ),

@@ -22,8 +22,25 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
   @override
   void initState() {
     super.initState();
-    _emailController.text = 'fresh1789288641@testakhir.test';
-    _passwordController.text = 'TestFix123!';
+  }
+
+  Future<void> _loginWithGoogle() async {
+    setState(() => _isLoading = true);
+    try {
+      final authService = ref.read(authServiceProvider);
+      await authService.signInWithGoogle();
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Login Google gagal: ${e.toString()}'),
+            backgroundColor: AppTheme.errorColor,
+          ),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _isLoading = false);
+    }
   }
 
   @override
@@ -228,6 +245,33 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
             const SizedBox(height: 22),
             _buildPrimaryButton('MASUK KE KASIRGO'),
             const SizedBox(height: 14),
+            Row(
+              children: [
+                const Expanded(child: Divider(color: AppTheme.borderColor)),
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 10),
+                  child: Text('atau', style: GoogleFonts.inter(color: AppTheme.textSecondary, fontSize: 12)),
+                ),
+                const Expanded(child: Divider(color: AppTheme.borderColor)),
+              ],
+            ),
+            const SizedBox(height: 14),
+            SizedBox(
+              height: AppTheme.touchTargetLarge,
+              child: OutlinedButton.icon(
+                onPressed: _isLoading ? null : _loginWithGoogle,
+                style: OutlinedButton.styleFrom(
+                  side: const BorderSide(color: AppTheme.borderColor),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppTheme.radiusMedium)),
+                ),
+                icon: const Icon(Icons.g_mobiledata, size: 28, color: AppTheme.primaryColor),
+                label: Text(
+                  'Masuk dengan Google',
+                  style: GoogleFonts.inter(fontSize: 14, fontWeight: FontWeight.w600, color: AppTheme.textPrimary),
+                ),
+              ),
+            ),
+            const SizedBox(height: 16),
             Row(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [

@@ -1,6 +1,8 @@
 import 'dart:math';
+import 'package:flutter/foundation.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:supabase_flutter/supabase_flutter.dart' hide User;
+import '../config/supabase_config.dart';
 import '../models/user.dart';
 
 class AuthService {
@@ -221,20 +223,24 @@ class AuthService {
     }
   }
 
-  Future<User?> linkAccountWithPhone({
-    required String phone,
-    required String token,
-  }) async {
-    try {
-      final response = await _client.auth.verifyOTP(
-        phone: phone,
-        token: token,
-        type: OtpType.sms,
-      );
-      if (response.user != null) {
-        return await getCurrentUser();
+  static String getAuthRedirectUrl() {
+    if (kIsWeb) {
+      final origin = Uri.base.origin;
+      var path = Uri.base.path;
+      if (!path.endsWith('/')) {
+        path = '$path/';
       }
-      return null;
+      return '$origin$path';
+    }
+    return 'https://ikhlassabar2021-create.github.io/kasirgo/';
+  }
+
+  Future<void> signInWithGoogle() async {
+    try {
+      await _client.auth.signInWithOAuth(
+        OAuthProvider.google,
+        redirectTo: getAuthRedirectUrl(),
+      );
     } catch (_) {
       rethrow;
     }
@@ -244,7 +250,7 @@ class AuthService {
     try {
       await _client.auth.signInWithOAuth(
         OAuthProvider.google,
-        redirectTo: 'kasirgo://login-callback',
+        redirectTo: getAuthRedirectUrl(),
       );
     } catch (_) {
       rethrow;
@@ -274,6 +280,7 @@ class AuthService {
         email: email,
         password: password,
         data: data,
+        emailRedirectTo: getAuthRedirectUrl(),
       );
 
       if (kycData != null && kycData.isNotEmpty && response.user != null) {
@@ -312,6 +319,33 @@ class AuthService {
 
   Future<void> signOut() async {
     await _client.auth.signOut();
+  }
+
+  Future<AuthResponse> createStaffAccount({
+    required String email,
+    required String password,
+    required String outletId,
+    required String role,
+    String? name,
+  }) async {
+    final tempClient = SupabaseClient(
+      SupabaseConfig.url,
+      SupabaseConfig.anonKey,
+    );
+
+    final response = await tempClient.auth.signUp(
+      email: email,
+      password: password,
+      data: {
+        'staff_email': email,
+        'staff_role': role,
+        'outlet_id': outletId,
+        if (name != null && name.isNotEmpty) 'staff_name': name,
+      },
+      emailRedirectTo: getAuthRedirectUrl(),
+    );
+
+    return response;
   }
 
   Future<String?> getUserRole(String userId) async {

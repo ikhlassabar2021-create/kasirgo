@@ -2,9 +2,11 @@ import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 import '../../config/app_theme.dart';
 import '../../models/transaction.dart';
 import '../../services/payment_service.dart';
+import '../../utils/qris_config.dart';
 import '../../utils/wa_helper.dart';
 import '../common/app_button.dart';
 
@@ -59,6 +61,7 @@ class _CheckoutDialogState extends State<CheckoutDialog> {
   final _customerWaController = TextEditingController();
   bool _sendWaReceipt = false;
   bool _isLoadingQris = false;
+  QrisConfig _qrisConfig = const QrisConfig();
 
   double get _tipAmount => double.tryParse(_tipController.text.replaceAll(RegExp(r'[^0-9]'), '')) ?? 0.0;
   double get _grandTotal => widget.totalAmount + _tipAmount;
@@ -70,6 +73,42 @@ class _CheckoutDialogState extends State<CheckoutDialog> {
     super.initState();
     _cashController.text = widget.totalAmount.toStringAsFixed(0);
     _qrisAmountController.text = widget.totalAmount.toStringAsFixed(0);
+    _loadQrisConfig();
+  }
+
+  Future<void> _loadQrisConfig() async {
+    try {
+      final client = Supabase.instance.client;
+      final user = client.auth.currentUser;
+      if (user == null) return;
+      final outletId = await _findOutletId(user.id);
+      if (outletId == null) return;
+      final config = await QrisConfig.load(outletId: outletId);
+      if (mounted) {
+        setState(() => _qrisConfig = config);
+      }
+    } catch (_) {}
+  }
+
+  Future<String?> _findOutletId(String userId) async {
+    try {
+      final client = Supabase.instance.client;
+      final owned = await client
+          .from('outlets')
+          .select('id')
+          .eq('owner_id', userId)
+          .limit(1)
+          .maybeSingle();
+      if (owned != null) return owned['id'].toString();
+      final role = await client
+          .from('user_roles')
+          .select('outlet_id')
+          .eq('user_id', userId)
+          .limit(1)
+          .maybeSingle();
+      if (role != null) return role['outlet_id']?.toString();
+    } catch (_) {}
+    return null;
   }
 
   @override
@@ -523,6 +562,13 @@ class _CheckoutDialogState extends State<CheckoutDialog> {
   }
 
   List<Widget> _buildStaticQris() {
+    final merchant =
+        _qrisConfig.merchantName.trim().isNotEmpty ? _qrisConfig.merchantName.trim() : 'MY QRIS';
+    final nmid =
+        _qrisConfig.nmid.trim().isNotEmpty ? _qrisConfig.nmid.trim() : 'BELUM DIATUR OLEH OWNER';
+    final wallet =
+        _qrisConfig.bankOrWallet.trim().isNotEmpty ? _qrisConfig.bankOrWallet.trim() : '';
+
     return [
       Center(
         child: Container(
@@ -541,7 +587,7 @@ class _CheckoutDialogState extends State<CheckoutDialog> {
                 style: TextStyle(color: AppTheme.textSecondary, fontSize: 8, fontWeight: FontWeight.bold),
               ),
               Text(
-                'NMID: ID1020038847291',
+                nmid,
                 style: TextStyle(color: AppTheme.textSecondary, fontSize: 8),
               ),
             ],
@@ -550,9 +596,30 @@ class _CheckoutDialogState extends State<CheckoutDialog> {
       ),
       const SizedBox(height: 10),
       Text(
-        'Scan QRIS Statis Merchant',
-        style: GoogleFonts.inter(color: AppTheme.textSecondary, fontSize: 12),
+        merchant,
+        style: GoogleFonts.inter(color: AppTheme.textPrimary, fontSize: 13, fontWeight: FontWeight.w700),
       ),
+      if (wallet.isNotEmpty) ...[
+        const SizedBox(height: 2),
+        Text(
+          wallet,
+          style: GoogleFonts.inter(color: AppTheme.textSecondary, fontSize: 12),
+        ),
+      ],
+      const SizedBox(height: 10),
+      if (!_qrisConfig.isConfigured)
+        Container(
+          padding: const EdgeInsets.all(10),
+          decoration: BoxDecoration(
+            color: AppTheme.warningColor.withValues(alpha: 0.12),
+            borderRadius: BorderRadius.circular(10),
+          ),
+          child: const Text(
+            'QRIS Manual belum diatur oleh Owner. Silakan atur di menu Pengaturan -> QRIS Toko.',
+            textAlign: TextAlign.center,
+            style: TextStyle(fontSize: 11, color: AppTheme.warningColor, fontWeight: FontWeight.w600),
+          ),
+        ),
       const SizedBox(height: 10),
       TextField(
         controller: _qrisAmountController,

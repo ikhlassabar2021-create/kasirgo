@@ -217,9 +217,10 @@ class SupabaseService {
 
   Future<Transaction?> createTransaction(Transaction transaction) async {
     try {
+      final txJson = transaction.toSupabaseJson();
       final response = await _client
           .from('transactions')
-          .insert(transaction.toJson())
+          .insert(txJson)
           .select()
           .single();
 

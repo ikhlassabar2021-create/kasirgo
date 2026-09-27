@@ -61,23 +61,55 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
 
       if (mounted) {
         final hasSession = result.session != null;
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(
-              hasSession
-                  ? 'Pendaftaran berhasil! Silakan upload dokumen KYC.'
-                  : 'Pendaftaran berhasil! Cek email untuk konfirmasi, lalu login.',
+        if (hasSession) {
+          final user = await authService.getCurrentUser();
+          if (user != null && mounted) {
+            ref.read(currentUserProvider.notifier).setUserDirectly(user);
+          }
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(
+                content: Text('Pendaftaran berhasil! Selamat datang di KasirGo.'),
+                backgroundColor: AppTheme.successColor,
+              ),
+            );
+            context.go('/owner');
+          }
+        } else {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Pendaftaran berhasil! Cek email untuk klik tautan konfirmasi, lalu silakan login.'),
+              backgroundColor: AppTheme.successColor,
+              duration: Duration(seconds: 6),
             ),
-            backgroundColor: AppTheme.successColor,
-          ),
-        );
-        context.go(hasSession ? '/kyc-upload' : '/login');
+          );
+          context.go('/login');
+        }
       }
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text('Pendaftaran gagal: ${e.toString()}'),
+            backgroundColor: AppTheme.errorColor,
+          ),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _isLoading = false);
+    }
+  }
+
+  Future<void> _signUpWithGoogle() async {
+    setState(() => _isLoading = true);
+    try {
+      final authService = ref.read(authServiceProvider);
+      await authService.signInWithGoogle();
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Gagal daftar dengan Google: $e'),
             backgroundColor: AppTheme.errorColor,
           ),
         );
@@ -279,6 +311,33 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                                         'Daftar',
                                         style: GoogleFonts.inter(fontSize: 16, fontWeight: FontWeight.w800),
                                       ),
+                              ),
+                            ),
+                          ),
+                          const SizedBox(height: 12),
+                          Row(
+                            children: [
+                              const Expanded(child: Divider(color: AppTheme.borderColor)),
+                              Padding(
+                                padding: const EdgeInsets.symmetric(horizontal: 12),
+                                child: Text('atau', style: GoogleFonts.inter(color: AppTheme.textSecondary, fontSize: 12)),
+                              ),
+                              const Expanded(child: Divider(color: AppTheme.borderColor)),
+                            ],
+                          ),
+                          const SizedBox(height: 12),
+                          SizedBox(
+                            height: AppTheme.touchTargetLarge,
+                            child: OutlinedButton.icon(
+                              onPressed: _isLoading ? null : _signUpWithGoogle,
+                              style: OutlinedButton.styleFrom(
+                                side: const BorderSide(color: AppTheme.borderColor),
+                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppTheme.radiusMedium)),
+                              ),
+                              icon: const Icon(Icons.g_mobiledata, size: 28, color: AppTheme.primaryColor),
+                              label: Text(
+                                'Daftar dengan Google',
+                                style: GoogleFonts.inter(fontSize: 14, fontWeight: FontWeight.w600, color: AppTheme.textPrimary),
                               ),
                             ),
                           ),

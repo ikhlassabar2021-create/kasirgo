@@ -7,6 +7,7 @@ import '../../providers/auth_provider.dart';
 import '../../services/auth_service.dart';
 import '../../services/settlement_service.dart';
 import '../../utils/formatters.dart';
+import '../../utils/qris_config.dart';
 
 class SettingsScreen extends ConsumerStatefulWidget {
   const SettingsScreen({super.key});
@@ -550,12 +551,15 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
             style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
           ),
           const SizedBox(height: 12),
-          _buildMenuRow(Icons.cloud_upload_outlined, 'Tautkan Akun (Google / No. HP)', () {
+          _buildMenuRow(Icons.cloud_upload_outlined, 'Tautkan Akun Google', () {
             _showLinkAccountDialog();
           }),
           _buildMenuRow(Icons.person_outline, 'Edit Profil', () {
             final currentUser = ref.read(currentUserProvider);
             _showEditProfileDialog(currentUser);
+          }),
+          _buildMenuRow(Icons.qr_code_2_rounded, 'QRIS Toko (Manual / Statis)', () {
+            _showQrisConfigDialog();
           }),
           _buildMenuRow(Icons.lock_outline, 'Ubah Password', () {
             _showChangePasswordDialog();
@@ -574,17 +578,16 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
   }
 
   void _showLinkAccountDialog() {
-    final phoneController = TextEditingController();
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: const Text('Tautkan Akun', style: TextStyle(fontWeight: FontWeight.bold)),
+        title: const Text('Tautkan Akun Google', style: TextStyle(fontWeight: FontWeight.bold)),
         content: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             const Text(
-              'Tautkan akun Anda untuk mengamankan data dan melakukan backup transaksi ke Cloud secara otomatis.',
+              'Tautkan akun Google Anda untuk masuk dengan cepat dan mengamankan data KasirGo.',
               style: TextStyle(fontSize: 13, color: AppTheme.textSecondary),
             ),
             const SizedBox(height: 16),
@@ -610,18 +613,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                   }
                 },
                 icon: const Icon(Icons.g_mobiledata, size: 28),
-                label: const Text('Tautkan Akun Google'),
-              ),
-            ),
-            const SizedBox(height: 12),
-            TextField(
-              controller: phoneController,
-              keyboardType: TextInputType.phone,
-              decoration: const InputDecoration(
-                labelText: 'Nomor WhatsApp / HP',
-                prefixText: '+62 ',
-                border: OutlineInputBorder(),
-                isDense: true,
+                label: const Text('Masuk dengan Google'),
               ),
             ),
           ],
@@ -630,75 +622,136 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
           TextButton(
             onPressed: () => Navigator.pop(ctx),
             child: const Text('Batal'),
-          ),
-          ElevatedButton(
-            onPressed: () {
-              final phone = phoneController.text.trim();
-              Navigator.pop(ctx);
-              if (phone.isNotEmpty) {
-                _showOtpVerificationDialog(phone);
-              } else {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text('Masukkan nomor WhatsApp terlebih dahulu')),
-                );
-              }
-            },
-            child: const Text('Kirim OTP'),
           ),
         ],
       ),
     );
   }
 
-  void _showOtpVerificationDialog(String phone) {
-    final otpController = TextEditingController();
+  void _showQrisConfigDialog() {
+    final user = ref.read(currentUserProvider);
+    final outletId = user?.outletId;
+    if (outletId == null || outletId.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Outlet ID tidak ditemukan')),
+      );
+      return;
+    }
+    final nameController = TextEditingController();
+    final nmidController = TextEditingController();
+    final walletController = TextEditingController();
+    final qrisStringController = TextEditingController();
+    bool isLoading = true;
+
+    QrisConfig.load(outletId: outletId).then((config) {
+      if (!mounted) return;
+      nameController.text = config.merchantName;
+      nmidController.text = config.nmid;
+      walletController.text = config.bankOrWallet;
+      qrisStringController.text = config.qrisString;
+      setState(() => isLoading = false);
+    });
+
     showDialog(
       context: context,
-      builder: (ctx) => AlertDialog(
-        title: const Text('Verifikasi OTP', style: TextStyle(fontWeight: FontWeight.bold)),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text('Kode OTP telah dikirim ke +62 $phone via SMS/WhatsApp.', style: const TextStyle(fontSize: 13, color: AppTheme.textSecondary)),
-            const SizedBox(height: 12),
-            TextField(
-              controller: otpController,
-              keyboardType: TextInputType.number,
-              maxLength: 6,
-              decoration: const InputDecoration(
-                labelText: 'Masukkan 6 Digit OTP',
-                border: OutlineInputBorder(),
-                isDense: true,
+      builder: (ctx) => StatefulBuilder(
+        builder: (context, setDialogState) {
+          return AlertDialog(
+            backgroundColor: AppTheme.surfaceColor,
+            title: const Text('QRIS Toko', style: TextStyle(fontWeight: FontWeight.bold)),
+            content: SizedBox(
+              width: 420,
+              child: SingleChildScrollView(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text(
+                      'Atur QRIS manual / statis milik toko Anda. QR ini akan ditampilkan saat kasir memilih metode pembayaran QRIS.',
+                      style: TextStyle(fontSize: 13, color: AppTheme.textSecondary, height: 1.4),
+                    ),
+                    const SizedBox(height: 16),
+                    TextField(
+                      controller: nameController,
+                      decoration: const InputDecoration(
+                        labelText: 'Nama Merchant / Toko',
+                        prefixIcon: Icon(Icons.store, color: AppTheme.textSecondary),
+                        isDense: true,
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                    TextField(
+                      controller: nmidController,
+                      decoration: const InputDecoration(
+                        labelText: 'NMID / ID Merchant QRIS',
+                        prefixIcon: Icon(Icons.badge, color: AppTheme.textSecondary),
+                        isDense: true,
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                    TextField(
+                      controller: walletController,
+                      decoration: const InputDecoration(
+                        labelText: 'Bank / E-Wallet',
+                        hintText: 'Contoh: BCA a.n. Siti, DANA, OVO',
+                        prefixIcon: Icon(Icons.account_balance_wallet_outlined, color: AppTheme.textSecondary),
+                        isDense: true,
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                    TextField(
+                      controller: qrisStringController,
+                      maxLines: 2,
+                      decoration: const InputDecoration(
+                        labelText: 'No. Rekening / Catatan QRIS',
+                        prefixIcon: Icon(Icons.notes, color: AppTheme.textSecondary),
+                        isDense: true,
+                      ),
+                    ),
+                  ],
+                ),
               ),
             ),
-          ],
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx),
-            child: const Text('Batal'),
-          ),
-          ElevatedButton(
-            onPressed: () {
-              final otp = otpController.text.trim();
-              if (otp.length < 4) {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text('Masukkan kode OTP dengan benar')),
-                );
-                return;
-              }
-              Navigator.pop(ctx);
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(
-                  content: Text('Nomor WhatsApp / HP berhasil ditautkan!'),
-                  backgroundColor: AppTheme.successColor,
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(ctx),
+                child: const Text('Batal', style: TextStyle(color: AppTheme.textSecondary)),
+              ),
+              ElevatedButton.icon(
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: AppTheme.primaryColor,
+                  foregroundColor: Colors.white,
                 ),
-              );
-            },
-            child: const Text('Verifikasi'),
-          ),
-        ],
+                onPressed: isLoading
+                    ? null
+                    : () async {
+                        final config = QrisConfig(
+                          merchantName: nameController.text.trim(),
+                          nmid: nmidController.text.trim(),
+                          bankOrWallet: walletController.text.trim(),
+                          qrisString: qrisStringController.text.trim(),
+                        );
+                        await QrisConfig.save(outletId: outletId, config: config);
+                        if (!ctx.mounted) return;
+                        Navigator.pop(ctx);
+                        if (!mounted) return;
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(
+                            content: Text(
+                              config.isConfigured
+                                  ? 'QRIS Toko berhasil disimpan'
+                                  : 'Disimpan. Lengkapi Nama Merchant & NMID agar QRIS tampil',
+                            ),
+                            backgroundColor: config.isConfigured ? AppTheme.successColor : AppTheme.warningColor,
+                          ),
+                        );
+                      },
+                icon: const Icon(Icons.save_outlined, size: 18),
+                label: const Text('Simpan'),
+              ),
+            ],
+          );
+        },
       ),
     );
   }
@@ -706,7 +759,6 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
   void _showEditProfileDialog(dynamic user) {
     final nameController = TextEditingController(text: _outletData?['name'] ?? user?.name ?? '');
     final phoneController = TextEditingController(text: _outletData?['phone'] ?? '');
-
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(

@@ -375,6 +375,40 @@ class _ProductFormScreenState extends ConsumerState<ProductFormScreen> {
     }
   }
 
+  Future<void> _deleteProduct() async {
+    final product = widget.product;
+    if (product == null) return;
+    final confirm = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: AppTheme.surfaceColor,
+        title: const Text('Hapus Produk'),
+        content: Text('Yakin ingin menghapus "${product.name}"?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text('Batal'),
+          ),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(backgroundColor: AppTheme.errorColor),
+            onPressed: () => Navigator.pop(ctx, true),
+            child: const Text('Hapus'),
+          ),
+        ],
+      ),
+    );
+    if (confirm != true) return;
+    final success = await SupabaseService().deleteProduct(product.id);
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(success ? '${product.name} berhasil dihapus' : 'Gagal menghapus ${product.name}'),
+        backgroundColor: success ? AppTheme.successColor : AppTheme.errorColor,
+      ),
+    );
+    if (success && mounted) context.pop();
+  }
+
   Future<void> _save() async {
     if (!_formKey.currentState!.validate()) return;
 
@@ -992,6 +1026,14 @@ class _ProductFormScreenState extends ConsumerState<ProductFormScreen> {
     return Scaffold(
       appBar: AppBar(
         title: Text(isEdit ? 'Edit Produk' : 'Tambah Produk'),
+        actions: [
+          if (isEdit)
+            IconButton(
+              icon: const Icon(Icons.delete_outline),
+              tooltip: 'Hapus Produk',
+              onPressed: _isLoading ? null : _deleteProduct,
+            ),
+        ],
       ),
       body: Center(
         child: ConstrainedBox(
@@ -1151,6 +1193,21 @@ class _ProductFormScreenState extends ConsumerState<ProductFormScreen> {
                             : Text(isEdit ? 'Simpan Perubahan' : 'Simpan Produk'),
                       ),
                     ),
+                    if (isEdit) ...[
+                      const SizedBox(height: 12),
+                      SizedBox(
+                        height: 44,
+                        child: OutlinedButton.icon(
+                          onPressed: _isLoading ? null : _deleteProduct,
+                          icon: const Icon(Icons.delete_outline, size: 18),
+                          label: const Text('Hapus Produk'),
+                          style: OutlinedButton.styleFrom(
+                            foregroundColor: AppTheme.errorColor,
+                            side: BorderSide(color: AppTheme.errorColor.withValues(alpha: 0.5)),
+                          ),
+                        ),
+                      ),
+                    ],
                   ],
                 ),
               ),
