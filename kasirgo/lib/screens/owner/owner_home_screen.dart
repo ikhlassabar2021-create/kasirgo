@@ -26,12 +26,9 @@ import '../modules/kitchen_display_screen.dart';
 import '../modules/ppob_screen.dart';
 import '../modules/restock_screen.dart';
 import '../modules/supporter_screen.dart';
-import 'customer_list_screen.dart';
-import 'employee_screen.dart';
 import 'pos_screen.dart';
 import 'product_list_screen.dart';
 import 'report_screen.dart';
-import 'settings_screen.dart';
 
 final homeSummaryProvider = FutureProvider<Map<String, dynamic>>((ref) async {
   final user = ref.watch(currentUserProvider);
@@ -263,15 +260,12 @@ class _OwnerHomeScreenState extends ConsumerState<OwnerHomeScreen> {
 
     final bodyContent = widget.subScreen ??
         IndexedStack(
-          index: _currentIndex,
+          index: _currentIndex > 3 ? 0 : _currentIndex,
           children: [
             _buildDashboard(user.name ?? user.email, summaryAsync),
             const ProductListScreen(),
             const PosScreen(),
             const ReportScreen(),
-            const CustomerListScreen(),
-            const EmployeeScreen(),
-            const SettingsScreen(),
           ],
         );
 
@@ -945,9 +939,6 @@ class _OwnerHomeScreenState extends ConsumerState<OwnerHomeScreen> {
               BottomNavigationBarItem(icon: Icon(Icons.inventory_2_rounded), label: 'Produk'),
               BottomNavigationBarItem(icon: Icon(Icons.point_of_sale_rounded), label: 'Kasir'),
               BottomNavigationBarItem(icon: Icon(Icons.bar_chart_rounded), label: 'Laporan'),
-              BottomNavigationBarItem(icon: Icon(Icons.people_rounded), label: 'Pelanggan'),
-              BottomNavigationBarItem(icon: Icon(Icons.badge_rounded), label: 'Karyawan'),
-              BottomNavigationBarItem(icon: Icon(Icons.settings_rounded), label: 'Atur'),
             ],
           ),
         ),

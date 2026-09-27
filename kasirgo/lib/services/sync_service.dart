@@ -166,6 +166,8 @@ class SyncService {
               );
           return true;
         case 'create_product':
+          data.remove('is_active');
+          data.remove('price');
           await _client.from('products').upsert(
                 data,
                 onConflict: data.containsKey('event_id') ? 'event_id' : 'id',
@@ -174,6 +176,8 @@ class SyncService {
         case 'update_product':
           final id = data['id'];
           data.remove('id');
+          data.remove('is_active');
+          data.remove('price');
           await _client.from('products').update(data).eq('id', id);
           return true;
         case 'update_stock':

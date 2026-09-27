@@ -116,22 +116,72 @@ class AuthService {
         return await initializeAnonymousOnboarding();
       }
 
+      // 1. Try to find existing user_roles
       final response = await _client
           .from('user_roles')
           .select('*, outlets(*)')
           .eq('user_id', authUser.id)
           .maybeSingle();
 
-      if (response != null) {
+      if (response != null && response['outlet_id'] != null) {
         return User(
           id: authUser.id,
           email: authUser.email ?? '',
-          name: response['name'] as String?,
-          role: response['role'] as String? ?? 'cashier',
+          name: response['name'] as String? ?? (response['outlets']?['name'] as String?),
+          role: response['role'] as String? ?? 'owner',
           outletId: response['outlet_id'] as String?,
           createdAt: DateTime.tryParse(authUser.createdAt),
         );
       }
+
+      // 2. If no role or outlet_id is null, find outlet owned by this user
+      final ownedOutlet = await _client
+          .from('outlets')
+          .select('*')
+          .eq('owner_id', authUser.id)
+          .order('created_at', ascending: true)
+          .limit(1)
+          .maybeSingle();
+
+      if (ownedOutlet != null) {
+        final outletId = ownedOutlet['id'] as String;
+        final outletName = ownedOutlet['name'] as String? ?? 'Warung Saya';
+        return User(
+          id: authUser.id,
+          email: authUser.email ?? '',
+          name: outletName,
+          role: 'owner',
+          outletId: outletId,
+          createdAt: DateTime.tryParse(authUser.createdAt),
+        );
+      }
+
+      // 3. Fallback: if user is logged in but has no outlet yet, create one
+      try {
+        final meta = authUser.userMetadata ?? {};
+        final businessName = meta['business_name'] as String? ?? 'Warung Saya';
+        final businessType = meta['business_type'] as String? ?? 'kelontong';
+
+        final newOutlet = await _client
+            .from('outlets')
+            .insert({
+              'owner_id': authUser.id,
+              'name': businessName,
+              'type': businessType,
+            })
+            .select()
+            .single();
+
+        final newOutletId = newOutlet['id'] as String;
+        return User(
+          id: authUser.id,
+          email: authUser.email ?? '',
+          name: businessName,
+          role: 'owner',
+          outletId: newOutletId,
+          createdAt: DateTime.tryParse(authUser.createdAt),
+        );
+      } catch (_) {}
 
       return await initializeAnonymousOnboarding();
     } catch (_) {

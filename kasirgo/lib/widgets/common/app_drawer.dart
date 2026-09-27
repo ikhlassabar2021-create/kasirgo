@@ -4,6 +4,9 @@ import 'package:go_router/go_router.dart';
 import '../../config/app_theme.dart';
 import '../../models/user.dart';
 import '../../providers/auth_provider.dart';
+import '../../screens/owner/settings_screen.dart';
+import '../../screens/owner/customer_list_screen.dart';
+import '../../screens/owner/employee_screen.dart';
 
 class AppDrawer extends ConsumerWidget {
   final User user;
@@ -104,14 +107,48 @@ class AppDrawer extends ConsumerWidget {
             if (!isAdmin) _DrawerTile(
               icon: Icons.person_outline,
               title: 'Profil Akun',
-              onTap: () => Navigator.pop(context),
+              onTap: () {
+                Navigator.pop(context);
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (_) => const SettingsScreen()),
+                );
+              },
             ),
             
             if (!isAdmin) ...[
               _DrawerTile(
                 icon: Icons.settings_outlined,
                 title: 'Pengaturan & Supporter',
-                onTap: () => Navigator.pop(context),
+                onTap: () {
+                  Navigator.pop(context);
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(builder: (_) => const SettingsScreen()),
+                  );
+                },
+              ),
+              _DrawerTile(
+                icon: Icons.people_outline,
+                title: 'Pelanggan',
+                onTap: () {
+                  Navigator.pop(context);
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(builder: (_) => const CustomerListScreen()),
+                  );
+                },
+              ),
+              _DrawerTile(
+                icon: Icons.badge_outlined,
+                title: 'Karyawan',
+                onTap: () {
+                  Navigator.pop(context);
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(builder: (_) => const EmployeeScreen()),
+                  );
+                },
               ),
               _DrawerTile(
                 icon: Icons.help_outline,

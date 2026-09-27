@@ -345,10 +345,15 @@ class _ProductFormScreenState extends ConsumerState<ProductFormScreen> {
       lastDate: now.add(const Duration(days: 365 * 10)),
       builder: (context, child) {
         return Theme(
-          data: ThemeData.dark().copyWith(
-            colorScheme: const ColorScheme.dark(
+          data: ThemeData.light().copyWith(
+            colorScheme: const ColorScheme.light(
               primary: AppTheme.primaryColor,
-              surface: AppTheme.surfaceColor,
+              onPrimary: Colors.white,
+              surface: Colors.white,
+              onSurface: Color(0xFF0F172A),
+            ),
+            dialogTheme: const DialogThemeData(
+              backgroundColor: Colors.white,
             ),
           ),
           child: child!,

@@ -412,14 +412,25 @@ class SupabaseService {
   Future<List<Employee>> getEmployees(String outletId) async {
     try {
       final response = await _client
-          .from('employees')
-          .select()
-          .eq('outlet_id', outletId)
-          .order('name');
+          .from('user_roles')
+          .select('*, outlets(name)')
+          .eq('outlet_id', outletId);
 
-      return (response as List)
-          .map((json) => Employee.fromJson(json as Map<String, dynamic>))
-          .toList();
+      return (response as List).map((json) {
+        final role = json['role']?.toString() ?? 'cashier';
+        final userId = json['user_id']?.toString() ?? '';
+        return Employee(
+          id: (json['id'] ?? '').toString(),
+          outletId: outletId,
+          userId: userId,
+          name: 'Staf (${role.toUpperCase()})',
+          role: role,
+          isActive: true,
+          createdAt: json['created_at'] != null
+              ? DateTime.tryParse(json['created_at'].toString())
+              : null,
+        );
+      }).toList();
     } catch (e) {
       return [];
     }
@@ -428,13 +439,21 @@ class SupabaseService {
   Future<Employee?> getEmployee(String id) async {
     try {
       final response = await _client
-          .from('employees')
+          .from('user_roles')
           .select()
           .eq('id', id)
           .maybeSingle();
 
       if (response == null) return null;
-      return Employee.fromJson(response);
+      final role = response['role']?.toString() ?? 'cashier';
+      return Employee(
+        id: response['id'].toString(),
+        outletId: response['outlet_id']?.toString() ?? '',
+        userId: response['user_id']?.toString() ?? '',
+        name: 'Staf (${role.toUpperCase()})',
+        role: role,
+        isActive: true,
+      );
     } catch (e) {
       return null;
     }
@@ -443,12 +462,23 @@ class SupabaseService {
   Future<Employee?> createEmployee(Employee employee) async {
     try {
       final response = await _client
-          .from('employees')
-          .insert(employee.toJson())
+          .from('user_roles')
+          .insert({
+            'outlet_id': employee.outletId,
+            'user_id': employee.userId,
+            'role': employee.role,
+          })
           .select()
           .single();
 
-      return Employee.fromJson(response);
+      return Employee(
+        id: response['id'].toString(),
+        outletId: employee.outletId,
+        userId: employee.userId,
+        name: employee.name,
+        role: employee.role,
+        isActive: true,
+      );
     } catch (e) {
       return null;
     }
@@ -457,13 +487,22 @@ class SupabaseService {
   Future<Employee?> updateEmployee(Employee employee) async {
     try {
       final response = await _client
-          .from('employees')
-          .update(employee.toJson())
+          .from('user_roles')
+          .update({
+            'role': employee.role,
+          })
           .eq('id', employee.id)
           .select()
           .single();
 
-      return Employee.fromJson(response);
+      return Employee(
+        id: response['id'].toString(),
+        outletId: employee.outletId,
+        userId: employee.userId,
+        name: employee.name,
+        role: employee.role,
+        isActive: true,
+      );
     } catch (e) {
       return null;
     }
@@ -472,19 +511,9 @@ class SupabaseService {
   Future<bool> updateEmployeeRole(String employeeId, String newRole, {String? userId, String? outletId}) async {
     try {
       await _client
-          .from('employees')
-          .update({'role': newRole, 'updated_at': DateTime.now().toIso8601String()})
+          .from('user_roles')
+          .update({'role': newRole})
           .eq('id', employeeId);
-
-      if (userId != null && userId.isNotEmpty && outletId != null && outletId.isNotEmpty) {
-        await _client
-            .from('user_roles')
-            .upsert({
-              'user_id': userId,
-              'outlet_id': outletId,
-              'role': newRole,
-            });
-      }
       return true;
     } catch (e) {
       return false;
@@ -523,9 +552,6 @@ class SupabaseService {
         'date': dateStr,
         'check_in_time': now.toIso8601String(),
       };
-      if (employeeName != null && employeeName.isNotEmpty) {
-        row['name'] = employeeName;
-      }
       final response = await _client
           .from('employees')
           .insert(row)

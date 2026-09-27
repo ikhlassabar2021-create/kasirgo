@@ -7,7 +7,6 @@ import '../../providers/auth_provider.dart';
 import '../../services/auth_service.dart';
 import '../../services/settlement_service.dart';
 import '../../utils/formatters.dart';
-import '../../widgets/common/app_drawer.dart';
 
 class SettingsScreen extends ConsumerStatefulWidget {
   const SettingsScreen({super.key});
@@ -231,12 +230,6 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     return Scaffold(
       appBar: AppBar(
         title: const Text('Pengaturan & Program Pendukung'),
-        leading: Builder(
-          builder: (context) => IconButton(
-            icon: const Icon(Icons.menu),
-            onPressed: () => Scaffold.of(context).openDrawer(),
-          ),
-        ),
         actions: [
           IconButton(
             icon: const Icon(Icons.refresh),
@@ -244,7 +237,6 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
           ),
         ],
       ),
-      drawer: user != null ? AppDrawer(user: user) : null,
       body: _isLoading
           ? const Center(child: CircularProgressIndicator())
           : Center(
@@ -562,14 +554,11 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
             _showLinkAccountDialog();
           }),
           _buildMenuRow(Icons.person_outline, 'Edit Profil', () {
-            ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(content: Text('Edit profil akun')),
-            );
+            final currentUser = ref.read(currentUserProvider);
+            _showEditProfileDialog(currentUser);
           }),
           _buildMenuRow(Icons.lock_outline, 'Ubah Password', () {
-            ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(content: Text('Ubah password akun')),
-            );
+            _showChangePasswordDialog();
           }),
           _buildMenuRow(Icons.info_outline, 'Tentang KasirGo v3.0.0', () {
             showAboutDialog(
@@ -648,6 +637,151 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
               }
             },
             child: const Text('Kirim OTP'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showEditProfileDialog(dynamic user) {
+    final nameController = TextEditingController(text: _outletData?['name'] ?? user?.name ?? '');
+    final phoneController = TextEditingController(text: _outletData?['phone'] ?? '');
+
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Edit Profil Usaha', style: TextStyle(fontWeight: FontWeight.bold)),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            TextField(
+              controller: nameController,
+              decoration: const InputDecoration(
+                labelText: 'Nama Usaha',
+                border: OutlineInputBorder(),
+                isDense: true,
+              ),
+            ),
+            const SizedBox(height: 12),
+            TextField(
+              controller: phoneController,
+              decoration: const InputDecoration(
+                labelText: 'Nomor Telepon / WhatsApp',
+                border: OutlineInputBorder(),
+                isDense: true,
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('Batal'),
+          ),
+          ElevatedButton(
+            onPressed: () async {
+              final newName = nameController.text.trim();
+              final newPhone = phoneController.text.trim();
+              final outletId = user?.outletId;
+              if (outletId != null && outletId.isNotEmpty) {
+                try {
+                  await Supabase.instance.client
+                      .from('outlets')
+                      .update({
+                        'name': newName,
+                        'phone': newPhone.isEmpty ? null : newPhone,
+                      })
+                      .eq('id', outletId);
+                } catch (_) {}
+              }
+              if (ctx.mounted) Navigator.pop(ctx);
+              _loadData();
+              if (mounted) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(content: Text('Profil usaha berhasil diperbarui')),
+                );
+              }
+            },
+            child: const Text('Simpan'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showChangePasswordDialog() {
+    final passController = TextEditingController();
+    final confirmController = TextEditingController();
+
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Ubah Password', style: TextStyle(fontWeight: FontWeight.bold)),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            TextField(
+              controller: passController,
+              obscureText: true,
+              decoration: const InputDecoration(
+                labelText: 'Password Baru',
+                border: OutlineInputBorder(),
+                isDense: true,
+              ),
+            ),
+            const SizedBox(height: 12),
+            TextField(
+              controller: confirmController,
+              obscureText: true,
+              decoration: const InputDecoration(
+                labelText: 'Konfirmasi Password Baru',
+                border: OutlineInputBorder(),
+                isDense: true,
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('Batal'),
+          ),
+          ElevatedButton(
+            onPressed: () async {
+              final newPass = passController.text;
+              final confirmPass = confirmController.text;
+              if (newPass.length < 6) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(content: Text('Password minimal 6 karakter')),
+                );
+                return;
+              }
+              if (newPass != confirmPass) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(content: Text('Konfirmasi password tidak cocok')),
+                );
+                return;
+              }
+              try {
+                await Supabase.instance.client.auth.updateUser(
+                  UserAttributes(password: newPass),
+                );
+                if (ctx.mounted) Navigator.pop(ctx);
+                if (mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text('Password berhasil diubah')),
+                  );
+                }
+              } catch (e) {
+                if (ctx.mounted) Navigator.pop(ctx);
+                if (mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(content: Text('Gagal mengubah password: $e')),
+                  );
+                }
+              }
+            },
+            child: const Text('Simpan'),
           ),
         ],
       ),
