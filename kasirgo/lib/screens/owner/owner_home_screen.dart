@@ -29,6 +29,9 @@ import '../modules/supporter_screen.dart';
 import 'pos_screen.dart';
 import 'product_list_screen.dart';
 import 'report_screen.dart';
+import 'customer_list_screen.dart';
+import 'employee_screen.dart';
+import 'settings_screen.dart';
 
 final homeSummaryProvider = FutureProvider<Map<String, dynamic>>((ref) async {
   final user = ref.watch(currentUserProvider);
@@ -339,6 +342,15 @@ class _OwnerHomeScreenState extends ConsumerState<OwnerHomeScreen> {
                           _buildDesktopNavItem(1, Icons.inventory_2_rounded, 'Produk'),
                           _buildDesktopNavItem(2, Icons.point_of_sale_rounded, 'Kasir / POS'),
                           _buildDesktopNavItem(3, Icons.bar_chart_rounded, 'Laporan'),
+                          const SizedBox(height: 8),
+                          const Divider(height: 1, color: AppTheme.borderColor),
+                          const SizedBox(height: 8),
+                          _buildDesktopActionItem(Icons.people_rounded, 'Pelanggan',
+                              () => Navigator.push(context, MaterialPageRoute(builder: (_) => const CustomerListScreen()))),
+                          _buildDesktopActionItem(Icons.badge_rounded, 'Karyawan',
+                              () => Navigator.push(context, MaterialPageRoute(builder: (_) => const EmployeeScreen()))),
+                          _buildDesktopActionItem(Icons.settings_rounded, 'Pengaturan',
+                              () => Navigator.push(context, MaterialPageRoute(builder: (_) => const SettingsScreen()))),
                         ],
                       ),
                     ),
@@ -542,6 +554,26 @@ class _OwnerHomeScreenState extends ConsumerState<OwnerHomeScreen> {
         child: bodyContent,
       ),
       bottomNavigationBar: isDesktop ? null : _buildBottomNav(),
+    );
+  }
+
+  Widget _buildDesktopActionItem(IconData icon, String label, VoidCallback onTap) {
+    return Container(
+      margin: const EdgeInsets.only(bottom: 4),
+      child: ListTile(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+        dense: true,
+        leading: Icon(icon, size: 20, color: AppTheme.textSecondary),
+        title: Text(
+          label,
+          style: GoogleFonts.inter(
+            fontSize: 13,
+            fontWeight: FontWeight.w500,
+            color: AppTheme.textPrimary,
+          ),
+        ),
+        onTap: onTap,
+      ),
     );
   }
 

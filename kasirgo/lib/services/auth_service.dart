@@ -114,12 +114,25 @@ class AuthService {
       final authUser = _client.auth.currentUser;
       if (authUser == null) {
         final anonUser = await initializeAnonymousOnboarding();
-        if (anonUser != null && (anonUser.outletId == null || anonUser.outletId!.isEmpty)) {
-          // Ensure anonymous session also has a valid outlet in SQLite/local or Supabase
+        final sessionUser = _client.auth.currentUser;
+        if (anonUser != null &&
+            (anonUser.outletId == null || anonUser.outletId!.isEmpty) &&
+            sessionUser != null) {
+          // Ensure anonymous session also has a valid outlet row (with owner_id)
           try {
+            final owned = await _client
+                .from('outlets')
+                .select('id')
+                .eq('owner_id', sessionUser.id)
+                .limit(1)
+                .maybeSingle();
+            if (owned != null) {
+              return anonUser.copyWith(outletId: owned['id'].toString());
+            }
             final newOutlet = await _client
                 .from('outlets')
                 .insert({
+                  'owner_id': sessionUser.id,
                   'name': 'Warung Saya',
                   'type': 'kelontong',
                 })
@@ -127,7 +140,7 @@ class AuthService {
                 .single();
             return anonUser.copyWith(outletId: newOutlet['id'].toString());
           } catch (_) {
-            return anonUser.copyWith(outletId: anonUser.id);
+            return anonUser;
           }
         }
         return anonUser;

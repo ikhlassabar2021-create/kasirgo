@@ -47,7 +47,7 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
 
     try {
       final authService = ref.read(authServiceProvider);
-      await authService.signUp(
+      final result = await authService.signUp(
         email: _emailController.text.trim(),
         password: _passwordController.text,
         businessName: _businessNameController.text.trim(),
@@ -60,13 +60,18 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
       );
 
       if (mounted) {
+        final hasSession = result.session != null;
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Pendaftaran berhasil! Silakan upload dokumen KYC.'),
+          SnackBar(
+            content: Text(
+              hasSession
+                  ? 'Pendaftaran berhasil! Silakan upload dokumen KYC.'
+                  : 'Pendaftaran berhasil! Cek email untuk konfirmasi, lalu login.',
+            ),
             backgroundColor: AppTheme.successColor,
           ),
         );
-        context.go('/kyc-upload');
+        context.go(hasSession ? '/kyc-upload' : '/login');
       }
     } catch (e) {
       if (mounted) {

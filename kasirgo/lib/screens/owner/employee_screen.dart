@@ -1,6 +1,8 @@
+import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import '../../config/app_theme.dart';
 import '../../models/employee.dart';
 import '../../providers/auth_provider.dart';
@@ -55,15 +57,40 @@ class _EmployeeScreenState extends ConsumerState<EmployeeScreen> with SingleTick
     final outletId = user?.outletId;
     if (outletId != null && outletId.isNotEmpty) {
       final list = await _supabaseService.getEmployees(outletId);
+      final local = await _loadLocalStaff(outletId);
       if (mounted) {
         setState(() {
-          _employees = list;
+          _employees = [...local, ...list];
           _isLoadingStaff = false;
         });
       }
     } else {
       if (mounted) setState(() => _isLoadingStaff = false);
     }
+  }
+
+  Future<List<Employee>> _loadLocalStaff(String outletId) async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final raw = prefs.getString('local_staff_$outletId');
+      if (raw == null || raw.isEmpty) return [];
+      final list = jsonDecode(raw) as List;
+      return list
+          .map((e) => Employee.fromJson(Map<String, dynamic>.from(e as Map)))
+          .toList();
+    } catch (_) {
+      return [];
+    }
+  }
+
+  Future<void> _saveLocalStaff(String outletId, List<Employee> staff) async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setString(
+        'local_staff_$outletId',
+        jsonEncode(staff.map((e) => e.toJson()).toList()),
+      );
+    } catch (_) {}
   }
 
   Future<void> _loadAttendance() async {
@@ -266,20 +293,24 @@ class _EmployeeScreenState extends ConsumerState<EmployeeScreen> with SingleTick
                             isActive: true,
                           );
 
-                          final res = await _supabaseService.createEmployee(newEmployee);
+                          final resp = await _supabaseService.createEmployee(newEmployee);
+                          var saved = resp;
+                          if (saved == null) {
+                            final local = await _loadLocalStaff(outletId);
+                            final newLocal = newEmployee.copyWith(
+                              id: 'local_${DateTime.now().millisecondsSinceEpoch}',
+                            );
+                            local.add(newLocal);
+                            await _saveLocalStaff(outletId, local);
+                            saved = newLocal;
+                          }
                           if (!dialogCtx.mounted) return;
                           Navigator.pop(dialogCtx);
                           if (!mounted) return;
-                          if (res != null) {
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              const SnackBar(content: Text('Karyawan berhasil ditambahkan')),
-                            );
-                            _loadEmployees();
-                          } else {
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              const SnackBar(content: Text('Gagal menambahkan karyawan')),
-                            );
-                          }
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(content: Text('Karyawan berhasil ditambahkan')),
+                          );
+                          _loadEmployees();
                         },
                   child: isSubmitting
                       ? const SizedBox(
@@ -369,12 +400,23 @@ class _EmployeeScreenState extends ConsumerState<EmployeeScreen> with SingleTick
                       ? null
                       : () async {
                           setDialogState(() => isSubmitting = true);
-                          final ok = await _supabaseService.updateEmployeeRole(
-                            employee.id,
-                            currentRole,
-                            userId: employee.userId,
-                            outletId: employee.outletId,
-                          );
+                          var ok = false;
+                          if (employee.id.startsWith('local_')) {
+                            final local = await _loadLocalStaff(employee.outletId);
+                            final idx = local.indexWhere((e) => e.id == employee.id);
+                            if (idx >= 0) {
+                              local[idx] = local[idx].copyWith(role: currentRole);
+                              await _saveLocalStaff(employee.outletId, local);
+                              ok = true;
+                            }
+                          } else {
+                            ok = await _supabaseService.updateEmployeeRole(
+                              employee.id,
+                              currentRole,
+                              userId: employee.userId,
+                              outletId: employee.outletId,
+                            );
+                          }
                           if (!dialogCtx.mounted) return;
                           Navigator.pop(dialogCtx);
                           if (!mounted) return;
