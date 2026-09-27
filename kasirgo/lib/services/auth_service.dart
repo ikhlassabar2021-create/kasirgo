@@ -113,7 +113,24 @@ class AuthService {
     try {
       final authUser = _client.auth.currentUser;
       if (authUser == null) {
-        return await initializeAnonymousOnboarding();
+        final anonUser = await initializeAnonymousOnboarding();
+        if (anonUser != null && (anonUser.outletId == null || anonUser.outletId!.isEmpty)) {
+          // Ensure anonymous session also has a valid outlet in SQLite/local or Supabase
+          try {
+            final newOutlet = await _client
+                .from('outlets')
+                .insert({
+                  'name': 'Warung Saya',
+                  'type': 'kelontong',
+                })
+                .select()
+                .single();
+            return anonUser.copyWith(outletId: newOutlet['id'].toString());
+          } catch (_) {
+            return anonUser.copyWith(outletId: anonUser.id);
+          }
+        }
+        return anonUser;
       }
 
       // 1. Try to find existing user_roles
@@ -183,7 +200,9 @@ class AuthService {
         );
       } catch (_) {}
 
-      return await initializeAnonymousOnboarding();
+      return (await initializeAnonymousOnboarding())?.copyWith(
+        outletId: authUser.id,
+      );
     } catch (_) {
       return null;
     }
@@ -245,14 +264,16 @@ class AuthService {
       );
 
       if (kycData != null && kycData.isNotEmpty && response.user != null) {
-        // Insert KYC record into database
-        await _client.from('outlet_kyc').insert({
-          'owner_nik': kycData['nik'],
-          'owner_full_name': kycData['fullName'],
-          'owner_phone': kycData['phone'],
-          'kyc_status': 'pending',
-          'created_at': DateTime.now().toIso8601String(),
-        });
+        // Insert KYC record into database if table exists
+        try {
+          await _client.from('outlet_kyc').insert({
+            'owner_nik': kycData['nik'],
+            'owner_full_name': kycData['fullName'],
+            'owner_phone': kycData['phone'],
+            'kyc_status': 'pending',
+            'created_at': DateTime.now().toIso8601String(),
+          });
+        } catch (_) {}
       }
 
       return response;

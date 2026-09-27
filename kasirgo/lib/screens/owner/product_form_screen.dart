@@ -346,11 +346,19 @@ class _ProductFormScreenState extends ConsumerState<ProductFormScreen> {
       builder: (context, child) {
         return Theme(
           data: ThemeData.light().copyWith(
+            scaffoldBackgroundColor: Colors.white,
             colorScheme: const ColorScheme.light(
               primary: AppTheme.primaryColor,
               onPrimary: Colors.white,
               surface: Colors.white,
-              onSurface: Color(0xFF0F172A),
+              onSurface: Colors.black,
+            ),
+            datePickerTheme: const DatePickerThemeData(
+              backgroundColor: Colors.white,
+              headerBackgroundColor: AppTheme.primaryColor,
+              headerForegroundColor: Colors.white,
+              dayForegroundColor: WidgetStatePropertyAll(Colors.black),
+              yearForegroundColor: WidgetStatePropertyAll(Colors.black),
             ),
             dialogTheme: const DialogThemeData(
               backgroundColor: Colors.white,
@@ -799,6 +807,22 @@ class _ProductFormScreenState extends ConsumerState<ProductFormScreen> {
                       initialDate: _discountStartDate ?? DateTime.now(),
                       firstDate: DateTime(2020),
                       lastDate: DateTime(2035),
+                      builder: (context, child) {
+                        return Theme(
+                          data: ThemeData.light().copyWith(
+                            colorScheme: const ColorScheme.light(
+                              primary: AppTheme.primaryColor,
+                              onPrimary: Colors.white,
+                              onSurface: Colors.black,
+                              surface: Colors.white,
+                            ),
+                            dialogTheme: const DialogThemeData(
+                              backgroundColor: Colors.white,
+                            ),
+                          ),
+                          child: child!,
+                        );
+                      },
                     );
                     if (picked != null) {
                       setState(() => _discountStartDate = picked);
@@ -835,6 +859,22 @@ class _ProductFormScreenState extends ConsumerState<ProductFormScreen> {
                       initialDate: _discountEndDate ?? DateTime.now().add(const Duration(days: 7)),
                       firstDate: DateTime(2020),
                       lastDate: DateTime(2035),
+                      builder: (context, child) {
+                        return Theme(
+                          data: ThemeData.light().copyWith(
+                            colorScheme: const ColorScheme.light(
+                              primary: AppTheme.primaryColor,
+                              onPrimary: Colors.white,
+                              onSurface: Colors.black,
+                              surface: Colors.white,
+                            ),
+                            dialogTheme: const DialogThemeData(
+                              backgroundColor: Colors.white,
+                            ),
+                          ),
+                          child: child!,
+                        );
+                      },
                     );
                     if (picked != null) {
                       setState(() => _discountEndDate = picked);

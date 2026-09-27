@@ -579,7 +579,7 @@ class SupabaseService {
 
   Future<bool> deleteEmployee(String id) async {
     try {
-      await _client.from('employees').delete().eq('id', id);
+      await _client.from('user_roles').delete().eq('id', id);
       return true;
     } catch (e) {
       return false;

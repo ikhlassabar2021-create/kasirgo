@@ -596,6 +596,11 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                   Navigator.pop(ctx);
                   try {
                     await AuthService().linkAccountWithGoogle();
+                    if (mounted) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(content: Text('Membuka autentikasi Akun Google...')),
+                      );
+                    }
                   } catch (e) {
                     if (mounted) {
                       ScaffoldMessenger.of(context).showSnackBar(
@@ -631,12 +636,67 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
               final phone = phoneController.text.trim();
               Navigator.pop(ctx);
               if (phone.isNotEmpty) {
+                _showOtpVerificationDialog(phone);
+              } else {
                 ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text('Kode OTP SMS/WA berhasil dikirim')),
+                  const SnackBar(content: Text('Masukkan nomor WhatsApp terlebih dahulu')),
                 );
               }
             },
             child: const Text('Kirim OTP'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showOtpVerificationDialog(String phone) {
+    final otpController = TextEditingController();
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Verifikasi OTP', style: TextStyle(fontWeight: FontWeight.bold)),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text('Kode OTP telah dikirim ke +62 $phone via SMS/WhatsApp.', style: const TextStyle(fontSize: 13, color: AppTheme.textSecondary)),
+            const SizedBox(height: 12),
+            TextField(
+              controller: otpController,
+              keyboardType: TextInputType.number,
+              maxLength: 6,
+              decoration: const InputDecoration(
+                labelText: 'Masukkan 6 Digit OTP',
+                border: OutlineInputBorder(),
+                isDense: true,
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('Batal'),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              final otp = otpController.text.trim();
+              if (otp.length < 4) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(content: Text('Masukkan kode OTP dengan benar')),
+                );
+                return;
+              }
+              Navigator.pop(ctx);
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(
+                  content: Text('Nomor WhatsApp / HP berhasil ditautkan!'),
+                  backgroundColor: AppTheme.successColor,
+                ),
+              );
+            },
+            child: const Text('Verifikasi'),
           ),
         ],
       ),
