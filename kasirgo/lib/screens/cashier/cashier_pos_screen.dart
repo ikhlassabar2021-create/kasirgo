@@ -11,6 +11,7 @@ import '../owner/product_list_screen.dart';
 import '../../widgets/pos/product_grid.dart';
 import '../../widgets/pos/cart_panel.dart';
 import '../../widgets/pos/checkout_dialog.dart';
+import '../../widgets/common/logout_button.dart';
 
 class CashierPosScreen extends ConsumerStatefulWidget {
   const CashierPosScreen({super.key});
@@ -204,6 +205,7 @@ class _CashierPosScreenState extends ConsumerState<CashierPosScreen> {
         elevation: 0,
         scrolledUnderElevation: 0,
         title: const Text('Kasir POS'),
+        actions: const [LogoutButton()],
       ),
       body: CentennialBackground(
         child: productsAsync.when(
