@@ -1035,7 +1035,7 @@ class _OutletTypeBadge extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final outletType = ref.watch(outletTypeProvider(outletId));
     String label;
-    switch (outletType.toLowerCase()) {
+    switch (ModuleConfig.normalizeType(outletType)) {
       case 'warteg':
         label = 'WARTEG';
         break;
@@ -1044,6 +1044,9 @@ class _OutletTypeBadge extends ConsumerWidget {
         break;
       case 'retail':
         label = 'RETAIL';
+        break;
+      case 'gerobak':
+        label = 'GEROBAK';
         break;
       default:
         label = 'KELONTONG';

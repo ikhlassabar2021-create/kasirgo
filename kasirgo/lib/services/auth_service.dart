@@ -78,9 +78,7 @@ class AuthService {
             name: outletName,
             role: 'owner',
             outletId: outletId,
-            createdAt: authUser != null
-                ? DateTime.tryParse(authUser.createdAt)
-                : DateTime.now(),
+            createdAt: DateTime.tryParse(authUser.createdAt),
           );
         }
       } catch (_) {}

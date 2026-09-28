@@ -14,6 +14,7 @@ class AppConstants {
     'Minimarket',
     'Toko Baju',
     'Apotek',
+    'Gerobak',
     'Lainnya',
   ];
 

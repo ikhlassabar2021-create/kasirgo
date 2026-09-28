@@ -54,11 +54,43 @@ class ModuleConfig {
       BusinessModule.restockB2B,
       BusinessModule.dailyDigest,
     },
+    'gerobak': {
+      BusinessModule.pos,
+      BusinessModule.inventory,
+      BusinessModule.debt,
+      BusinessModule.dailyDigest,
+    },
   };
 
+  /// Memetakan label tipe usaha (yang dipilih saat daftar) ke kunci modul.
+  static const Map<String, String> _typeAliases = {
+    'warung sembako': 'kelontong',
+    'warung madura': 'kelontong',
+    'kelontong': 'kelontong',
+    'minimarket': 'kelontong',
+    'retail': 'retail',
+    'toko baju': 'retail',
+    'apotek': 'retail',
+    'cafe': 'cafe',
+    'kedai kopi': 'cafe',
+    'restoran': 'cafe',
+    'warteg': 'warteg',
+    'warung makan': 'warteg',
+    'gerobak': 'gerobak',
+    'gerobak keliling': 'gerobak',
+    'lainnya': 'kelontong',
+  };
+
+  /// Normalisasi tipe usaha bebas -> kunci modul yang dikenal.
+  static String normalizeType(String outletType) {
+    final key = outletType.trim().toLowerCase();
+    if (_outletModules.containsKey(key)) return key;
+    return _typeAliases[key] ?? 'kelontong';
+  }
+
   static Set<BusinessModule> getModules(String outletType) {
-    return _outletModules[outletType.toLowerCase()] ??
-        _outletModules['kelontong']!;
+    final normalized = normalizeType(outletType);
+    return _outletModules[normalized] ?? _outletModules['kelontong']!;
   }
 
   static bool isEnabled(String outletType, BusinessModule module) {
