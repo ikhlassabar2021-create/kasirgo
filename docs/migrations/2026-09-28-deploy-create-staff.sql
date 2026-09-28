@@ -1,0 +1,52 @@
+-- ============================================================================
+-- KasirGo — DEPLOY EDGE FUNCTION create_staff (solusi tambah karyawan)
+-- ============================================================================
+-- MASALAH:
+--   Tambah karyawan gagal dengan error:
+--     HTTP 429 over_email_send_rate_limit
+--   Penyebab: "Confirm email" = ON, jadi setiap signUp mengirim email.
+--   Supabase free tier hanya ~3-4 email/jam -> habis saat testing.
+--
+-- SOLUSI (pilih salah satu):
+--
+-- A. CARA PALING CEPAT (tanpa deploy, tanpa email sama sekali)
+--    Supabase Dashboard -> Authentication -> Sign In / Providers -> Email
+--    -> matikan "Confirm email" -> Save.
+--    Setelah itu registrasi owner & tambah karyawan langsung berhasil.
+--    Kekurangan: tidak ada verifikasi email.
+--
+-- B. CARA DISARANKAN (tetap ada konfirmasi email untuk owner)
+--    Deploy Edge Function `create_staff`. Karyawan dibuat langsung
+--    terkonfirmasi lewat service role, tanpa mengirim email.
+--    Registrasi OWNER lewat form tetap memakai konfirmasi email.
+--    Aplikasi otomatis memakai function ini bila tersedia.
+--
+--    Langkah deploy:
+--    1. Install Supabase CLI (sekali):
+--         npm install -g supabase
+--       atau: brew install supabase/tap/supabase
+--    2. Login:
+--         supabase login
+--    3. Link project (dari root repo, folder yang punya supabase/functions):
+--         supabase link --project-ref lmvjecdvfzsmrowwwpck
+--    4. Deploy function:
+--         supabase functions deploy create_staff --no-verify-jwt
+--       Catatan: function tetap memverifikasi token pemanggil sendiri,
+--       jadi --no-verify-jwt aman dan membuat CORS lebih sederhana.
+--    5. (Opsional) Nonaktifkan verifikasi JWT platform:
+--         Supabase Dashboard -> Edge Functions -> create_staff -> Settings
+--         -> Verify JWT = OFF.
+--
+--    Service role key TIDAK perlu diset manual; Supabase otomatis
+--    menyediakan SUPABASE_SERVICE_ROLE_KEY ke Edge Function.
+--
+-- C. CARA PRODUKSI (tetap konfirmasi email + volume tinggi)
+--    Pasang SMTP sendiri (mis. Gmail App Password / Resend / Brevo):
+--      Supabase Dashboard -> Project Settings -> Auth -> SMTP Settings.
+--    Limit naik dari ~3/jam menjadi ~30-500/jam tergantung provider.
+--
+-- ============================================================================
+-- VERIFIKASI SETELAH DEPLOY:
+--   Owner login di aplikasi -> menu Karyawan -> Tambah Karyawan
+--   -> isi email + password -> Simpan. Akun kasir/admin langsung bisa login.
+-- ============================================================================

@@ -351,14 +351,13 @@ class _EmployeeScreenState extends ConsumerState<EmployeeScreen> with SingleTick
                               final authService = ref.read(authServiceProvider);
                               final staffEmail = emailController.text.trim();
                               final staffPassword = passwordController.text;
-                              final staffResp = await authService.createStaffAccount(
+                              newUserId = await authService.createStaffAccount(
                                 email: staffEmail,
                                 password: staffPassword,
                                 outletId: outletId,
                                 role: selectedRole,
                                 name: nameController.text.trim(),
                               );
-                              newUserId = staffResp.user?.id;
                             }
                           } catch (e) {
                             setDialogState(() => isSubmitting = false);

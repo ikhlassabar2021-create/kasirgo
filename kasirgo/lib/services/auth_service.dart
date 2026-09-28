@@ -346,7 +346,14 @@ class AuthService {
     await _client.auth.signOut();
   }
 
-  Future<AuthResponse> createStaffAccount({
+  /// Membuat akun login staf (admin/kasir).
+  ///
+  /// Prioritas: Edge Function `create_staff` (via service role, akun langsung
+  /// terkonfirmasi tanpa kirim email -> bebas rate limit). Jika function belum
+  /// dideploy, fallback ke `signUp` biasa.
+  ///
+  /// Mengembalikan user id staf, atau null jika gagal.
+  Future<String?> createStaffAccount({
     required String email,
     required String password,
     required String outletId,
@@ -358,17 +365,60 @@ class AuthService {
           'Outlet belum siap. Pastikan tipe usaha sudah dipilih di dashboard, lalu coba lagi.');
     }
 
-    // Client terpisah agar session owner tidak tertimpa.
+    final staffEmail = email.trim();
+
+    // 1) Coba Edge Function (disarankan).
+    try {
+      final res = await _client.functions.invoke(
+        'create_staff',
+        body: {
+          'email': staffEmail,
+          'password': password,
+          'outlet_id': outletId,
+          'role': role,
+          if (name != null && name.isNotEmpty) 'name': name,
+        },
+      );
+      final data = res.data;
+      if (data is Map && data['user_id'] is String) {
+        return await _ensureStaffRole(
+            data['user_id'] as String, outletId, role);
+      }
+      if (data is Map && data['error'] != null) {
+        throw Exception(data['error'].toString());
+      }
+    } on FunctionException catch (e) {
+      // 404 = function belum dideploy -> fallback ke signUp.
+      final status = e.status;
+      final details = e.details?.toString() ?? e.toString();
+      if (status == 404 ||
+          details.contains('not found') ||
+          details.contains('Failed to fetch')) {
+        // lanjut ke fallback di bawah
+      } else {
+        throw Exception(_friendlyStaffError(details));
+      }
+    } catch (e) {
+      final msg = e.toString();
+      if (!(msg.contains('404') ||
+          msg.contains('not found') ||
+          msg.contains('Failed to fetch') ||
+          msg.contains('FunctionException'))) {
+        throw Exception(_friendlyStaffError(msg));
+      }
+    }
+
+    // 2) Fallback: signUp biasa (butuh Confirm email OFF / kuota email).
     final tempClient = SupabaseClient(
       SupabaseConfig.url,
       SupabaseConfig.anonKey,
     );
 
     final response = await tempClient.auth.signUp(
-      email: email,
+      email: staffEmail,
       password: password,
       data: {
-        'staff_email': email,
+        'staff_email': staffEmail,
         'staff_role': role,
         'outlet_id': outletId,
         if (name != null && name.isNotEmpty) 'staff_name': name,
@@ -377,37 +427,55 @@ class AuthService {
     );
 
     final staffUserId = response.user?.id;
-
-    // Buat / perbarui baris user_roles memakai session OWNER (bukan temp client),
-    // supaya staf punya role & outlet yang benar saat login.
     if (staffUserId != null) {
-      try {
-        await _client.from('user_roles').upsert(
-          {
-            'user_id': staffUserId,
-            'outlet_id': outletId,
-            'role': role,
-          },
-          onConflict: 'user_id,outlet_id',
-        );
-      } catch (_) {
-        // Fallback: hapus baris lama dulu lalu insert.
-        try {
-          await _client
-              .from('user_roles')
-              .delete()
-              .eq('user_id', staffUserId)
-              .eq('outlet_id', outletId);
-        } catch (_) {}
-        await _client.from('user_roles').insert({
-          'user_id': staffUserId,
+      return await _ensureStaffRole(staffUserId, outletId, role);
+    }
+    return null;
+  }
+
+  Future<String?> _ensureStaffRole(
+    String userId,
+    String outletId,
+    String role,
+  ) async {
+    try {
+      await _client.from('user_roles').upsert(
+        {
+          'user_id': userId,
           'outlet_id': outletId,
           'role': role,
-        });
-      }
+        },
+        onConflict: 'user_id,outlet_id',
+      );
+    } catch (_) {
+      try {
+        await _client
+            .from('user_roles')
+            .delete()
+            .eq('user_id', userId)
+            .eq('outlet_id', outletId);
+      } catch (_) {}
+      await _client.from('user_roles').insert({
+        'user_id': userId,
+        'outlet_id': outletId,
+        'role': role,
+      });
     }
+    return userId;
+  }
 
-    return response;
+  String _friendlyStaffError(String raw) {
+    final msg = raw.toLowerCase();
+    if (msg.contains('rate limit') ||
+        msg.contains('429') ||
+        msg.contains('over_email')) {
+      return 'Kuota email Supabase habis. Tunggu ~1 jam, atau minta admin '
+          'mendeploy Edge Function "create_staff" / menonaktifkan Confirm email.';
+    }
+    if (msg.contains('sudah terdaftar') || msg.contains('already')) {
+      return 'Email sudah terdaftar. Gunakan email lain.';
+    }
+    return raw;
   }
 
   Future<String?> getUserRole(String userId) async {
