@@ -903,15 +903,17 @@ class _OwnerHomeScreenState extends ConsumerState<OwnerHomeScreen> {
       ),
     );
 
-    quickActionItems.add(
-      _ModuleCard(
-        icon: Icons.qr_code_scanner_rounded,
-        title: 'QR Meja Dine-in',
-        subtitle: 'Self Order',
-        color: AppTheme.accentColor,
-        onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const QrTableScreen())),
-      ),
-    );
+    if (modules.contains(BusinessModule.tableManagement)) {
+      quickActionItems.add(
+        _ModuleCard(
+          icon: Icons.qr_code_scanner_rounded,
+          title: 'QR Meja Dine-in',
+          subtitle: 'Self Order',
+          color: AppTheme.accentColor,
+          onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const QrTableScreen())),
+        ),
+      );
+    }
 
     quickActionItems.add(
       _ModuleCard(
