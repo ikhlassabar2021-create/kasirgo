@@ -7,22 +7,29 @@ class QrisConfig {
   final String bankOrWallet;
   final String qrisString;
 
+  /// Gambar QRIS statis yang diupload owner (base64 data, tanpa prefix).
+  final String imageBase64;
+
   const QrisConfig({
     this.merchantName = '',
     this.nmid = '',
     this.bankOrWallet = '',
     this.qrisString = '',
+    this.imageBase64 = '',
   });
+
+  bool get hasImage => imageBase64.trim().isNotEmpty;
 
   bool get isConfigured =>
       merchantName.trim().isNotEmpty &&
-      ((nmid.trim().isNotEmpty) || (qrisString.trim().isNotEmpty));
+      (hasImage || nmid.trim().isNotEmpty || qrisString.trim().isNotEmpty);
 
   Map<String, dynamic> toJson() => {
         'merchant_name': merchantName,
         'nmid': nmid,
         'bank_or_wallet': bankOrWallet,
         'qris_string': qrisString,
+        'image_base64': imageBase64,
       };
 
   factory QrisConfig.fromJson(Map<String, dynamic> json) => QrisConfig(
@@ -30,6 +37,22 @@ class QrisConfig {
         nmid: json['nmid']?.toString() ?? '',
         bankOrWallet: json['bank_or_wallet']?.toString() ?? '',
         qrisString: json['qris_string']?.toString() ?? '',
+        imageBase64: json['image_base64']?.toString() ?? '',
+      );
+
+  QrisConfig copyWith({
+    String? merchantName,
+    String? nmid,
+    String? bankOrWallet,
+    String? qrisString,
+    String? imageBase64,
+  }) =>
+      QrisConfig(
+        merchantName: merchantName ?? this.merchantName,
+        nmid: nmid ?? this.nmid,
+        bankOrWallet: bankOrWallet ?? this.bankOrWallet,
+        qrisString: qrisString ?? this.qrisString,
+        imageBase64: imageBase64 ?? this.imageBase64,
       );
 
   static String keyFor(String outletId) => 'qris_config_$outletId';

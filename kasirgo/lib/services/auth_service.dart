@@ -353,6 +353,7 @@ class AuthService {
     required String role,
     String? name,
   }) async {
+    // Client terpisah agar session owner tidak tertimpa.
     final tempClient = SupabaseClient(
       SupabaseConfig.url,
       SupabaseConfig.anonKey,
@@ -369,6 +370,37 @@ class AuthService {
       },
       emailRedirectTo: getAuthRedirectUrl(),
     );
+
+    final staffUserId = response.user?.id;
+
+    // Buat / perbarui baris user_roles memakai session OWNER (bukan temp client),
+    // supaya staf punya role & outlet yang benar saat login.
+    if (staffUserId != null) {
+      try {
+        await _client.from('user_roles').upsert(
+          {
+            'user_id': staffUserId,
+            'outlet_id': outletId,
+            'role': role,
+          },
+          onConflict: 'user_id,outlet_id',
+        );
+      } catch (_) {
+        // Fallback: hapus baris lama dulu lalu insert.
+        try {
+          await _client
+              .from('user_roles')
+              .delete()
+              .eq('user_id', staffUserId)
+              .eq('outlet_id', outletId);
+        } catch (_) {}
+        await _client.from('user_roles').insert({
+          'user_id': staffUserId,
+          'outlet_id': outletId,
+          'role': role,
+        });
+      }
+    }
 
     return response;
   }

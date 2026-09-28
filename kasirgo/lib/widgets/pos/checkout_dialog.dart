@@ -1,4 +1,6 @@
 import 'dart:ui';
+import 'dart:convert';
+import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:google_fonts/google_fonts.dart';
@@ -569,6 +571,16 @@ class _CheckoutDialogState extends State<CheckoutDialog> {
     final wallet =
         _qrisConfig.bankOrWallet.trim().isNotEmpty ? _qrisConfig.bankOrWallet.trim() : '';
 
+    // Gambar QRIS statis yang diupload owner (otomatis tampil, tanpa ketik ulang).
+    Uint8List? qrisImage;
+    if (_qrisConfig.hasImage) {
+      try {
+        qrisImage = base64Decode(_qrisConfig.imageBase64);
+      } catch (_) {
+        qrisImage = null;
+      }
+    }
+
     return [
       Center(
         child: Container(
@@ -580,7 +592,15 @@ class _CheckoutDialogState extends State<CheckoutDialog> {
           ),
           child: Column(
             children: [
-              const Icon(Icons.qr_code_2_rounded, size: 140, color: AppTheme.qrInkColor),
+              if (qrisImage != null)
+                Image.memory(
+                  qrisImage,
+                  width: 220,
+                  height: 220,
+                  fit: BoxFit.contain,
+                )
+              else
+                const Icon(Icons.qr_code_2_rounded, size: 140, color: AppTheme.qrInkColor),
               const SizedBox(height: 6),
               const Text(
                 'QRIS STANDAR PEMBAYARAN NASIONAL',
@@ -588,7 +608,7 @@ class _CheckoutDialogState extends State<CheckoutDialog> {
               ),
               Text(
                 nmid,
-                style: TextStyle(color: AppTheme.textSecondary, fontSize: 8),
+                style: const TextStyle(color: AppTheme.textSecondary, fontSize: 8),
               ),
             ],
           ),

@@ -461,14 +461,16 @@ class SupabaseService {
   }
 
   Future<Employee?> createEmployee(Employee employee) async {
+    // Tanpa user_id (akun login belum dibuat), tidak bisa simpan ke user_roles.
+    if (employee.userId.isEmpty) return null;
     try {
       final response = await _client
           .from('user_roles')
-          .insert({
+          .upsert({
             'outlet_id': employee.outletId,
             'user_id': employee.userId,
             'role': employee.role,
-          })
+          }, onConflict: 'user_id,outlet_id')
           .select()
           .single();
 

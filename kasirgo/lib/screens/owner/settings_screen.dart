@@ -2,6 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:supabase_flutter/supabase_flutter.dart' hide User;
+import 'dart:convert';
+import 'dart:typed_data';
+import 'package:image_picker/image_picker.dart';
 import '../../config/app_theme.dart';
 import '../../providers/auth_provider.dart';
 import '../../services/auth_service.dart';
@@ -648,6 +651,49 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     final walletController = TextEditingController(text: existing.bankOrWallet);
     final qrisStringController = TextEditingController(text: existing.qrisString);
 
+    // Gambar QRIS statis (base64) — terisi otomatis bila sudah pernah diupload.
+    String imageBase64 = existing.imageBase64;
+    bool isUploading = false;
+
+    Future<void> pickQrisImage(StateSetter setDialogState) async {
+      try {
+        setDialogState(() => isUploading = true);
+        final picker = ImagePicker();
+        final picked = await picker.pickImage(
+          source: ImageSource.gallery,
+          imageQuality: 90,
+          maxWidth: 1200,
+        );
+        if (picked == null) {
+          if (mounted) setDialogState(() => isUploading = false);
+          return;
+        }
+        final bytes = await picked.readAsBytes();
+        setDialogState(() {
+          imageBase64 = base64Encode(bytes);
+          isUploading = false;
+        });
+      } catch (e) {
+        if (!mounted) return;
+        setDialogState(() => isUploading = false);
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Gagal upload gambar: $e'),
+            backgroundColor: AppTheme.errorColor,
+          ),
+        );
+      }
+    }
+
+    Uint8List? decodedImage() {
+      if (imageBase64.trim().isEmpty) return null;
+      try {
+        return base64Decode(imageBase64);
+      } catch (_) {
+        return null;
+      }
+    }
+
     showDialog(
       context: context,
       builder: (ctx) => StatefulBuilder(
@@ -663,8 +709,69 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     const Text(
-                      'Atur QRIS manual / statis milik toko Anda. QR ini akan ditampilkan saat kasir memilih metode pembayaran QRIS.',
+                      'Upload foto QRIS statis milik toko Anda. QR ini otomatis ditampilkan saat kasir memilih metode pembayaran QRIS — tidak perlu ketik ulang.',
                       style: TextStyle(fontSize: 13, color: AppTheme.textSecondary, height: 1.4),
+                    ),
+                    const SizedBox(height: 16),
+                    // Preview gambar QRIS (otomatis terisi bila sudah ada).
+                    Container(
+                      width: double.infinity,
+                      padding: const EdgeInsets.all(12),
+                      decoration: BoxDecoration(
+                        color: AppTheme.backgroundColor,
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(color: AppTheme.borderColor),
+                      ),
+                      child: Column(
+                        children: [
+                          if (decodedImage() != null)
+                            Image.memory(
+                              decodedImage()!,
+                              height: 200,
+                              fit: BoxFit.contain,
+                            )
+                          else
+                            const Padding(
+                              padding: EdgeInsets.symmetric(vertical: 24),
+                              child: Column(
+                                children: [
+                                  Icon(Icons.qr_code_2, size: 56, color: AppTheme.textSecondary),
+                                  SizedBox(height: 8),
+                                  Text(
+                                    'Belum ada gambar QRIS',
+                                    style: TextStyle(color: AppTheme.textSecondary, fontSize: 12),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          const SizedBox(height: 12),
+                          Row(
+                            children: [
+                              Expanded(
+                                child: OutlinedButton.icon(
+                                  onPressed: isUploading ? null : () => pickQrisImage(setDialogState),
+                                  icon: isUploading
+                                      ? const SizedBox(
+                                          width: 16,
+                                          height: 16,
+                                          child: CircularProgressIndicator(strokeWidth: 2),
+                                        )
+                                      : const Icon(Icons.upload_file, size: 18),
+                                  label: Text(decodedImage() != null ? 'Ganti Gambar' : 'Upload Gambar QRIS'),
+                                ),
+                              ),
+                              if (decodedImage() != null) ...[
+                                const SizedBox(width: 8),
+                                IconButton(
+                                  tooltip: 'Hapus gambar',
+                                  onPressed: () => setDialogState(() => imageBase64 = ''),
+                                  icon: const Icon(Icons.delete_outline, color: AppTheme.errorColor),
+                                ),
+                              ],
+                            ],
+                          ),
+                        ],
+                      ),
                     ),
                     const SizedBox(height: 16),
                     TextField(
@@ -679,7 +786,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                     TextField(
                       controller: nmidController,
                       decoration: const InputDecoration(
-                        labelText: 'NMID / ID Merchant QRIS',
+                        labelText: 'NMID / ID Merchant QRIS (opsional)',
                         prefixIcon: Icon(Icons.badge, color: AppTheme.textSecondary),
                         isDense: true,
                       ),
@@ -719,27 +826,28 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                   foregroundColor: Colors.white,
                 ),
                 onPressed: () async {
-                        final config = QrisConfig(
-                          merchantName: nameController.text.trim(),
-                          nmid: nmidController.text.trim(),
-                          bankOrWallet: walletController.text.trim(),
-                          qrisString: qrisStringController.text.trim(),
-                        );
-                        await QrisConfig.save(outletId: outletId, config: config);
-                        if (!ctx.mounted) return;
-                        Navigator.pop(ctx);
-                        if (!mounted) return;
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          SnackBar(
-                            content: Text(
-                              config.isConfigured
-                                  ? 'QRIS Toko berhasil disimpan'
-                                  : 'Disimpan. Lengkapi Nama Merchant & NMID agar QRIS tampil',
-                            ),
-                            backgroundColor: config.isConfigured ? AppTheme.successColor : AppTheme.warningColor,
-                          ),
-                        );
-                      },
+                  final config = QrisConfig(
+                    merchantName: nameController.text.trim(),
+                    nmid: nmidController.text.trim(),
+                    bankOrWallet: walletController.text.trim(),
+                    qrisString: qrisStringController.text.trim(),
+                    imageBase64: imageBase64,
+                  );
+                  await QrisConfig.save(outletId: outletId, config: config);
+                  if (!ctx.mounted) return;
+                  Navigator.pop(ctx);
+                  if (!mounted) return;
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text(
+                        config.isConfigured
+                            ? 'QRIS Toko berhasil disimpan'
+                            : 'Disimpan. Lengkapi Nama Merchant + gambar QRIS/NMID agar QRIS tampil',
+                      ),
+                      backgroundColor: config.isConfigured ? AppTheme.successColor : AppTheme.warningColor,
+                    ),
+                  );
+                },
                 icon: const Icon(Icons.save_outlined, size: 18),
                 label: const Text('Simpan'),
               ),

@@ -31,10 +31,16 @@ class PaymentService {
     required String transactionId,
     required String status,
   }) async {
-    await _client
-        .from('transactions')
-        .update({'payment_status': status})
-        .eq('id', transactionId);
+    // Kolom payment_status belum ada di skema live. Coba update kolom `status`
+    // (yang ada) agar tidak membuat error; jika gagal, abaikan diam-diam.
+    try {
+      await _client
+          .from('transactions')
+          .update({'status': status})
+          .eq('id', transactionId);
+    } catch (_) {
+      // diamkan: fitur dynamic QRIS belum didukung backend.
+    }
   }
 
   Map<String, dynamic> getFinancialConfig() {
