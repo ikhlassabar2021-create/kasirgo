@@ -36,9 +36,13 @@ BEGIN
 
   -- Kasus STAF
   IF staff_role IN ('admin', 'cashier') AND staff_outlet IS NOT NULL THEN
-    INSERT INTO public.user_roles (user_id, outlet_id, role)
-    VALUES (NEW.id, staff_outlet, staff_role)
-    ON CONFLICT (user_id, outlet_id) DO UPDATE SET role = EXCLUDED.role;
+    -- Hanya pasang role jika outlet-nya benar-benar ada; kalau tidak,
+    -- lewati (jangan sampai gagal total / error 500).
+    IF EXISTS (SELECT 1 FROM public.outlets WHERE id = staff_outlet) THEN
+      INSERT INTO public.user_roles (user_id, outlet_id, role)
+      VALUES (NEW.id, staff_outlet, staff_role)
+      ON CONFLICT (user_id, outlet_id) DO UPDATE SET role = EXCLUDED.role;
+    END IF;
     RETURN NEW;
   END IF;
 

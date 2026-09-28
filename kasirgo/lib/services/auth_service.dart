@@ -353,6 +353,11 @@ class AuthService {
     required String role,
     String? name,
   }) async {
+    if (outletId.trim().isEmpty) {
+      throw Exception(
+          'Outlet belum siap. Pastikan tipe usaha sudah dipilih di dashboard, lalu coba lagi.');
+    }
+
     // Client terpisah agar session owner tidak tertimpa.
     final tempClient = SupabaseClient(
       SupabaseConfig.url,
