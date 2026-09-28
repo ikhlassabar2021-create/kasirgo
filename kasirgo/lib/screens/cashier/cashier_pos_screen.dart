@@ -198,12 +198,12 @@ class _CashierPosScreenState extends ConsumerState<CashierPosScreen> {
     final productsAsync = ref.watch(productsProvider);
 
     return Scaffold(
-      backgroundColor: Colors.transparent,
-      extendBodyBehindAppBar: true,
+      backgroundColor: AppTheme.backgroundColor,
       appBar: AppBar(
-        backgroundColor: Colors.transparent,
+        backgroundColor: AppTheme.surfaceColor,
         elevation: 0,
         scrolledUnderElevation: 0,
+        shape: const Border(bottom: BorderSide(color: AppTheme.borderColor)),
         title: const Text('Kasir POS'),
         actions: const [LogoutButton()],
       ),

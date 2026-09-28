@@ -17,7 +17,9 @@ import '../../utils/formatters.dart';
 enum ReportPeriod { today, last7Days, last30Days, thisMonth, custom }
 
 class ReportScreen extends ConsumerStatefulWidget {
-  const ReportScreen({super.key});
+  final bool embedded;
+
+  const ReportScreen({super.key, this.embedded = false});
 
   @override
   ConsumerState<ReportScreen> createState() => _ReportScreenState();
@@ -136,6 +138,56 @@ class _ReportScreenState extends ConsumerState<ReportScreen> with SingleTickerPr
 
   @override
   Widget build(BuildContext context) {
+    final tabBar = TabBar(
+      controller: _tabController,
+      indicatorColor: AppTheme.primaryColor,
+      indicatorWeight: 3,
+      labelColor: AppTheme.textPrimary,
+      unselectedLabelColor: AppTheme.textSecondary,
+      tabs: const [
+        Tab(text: 'Ringkasan'),
+        Tab(text: 'Penjualan'),
+        Tab(text: 'Produk'),
+        Tab(text: 'Per Channel'),
+      ],
+    );
+
+    if (widget.embedded) {
+      return Scaffold(
+        backgroundColor: Colors.transparent,
+        body: Center(
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 1100),
+            child: Column(
+              children: [
+                tabBar,
+                _buildPeriodFilterChips(),
+                Expanded(
+                  child: _isLoading
+                      ? const Center(child: CircularProgressIndicator())
+                      : TabBarView(
+                          controller: _tabController,
+                          children: [
+                            _buildSummaryTab(),
+                            _buildSalesTab(),
+                            _buildProductsTab(),
+                            _buildChannelTab(),
+                          ],
+                        ),
+                ),
+              ],
+            ),
+          ),
+        ),
+        floatingActionButton: FloatingActionButton.extended(
+          backgroundColor: AppTheme.primaryColor,
+          icon: const Icon(Icons.table_view, color: Colors.white),
+          label: const Text('Excel', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+          onPressed: _exportExcel,
+        ),
+      );
+    }
+
     return Scaffold(
       appBar: AppBar(
         title: const Text('Laporan'),
@@ -151,19 +203,7 @@ class _ReportScreenState extends ConsumerState<ReportScreen> with SingleTickerPr
             onPressed: _exportBankReadyPdf,
           ),
         ],
-        bottom: TabBar(
-          controller: _tabController,
-          indicatorColor: AppTheme.primaryColor,
-          indicatorWeight: 3,
-          labelColor: Colors.white,
-          unselectedLabelColor: AppTheme.textSecondary,
-          tabs: const [
-            Tab(text: 'Ringkasan'),
-            Tab(text: 'Penjualan'),
-            Tab(text: 'Produk'),
-            Tab(text: 'Per Channel'),
-          ],
-        ),
+        bottom: tabBar,
       ),
       body: Center(
         child: ConstrainedBox(

@@ -50,8 +50,8 @@ class _AdminHomeScreenState extends ConsumerState<AdminHomeScreen> {
       body: IndexedStack(
         index: _currentIndex,
         children: const [
-          ProductListScreen(),
-          ReportScreen(),
+          ProductListScreen(embedded: true),
+          ReportScreen(embedded: true),
         ],
       ),
     );

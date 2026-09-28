@@ -284,14 +284,17 @@ class _OwnerHomeScreenState extends ConsumerState<OwnerHomeScreen> {
 
     final isDesktop = AppTheme.isDesktop(context);
 
-    final bodyContent = widget.subScreen ??
-        IndexedStack(
+    if (widget.subScreen != null) {
+      return CentennialBackground(child: widget.subScreen!);
+    }
+
+    final bodyContent = IndexedStack(
           index: _currentIndex > 3 ? 0 : _currentIndex,
           children: [
             _buildDashboard(user.name ?? user.email, summaryAsync),
-            const ProductListScreen(),
-            const PosScreen(),
-            const ReportScreen(),
+            const ProductListScreen(embedded: true),
+            const PosScreen(embedded: true),
+            const ReportScreen(embedded: true),
           ],
         );
 
@@ -505,14 +508,14 @@ class _OwnerHomeScreenState extends ConsumerState<OwnerHomeScreen> {
     }
 
     return Scaffold(
-      backgroundColor: Colors.transparent,
+      backgroundColor: AppTheme.backgroundColor,
       drawer: AppDrawer(user: user),
-      extendBodyBehindAppBar: true,
       appBar: AppBar(
-        backgroundColor: Colors.transparent,
+        backgroundColor: AppTheme.surfaceColor,
         elevation: 0,
         scrolledUnderElevation: 0,
         centerTitle: false,
+        shape: const Border(bottom: BorderSide(color: AppTheme.borderColor)),
         title: Text(
           'KasirGo',
           style: GoogleFonts.inter(
@@ -574,7 +577,7 @@ class _OwnerHomeScreenState extends ConsumerState<OwnerHomeScreen> {
         ],
       ),
       body: CentennialBackground(
-        child: bodyContent,
+        child: SafeArea(top: false, child: bodyContent),
       ),
       bottomNavigationBar: isDesktop ? null : _buildBottomNav(),
     );

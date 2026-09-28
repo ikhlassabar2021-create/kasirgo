@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:mobile_scanner/mobile_scanner.dart';
@@ -108,25 +107,26 @@ class _CustomerMenuScreenState extends ConsumerState<CustomerMenuScreen> {
   }
 
   Future<void> _scanQr() async {
-    if (kIsWeb) {
-      // Kamera scanner tidak tersedia di web preview tertentu; arahkan manual.
+    try {
+      final scanned = await Navigator.push<String>(
+        context,
+        MaterialPageRoute(builder: (_) => const _QrScannerPage()),
+      );
+      if (!mounted || scanned == null || scanned.isEmpty) return;
+      _parseScannedCode(scanned);
+      final outlet = _outletController.text.trim();
+      final table = _tableController.text.trim();
+      if (outlet.isNotEmpty) {
+        _openOrderScreen(outlet, table);
+      }
+    } catch (_) {
+      if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content: Text('Di web, tempel Kode Outlet dari QR, atau buka di HP untuk scan kamera.'),
+          content: Text('Kamera tidak tersedia. Tempel Kode Outlet dari QR secara manual.'),
+          backgroundColor: AppTheme.errorColor,
         ),
       );
-      return;
-    }
-    final scanned = await Navigator.push<String>(
-      context,
-      MaterialPageRoute(builder: (_) => const _QrScannerPage()),
-    );
-    if (!mounted || scanned == null || scanned.isEmpty) return;
-    _parseScannedCode(scanned);
-    final outlet = _outletController.text.trim();
-    final table = _tableController.text.trim();
-    if (outlet.isNotEmpty) {
-      _openOrderScreen(outlet, table);
     }
   }
 
@@ -321,6 +321,29 @@ class _QrScannerPageState extends State<_QrScannerPage> {
         children: [
           MobileScanner(
             controller: _controller,
+            errorBuilder: (context, error) => Center(
+              child: Padding(
+                padding: const EdgeInsets.all(24),
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    const Icon(Icons.no_photography_rounded, color: Colors.white70, size: 48),
+                    const SizedBox(height: 12),
+                    Text(
+                      'Kamera tidak dapat diakses.\n${error.errorDetails?.message ?? error.errorCode.name}',
+                      textAlign: TextAlign.center,
+                      style: const TextStyle(color: Colors.white70, fontSize: 13),
+                    ),
+                    const SizedBox(height: 16),
+                    OutlinedButton(
+                      style: OutlinedButton.styleFrom(foregroundColor: Colors.white),
+                      onPressed: () => Navigator.pop(context),
+                      child: const Text('Kembali & input manual'),
+                    ),
+                  ],
+                ),
+              ),
+            ),
             onDetect: (capture) {
               if (_handled) return;
               for (final barcode in capture.barcodes) {

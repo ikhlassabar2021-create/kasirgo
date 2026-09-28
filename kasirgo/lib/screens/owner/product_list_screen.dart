@@ -16,7 +16,9 @@ final productsProvider = FutureProvider<List<Product>>((ref) async {
 });
 
 class ProductListScreen extends ConsumerStatefulWidget {
-  const ProductListScreen({super.key});
+  final bool embedded;
+
+  const ProductListScreen({super.key, this.embedded = false});
 
   @override
   ConsumerState<ProductListScreen> createState() => _ProductListScreenState();
@@ -190,21 +192,10 @@ class _ProductListScreenState extends ConsumerState<ProductListScreen> {
   Widget build(BuildContext context) {
     final productsAsync = ref.watch(productsProvider);
 
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('Produk'),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.qr_code_scanner),
-            tooltip: 'Scan Barcode',
-            onPressed: _showBarcodeScanDialog,
-          ),
-        ],
-      ),
-      body: Center(
-        child: ConstrainedBox(
-          constraints: const BoxConstraints(maxWidth: 1100),
-          child: productsAsync.when(
+    final content = Center(
+      child: ConstrainedBox(
+        constraints: const BoxConstraints(maxWidth: 1100),
+        child: productsAsync.when(
             loading: () => const Center(
               child: CircularProgressIndicator(color: AppTheme.primaryColor),
             ),
@@ -242,22 +233,34 @@ class _ProductListScreenState extends ConsumerState<ProductListScreen> {
                 children: [
                   Container(
                     margin: const EdgeInsets.fromLTRB(12, 10, 12, 6),
-                    child: TextField(
-                      controller: _searchController,
-                      onChanged: (v) => setState(() => _searchQuery = v.trim().toLowerCase()),
-                      decoration: InputDecoration(
-                        hintText: 'Cari produk atau barcode...',
-                        prefixIcon: const Icon(Icons.search, color: AppTheme.textSecondary),
-                        suffixIcon: _searchQuery.isNotEmpty
-                            ? IconButton(
-                                icon: const Icon(Icons.clear, color: AppTheme.textSecondary),
-                                onPressed: () {
-                                  _searchController.clear();
-                                  setState(() => _searchQuery = '');
-                                },
-                              )
-                            : null,
-                      ),
+                    child: Row(
+                      children: [
+                        Expanded(
+                          child: TextField(
+                            controller: _searchController,
+                            onChanged: (v) => setState(() => _searchQuery = v.trim().toLowerCase()),
+                            decoration: InputDecoration(
+                              hintText: 'Cari produk atau barcode...',
+                              prefixIcon: const Icon(Icons.search, color: AppTheme.textSecondary),
+                              suffixIcon: _searchQuery.isNotEmpty
+                                  ? IconButton(
+                                      icon: const Icon(Icons.clear, color: AppTheme.textSecondary),
+                                      onPressed: () {
+                                        _searchController.clear();
+                                        setState(() => _searchQuery = '');
+                                      },
+                                    )
+                                  : null,
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        IconButton.filledTonal(
+                          onPressed: _showBarcodeScanDialog,
+                          tooltip: 'Scan Barcode',
+                          icon: const Icon(Icons.qr_code_scanner),
+                        ),
+                      ],
                     ),
                   ),
                   SizedBox(
@@ -307,20 +310,30 @@ class _ProductListScreenState extends ConsumerState<ProductListScreen> {
                         )
                       : RefreshIndicator(
                           onRefresh: () async => ref.invalidate(productsProvider),
-                          child: GridView.builder(
-                            padding: const EdgeInsets.fromLTRB(12, 6, 12, 80),
-                            gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                              crossAxisCount: 4,
-                              childAspectRatio: 0.95,
-                              crossAxisSpacing: 8,
-                              mainAxisSpacing: 8,
-                            ),
-                            itemCount: filtered.length,
-                            itemBuilder: (context, index) {
-                              final product = filtered[index];
-                              final canDelete = ref.watch(currentUserProvider)?.role == 'owner';
+                          child: LayoutBuilder(
+                            builder: (context, constraints) {
+                              final width = constraints.maxWidth;
+                              final crossAxisCount = width >= 1000
+                                  ? 5
+                                  : width >= 760
+                                      ? 4
+                                      : width >= 520
+                                          ? 3
+                                          : 2;
+                              return GridView.builder(
+                                padding: const EdgeInsets.fromLTRB(12, 6, 12, 80),
+                                gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                                  crossAxisCount: crossAxisCount,
+                                  childAspectRatio: 0.95,
+                                  crossAxisSpacing: 8,
+                                  mainAxisSpacing: 8,
+                                ),
+                                itemCount: filtered.length,
+                                itemBuilder: (context, index) {
+                                  final product = filtered[index];
+                                  final canDelete = ref.watch(currentUserProvider)?.role == 'owner';
 
-                              final cardContent = Card(
+                                  final cardContent = Card(
                                 elevation: 2,
                                 shape: RoundedRectangleBorder(
                                   borderRadius: BorderRadius.circular(12),
@@ -424,6 +437,8 @@ class _ProductListScreenState extends ConsumerState<ProductListScreen> {
                                 ),
                               );
                               return cardContent;
+                                },
+                              );
                             },
                           ),
                         ),
@@ -433,7 +448,38 @@ class _ProductListScreenState extends ConsumerState<ProductListScreen> {
             },
           ),
         ),
+      );
+
+    if (widget.embedded) {
+      return Stack(
+        children: [
+          content,
+          Positioned(
+            right: 16,
+            bottom: 16,
+            child: FloatingActionButton.extended(
+              onPressed: () => context.push('/owner/products/add'),
+              backgroundColor: AppTheme.primaryColor,
+              icon: const Icon(Icons.add, color: Colors.white),
+              label: const Text('Tambah', style: TextStyle(color: Colors.white)),
+            ),
+          ),
+        ],
+      );
+    }
+
+    return Scaffold(
+      appBar: AppBar(
+        title: const Text('Produk'),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.qr_code_scanner),
+            tooltip: 'Scan Barcode',
+            onPressed: _showBarcodeScanDialog,
+          ),
+        ],
       ),
+      body: content,
       floatingActionButton: FloatingActionButton.extended(
         onPressed: () => context.push('/owner/products/add'),
         backgroundColor: AppTheme.primaryColor,

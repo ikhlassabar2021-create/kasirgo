@@ -179,18 +179,18 @@ class AppShell extends StatelessWidget {
 
   Widget _buildMobile(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.transparent,
-      extendBodyBehindAppBar: true,
+      backgroundColor: AppTheme.backgroundColor,
       drawer: drawer,
       appBar: AppBar(
-        backgroundColor: Colors.transparent,
+        backgroundColor: AppTheme.surfaceColor,
         elevation: 0,
         scrolledUnderElevation: 0,
         centerTitle: false,
+        shape: const Border(bottom: BorderSide(color: AppTheme.borderColor)),
         title: mobileTitle,
         actions: mobileActions.isEmpty ? null : mobileActions,
       ),
-      body: CentennialBackground(child: body),
+      body: CentennialBackground(child: SafeArea(top: false, child: body)),
       bottomNavigationBar: showBottomNav ? _buildBottomNav() : null,
     );
   }

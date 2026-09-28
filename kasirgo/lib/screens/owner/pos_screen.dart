@@ -14,7 +14,9 @@ import '../../widgets/pos/cart_panel.dart';
 import '../../widgets/pos/checkout_dialog.dart';
 
 class PosScreen extends ConsumerStatefulWidget {
-  const PosScreen({super.key});
+  final bool embedded;
+
+  const PosScreen({super.key, this.embedded = false});
 
   @override
   ConsumerState<PosScreen> createState() => _PosScreenState();
@@ -307,6 +309,83 @@ class _PosScreenState extends ConsumerState<PosScreen> {
   Widget build(BuildContext context) {
     final productsAsync = ref.watch(productsProvider);
 
+    final body = CentennialBackground(
+      child: productsAsync.when(
+        loading: () => const _PosSkeleton(),
+        error: (err, _) => Center(
+          child: Padding(
+            padding: const EdgeInsets.all(24),
+            child: Text(
+              'Gagal memuat produk: $err',
+              textAlign: TextAlign.center,
+              style: const TextStyle(color: AppTheme.errorColor),
+            ),
+          ),
+        ),
+        data: (products) {
+          final filtered = products.where((p) {
+            final matchSearch = _searchQuery.isEmpty ||
+                p.name.toLowerCase().contains(_searchQuery.toLowerCase()) ||
+                (p.barcode != null && p.barcode!.contains(_searchQuery));
+            return matchSearch;
+          }).toList();
+
+          return LayoutBuilder(
+            builder: (context, constraints) {
+              final isTablet = constraints.maxWidth >= 600;
+              return Stack(
+                children: [
+                  if (isTablet)
+                    Row(
+                      children: [
+                        Expanded(
+                          flex: 65,
+                          child: _buildCatalog(filtered, products, bottomPadding: 16),
+                        ),
+                        SizedBox(
+                          width: constraints.maxWidth * 0.35,
+                          child: _buildPersistentCart(products),
+                        ),
+                      ],
+                    )
+                  else
+                    Column(
+                      children: [
+                        Expanded(child: _buildCatalog(filtered, products, bottomPadding: 220)),
+                      ],
+                    ),
+                  if (!isTablet)
+                    CartPanel(
+                      items: _cart,
+                      discountAmount: _discountAmount,
+                      onCheckout: () => _handleCheckout(products),
+                      onRemoveItem: _removeItem,
+                      onUpdateQty: (entry) => _updateQty(entry, products),
+                    ),
+                  if (_isLoading) const _SyncingOverlay(),
+                ],
+              );
+            },
+          );
+        },
+      ),
+    );
+
+    if (widget.embedded) {
+      return Column(
+        children: [
+          Align(
+            alignment: Alignment.centerRight,
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(12, 8, 12, 0),
+              child: _buildChannelSelector(),
+            ),
+          ),
+          Expanded(child: body),
+        ],
+      );
+    }
+
     return Scaffold(
       backgroundColor: Colors.transparent,
       appBar: AppBar(
@@ -322,67 +401,7 @@ class _PosScreenState extends ConsumerState<PosScreen> {
           const SizedBox(width: 12),
         ],
       ),
-      body: CentennialBackground(
-        child: productsAsync.when(
-          loading: () => const _PosSkeleton(),
-          error: (err, _) => Center(
-            child: Padding(
-              padding: const EdgeInsets.all(24),
-              child: Text(
-                'Gagal memuat produk: $err',
-                textAlign: TextAlign.center,
-                style: const TextStyle(color: AppTheme.errorColor),
-              ),
-            ),
-          ),
-          data: (products) {
-            final filtered = products.where((p) {
-              final matchSearch = _searchQuery.isEmpty ||
-                  p.name.toLowerCase().contains(_searchQuery.toLowerCase()) ||
-                  (p.barcode != null && p.barcode!.contains(_searchQuery));
-              return matchSearch;
-            }).toList();
-
-            return LayoutBuilder(
-              builder: (context, constraints) {
-                final isTablet = constraints.maxWidth >= 600;
-                return Stack(
-                  children: [
-                    if (isTablet)
-                      Row(
-                        children: [
-                          Expanded(
-                            flex: 65,
-                            child: _buildCatalog(filtered, products, bottomPadding: 16),
-                          ),
-                          SizedBox(
-                            width: constraints.maxWidth * 0.35,
-                            child: _buildPersistentCart(products),
-                          ),
-                        ],
-                      )
-                    else
-                      Column(
-                        children: [
-                          Expanded(child: _buildCatalog(filtered, products, bottomPadding: 220)),
-                        ],
-                      ),
-                    if (!isTablet)
-                      CartPanel(
-                        items: _cart,
-                        discountAmount: _discountAmount,
-                        onCheckout: () => _handleCheckout(products),
-                        onRemoveItem: _removeItem,
-                        onUpdateQty: (entry) => _updateQty(entry, products),
-                      ),
-                    if (_isLoading) const _SyncingOverlay(),
-                  ],
-                );
-              },
-            );
-          },
-        ),
-      ),
+      body: body,
     );
   }
 
