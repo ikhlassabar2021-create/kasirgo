@@ -363,10 +363,19 @@ class _EmployeeScreenState extends ConsumerState<EmployeeScreen> with SingleTick
                           } catch (e) {
                             setDialogState(() => isSubmitting = false);
                             if (context.mounted) {
+                              final msg = e.toString();
+                              final isRateLimit = msg.contains('rate limit') ||
+                                  msg.contains('429') ||
+                                  msg.contains('over_email');
                               ScaffoldMessenger.of(context).showSnackBar(
                                 SnackBar(
-                                  content: Text('Gagal membuat akun login: $e'),
+                                  content: Text(
+                                    isRateLimit
+                                        ? 'Kuota email Supabase habis (maks ~3/jam). Tunggu 1 jam, atau minta admin menonaktifkan "Confirm email" sementara, lalu coba lagi.'
+                                        : 'Gagal membuat akun login: $e',
+                                  ),
                                   backgroundColor: AppTheme.errorColor,
+                                  duration: const Duration(seconds: 8),
                                 ),
                               );
                             }
