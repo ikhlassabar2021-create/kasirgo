@@ -6,6 +6,7 @@ import 'package:fl_chart/fl_chart.dart';
 import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../config/app_theme.dart';
+import '../../config/constants.dart';
 import '../../models/product.dart';
 import '../../providers/auth_provider.dart';
 import '../../providers/outlet_provider.dart';
@@ -687,6 +688,7 @@ class _OwnerHomeScreenState extends ConsumerState<OwnerHomeScreen> {
                 ],
               ),
               const SizedBox(height: 20),
+              _OutletTypeSetupBanner(outletId: userOutletId()),
               _QrisSetupBanner(outletId: userOutletId()),
               const SizedBox(height: 16),
               _HeroSalesCard(sales: todaySales, txCount: todayCount),
@@ -1194,6 +1196,154 @@ class _QrisSetupBannerState extends ConsumerState<_QrisSetupBanner> {
               'Atur',
               style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold),
             ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _OutletTypeSetupBanner extends ConsumerStatefulWidget {
+  final String outletId;
+  const _OutletTypeSetupBanner({required this.outletId});
+
+  @override
+  ConsumerState<_OutletTypeSetupBanner> createState() =>
+      _OutletTypeSetupBannerState();
+}
+
+class _OutletTypeSetupBannerState
+    extends ConsumerState<_OutletTypeSetupBanner> {
+  bool _saving = false;
+
+  Future<void> _pickType() async {
+    final selected = await showDialog<String>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: AppTheme.surfaceColor,
+        title: const Text('Pilih Tipe Usaha',
+            style: TextStyle(fontWeight: FontWeight.bold)),
+        content: SizedBox(
+          width: 380,
+          child: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: AppConstants.businessTypes
+                  .map((t) => ListTile(
+                        dense: true,
+                        title: Text(t,
+                            style: const TextStyle(
+                                color: AppTheme.textPrimary, fontSize: 14)),
+                        onTap: () => Navigator.pop(ctx, t),
+                      ))
+                  .toList(),
+            ),
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('Batal',
+                style: TextStyle(color: AppTheme.textSecondary)),
+          ),
+        ],
+      ),
+    );
+
+    if (selected == null) return;
+    setState(() => _saving = true);
+    final ok = await SupabaseService()
+        .updateOutletType(outletId: widget.outletId, businessType: selected);
+    if (!mounted) return;
+    setState(() => _saving = false);
+    if (ok) {
+      // Muat ulang tipe outlet agar modul langsung menyesuaikan.
+      ref.invalidate(outletProvider(widget.outletId));
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Tipe usaha disimpan: $selected'),
+          backgroundColor: AppTheme.successColor,
+        ),
+      );
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Gagal menyimpan tipe usaha'),
+          backgroundColor: AppTheme.errorColor,
+        ),
+      );
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final outletType = ref.watch(outletTypeProvider(widget.outletId));
+    // Hanya tampilkan bila tipe outlet masih default/kosong.
+    final raw = outletType.trim().toLowerCase();
+    final isUnset = raw.isEmpty || raw == 'warung' || raw == 'toko baru';
+    if (!isUnset) return const SizedBox.shrink();
+
+    return Container(
+      margin: const EdgeInsets.only(bottom: 12),
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: AppTheme.primaryColor.withValues(alpha: 0.12),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: AppTheme.primaryColor.withValues(alpha: 0.4)),
+      ),
+      child: Row(
+        children: [
+          Container(
+            padding: const EdgeInsets.all(10),
+            decoration: BoxDecoration(
+              color: AppTheme.primaryColor.withValues(alpha: 0.18),
+              borderRadius: BorderRadius.circular(14),
+            ),
+            child: const Icon(Icons.storefront_rounded,
+                color: AppTheme.accentColor, size: 26),
+          ),
+          const SizedBox(width: 12),
+          const Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Lengkapi Tipe Usaha Anda',
+                  style: TextStyle(
+                    color: AppTheme.textPrimary,
+                    fontSize: 14,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+                SizedBox(height: 3),
+                Text(
+                  'Pilih tipe usaha agar fitur yang tampil sesuai (Warung, Gerobak, Cafe, dll).',
+                  style: TextStyle(
+                      color: AppTheme.textSecondary, fontSize: 12, height: 1.3),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(width: 8),
+          TextButton(
+            onPressed: _saving ? null : _pickType,
+            style: TextButton.styleFrom(
+              backgroundColor: AppTheme.primaryColor,
+              foregroundColor: Colors.white,
+              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+              shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(10)),
+            ),
+            child: _saving
+                ? const SizedBox(
+                    width: 16,
+                    height: 16,
+                    child: CircularProgressIndicator(
+                        strokeWidth: 2, color: Colors.white),
+                  )
+                : const Text('Pilih',
+                    style:
+                        TextStyle(fontSize: 13, fontWeight: FontWeight.bold)),
           ),
         ],
       ),

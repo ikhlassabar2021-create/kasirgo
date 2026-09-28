@@ -1116,4 +1116,21 @@ class SupabaseService {
       return null;
     }
   }
+
+  /// Simpan/pilih tipe usaha outlet (dipakai saat owner daftar via Google
+  /// atau ingin mengubah tipe setelahnya).
+  Future<bool> updateOutletType({
+    required String outletId,
+    required String businessType,
+  }) async {
+    try {
+      await _client
+          .from('outlets')
+          .update({'type': businessType})
+          .eq('id', outletId);
+      return true;
+    } catch (e) {
+      return false;
+    }
+  }
 }
