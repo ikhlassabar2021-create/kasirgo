@@ -39,6 +39,19 @@ class SupabaseConfig {
   static const String anonKey =
       'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImxtdmplY2R2ZnpzbXJvd3d3cGNrIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODkxMjk3MjgsImV4cCI6MjEwNDcwNTcyOH0.6waUmz-Kj32gGuxBs4DutgBDQtsSljazTuJQw_qZstI';
 
+  /// URL dasar aplikasi (dipakai untuk deep-link QR meja & redirect auth).
+  static String get appUrl {
+    try {
+      final origin = Uri.base.origin;
+      if (origin.isNotEmpty && !origin.contains('localhost')) {
+        var path = Uri.base.path;
+        if (!path.endsWith('/')) path = '$path/';
+        return '$origin$path';
+      }
+    } catch (_) {}
+    return 'https://ikhlassabar2021-create.github.io/kasirgo/';
+  }
+
   static Future<void> initialize() async {
     await Supabase.initialize(
       url: url,

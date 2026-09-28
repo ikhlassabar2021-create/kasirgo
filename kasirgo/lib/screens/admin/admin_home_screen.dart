@@ -5,6 +5,7 @@ import '../../config/app_theme.dart';
 import '../../providers/auth_provider.dart';
 import '../../providers/outlet_provider.dart';
 import '../../widgets/common/app_drawer.dart';
+import '../../widgets/common/logout_button.dart';
 import '../../widgets/common/responsive.dart';
 import '../owner/product_list_screen.dart';
 import '../owner/report_screen.dart';
@@ -43,12 +44,69 @@ class _AdminHomeScreenState extends ConsumerState<AdminHomeScreen> {
       headerTitle: 'Panel Admin',
       drawer: AppDrawer(user: user),
       brand: const _AppBrand(),
+      mobileActions: const [LogoutButton()],
+      sidebarFooter: _AdminSidebarFooter(email: user.email, role: user.role),
       mobileTitle: _RoleBadge(label: 'ADMIN • ${outletType.toUpperCase()}'),
       body: IndexedStack(
         index: _currentIndex,
         children: const [
           ProductListScreen(),
           ReportScreen(),
+        ],
+      ),
+    );
+  }
+}
+
+class _AdminSidebarFooter extends StatelessWidget {
+  final String email;
+  final String role;
+
+  const _AdminSidebarFooter({required this.email, required this.role});
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.all(12),
+      child: Row(
+        children: [
+          CircleAvatar(
+            radius: 18,
+            backgroundColor: AppTheme.secondaryColor.withValues(alpha: 0.15),
+            child: Text(
+              email.isNotEmpty ? email[0].toUpperCase() : 'A',
+              style: const TextStyle(
+                color: AppTheme.secondaryColor,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+          ),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  email,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.bold,
+                    color: AppTheme.textPrimary,
+                  ),
+                ),
+                Text(
+                  role.toUpperCase(),
+                  style: const TextStyle(
+                    fontSize: 10,
+                    color: AppTheme.textSecondary,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const LogoutButton(),
         ],
       ),
     );

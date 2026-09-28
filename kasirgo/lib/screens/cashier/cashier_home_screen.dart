@@ -13,6 +13,7 @@ import '../../services/supabase_service.dart';
 import '../../utils/formatters.dart';
 import '../../widgets/common/app_drawer.dart';
 import '../../widgets/common/glass_card.dart';
+import '../../widgets/common/logout_button.dart';
 import '../../widgets/common/responsive.dart';
 
 final activeShiftProvider = FutureProvider.autoDispose<Shift?>((ref) async {
@@ -302,6 +303,8 @@ class _CashierHomeScreenState extends ConsumerState<CashierHomeScreen> {
       },
       headerTitle: 'Home Kasir',
       drawer: AppDrawer(user: user),
+      mobileActions: const [LogoutButton()],
+      sidebarFooter: _CashierSidebarFooter(email: user.email, role: user.role),
       mobileTitle: _RoleBadge(icon: Icons.badge_rounded, label: 'KASIR • ${outletType.toUpperCase()}'),
       body: SafeArea(
         child: SingleChildScrollView(
@@ -590,6 +593,61 @@ class _RoleBadge extends StatelessWidget {
               color: AppTheme.primaryColor,
             ),
           ),
+        ],
+      ),
+    );
+  }
+}
+
+class _CashierSidebarFooter extends StatelessWidget {
+  final String email;
+  final String role;
+
+  const _CashierSidebarFooter({required this.email, required this.role});
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.all(12),
+      child: Row(
+        children: [
+          CircleAvatar(
+            radius: 18,
+            backgroundColor: AppTheme.primaryColor.withValues(alpha: 0.12),
+            child: Text(
+              email.isNotEmpty ? email[0].toUpperCase() : 'K',
+              style: const TextStyle(
+                color: AppTheme.primaryColor,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+          ),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  email,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.bold,
+                    color: AppTheme.textPrimary,
+                  ),
+                ),
+                Text(
+                  role.toUpperCase(),
+                  style: const TextStyle(
+                    fontSize: 10,
+                    color: AppTheme.textSecondary,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const LogoutButton(),
         ],
       ),
     );

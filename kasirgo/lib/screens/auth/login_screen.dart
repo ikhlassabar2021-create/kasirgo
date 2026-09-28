@@ -272,6 +272,24 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
               ),
             ),
             const SizedBox(height: 16),
+            SizedBox(
+              width: double.infinity,
+              height: AppTheme.touchTargetLarge,
+              child: OutlinedButton.icon(
+                onPressed: () => context.push('/customer'),
+                style: OutlinedButton.styleFrom(
+                  foregroundColor: AppTheme.secondaryColor,
+                  side: BorderSide(color: AppTheme.secondaryColor.withValues(alpha: 0.5)),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppTheme.radiusMedium)),
+                ),
+                icon: const Icon(Icons.qr_code_scanner_rounded, size: 20),
+                label: Text(
+                  'Masuk sebagai Pelanggan (Scan QR Meja)',
+                  style: GoogleFonts.inter(fontSize: 13, fontWeight: FontWeight.w700),
+                ),
+              ),
+            ),
+            const SizedBox(height: 16),
             Row(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [

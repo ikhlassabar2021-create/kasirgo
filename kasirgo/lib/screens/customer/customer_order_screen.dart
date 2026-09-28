@@ -2,16 +2,19 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../config/app_theme.dart';
 import '../../models/product.dart';
+import '../../models/transaction.dart';
 import '../../services/supabase_service.dart';
 import '../../utils/formatters.dart';
 
 class CustomerOrderScreen extends StatefulWidget {
   final String outletId;
+  final String outletName;
   final String tableNumber;
 
   const CustomerOrderScreen({
     super.key,
     required this.outletId,
+    this.outletName = '',
     required this.tableNumber,
   });
 
@@ -24,6 +27,7 @@ class _CustomerOrderScreenState extends State<CustomerOrderScreen> {
   List<Product> _products = [];
   final Map<String, int> _cart = {};
   bool _isLoading = true;
+  bool _isSubmitting = false;
   String _selectedCategory = 'Semua';
 
   @override
@@ -34,7 +38,7 @@ class _CustomerOrderScreenState extends State<CustomerOrderScreen> {
 
   Future<void> _loadProducts() async {
     setState(() => _isLoading = true);
-    final data = await _service.getProducts(widget.outletId);
+    final data = await _service.getPublicMenu(widget.outletId);
     setState(() {
       _products = data.where((p) => p.isActive && p.stock > 0).toList();
       _isLoading = false;
@@ -88,17 +92,56 @@ class _CustomerOrderScreenState extends State<CustomerOrderScreen> {
             ),
             onPressed: () {
               Navigator.pop(ctx);
-              setState(() => _cart.clear());
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(
-                  content: Text('Pesanan Meja ${widget.tableNumber} berhasil dikirim! Silakan tunggu di meja.'),
-                  backgroundColor: AppTheme.successColor,
-                ),
-              );
+              _sendOrder();
             },
             child: const Text('Kirim Pesanan'),
           ),
         ],
+      ),
+    );
+  }
+
+  Future<void> _sendOrder() async {
+    setState(() => _isSubmitting = true);
+
+    final items = _cart.entries.map((e) {
+      final product = _products.firstWhere(
+        (p) => p.id == e.key,
+        orElse: () => _products.first,
+      );
+      return TransactionItem(
+        productId: product.id,
+        productName: product.name,
+        price: product.price,
+        quantity: e.value,
+        subtotal: product.price * e.value,
+      );
+    }).toList();
+
+    final txId = await _service.placeDineInOrder(
+      outletId: widget.outletId,
+      tableNumber: widget.tableNumber,
+      items: items,
+    );
+
+    if (!mounted) return;
+    setState(() => _isSubmitting = false);
+
+    if (txId == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Gagal mengirim pesanan. Pastikan koneksi internet, lalu coba lagi.'),
+          backgroundColor: AppTheme.errorColor,
+        ),
+      );
+      return;
+    }
+
+    setState(() => _cart.clear());
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text('Pesanan Meja ${widget.tableNumber} berhasil dikirim! Silakan tunggu di meja.'),
+        backgroundColor: AppTheme.successColor,
       ),
     );
   }
@@ -120,7 +163,7 @@ class _CustomerOrderScreenState extends State<CustomerOrderScreen> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
-              'Menu Pesanan',
+              widget.outletName.isNotEmpty ? widget.outletName : 'Menu Pesanan',
               style: GoogleFonts.inter(fontWeight: FontWeight.w700, fontSize: 16, color: AppTheme.textPrimary),
             ),
             Text(
@@ -319,10 +362,16 @@ class _CustomerOrderScreenState extends State<CustomerOrderScreen> {
                               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                               padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
                             ),
-                            onPressed: _submitOrder,
-                            icon: const Icon(Icons.send_rounded, size: 18),
+                            onPressed: _isSubmitting ? null : _submitOrder,
+                            icon: _isSubmitting
+                                ? const SizedBox(
+                                    width: 18,
+                                    height: 18,
+                                    child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2),
+                                  )
+                                : const Icon(Icons.send_rounded, size: 18),
                             label: Text(
-                              'Pesan Sekarang',
+                              _isSubmitting ? 'Mengirim...' : 'Pesan Sekarang',
                               style: GoogleFonts.inter(fontWeight: FontWeight.w700, fontSize: 14),
                             ),
                           ),

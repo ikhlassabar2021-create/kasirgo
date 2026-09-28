@@ -88,7 +88,10 @@ final _router = GoRouter(
     ),
     GoRoute(
       path: '/customer',
-      builder: (context, state) => const CustomerMenuScreen(),
+      builder: (context, state) => CustomerMenuScreen(
+        initialOutletId: state.uri.queryParameters['outlet'] ?? '',
+        initialTable: state.uri.queryParameters['table'] ?? '',
+      ),
     ),
   ],
 );

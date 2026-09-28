@@ -1133,4 +1133,72 @@ class SupabaseService {
       return false;
     }
   }
+
+  /// Menu publik untuk pelanggan QR meja (tanpa login).
+  Future<List<Product>> getPublicMenu(String outletId) async {
+    try {
+      final response =
+          await _client.rpc('get_public_menu', params: {'p_outlet': outletId});
+      return (response as List)
+          .map((json) => Product.fromJson(Map<String, dynamic>.from(json)))
+          .toList();
+    } catch (_) {
+      // Fallback: query langsung (berhasil bila RLS mengizinkan anon).
+      return getProducts(outletId);
+    }
+  }
+
+  /// Kirim pesanan dine-in pelanggan (tersinkron ke kasir/dapur).
+  /// Mengembalikan id transaksi, atau null bila gagal.
+  Future<String?> placeDineInOrder({
+    required String outletId,
+    required String tableNumber,
+    required List<TransactionItem> items,
+  }) async {
+    try {
+      final orderItems = items
+          .where((i) => i.productId.isNotEmpty)
+          .map((i) => {'product_id': i.productId, 'quantity': i.quantity})
+          .toList();
+      if (orderItems.isEmpty) return null;
+
+      final result = await _client.rpc('place_dine_in_order', params: {
+        'p_outlet': outletId,
+        'p_table': tableNumber,
+        'p_items': orderItems,
+      });
+      if (result == null) return null;
+      return result.toString();
+    } catch (e) {
+      debugPrint('placeDineInOrder error: $e');
+      return null;
+    }
+  }
+
+  /// Cari outlet publik (id/nama) untuk pelanggan anonim via RPC.
+  Future<({String id, String name})?> findOutlet(String codeOrName) async {
+    final code = codeOrName.trim();
+    if (code.isEmpty) return null;
+    try {
+      final res = await _client
+          .rpc('get_public_outlet', params: {'p_code': code});
+      final list = (res as List);
+      if (list.isNotEmpty) {
+        final row = Map<String, dynamic>.from(list.first as Map);
+        final id = row['id']?.toString() ?? '';
+        if (id.isNotEmpty) {
+          return (id: id, name: row['name']?.toString() ?? '');
+        }
+      }
+    } catch (_) {}
+    // Fallback bila RPC belum terpasang (mis. pengguna login owner/kasir).
+    try {
+      final byId =
+          await _client.from('outlets').select().eq('id', code).maybeSingle();
+      if (byId != null) {
+        return (id: byId['id'].toString(), name: byId['name']?.toString() ?? '');
+      }
+    } catch (_) {}
+    return null;
+  }
 }

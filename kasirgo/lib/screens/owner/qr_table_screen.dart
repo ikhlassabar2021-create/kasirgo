@@ -1,16 +1,19 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:barcode/barcode.dart' as bc;
 import 'package:google_fonts/google_fonts.dart';
 import '../../config/app_theme.dart';
+import '../../config/supabase_config.dart';
+import '../../providers/auth_provider.dart';
 
-class QrTableScreen extends StatefulWidget {
+class QrTableScreen extends ConsumerStatefulWidget {
   const QrTableScreen({super.key});
 
   @override
-  State<QrTableScreen> createState() => _QrTableScreenState();
+  ConsumerState<QrTableScreen> createState() => _QrTableScreenState();
 }
 
-class _QrTableScreenState extends State<QrTableScreen> {
+class _QrTableScreenState extends ConsumerState<QrTableScreen> {
   final List<String> _tables = ['Meja 01', 'Meja 02', 'Meja 03', 'Meja 04', 'Meja 05'];
   final _newTableController = TextEditingController();
 
@@ -28,9 +31,15 @@ class _QrTableScreenState extends State<QrTableScreen> {
     });
   }
 
+  String _buildQrData(String table) {
+    final outletId = ref.read(currentUserProvider)?.outletId ?? '';
+    final tableParam = Uri.encodeComponent(table);
+    return '${SupabaseConfig.appUrl}#/customer?outlet=$outletId&table=$tableParam';
+  }
+
   void _showQrModal(String table) {
-    // Deep-link format with table parameter
-    final qrData = 'https://kasirgo.online/order?table=${Uri.encodeComponent(table)}';
+    // Deep-link ke aplikasi pelanggan: bawa outlet_id + nomor meja.
+    final qrData = _buildQrData(table);
     final qrCode = bc.Barcode.qrCode();
 
     showDialog(
