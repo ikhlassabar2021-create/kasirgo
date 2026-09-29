@@ -98,7 +98,7 @@ CREATE OR REPLACE FUNCTION public.submit_kyc(
   p_nik TEXT,
   p_consent BOOLEAN
 ) RETURNS JSONB
-LANGUAGE plpgsql SECURITY DEFINER SET search_path = public
+LANGUAGE plpgsql SECURITY DEFINER SET search_path = public, extensions
 AS $$
 DECLARE
   v_nik_hash TEXT;
