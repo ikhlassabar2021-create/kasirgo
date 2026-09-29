@@ -1,4 +1,5 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../services/module_registry.dart';
 import 'outlet_provider.dart';
 
 enum BusinessModule {
@@ -124,10 +125,16 @@ class ModuleConfig {
   }
 }
 
+/// Flag `module_*` dari feature_flags (dimuat sekali, offline fallback default).
+final moduleFlagsProvider =
+    FutureProvider<Map<String, bool>>((ref) => ModuleRegistry.loadFlags());
+
 final activeModulesProvider =
     Provider.family<Set<BusinessModule>, String>((ref, outletId) {
   final outletType = ref.watch(outletTypeProvider(outletId));
-  return ModuleConfig.getModules(outletType);
+  // Memuat flag di latar belakang; provider ini reaktif saat selesai.
+  ref.watch(moduleFlagsProvider);
+  return ModuleRegistry.effectiveModules(outletType);
 });
 
 final isModuleEnabledProvider =
