@@ -33,7 +33,7 @@ Satu APK dengan modul dinamis berdasarkan `outlets.outlet_type`:
 
 ### 1.3 12 Revenue Engine (pihak ketiga yang bayar)
 1. Dynamic QRIS Take-Rate (0.1-0.3% nilai transaksi) - Payment Gateway/Bank
-2. Brand-Sponsored Receipts (kupon FMCG di struk WA)
+2. Brand-Sponsored Receipts + Iklan Halaman Pelanggan (kupon FMCG di struk WA + banner sponsor lokal / Adsterra di halaman web pelanggan: katalog online & QR meja; owner TIDAK melihat iklan; Pendukung = bebas iklan)
 3. Embedded B2B Restock Engine (komisi 1-3% belanja stok via WebView anti-bypass)
 4. Fintech & Credit Lead-Gen (1-2% nilai pinjaman cair)
 5. Margin PPOB API (pulsa/PLN/BPJS via Digiflazz/IAK/RCB)
@@ -43,15 +43,31 @@ Satu APK dengan modul dinamis berdasarkan `outlets.outlet_type`:
 9. Hyperlocal Data Intelligence (laporan tren agregat anonim)
 10. Hardware Bundling (margin 20-40%)
 11. WhatsApp Credit Margin (Rp100/pesan)
-12. Program Pendukung (kosmetik opsional)
+12. Program Pendukung (satu paket sukarela Rp50.000/bulan - fitur pertumbuhan, lihat 1.4)
 
-### 1.4 Program Pendukung (BUKAN langganan)
-Semua fitur inti gratis. Hanya fitur kosmetik/bonus yang bisa didukung:
-- Pendukung Rp10.000: badge + Hall of Fame + hapus iklan kecil di struk
-- Pendukung Pro Rp25.000: + tema eksklusif + logo toko di struk + prioritas support
-- Pendukung Setia Rp50.000: + laporan lanjutan (cashflow/tren) + export Excel/PDF + backup harian
-- Kuota akun staf GRATIS per outlet: **1 Admin + 1 Kasir**. Owner bisa create & hapus sendiri.
-  Butuh lebih banyak akun staf -> buka Program Pendukung (bukan langganan, sekali dukung).
+### 1.4 Program Pendukung (satu paket, Rp50.000/bulan)
+Semua fitur inti (POS, produk & transaksi tanpa batas, stok, kasbon, laporan dasar, struk WA manual,
+QRIS statis+dinamis, AI Co-Pilot dasar, 1 outlet, 1 Admin + 1 Kasir) GRATIS SELAMANYA.
+Program Pendukung = fitur pertumbuhan, sukarela, SATU harga.
+
+Harga & durasi disimpan di Control Plane (`platform_financial_configs`), BUKAN hardcode.
+- **Pendukung KasirGo - Rp50.000/bulan** (satu paket, akses semua fitur Pendukung).
+- **Reverse trial 14 hari** otomatis sejak onboarding; setelah habis fitur terkunci.
+  DATA TIDAK DIHAPUS - terbuka kembali saat berlangganan.
+- Isi paket:
+  - Katalog pelanggan **bebas iklan** (ad-free) + branding sendiri
+  - **Laporan otomatis ke bos** (harian/mingguan/bulanan, bisa diset)
+  - Multi-outlet (outlet ke-2 dst)
+  - Slot staf tambahan di atas kuota gratis (1 Admin + 1 Kasir)
+  - Laporan lanjutan + export Excel/PDF + analitik cashflow/tren
+  - AI Co-Pilot Pro + Health Score pro
+  - WA Marketing broadcast massal + auto-retensi pelanggan
+  - Social Commerce Sync + Katalog Online publik + QR Meja dine-in
+  - Backup cloud harian + restore + riwayat >30 hari
+  - Custom struk (logo toko + footer)
+  - Prioritas support + badge Pendukung + Hall of Fame
+- Prinsip: **"gratis untuk bertahan, Pendukung untuk bertumbuh"**.
+  DILARANG mengunci POS/produk/transaksi/stok, iklan paksa di app, atau menghapus data user.
 
 ### 1.5 Roles
 | Role | Akses | Platform |
@@ -68,6 +84,8 @@ Aturan izin kunci (ditegakkan di RLS + UI, keduanya wajib):
 - **User staf**: hanya Owner yang create/delete Admin & Kasir (kuota gratis 1 Admin + 1 Kasir; lebih -> Program Pendukung).
 - **Affiliate**: hanya Owner melihat link affiliate, rekening bank pencairan, dan laporan closing komisi.
 - **Pembayaran**: Owner boleh pasang QRIS statis (upload gambar) atau aktifkan gateway dinamis (via superadmin).
+- **KYC wajib**: user baru TIDAK BISA memakai aplikasi (POS/transaksi/modul diblokir total) sebelum
+  KYC `verified`. Tidak ada tombol lewati. Detail alur & kemudahan di Bagian 1.11.
 
 ### 1.6 Design System v2 - "Centennial Modern Ocean White" (WAJIB, GANTI TOTAL)
 Menggantikan dark Glassmorphism. Referensi layout: pola dashboard kasirmurah.com
@@ -145,11 +163,18 @@ Elemen pendukung lain (semua dari 11 referensi):
 - Scan Kasir: info Outlet, segmented toggle "Kamera" / "Alat Scanner", viewport kamera gelap
   dengan hint, bar Total (N item) + nominal, tombol penuh lebar "Lanjut ke Keranjang".
 
-10 modul bisnis di grid dashboard utama: Buku Kasbon (`DebtScreen`), PPOB & Pulsa (`PpobScreen`),
-Kulakan B2B (`RestockScreen`), Kitchen Display (`KitchenDisplayScreen`), WA Marketing
-(`WhatsappBroadcastScreen`), Social Commerce (`SocialCommerceScreen`), QR Meja Dine-in
-(`QrTableScreen`), Katalog Online (`OnlineCatalogScreen`), Health Score Bisnis
-(`HealthScoreScreen`), Pendukung KasirGo (`SupporterScreen`).
+10 modul bisnis di grid shortcut dashboard utama (badge "Segera" bila belum aktif):
+1. Buku Kasbon (`DebtScreen`) - catat piutang pelanggan + pengingat via WhatsApp.
+2. PPOB & Pulsa (`PpobScreen`) - transaksi produk digital/token.
+3. Kulakan B2B (`RestockScreen`) - order grosir stok (link distributor dari Control Plane).
+4. Kitchen Display (`KitchenDisplayScreen`) - monitor pesanan dapur cafe/resto.
+5. WA Marketing (`WhatsappBroadcastScreen`) - broadcast promo + auto-retensi pelanggan.
+6. Social Commerce (`SocialCommerceScreen`) - sinkron pesanan marketplace (Shopee, Tokped,
+   GrabFood, GoFood) dengan potongan fee otomatis.
+7. QR Meja Dine-in (`QrTableScreen`) - generator stiker QR per nomor meja untuk self-order.
+8. Katalog Online (`OnlineCatalogScreen`) - katalog publik + tombol langsung order ke WhatsApp warung.
+9. Health Score Bisnis (`HealthScoreScreen`) - diagnosa performa otomatis (turnover stok, margin, retensi).
+10. Pendukung KasirGo (`SupporterScreen`) - program donasi sukarela penjaga aplikasi Rp0 selamanya.
 
 Aturan implementasi (feature-preserving retrofit - lihat Phase 7.6):
 - Utamakan komponen bersama di `widgets/common/` (`app_shell.dart`, `stat_card.dart`,
@@ -204,14 +229,67 @@ Yang wajib bisa diset dari superadmin:
 | Grup | Isi setting |
 |------|-------------|
 | Payment Gateway | link/api key PG (Duitku dll), nomor biaya yang dikenakan, margin KasirGo, setting transfer pencairan |
+| Financial | threshold gratis biaya, jadwal auto-settlement, biaya BI-FAST, **harga & durasi Program Pendukung**, pajak |
 | PPOB | api key (Digiflazz/IAK/RCB), modal, **margin persentase** -> harga jual semua produk PPOB auto ikut harga terbaru |
 | B2B Kulakan | link affiliate distributor -> dipakai `RestockScreen` di dashboard owner; ubah link cukup edit di sini |
 | Affiliate | komisi dari pembayaran Program Pendukung (upgrade) + sistem pencairan komisi otomatis |
 | Fintech | link akun partner fintech/insurtech |
 | Storage/Hosting | koneksi Cloudflare R2 (bucket + key) |
 | Database | url, user, password, api key koneksi (mis. Supabase) |
-| WA Marketing | api key WA Business (Cloud API) |
+| WA | mode WA (Pribadi via `wa.me` nomor KYC default / Cloud API opsional), template pesan, kanal laporan |
 | Verifikasi | auto-verify pendaftar yang datanya lengkap (email, nohp, nama toko, alamat, KTP, selfie) |
+| Iklan/Ads | `ads_enabled`, provider (`adsterra`/`sponsor_lokal`/`none`), script/zona Adsterra (secret), daftar sponsor lokal, kategori diblokir (judi/dewasa/pinjol), placement (katalog_online/qr_meja), frequency cap, ad-free untuk Pendukung, consent |
+| Panduan | daftar item panduan (judul, jenis PDF/video, kategori, role, URL/`file_key`, thumbnail, urutan, aktif) |
+| Laporan | template laporan ke bos, jadwal default, kanal (WA pribadi/email/PDF), isi default |
+| Kuota & Limit | kuota staf (1 Admin + 1 Kasir), multi-outlet, batas broadcast/export, riwayat data |
+| Feature Flags | nyala/mati fitur, rollout persen, per `outlet_type`/segmen |
+| Trial & Billing | durasi trial (14 hari), grace period, dunning/retry, auto-renew |
+
+Prinsip skala: **"set sekali, jalan otomatis"**. Konfigurasi berjenjang (Global -> Segmen/Region -> Outlet),
+punya versi + jadwal berlaku + rollback. Detail superadmin skala puluhan ribu di Bagian 1.11.
+
+---
+
+### 1.11 Superadmin Skala Besar + Onboarding KYC Wajib + Panduan
+
+#### A. Onboarding KYC wajib (aplikasi terkunci sampai verified)
+- Alur: daftar (Anonymous Auth + device UUID, <1 detik) -> **wizard KYC** -> auto-verify -> baru bisa pakai.
+- 6 field wajib: email, no HP (WA), nama toko, alamat toko, **foto KTP**, **selfie memegang KTP**.
+- Dibuat semudah mungkin: auto-isi (email/HP/nama toko), OCR KTP on-device, kamera berpanduan,
+  kompres otomatis (WebP), validasi realtime, draf otomatis, boleh isi offline + kirim saat online,
+  tombol bantuan + contoh foto benar/salah.
+- Sebelum `verified`: hanya layar KYC, bantuan/support, dan logout yang bisa diakses. POS, produk,
+  transaksi, dan semua modul **diblokir total**. Tidak ada tombol lewati. Banner "Selesaikan verifikasi untuk mulai berjualan".
+- Status: `unsubmitted` / `draft` / `pending_review` / `verified` / `rejected` (reject -> alasan + kirim ulang).
+- Foto KTP/selfie disimpan LOKAL (`image_local_path`); server hanya menyimpan status + data field.
+  Anti-duplikat via hash NIK/HP (tanpa menyimpan NIK mentah). Ada persetujuan data (UU PDP).
+- Gate ditegakkan di UI + server (RLS/Edge): tanpa `verified`, operasi transaksi ditolak.
+
+#### B. Panduan penggunaan aplikasi (PDF + video, dikelola superadmin)
+- Menu "Panduan" di Pengaturan + tombol bantuan/deep-link per modul.
+- Konten: **PDF** (dapat disimpan di R2) dan **video** (link YouTube).
+- Kategori per modul/role (Mulai, Produk, POS, Laporan, Kasbon, WA, Program Pendukung, dll).
+- Fitur: pencarian, thumbnail, urutan, tandai penting; PDF di-cache (offline), video butuh internet.
+- Dikelola dari Control Plane (tab Panduan): CRUD judul, jenis, kategori, role, URL/`file_key`,
+  thumbnail, urutan, aktif/nonaktif.
+
+#### C. Superadmin Control Plane & manajemen skala puluhan ribu
+Pewarisan konfigurasi: **Global -> Segmen/Region -> Outlet** (versi + jadwal berlaku + rollback).
+- **Manajemen**: server-side search/filter (nama, no HP, KYC, tier, outlet_type, region, status bayar,
+  tanggal daftar, kesehatan sync) + saved views; **bulk action** (suspend/aktifkan, kirim notifikasi,
+  beri trial, ubah kuota, tag segmen, reset device); segmentasi otomatis (baru/aktif/tidak aktif/pendukung/bermasalah);
+  impersonate + audit + expiry; user detail 360 (outlet, transaksi, langganan, KYC, perangkat, log sync, riwayat support).
+- **Otomatisasi (set sekali)**: auto-provision merchant+outlet; auto-KYC; auto-settlement + auto-disbursement;
+  auto-trial lalu auto-lock; auto-billing Pendukung (reminder H-3, retry, grace, auto-expire);
+  auto-report ke bos; auto-thumbnail R2; auto-arsip data HOT->WARM->COLD; auto-suspend abuse.
+- **Rules engine (if-then)**: tidak aktif 30 hari -> retensi; bayar gagal -> retry+dunning;
+  trial H-2 -> tawaran upgrade; sync error berulang -> alert ops; KYC ditolak 2x -> review manual;
+  stok kritis (AI) -> notif owner.
+- **Alat skala**: feature flags + staged rollout (persen/segmen/outlet_type); announcement/in-app message;
+  config versioning + rollback; audit log; RBAC tim admin (Superadmin/Finance/Support/Ops); rate limit & quota global.
+- **Monitoring**: revenue 12 engine, aktivitas outlet, konversi trial->Pendukung, churn; kesehatan sistem
+  (error sync, webhook gagal, pembayaran gagal); alert otomatis ke tim.
+- **Keamanan**: secret di-mask; `service_role` hanya di server/Edge Function; audit log wajib saat tim besar.
 
 ---
 
@@ -222,7 +300,9 @@ Yang wajib bisa diset dari superadmin:
 2. Push tiap 1-2 file: `git add . && git commit -m "progress: [file]" && git push`.
 3. Baca `AGENTS.md` + `PROGRESS-PHASE*.md` saja sebagai konteks. Jangan baca semua file.
 4. Update Progress Tracker di `AGENTS.md` tiap phase selesai.
-5. Testing cepat: `flutter run -d web-server --web-renderer html --web-hostname 0.0.0.0 --web-port 8080`.
+5. Testing cepat web (JANGAN `flutter run -d web-server` -> memicu "VM offline"/disk penuh):
+   `flutter build web --release --base-href /kasirgo/` lalu serve `build/web` (static server) atau deploy ke
+   GitHub Pages/Cloudflare Pages. Native (kamera/scan/SQLCipher) diuji via APK debug.
 6. APK target <10MB per ABI: `--split-per-abi --obfuscate --split-debug-info=build/debug-info`.
 7. Foto produk LOKAL (`image_local_path`), tidak upload Supabase.
 
@@ -275,7 +355,8 @@ Modular per outlet_type: kelontong/warteg/cafe/retail. Foto produk LOKAL (image_
 Design v2 "Centennial Modern Ocean White" (Bagian 1.6): bg #F8FAFC, surface #FFFFFF + border
 #E2E8F0, primary #0284C7, gradient #06B6D4->#0284C7, teks #0F172A/#64748B, font Inter.
 Pakai komponen bersama `widgets/common/`; DILARANG hardcode warna. UI-only: jangan ubah fitur/logic.
-Monetisasi dari pihak ketiga (QRIS gateway, sponsored receipt, B2B restock, PPOB, fintech), bukan user.
+Fitur inti GRATIS SELAMANYA; fitur pertumbuhan via Program Pendukung (satu harga Rp50.000/bulan + trial 14 hari).
+Onboarding KYC WAJIB: app terkunci sampai verified. Iklan hanya di web pelanggan (owner tidak lihat); tidak ada iklan tersembunyi.
 
 === ATURAN HEMAT TOKEN ===
 Flutter terinstall; jangan install/pub get/build APK. Baca HANYA PROGRESS file phase ini.
@@ -288,7 +369,7 @@ analyze dulu; kirim HANYA file:baris:pesan (bukan stack trace/log penuh); 1 erro
 error sama >2x -> STOP, push, tulis BLOCKER, laporkan.
 ```
 Cara pakai: tempel PROMPT PEMBUKA UNIVERSAL, lalu blok `=== SUB-TASK ... ===` di bawahnya, jadi satu pesan.
-Prompt siap-tempel per sub-task (7.5 -> 7.7 -> 7.6 -> 8-12): `docs/PROMPT-GILIRAN.md`.
+Prompt siap-tempel per sub-task (7.5 -> 7.7 -> 7.6 -> 7.8 -> 8-12): `docs/PROMPT-GILIRAN.md`.
 
 ---
 
@@ -298,7 +379,7 @@ Prompt siap-tempel per sub-task (7.5 -> 7.7 -> 7.6 -> 8-12): `docs/PROMPT-GILIRA
 - `outlets`: rename `type` -> `outlet_type` (enum kelontong/warteg/cafe/retail); HAPUS `subscription_tier`, `subscription_expiry`; tambah `merchant_id UUID REFERENCES merchants(id)`, `device_uuid TEXT`.
 - `user_roles`: role CHECK tambah `kitchen`.
 - `products`: tetap. Tambah `has_variants BOOLEAN DEFAULT false`.
-- `transactions`: tambah `merchant_id UUID`, `pg_reference_id TEXT` (kanonik; `gateway_ref` alias lama), `qris_type TEXT` (STATIC/DYNAMIC), `payment_status TEXT DEFAULT 'PENDING'` (PENDING/PAID/EXPIRED/CANCELLED), `gross_amount DECIMAL(12,2)`, `mdr_fee_deducted DECIMAL(12,2) DEFAULT 0`, `kasirgo_margin_deducted DECIMAL(12,2) DEFAULT 0`, `net_amount_to_merchant DECIMAL(12,2) DEFAULT 0`, `settlement_status TEXT DEFAULT 'n/a'` (UNSETTLED/SETTLED/PPOB_USED), `tip_amount DECIMAL(12,2) DEFAULT 0`, `shift_id UUID`, `debt_id UUID`, `sync_status TEXT DEFAULT 'synced'`, `event_id TEXT`, `device_id TEXT`.
+- `transactions`: tambah `merchant_id UUID`, `pg_reference_id TEXT` (kanonik; `gateway_ref` alias lama), `qris_type TEXT` (STATIC/DYNAMIC), `payment_status TEXT DEFAULT 'PENDING'` (PENDING/PAID/EXPIRED/CANCELLED), `gross_amount DECIMAL(12,2)`, `mdr_fee_deducted DECIMAL(12,2) DEFAULT 0`, `kasirgo_margin_deducted DECIMAL(12,2) DEFAULT 0`, `net_amount_to_merchant DECIMAL(12,2) DEFAULT 0`, `settlement_status TEXT DEFAULT 'n/a'` (UNSETTLED/SETTLED/PPOB_USED), `tip_amount DECIMAL(12,2) DEFAULT 0`, `shift_id UUID`, `debt_id UUID`, `sync_status TEXT DEFAULT 'synced'`, `event_id TEXT`, `device_id TEXT`; + dine-in: `notes TEXT` (menyimpan "Meja <no>"), `order_status TEXT DEFAULT 'baru'` (baru/diproses/siap/selesai), `REPLICA IDENTITY FULL`, masuk publication `supabase_realtime`.
 - `transaction_items`: tambah `variant_id UUID`, `note TEXT`.
 - `employees`: tetap untuk absensi; shift pindah ke `shifts`.
 - `subscriptions`: OBSOLETE -> ganti `supporters` + `supporter_benefits`.
@@ -310,11 +391,15 @@ Prompt siap-tempel per sub-task (7.5 -> 7.7 -> 7.6 -> 8-12): `docs/PROMPT-GILIRA
 CREATE TABLE supporters (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   outlet_id UUID REFERENCES outlets(id) ON DELETE CASCADE,
-  tier TEXT NOT NULL CHECK (tier IN ('pendukung','pro','setia')),
+  tier TEXT DEFAULT 'pendukung',
+  amount DECIMAL(12,2) DEFAULT 50000,
+  status TEXT DEFAULT 'trial' CHECK (status IN ('trial','active','expired','cancelled')),
+  trial_started_at TIMESTAMPTZ,
   start_date TIMESTAMPTZ DEFAULT NOW(),
   end_date TIMESTAMPTZ,
-  amount DECIMAL(12,2) DEFAULT 0,
-  status TEXT DEFAULT 'active'
+  auto_renew BOOLEAN DEFAULT true,
+  pg_reference_id TEXT,
+  updated_at TIMESTAMPTZ DEFAULT NOW()
 );
 
 CREATE TABLE supporter_benefits (
@@ -546,6 +631,120 @@ CREATE TABLE affiliate_payouts (
   provider_ref TEXT,
   created_at TIMESTAMPTZ DEFAULT NOW()
 );
+
+-- Program Pendukung (satu paket, Rp50.000/bulan) + entitlement + trial
+CREATE TABLE entitlements (
+  outlet_id UUID PRIMARY KEY REFERENCES outlets(id) ON DELETE CASCADE,
+  is_supporter BOOLEAN DEFAULT false,
+  ad_free BOOLEAN DEFAULT false,
+  features JSONB DEFAULT '{}',
+  trial_ends_at TIMESTAMPTZ,
+  updated_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+CREATE TABLE billing_events (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  outlet_id UUID REFERENCES outlets(id) ON DELETE CASCADE,
+  event TEXT, amount NUMERIC DEFAULT 0, status TEXT, ref TEXT,
+  created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- Laporan otomatis ke bos
+CREATE TABLE report_schedules (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  outlet_id UUID REFERENCES outlets(id) ON DELETE CASCADE,
+  period TEXT CHECK (period IN ('daily','weekly','monthly')),
+  send_time TIME DEFAULT '21:00',
+  day_of_week INT, day_of_month INT,
+  recipients JSONB DEFAULT '[]',
+  channels JSONB DEFAULT '["email"]',
+  content_flags JSONB DEFAULT '{}',
+  enabled BOOLEAN DEFAULT true,
+  last_sent_at TIMESTAMPTZ,
+  created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- Iklan sisi pelanggan (owner tidak melihat)
+CREATE TABLE outlet_ad_state (
+  outlet_id UUID PRIMARY KEY REFERENCES outlets(id) ON DELETE CASCADE,
+  ad_enabled BOOLEAN DEFAULT true,
+  ad_free BOOLEAN DEFAULT false,
+  impressions INT DEFAULT 0,
+  updated_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- Panduan penggunaan (PDF + video), dikelola superadmin
+CREATE TABLE guide_items (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  title TEXT NOT NULL,
+  kind TEXT CHECK (kind IN ('pdf','video')),
+  category TEXT, role TEXT,
+  url TEXT, file_key TEXT, thumbnail_key TEXT,
+  sort_order INT DEFAULT 0, is_active BOOLEAN DEFAULT true,
+  updated_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- Fondasi Control Plane skala besar
+CREATE TABLE platform_configs (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  key TEXT NOT NULL,
+  scope TEXT DEFAULT 'global' CHECK (scope IN ('global','segment','outlet')),
+  scope_ref TEXT,
+  value JSONB DEFAULT '{}',
+  version INT DEFAULT 1,
+  effective_from TIMESTAMPTZ,
+  updated_by UUID,
+  updated_at TIMESTAMPTZ DEFAULT NOW(),
+  UNIQUE(key, scope, scope_ref)
+);
+
+CREATE TABLE feature_flags (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  key TEXT UNIQUE NOT NULL,
+  enabled BOOLEAN DEFAULT false,
+  rollout_pct INT DEFAULT 100,
+  segments JSONB DEFAULT '[]',
+  outlet_types JSONB DEFAULT '[]',
+  updated_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+CREATE TABLE automation_rules (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  name TEXT, trigger TEXT,
+  condition JSONB DEFAULT '{}', action JSONB DEFAULT '{}',
+  enabled BOOLEAN DEFAULT true, created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+CREATE TABLE segments (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  name TEXT UNIQUE NOT NULL, rules JSONB DEFAULT '{}',
+  created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+CREATE TABLE outlet_segments (
+  outlet_id UUID REFERENCES outlets(id) ON DELETE CASCADE,
+  segment_id UUID REFERENCES segments(id) ON DELETE CASCADE,
+  PRIMARY KEY (outlet_id, segment_id)
+);
+
+CREATE TABLE announcements (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  title TEXT, body TEXT, audience TEXT DEFAULT 'all',
+  starts_at TIMESTAMPTZ, ends_at TIMESTAMPTZ,
+  is_active BOOLEAN DEFAULT true, created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+CREATE TABLE audit_logs (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  actor_id UUID, actor_role TEXT, action TEXT, target TEXT,
+  meta JSONB DEFAULT '{}', created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+CREATE TABLE admin_users (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id UUID, role TEXT CHECK (role IN ('superadmin','finance','support','ops')),
+  is_active BOOLEAN DEFAULT true, created_at TIMESTAMPTZ DEFAULT NOW()
+);
 ```
 
 ### 3.2b Tabel & RPC Pesanan Dine-in Pelanggan (QR Meja)
@@ -586,8 +785,6 @@ RPC (SECURITY DEFINER; customer = anon):
 - Edge Function `webhook_qris`: verifikasi HMAC SHA-256, update status transaksi LUNAS.
 - Edge Function `stock_alert`: cek stok menipis + expired, insert `ai_insights`.
 - Cron `auto_settlement`: batch settlement PG sesuai `auto_settlement_schedules` (default 12:00 & 19:00 WIB).
-- RPC dine-in pelanggan: `get_public_outlet`, `get_public_menu`, `get_public_outlet_payment`,
-  `place_dine_in_order`, `set_order_status` -- lihat 3.2b. Grant ke `anon`/`authenticated` sesuai role.
 
 ### 3.4 RLS
 Pola tetap: Owner full akses outlet sendiri; Admin tambah/edit produk + laporan (DELETE produk DITOLAK);
@@ -601,6 +798,14 @@ semua tabel baru berbasis `outlet_id`.
 - `outlet_staff_quota` / `affiliate_payouts`: Owner read outlet sendiri; Superadmin full; tulis payout via Edge Function.
 - Produk DELETE policy: izinkan hanya jika `auth.jwt()->>'role' IN ('owner','superowner')`.
 - Kolom margin/fee (`mdr_fee_deducted`, `kasirgo_margin_deducted`, `net_amount_to_merchant`) hanya ditulis server (Edge Function), tidak dari client.
+- `supporters` / `entitlements` / `billing_events` / `report_schedules` / `outlet_ad_state`: Owner akses outlet sendiri
+  (read; update terbatas); tulis status pembayaran/trial via Edge Function; Superadmin full.
+- `guide_items` / `announcements`: Superadmin full (CRUD); app client SELECT-only yang `is_active`.
+- `platform_configs` / `feature_flags` / `automation_rules` / `segments` / `outlet_segments` / `audit_logs` / `admin_users`:
+  Superadmin/Edge only; app client hanya SELECT `public_config` yang relevan (secret tidak diekspos).
+- Gate KYC: operasi transaksi hanya diizinkan bila `outlet_kyc.status='verified'` (ditegakkan RLS + Edge).
+- RPC dine-in pelanggan: `get_public_outlet`, `get_public_menu`, `get_public_outlet_payment`,
+  `place_dine_in_order`, `set_order_status` -- lihat 3.2b. Grant ke `anon`/`authenticated` sesuai role.
 
 ---
 
@@ -618,17 +823,20 @@ semua tabel baru berbasis `outlet_id`.
 | 5.5C | Retrofit 3.0: Security (SQLCipher + secure storage) + sync event-sourcing | SELESAI |
 | 6 | Kasbon/Piutang + WA + Sponsored Receipt | SELESAI |
 | 7 | Dynamic QRIS Payment Gateway + webhook HMAC | SELESAI |
-| **7.5** | **Zero-Friction Onboarding + Dual-Mode QRIS + Settlement/Disbursement + Superowner Financial Config** | **MULAI DI SINI** |
-| 7.6 | UI Retrofit "Centennial Modern Ocean White" (semua role + semua fitur) | |
-| 7.7 | Control Plane (setting superadmin tanpa kodingan) + KYC Auto-Verify + Izin Produk/Staf + Owner Affiliate | |
+| 7.5 | Zero-Friction Onboarding + Dual-Mode QRIS + Settlement/Disbursement + Superowner Financial Config | SELESAI |
+| 7.6 | UI Retrofit "Centennial Modern Ocean White" (semua role + semua fitur) | SELESAI |
+| 7.7 | Control Plane (setting superadmin tanpa kodingan) + KYC Auto-Verify + Izin Produk/Staf + Owner Affiliate | SELESAI |
+| **7.8** | **Monetisasi & Program Pendukung (1 harga Rp50k) + Iklan Pelanggan + Laporan ke Bos + KYC Wajib + Panduan + Skala Superadmin** | **MULAI DI SINI** |
 | 8 | Modul outlet_type: BOM/Resep, KDS/QR Meja, Variant, Shift/Tip | |
 | 9 | PPOB + Closed-loop + Embedded B2B Restock | |
 | 10 | Fintech Lead + Hyperlocal Data + Micro-insurance | |
-| 11 | Superadmin Web (12 revenue engine) | |
+| 11 | Superadmin Web (12 revenue engine, RBAC, rules engine, monitoring) | |
 | 12 | Polish + Security Audit + Release | |
 
 Catatan: porsi yang OBSOLETE dari Phase 5 dan harus dibuang di 5.5B: subscription gate
 (free/basic_25/pro_50), iklan banner free tier, limit 500 produk/transaksi.
+Catatan: Phase 7.8 menggantikan konsep "3 tier Program Pendukung" menjadi satu harga Rp50.000/bulan.
+Iklan hanya di sisi pelanggan (web), TIDAK di APK; tidak boleh ada iklan tersembunyi (ad fraud).
 
 ---
 
@@ -1008,6 +1216,119 @@ Catatan: Phase 7.8/9 lanjut memakai config yang sama; jangan hardcode ulang nila
 
 ---
 
+## BAGIAN 7E - PHASE 7.8 (MONETISASI & PROGRAM PENDUKUNG + IKLAN PELANGGAN + LAPORAN KE BOS + KYC WAJIB + PANDUAN + SKALA SUPERADMIN)
+
+Buat PROGRESS-PHASE7.8.md. Tujuan: ganti 3 tier Program Pendukung menjadi SATU harga Rp50.000/bulan
+(+ reverse trial 14 hari), pindahkan sebagian fitur gratis ke Pendukung, tambah iklan sisi pelanggan
+(config Control Plane), laporan otomatis ke bos, onboarding KYC wajib yang mudah, panduan PDF/video,
+dan fondasi superadmin siap skala puluhan ribu. Satu sub-task = satu sesi, commit+push, Compact.
+Prasyarat: WA pribadi (nomor KYC) via `wa.me` untuk manual; email/PDF untuk laporan otomatis.
+
+ST7.8-1 (migration SQL + seed)
+```
+=== SUB-TASK ST7.8-1 ===
+Buat docs/migrations/2026-09-28-kasirgo-7.8.sql berisi:
+- CREATE TABLE supporters (tier 'pendukung', amount 50000, status trial/active/expired/cancelled,
+  trial_started_at, period_start/end, auto_renew, pg_reference_id)
+- CREATE TABLE entitlements (is_supporter, ad_free, features jsonb, trial_ends_at)
+- CREATE TABLE billing_events, report_schedules, outlet_ad_state, guide_items
+- CREATE TABLE platform_configs (scope global/segment/outlet + version + effective_from + updated_by)
+- CREATE TABLE feature_flags, automation_rules, segments, outlet_segments, announcements,
+  audit_logs, admin_users
+- ALTER outlets: kolom nomor WA owner (dari KYC) bila belum ada
+- Seed grup Control Plane: ads, guide, report, kyc, quota, flags, billing
+- RLS sesuai Bagian 3.4 (tabel baru)
+File .sql tidak perlu flutter analyze. commit+push, STOP.
+```
+
+ST7.8-2 (supporter service + entitlement + trial)
+```
+=== SUB-TASK ST7.8-2 ===
+- services/supporter_service.dart: baca harga/durasi dari platform_financial_configs (cache+fallback),
+  status trial/active/expired, auto-renew, checkout via QRIS existing
+- entitlements: is_supporter, ad_free, hasFeature(key)
+- reverse trial 14 hari otomatis saat onboarding KYC verified (set entitlements.trial_ends_at)
+- simpan nomor WA owner dari KYC untuk dipakai wa.me
+Update PROGRESS-PHASE7.8.md: SELESAI ST7.8-2 + BERIKUTNYA ST7.8-3. commit+push, STOP.
+```
+
+ST7.8-3 (UI Program Pendukung)
+```
+=== SUB-TASK ST7.8-3 ===
+- settings_screen.dart: ganti 3 tier jadi SATU kartu "Pendukung KasirGo Rp50.000/bulan" + status trial/aktif
+- _showUpgradeModal -> checkout QRIS; tampilkan sisa hari trial
+- badge terkunci pada fitur Pendukung
+Update PROGRESS-PHASE7.8.md: SELESAI ST7.8-3 + BERIKUTNYA ST7.8-4. commit+push, STOP.
+```
+
+ST7.8-4 (gate fitur pindahan)
+```
+=== SUB-TASK ST7.8-4 ===
+Gate via hasFeature() untuk fitur yang dipindah dari gratis ke Pendukung:
+WA Marketing broadcast + auto-retensi, Social Commerce Sync, Katalog Online/QR Meja, AI Pro +
+Health Score pro, laporan lanjutan + export Excel/PDF, backup cloud + restore, multi-outlet,
+slot staf ke-3 dst, custom struk/logo. Data lama tidak dihapus, hanya akses dikunci.
+Update PROGRESS-PHASE7.8.md: SELESAI ST7.8-4 + BERIKUTNYA ST7.8-5. commit+push, STOP.
+```
+
+ST7.8-5 (laporan otomatis ke bos)
+```
+=== SUB-TASK ST7.8-5 ===
+- screens/owner/report_schedule_screen.dart: set periode (harian/mingguan/bulanan), jam/hari/tanggal,
+  sampai 3 penerima, isi laporan (toggle), kanal (WA pribadi one-tap / email-PDF)
+- notifikasi lokal (flutter_local_notifications) -> tap buka WhatsApp dengan teks laporan siap kirim
+- Edge Function cron: bangun laporan + kirim email/PDF otomatis
+Update PROGRESS-PHASE7.8.md: SELESAI ST7.8-5 + BERIKUTNYA ST7.8-6. commit+push, STOP.
+```
+
+ST7.8-6 (iklan pelanggan)
+```
+=== SUB-TASK ST7.8-6 ===
+- halaman web katalog online + QR meja baca config `ads` dari platform_configs (cache+fallback)
+- tampilkan iklan WAJAR non-intrusif (bukan popunder, tidak menutupi tombol); owner tidak melihat
+- ad_free untuk Pendukung; blokir kategori judi/dewasa/pinjol; consent (UU PDP)
+- mode: sponsor_lokal diutamakan, adsterra fallback; TIDAK ada iklan tersembunyi
+Update PROGRESS-PHASE7.8.md: SELESAI ST7.8-6 + BERIKUTNYA ST7.8-7. commit+push, STOP.
+```
+
+ST7.8-7 (onboarding KYC wajib)
+```
+=== SUB-TASK ST7.8-7 ===
+- screens/auth/onboarding_kyc_screen.dart: wizard 6 field (email, nohp, nama toko, alamat toko,
+  foto KTP, selfie pegang KTP) + persetujuan data
+- kemudahan: auto-isi, OCR KTP on-device (opsional), kamera berpanduan, kompres otomatis, validasi
+  realtime, draf otomatis, boleh offline + kirim saat online, tombol bantuan + contoh foto
+- GATE: sebelum verified -> hanya layar KYC/bantuan/logout; POS, produk, transaksi, semua modul DIBLOKIR.
+  Tidak ada tombol lewati; banner "Selesaikan verifikasi untuk mulai berjualan"
+- status unsubmitted/draft/pending_review/verified/rejected; reject -> alasan + kirim ulang
+- foto simpan LOKAL; anti-duplikat hash NIK/HP; Edge Function verify_kyc auto-verify 6 field + format
+Update PROGRESS-PHASE7.8.md: SELESAI ST7.8-7 + BERIKUTNYA ST7.8-8. commit+push, STOP.
+```
+
+ST7.8-8 (panduan penggunaan PDF + video)
+```
+=== SUB-TASK ST7.8-8 ===
+- screens/owner/guide_screen.dart: daftar panduan dari guide_items (config), filter kategori/role,
+  pencarian, thumbnail; PDF di-cache (offline), video buka link YouTube
+- tombol/deep-link bantuan per modul; menu "Panduan" di Pengaturan
+- konten dikelola superadmin (Bagian 7E ST7.8-9)
+Update PROGRESS-PHASE7.8.md: SELESAI ST7.8-8 + BERIKUTNYA ST7.8-9. commit+push, STOP.
+```
+
+ST7.8-9 (Control Plane superadmin + QA + dokumen)
+```
+=== SUB-TASK ST7.8-9 ===
+kasirgo-admin: tab Settings Control Plane lengkap:
+- Iklan (provider, script/zona secret, sponsor lokal, kategori diblokir, placement, ad-free, consent)
+- Panduan (CRUD guide_items: judul, jenis PDF/video, kategori, role, URL/file, thumbnail, urutan, aktif)
+- Financial (harga & durasi Pendukung), Laporan (template/jadwal/kanal), KYC, Kuota & Limit, Feature Flags
+- Otomatisasi dasar: auto-trial/auto-lock, auto-report, auto-KYC; secret di-mask; audit_logs
+- Update dokumen (KASIRGO-WORKFLOW-LENGKAP, AGENTS) + tracker; QA ubah config -> app ikut berubah
+Update PROGRESS-PHASE7.8.md: SELESAI Phase 7.8 + BERIKUTNYA Phase 8. commit+push, STOP.
+```
+
+---
+
 ## BAGIAN 8 - PHASE 6-12 (MODUL 3.0)
 
 Gunakan pola yang sama: tempel PROMPT PEMBUKA UNIVERSAL + SUB-TASK, satu per sesi, commit+push, Compact.
@@ -1029,6 +1350,11 @@ Lihat BAGIAN 7C (ST7.6-1 s/d ST7.6-8). UI-only, semua role + semua fitur.
 
 ### PHASE 7.7 - Control Plane + KYC + Izin + Setting Superadmin
 Lihat BAGIAN 7D (ST7.7-1 s/d ST7.7-6). Semua setting integrasi/margin lewat superadmin, tanpa kodingan.
+
+### PHASE 7.8 - Monetisasi & Program Pendukung (1 harga Rp50k) + Iklan Pelanggan + Laporan ke Bos + KYC Wajib + Panduan + Skala Superadmin
+Lihat BAGIAN 7E (ST7.8-1 s/d ST7.8-9). Ganti 3 tier jadi 1 harga Rp50.000/bulan + trial 14 hari;
+pindah sebagian fitur ke Pendukung; iklan hanya sisi pelanggan (web); laporan otomatis ke bos;
+onboarding KYC wajib (app terkunci sampai verified); panduan PDF/video via Control Plane.
 
 ### PHASE 8 - Modul per outlet_type
 - ST8-1: Variant produk (product_form + product_list + POS pilih varian) - retail
@@ -1087,17 +1413,20 @@ Bukan phase baru; menyempurnakan alur QR Meja pelanggan yang sudah live.
 Setelah phase selesai: jalankan dev server, minta URL preview, uji pakai klik, laporkan
 (URL + yang diklik + hasil + error). Jangan hanya bilang "build sukses".
 
-Flutter:
+Flutter (JANGAN `flutter run -d web-server` -> "VM offline"/disk penuh; pakai build statis):
 ```
-flutter run -d web-server --web-renderer html --web-hostname 0.0.0.0 --web-port 8080
+cd kasirgo
+flutter build web --release --base-href /kasirgo/
+python3 -m http.server 8080 --directory build/web
 ```
+Alternatif tanpa relay: deploy `build/web` ke GitHub Pages / Cloudflare Pages.
 React admin:
 ```
 npm run dev
 ```
 Catatan: fitur native (kamera/scan barcode, SQLite SQLCipher, image_picker) TIDAK jalan di web.
 Fitur ini diuji via APK debug di HP. Yang bisa diuji di web: UI, navigasi, auth, CRUD Supabase,
-chart, POS, PPOB mock, WA intent, Program Pendukung.
+chart, POS, PPOB mock, WA intent, Program Pendukung, KYC (tanpa kamera), panduan, iklan pelanggan.
 
 ---
 
@@ -1122,22 +1451,26 @@ Reset vs Compact (pilih satu):
 | Aspek | Versi lama | 3.0 |
 |-------|-----------|-----|
 | Model | Langganan free/basic_25/pro_50 | Gratis selamanya + 12 revenue engine |
-| Monetisasi user | Subscription gate + iklan | Program Pendukung (kosmetik opsional) |
+| Monetisasi user | Subscription gate + iklan | Program Pendukung SATU harga Rp50.000/bulan + reverse trial 14 hari (fitur pertumbuhan) |
+| Iklan | Banner di app free tier | Iklan hanya di halaman pelanggan (web katalog/QR); owner tidak lihat; Pendukung ad-free; tanpa iklan tersembunyi |
 | QRIS | Manual | Dynamic QRIS + webhook HMAC + split settlement |
 | QRIS mode | 1 mode (manual) | Dual-Mode: Statis (MDR 0%) + Dinamis (auto LUNAS) |
-| Onboarding | Form/email/OTP + login | Zero-friction: Anonymous Auth + Device UUID, lalu **KYC wajib** (email/nohp/toko/alamat/KTP/selfie) auto-verify |
+| Onboarding | Form/email/OTP + login | Zero-friction: Anonymous Auth + Device UUID -> **KYC WAJIB** (6 field + KTP + selfie) auto-verify; **app terkunci sampai verified** |
+| Laporan | Manual | Laporan otomatis ke bos (harian/mingguan/bulanan, bisa diset) via WA pribadi one-tap + email/PDF |
+| Panduan | Tidak ada | Panduan penggunaan PDF + video, link/content diatur superadmin (Control Plane) |
 | Dana | Tidak diatur eksplisit | Zero-touch money: escrow PG PJP BI + direct settlement + BI-FAST |
 | Biaya/margin | Hardcode | Dinamis via `platform_financial_configs` (superowner real-time) |
-| Integrasi | Hardcode di koding | Control Plane `platform_integrations` (PG/PPOB/B2B/Fintech/R2/DB/WA) -- edit superadmin tanpa koding |
+| Integrasi | Hardcode di koding | Control Plane `platform_integrations` (PG/PPOB/B2B/Fintech/R2/DB/WA/Iklan/Panduan) -- edit superadmin tanpa koding |
 | Izin | Sama rata | Owner hapus produk + kelola staf (kuota 1 Admin + 1 Kasir); Admin tanpa hapus |
 | Arsitektur | POS generik | Modular `outlet_type` |
 | Modul | Produk/POS/AI/laporan/pelanggan/karyawan | + Kasbon, BOM/Resep, KDS/QR meja, Variant, Shift/Tip, PPOB, B2B Restock, Fintech |
 | Keamanan | SQLite biasa | SQLCipher + flutter_secure_storage |
 | Sync | Last-write-wins | Event-sourcing / delta log + background Isolate |
-| Superadmin | Subscription/revenue/affiliate | 12 revenue engine + supporters + data + Control Plane (setting semua integrasi) |
+| Superadmin | Subscription/revenue/affiliate | 12 revenue engine + supporters + data + Control Plane + skala (config inheritance, feature flags, RBAC, rules engine, audit, monitoring) |
 | UI/Theme | Dark Glassmorphism (indigo) | Centennial Modern Ocean White (light) - Phase 7.6 |
 
 OBSOLETE (buang di 5.5B): subscription tier, iklan banner free, limit 500.
+OBSOLETE (diganti Phase 7.8): 3 tier Program Pendukung (Pendukung/Pro/Setia) -> satu harga Rp50.000/bulan.
 
 ---
 
@@ -1147,8 +1480,9 @@ OBSOLETE (buang di 5.5B): subscription tier, iklan banner free, limit 500.
 - API key PPOB (Digiflazz/IAK/RCB) -> Phase 9
 - Akun partner fintech/insurtech -> Phase 10
 - Cloudflare R2 bucket -> thumbnail opt-in (koneksi diset di superadmin, Phase 7.7)
-- Link affiliate distributor B2B (kulakan) -> Phase 7.7 (set di superadmin)
-- Kredensial koneksi database (url/user/password/apikey, mis. Supabase) -> Phase 7.7 (set di superadmin)
-- API key WA Business (Cloud API) untuk WA Marketing -> Phase 7.7 (set di superadmin)
+- Link affiliate distributor B2B (kulakan) -> Phase 7.7/7.8 (set di superadmin)
+- Kredensial koneksi database (url/user/password/apikey, mis. Supabase) -> Phase 7.7/7.8 (set di superadmin)
+- WA mode Pribadi (default, nomor KYC via `wa.me`) TIDAK butuh API key; WA Cloud API opsional -> Phase 7.8/11
+- Akun Adsterra (opsional, fallback) + daftar sponsor lokal FMCG -> Phase 7.8 (Control Plane tab Iklan)
 - Isi `config/supabase_config.dart` + kredensial Edge Function (service_role hanya di server)
 - Aktifkan Supabase Anonymous Auth (untuk onboarding zero-friction) -> Phase 7.5
