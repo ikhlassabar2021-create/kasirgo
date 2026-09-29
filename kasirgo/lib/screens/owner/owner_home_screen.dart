@@ -18,6 +18,7 @@ import '../../utils/qris_config.dart';
 import '../../widgets/common/app_drawer.dart';
 import '../../widgets/common/glass_card.dart';
 import '../../widgets/common/centennial_background.dart';
+import '../../widgets/common/supporter_gate.dart';
 import 'debt_screen.dart';
 import 'social_commerce_screen.dart';
 import 'whatsapp_broadcast_screen.dart';
@@ -583,6 +584,19 @@ class _OwnerHomeScreenState extends ConsumerState<OwnerHomeScreen> {
     );
   }
 
+  void _pushGated(String featureKey, Widget screen, {String? title}) {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => SupporterFeatureGate(
+          featureKey: featureKey,
+          title: title,
+          child: screen,
+        ),
+      ),
+    );
+  }
+
   Widget _buildDesktopActionItem(IconData icon, String label, VoidCallback onTap) {
     return Container(
       margin: const EdgeInsets.only(bottom: 4),
@@ -894,7 +908,8 @@ class _OwnerHomeScreenState extends ConsumerState<OwnerHomeScreen> {
         title: 'WA Marketing',
         subtitle: 'Broadcast & CRM',
         color: AppTheme.whatsAppColor,
-        onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const WhatsappBroadcastScreen())),
+        onTap: () => _pushGated('wa_marketing', const WhatsappBroadcastScreen(),
+            title: 'WA Marketing'),
       ),
     );
 
@@ -904,7 +919,8 @@ class _OwnerHomeScreenState extends ConsumerState<OwnerHomeScreen> {
         title: 'Social Commerce',
         subtitle: 'Sync Marketplace',
         color: AppTheme.secondaryColor,
-        onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const SocialCommerceScreen())),
+        onTap: () => _pushGated('social_sync', const SocialCommerceScreen(),
+            title: 'Social Commerce'),
       ),
     );
 
@@ -915,7 +931,8 @@ class _OwnerHomeScreenState extends ConsumerState<OwnerHomeScreen> {
           title: 'QR Meja Dine-in',
           subtitle: 'Self Order',
           color: AppTheme.accentColor,
-          onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const QrTableScreen())),
+          onTap: () => _pushGated('qr_table', const QrTableScreen(),
+              title: 'QR Meja Dine-in'),
         ),
       );
     }
@@ -926,7 +943,8 @@ class _OwnerHomeScreenState extends ConsumerState<OwnerHomeScreen> {
         title: 'Katalog Online',
         subtitle: 'Web Katalog WA',
         color: AppTheme.primaryColor,
-        onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const OnlineCatalogScreen())),
+        onTap: () => _pushGated('online_catalog', const OnlineCatalogScreen(),
+            title: 'Katalog Online'),
       ),
     );
 
@@ -936,7 +954,8 @@ class _OwnerHomeScreenState extends ConsumerState<OwnerHomeScreen> {
         title: 'Health Score',
         subtitle: 'Diagnosa Bisnis',
         color: AppTheme.successColor,
-        onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const HealthScoreScreen())),
+        onTap: () => _pushGated('health_score_pro', const HealthScoreScreen(),
+            title: 'Health Score Bisnis'),
       ),
     );
 

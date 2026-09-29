@@ -13,6 +13,7 @@ import '../../models/transaction.dart';
 import '../../providers/auth_provider.dart';
 import '../../services/supabase_service.dart';
 import '../../utils/formatters.dart';
+import '../../widgets/common/supporter_gate.dart';
 
 enum ReportPeriod { today, last7Days, last30Days, thisMonth, custom }
 
@@ -238,6 +239,8 @@ class _ReportScreenState extends ConsumerState<ReportScreen> with SingleTickerPr
   }
 
   Future<void> _exportExcel() async {
+    if (!await requireSupporterFeature(context, ref, 'export_excel')) return;
+    if (!mounted) return;
     if (_transactions.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Tidak ada data transaksi untuk diexport')),
@@ -313,6 +316,8 @@ class _ReportScreenState extends ConsumerState<ReportScreen> with SingleTickerPr
   }
 
   Future<void> _exportBankReadyPdf() async {
+    if (!await requireSupporterFeature(context, ref, 'export_pdf')) return;
+    if (!mounted) return;
     if (_transactions.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Tidak ada data transaksi untuk laporan bank')),

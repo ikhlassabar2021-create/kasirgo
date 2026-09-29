@@ -9,6 +9,7 @@ import '../../config/app_theme.dart';
 import '../../providers/auth_provider.dart';
 import '../../services/auth_service.dart';
 import '../../services/settlement_service.dart';
+import '../../services/supporter_service.dart';
 import '../../services/supabase_service.dart';
 import '../../utils/formatters.dart';
 import '../../utils/qris_config.dart';
@@ -22,8 +23,10 @@ class SettingsScreen extends ConsumerStatefulWidget {
 
 class _SettingsScreenState extends ConsumerState<SettingsScreen> {
   bool _isLoading = true;
-  String? _activeSupporterTier;
   DateTime? _supporterEndDate;
+  Entitlements? _entitlements;
+  Map<String, dynamic> _billingConfig = SupporterService.fallbackBilling;
+  bool _autoRenew = true;
   Map<String, dynamic>? _outletData;
   Map<String, dynamic>? _kycData;
   int? _staffQuotaCurrent;
@@ -66,14 +69,18 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
             .maybeSingle();
 
         if (supRes != null) {
-          _activeSupporterTier = supRes['tier'] as String?;
+          _autoRenew = supRes['auto_renew'] == true;
           if (supRes['end_date'] != null) {
             _supporterEndDate = DateTime.tryParse(supRes['end_date'] as String);
           }
         } else {
-          _activeSupporterTier = null;
           _supporterEndDate = null;
         }
+
+        // Entitlements + harga Program Pendukung (Control Plane, cache+fallback).
+        final supporterService = SupporterService();
+        _billingConfig = await supporterService.getBillingConfig();
+        _entitlements = await supporterService.getEntitlements(outletId);
 
         // Load KYC data
         final kycRes = await client
@@ -109,105 +116,38 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     }
   }
 
-  Future<void> _handleJoinSupporter(String tier, double amount, String tierLabel) async {
+  Future<void> _handleSupport() async {
     final user = ref.read(currentUserProvider);
     final outletId = user?.outletId;
     if (outletId == null || outletId.isEmpty) return;
 
-    final confirmed = await showDialog<bool>(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        backgroundColor: AppTheme.surfaceColor,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        title: const Row(
-          children: [
-            Icon(Icons.favorite, color: AppTheme.secondaryColor),
-            SizedBox(width: 8),
-            Text('Dukung KasirGo', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
-          ],
-        ),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              'Terima kasih telah berkontribusi menjaga KasirGo tetap 100% Gratis Selamanya untuk seluruh UMKM Indonesia.',
-              style: const TextStyle(color: AppTheme.textSecondary, fontSize: 13),
-            ),
-            const SizedBox(height: 16),
-            Container(
-              padding: const EdgeInsets.all(12),
-              decoration: BoxDecoration(
-                color: AppTheme.backgroundColor,
-                borderRadius: BorderRadius.circular(12),
-                border: Border.all(color: AppTheme.borderColor),
-              ),
-              child: Column(
-                children: [
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      const Text('Kategori Dukungan', style: TextStyle(color: AppTheme.textSecondary, fontSize: 13)),
-                      Text(tierLabel, style: const TextStyle(color: AppTheme.accentColor, fontWeight: FontWeight.bold)),
-                    ],
-                  ),
-                  const Divider(height: 16),
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      const Text('Nominal Kontribusi', style: TextStyle(color: AppTheme.textSecondary, fontSize: 13)),
-                      Text(
-                        Formatters.currency(amount),
-                        style: const TextStyle(color: AppTheme.secondaryColor, fontWeight: FontWeight.bold, fontSize: 15),
-                      ),
-                    ],
-                  ),
-                ],
-              ),
-            ),
-          ],
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(ctx).pop(false),
-            child: const Text('Batal', style: TextStyle(color: AppTheme.textSecondary)),
-          ),
-          ElevatedButton(
-            style: ElevatedButton.styleFrom(
-              backgroundColor: AppTheme.primaryColor,
-              foregroundColor: Colors.white,
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-            ),
-            onPressed: () => Navigator.of(ctx).pop(true),
-            child: const Text('Dukung Sekarang'),
-          ),
-        ],
-      ),
-    );
+    final price =
+        (_billingConfig['supporter_price'] as num?)?.toDouble() ?? 50000;
+    final isActive = _entitlements?.hasAccess ?? false;
 
+    final confirmed = await _confirmSupportDialog(price, isActive);
     if (confirmed != true) return;
 
     setState(() => _isLoading = true);
-    final now = DateTime.now();
-    final newEndDate = now.add(const Duration(days: 30));
-
     try {
-      final client = Supabase.instance.client;
-      await client.from('supporters').insert({
-        'outlet_id': outletId,
-        'tier': tier,
-        'start_date': now.toIso8601String(),
-        'end_date': newEndDate.toIso8601String(),
-        'amount': amount,
-        'status': 'active',
-      });
-
-      await _loadData();
-
-      if (mounted) {
+      final result = await SupporterService()
+          .checkout(outletId: outletId, amount: price);
+      if (!mounted) return;
+      if (!result.success) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Terima kasih! Dukungan $tierLabel berhasil diaktifkan.'),
+            content: Text('Gagal memproses dukungan: ${result.error ?? "-"}'),
+            backgroundColor: AppTheme.errorColor,
+          ),
+        );
+        return;
+      }
+      await _loadData();
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text(
+                'Terima kasih! Status Pendukung aktif. Fitur bonus terbuka.'),
             backgroundColor: AppTheme.successColor,
           ),
         );
@@ -222,10 +162,107 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
         );
       }
     } finally {
-      if (mounted) {
-        setState(() => _isLoading = false);
-      }
+      if (mounted) setState(() => _isLoading = false);
     }
+  }
+
+  Future<bool?> _confirmSupportDialog(double price, bool isActive) {
+    return showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: AppTheme.surfaceColor,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: const Row(
+          children: [
+            Icon(Icons.favorite, color: AppTheme.secondaryColor),
+            SizedBox(width: 8),
+            Text('Dukung KasirGo',
+                style: TextStyle(
+                    color: AppTheme.textPrimary, fontWeight: FontWeight.bold)),
+          ],
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text(
+              'Dukungan Anda menjaga KasirGo tetap 100% Gratis Selamanya untuk seluruh UMKM Indonesia.',
+              style: TextStyle(color: AppTheme.textSecondary, fontSize: 13),
+            ),
+            const SizedBox(height: 16),
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: AppTheme.backgroundColor,
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(color: AppTheme.borderColor),
+              ),
+              child: Column(
+                children: [
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      const Text('Program',
+                          style: TextStyle(
+                              color: AppTheme.textSecondary, fontSize: 13)),
+                      const Text('Pendukung KasirGo',
+                          style: TextStyle(
+                              color: AppTheme.accentColor,
+                              fontWeight: FontWeight.bold)),
+                    ],
+                  ),
+                  const Divider(height: 16),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Text(isActive ? 'Nominal Perpanjang' : 'Nominal Kontribusi',
+                          style: const TextStyle(
+                              color: AppTheme.textSecondary, fontSize: 13)),
+                      Text(
+                        '${Formatters.currency(price)} / bulan',
+                        style: const TextStyle(
+                            color: AppTheme.secondaryColor,
+                            fontWeight: FontWeight.bold,
+                            fontSize: 15),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 10),
+            const Text(
+              'Pembayaran via QRIS. Bonus: buka fitur kosmetik + bebas iklan sponsor di katalog pelanggan.',
+              style: TextStyle(color: AppTheme.textSecondary, fontSize: 11),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(false),
+            child: const Text('Batal',
+                style: TextStyle(color: AppTheme.textSecondary)),
+          ),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppTheme.primaryColor,
+              foregroundColor: Colors.white,
+              shape:
+                  RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+            ),
+            onPressed: () => Navigator.of(ctx).pop(true),
+            child: Text(isActive ? 'Perpanjang Sekarang' : 'Dukung Sekarang'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Future<void> _toggleAutoRenew(bool value) async {
+    final outletId = ref.read(currentUserProvider)?.outletId;
+    if (outletId == null || outletId.isEmpty) return;
+    setState(() => _autoRenew = value);
+    await SupporterService().setAutoRenew(outletId, value);
   }
 
   @override
@@ -344,12 +381,12 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
             'Seluruh fitur inti KasirGo: POS kasir, produk & transaksi tanpa batas, laporan, multi-tipe outlet, dan AI Co-Pilot dapat dinikmati 100% tanpa biaya langganan.',
             style: TextStyle(color: AppTheme.textSecondary, fontSize: 13, height: 1.4),
           ),
-          if (_activeSupporterTier != null) ...[
+          if (_entitlements?.hasAccess == true) ...[
             const SizedBox(height: 12),
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
               decoration: BoxDecoration(
-                color: AppTheme.secondaryColor.withValues(alpha: 0.25),
+                color: AppTheme.secondaryColor.withValues(alpha: 0.12),
                 borderRadius: BorderRadius.circular(8),
                 border: Border.all(color: AppTheme.secondaryColor),
               ),
@@ -359,9 +396,14 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                   const SizedBox(width: 8),
                   Expanded(
                     child: Text(
-                      'Terima kasih! Anda aktif sebagai Pendukung KasirGo (${_activeSupporterTier!.toUpperCase()})'
-                      '${_supporterEndDate != null ? " s/d ${Formatters.date(_supporterEndDate!)}" : ""}',
-                      style: const TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.w600),
+                      (_entitlements?.isSupporter == true)
+                          ? 'Terima kasih! Anda Pendukung KasirGo'
+                              '${_supporterEndDate != null ? " s/d ${Formatters.date(_supporterEndDate!)}" : ""}'
+                          : 'Masa trial Pendukung aktif - tersisa ${_entitlements?.trialDaysLeft ?? 0} hari',
+                      style: const TextStyle(
+                          color: AppTheme.textPrimary,
+                          fontSize: 12,
+                          fontWeight: FontWeight.w600),
                     ),
                   ),
                 ],
@@ -374,131 +416,168 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
   }
 
   Widget _buildSupporterProgramCard() {
+    final price =
+        (_billingConfig['supporter_price'] as num?)?.toDouble() ?? 50000;
+    final ent = _entitlements;
+    final hasAccess = ent?.hasAccess ?? false;
+    final isSupporter = ent?.isSupporter ?? false;
+
     return Container(
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
         color: AppTheme.surfaceColor.withValues(alpha: 0.8),
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: AppTheme.borderColor.withValues(alpha: 0.5)),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          const Row(
-            children: [
-              Icon(Icons.volunteer_activism, color: AppTheme.secondaryColor, size: 22),
-              SizedBox(width: 8),
-              Text(
-                'Program Pendukung KasirGo',
-                style: TextStyle(
-                  fontSize: 16,
-                  fontWeight: FontWeight.bold,
-                  color: AppTheme.textPrimary,
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 8),
-          const Text(
-            'Dukungan sukarela dari pemilik usaha untuk membiayai server, pengembangan fitur baru, dan ekosistem UMKM Indonesia mandiri.',
-            style: TextStyle(fontSize: 13, color: AppTheme.textSecondary, height: 1.4),
-          ),
-          const SizedBox(height: 16),
-          _buildSupporterTierTile(
-            title: 'Pendukung Kawan',
-            amountText: 'Rp 25.000 / bulan',
-            tier: 'pendukung',
-            amount: 25000,
-            desc: 'Badge Kawan KasirGo di profil & akses awal fitur eksperimental.',
-            color: AppTheme.primaryColor,
-          ),
-          const SizedBox(height: 12),
-          _buildSupporterTierTile(
-            title: 'Pendukung Pro',
-            amountText: 'Rp 50.000 / bulan',
-            tier: 'pro',
-            amount: 50000,
-            desc: 'Badge Supporter Pro, prioritas konsultasi AI, dan fitur custom struk.',
-            color: AppTheme.secondaryColor,
-          ),
-          const SizedBox(height: 12),
-          _buildSupporterTierTile(
-            title: 'Pendukung Setia',
-            amountText: 'Rp 100.000 / bulan',
-            tier: 'setia',
-            amount: 100000,
-            desc: 'Badge Mitra Utama, direct line tim KasirGo, dan roadmap feature voting.',
-            color: AppTheme.accentColor,
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildSupporterTierTile({
-    required String title,
-    required String amountText,
-    required String tier,
-    required double amount,
-    required String desc,
-    required Color color,
-  }) {
-    final isCurrent = _activeSupporterTier == tier;
-
-    return Container(
-      padding: const EdgeInsets.all(14),
-      decoration: BoxDecoration(
-        color: AppTheme.backgroundColor,
-        borderRadius: BorderRadius.circular(12),
         border: Border.all(
-          color: isCurrent ? AppTheme.successColor : color.withValues(alpha: 0.5),
-          width: isCurrent ? 2 : 1,
-        ),
+            color: hasAccess
+                ? AppTheme.secondaryColor.withValues(alpha: 0.6)
+                : AppTheme.borderColor.withValues(alpha: 0.5)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Text(
-                title,
-                style: const TextStyle(fontSize: 15, fontWeight: FontWeight.bold, color: Colors.white),
-              ),
-              if (isCurrent)
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-                  decoration: BoxDecoration(
-                    color: AppTheme.successColor,
-                    borderRadius: BorderRadius.circular(12),
+              const Icon(Icons.volunteer_activism,
+                  color: AppTheme.secondaryColor, size: 22),
+              const SizedBox(width: 8),
+              const Expanded(
+                child: Text(
+                  'Program Pendukung KasirGo',
+                  style: TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
+                    color: AppTheme.textPrimary,
                   ),
-                  child: const Text('AKTIF', style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: Colors.white)),
+                ),
+              ),
+              if (isSupporter)
+                Container(
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                  decoration: BoxDecoration(
+                    color: AppTheme.secondaryColor,
+                    borderRadius: BorderRadius.circular(20),
+                  ),
+                  child: const Text('PENDUKUNG',
+                      style: TextStyle(
+                          fontSize: 10,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.white)),
                 )
-              else
-                Text(
-                  amountText,
-                  style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: color),
+              else if (hasAccess)
+                Container(
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                  decoration: BoxDecoration(
+                    color: AppTheme.warningColor.withValues(alpha: 0.2),
+                    borderRadius: BorderRadius.circular(20),
+                  ),
+                  child: Text('TRIAL ${ent?.trialDaysLeft ?? 0} HARI',
+                      style: const TextStyle(
+                          fontSize: 10,
+                          fontWeight: FontWeight.bold,
+                          color: AppTheme.warningColor)),
                 ),
             ],
           ),
-          const SizedBox(height: 6),
-          Text(desc, style: const TextStyle(fontSize: 12, color: AppTheme.textSecondary)),
-          const SizedBox(height: 10),
+          const SizedBox(height: 8),
+          const Text(
+            'Fitur inti tetap 100% Gratis Selamanya. Program Pendukung '
+            '(sukarela) membuka fitur bonus & menghilangkan iklan sponsor di '
+            'katalog pelanggan Anda.',
+            style: TextStyle(
+                fontSize: 13, color: AppTheme.textSecondary, height: 1.4),
+          ),
+          const SizedBox(height: 14),
+          _buildSupportBenefit('WA Marketing (broadcast & retensi)'),
+          _buildSupportBenefit('Katalog Online & QR Meja Dine-in'),
+          _buildSupportBenefit('Laporan Lanjutan + Export Excel/PDF'),
+          _buildSupportBenefit('AI Co-Pilot Pro & Health Score Pro'),
+          _buildSupportBenefit('Backup Cloud, Multi-Outlet & Slot Staf Tambahan'),
+          const SizedBox(height: 16),
+          Container(
+            padding: const EdgeInsets.all(14),
+            decoration: BoxDecoration(
+              color: AppTheme.backgroundColor,
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(color: AppTheme.borderColor),
+            ),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                const Text('Satu harga untuk semua',
+                    style: TextStyle(
+                        color: AppTheme.textSecondary, fontSize: 13)),
+                Text(
+                  '${Formatters.currency(price)} / bulan',
+                  style: const TextStyle(
+                      color: AppTheme.secondaryColor,
+                      fontWeight: FontWeight.bold,
+                      fontSize: 15),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 14),
           SizedBox(
             width: double.infinity,
-            height: 38,
-            child: ElevatedButton(
-              onPressed: () => _handleJoinSupporter(tier, amount, title),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: isCurrent ? AppTheme.successColor : color,
-                foregroundColor: Colors.white,
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+            height: 46,
+            child: ElevatedButton.icon(
+              onPressed: _isLoading ? null : _handleSupport,
+              icon: const Icon(Icons.favorite_rounded, size: 18),
+              label: Text(
+                isSupporter ? 'Perpanjang Dukungan' : 'Dukung KasirGo Sekarang',
+                style: const TextStyle(
+                    fontSize: 14, fontWeight: FontWeight.bold),
               ),
-              child: Text(
-                isCurrent ? 'Perpanjang Dukungan' : 'Pilih $title',
-                style: const TextStyle(fontSize: 13, fontWeight: FontWeight.bold),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppTheme.primaryColor,
+                foregroundColor: Colors.white,
+                shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(10)),
               ),
             ),
+          ),
+          if (isSupporter) ...[
+            const SizedBox(height: 4),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                const Padding(
+                  padding: EdgeInsets.only(left: 4),
+                  child: Text('Perpanjang otomatis tiap bulan',
+                      style: TextStyle(
+                          fontSize: 12, color: AppTheme.textSecondary)),
+                ),
+                Switch(
+                  value: _autoRenew,
+                  activeThumbColor: AppTheme.primaryColor,
+                  onChanged: _toggleAutoRenew,
+                ),
+              ],
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+
+  Widget _buildSupportBenefit(String text) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 6),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Padding(
+            padding: EdgeInsets.only(top: 2),
+            child: Icon(Icons.check_circle,
+                color: AppTheme.successColor, size: 16),
+          ),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Text(text,
+                style: const TextStyle(
+                    fontSize: 12.5, color: AppTheme.textPrimary, height: 1.35)),
           ),
         ],
       ),
@@ -1169,7 +1248,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      '${quotaCurrent} staff aktif dari ${quotaMax} maksimal',
+                      '$quotaCurrent staff aktif dari $quotaMax maksimal',
                       style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 15),
                     ),
                     const SizedBox(height: 4),
@@ -1233,9 +1312,11 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
   }
 
   void _showUpgradeModal() {
+    final price =
+        (_billingConfig['supporter_price'] as num?)?.toDouble() ?? 50000;
     showModalBottomSheet(
       context: context,
-      backgroundColor: Colors.white,
+      backgroundColor: AppTheme.surfaceColor,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),
@@ -1246,18 +1327,45 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             const Text(
-              'Upgrade Kuota Staff',
-              style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+              'Tambah Slot Staf',
+              style: TextStyle(
+                  fontSize: 20,
+                  fontWeight: FontWeight.bold,
+                  color: AppTheme.textPrimary),
             ),
             const SizedBox(height: 8),
-            Text(
-              'Unlimited staff dengan plan Pro atau Enterprise',
+            const Text(
+              'Kuota gratis sudah penuh. Buka slot staf tambahan lewat '
+              'Program Pendukung KasirGo - satu harga untuk semua fitur bonus.',
               style: TextStyle(color: AppTheme.textSecondary, fontSize: 13),
             ),
             const SizedBox(height: 20),
-            _buildUpgradeOption('Pro Plan', 'Rp 50.000/bulan', 'Unlimited staff + advanced reports'),
-            const SizedBox(height: 12),
-            _buildUpgradeOption('Enterprise Plan', 'Custom', 'Unlimited + custom features'),
+            Container(
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                border:
+                    Border.all(color: AppTheme.borderColor.withValues(alpha: 0.5)),
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text('Program Pendukung KasirGo',
+                      style: TextStyle(
+                          fontSize: 16, fontWeight: FontWeight.bold)),
+                  const SizedBox(height: 4),
+                  Text('${Formatters.currency(price)}/bulan',
+                      style: const TextStyle(
+                          fontWeight: FontWeight.w700,
+                          color: AppTheme.primaryColor)),
+                  const SizedBox(height: 4),
+                  const Text(
+                      'Slot staf tambahan + 13 fitur bonus lainnya.',
+                      style: TextStyle(
+                          color: AppTheme.textSecondary, fontSize: 12)),
+                ],
+              ),
+            ),
             const SizedBox(height: 20),
             SizedBox(
               width: double.infinity,
@@ -1265,40 +1373,19 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
               child: ElevatedButton(
                 onPressed: () {
                   Navigator.pop(ctx);
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text('Request upgrade akan diproses tim KasirGo')),
-                  );
+                  _handleSupport();
                 },
                 style: ElevatedButton.styleFrom(
                   backgroundColor: AppTheme.primaryColor,
                   foregroundColor: Colors.white,
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                  shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12)),
                 ),
-                child: const Text('Ajukan Upgrade'),
+                child: const Text('Dukung & Buka Slot'),
               ),
             ),
           ],
         ),
-      ),
-    );
-  }
-
-  Widget _buildUpgradeOption(String title, String price, String benefits) {
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        border: Border.all(color: AppTheme.borderColor.withValues(alpha: 0.5)),
-        borderRadius: BorderRadius.circular(12),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(title, style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
-          const SizedBox(height: 4),
-          Text(price, style: const TextStyle(fontWeight: FontWeight.w700, color: AppTheme.primaryColor)),
-          const SizedBox(height: 4),
-          Text(benefits, style: TextStyle(color: AppTheme.textSecondary, fontSize: 12)),
-        ],
       ),
     );
   }

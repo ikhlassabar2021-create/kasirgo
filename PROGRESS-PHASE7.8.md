@@ -1,7 +1,11 @@
 # PROGRESS PHASE 7.8
 
-SELESAI: ST7.8-DB (Tahap 1/3) - migration SQL + seed Control Plane
-BERIKUTNYA: ST7.8-APP (Tahap 2/3) - service + entitlement + trial + UI
+SELESAI: ST7.8-DB (Tahap 1/3) - migration SQL + seed Control Plane  [SUDAH DIJALANKAN di Supabase, terverifikasi]
+SELESAI: ST7.8-2 - services/supporter_service.dart (config cache+fallback, entitlement, trial, WA owner, checkout)
+SELESAI: ST7.8-3 - UI Program Pendukung SATU kartu Rp50.000/bulan (settings + layar modul Pendukung)
+SELESAI: ST7.8-4 - gate hasFeature() fitur pindahan (WA Marketing, Social Sync, Katalog Online, QR Meja,
+          Health Score Pro, export Excel/PDF, slot staf tambahan)
+BERIKUTNYA: ST7.8-5 (Tahap 2/3) - laporan otomatis ke bos (report_schedule_screen + notifikasi lokal + WA one-tap)
 
 ## Detail ST7.8-DB
 File: docs/migrations/2026-09-28-kasirgo-7.8.sql (idempotent, aman diulang)
@@ -57,6 +61,46 @@ announcements(is_active), audit_logs(created_at DESC), admin_users(user_id).
 
 ## Catatan
 - File .sql tidak perlu flutter analyze.
+- Tahap berikutnya (ST7.8-5): laporan otomatis ke bos.
+
+## Detail ST7.8-2 s/d ST7.8-4 (Flutter)
+
+### services/supporter_service.dart (ST7.8-2)
+- Entitlements: isSupporter, adFree, features, trialEndsAt, status (none/trial/active/expired/cancelled),
+  hasAccess, isTrialActive, trialDaysLeft.
+- getConfig(key) dari platform_configs (scope global, versi terbaru) + cache SharedPreferences (TTL 300s) + fallback.
+- getBillingConfig(): platform_configs('billing') -> platform_financial_configs -> fallback (50000/30 hari/trial 14).
+- getAdsConfig(), getEntitlements(outletId), hasFeature(outletId, key), isSupporter(outletId).
+- premiumFeatures: wa_marketing, social_sync, online_catalog, qr_table, ai_pro, health_score_pro,
+  advanced_report, export_excel, export_pdf, backup_cloud, multi_outlet, extra_staff, custom_receipt.
+- featureLabels: label manusiawi tiap fitur (dipakai dialog terkunci).
+- ensureTrial(outletId): reverse trial 14 hari idempoten (set entitlements.trial_ends_at + catat supporters 'trial').
+- setAutoRenew, saveOwnerWa/getOwnerWa (normalisasi 08xx -> 628xx; fallback ke outlet_kyc.phone).
+- checkout(): QRIS existing (static/dinamis) -> insert supporters + upsert entitlements + billing_events.
+
+### UI Program Pendukung (ST7.8-3)
+- settings_screen.dart: 3 tier (Kawan/Pro/Setia) DIGANTI satu kartu "Pendukung KasirGo" harga dari config
+  + daftar benefit + tombol Dukung/Perpanjang + switch auto-renew + badge status (PENDUKUNG/TRIAL sisa hari).
+- _handleJoinSupporter -> _handleSupport (checkout QRIS via SupporterService) + _confirmSupportDialog.
+- _showUpgradeModal (kuota staf penuh) -> arahkan ke Pendukung (bukan Pro/Enterprise); _buildUpgradeOption dihapus.
+- screens/modules/supporter_screen.dart: dari layar statis -> layar fungsional (harga, benefit, checkout,
+  status, sisa trial, auto-renew).
+
+### Gate fitur (ST7.8-4)
+- widgets/common/supporter_gate.dart (BARU): SupporterFeatureGate (pembungkus layar terkunci),
+  requireSupporterFeature() (cek imperatif + dialog), showSupporterLockedDialog(). Data lama TIDAK dihapus.
+- owner_home_screen.dart: _pushGated() membungkus modul WA Marketing (wa_marketing), Social Commerce
+  (social_sync), QR Meja (qr_table), Katalog Online (online_catalog), Health Score (health_score_pro).
+- report_screen.dart: _exportExcel (export_excel) + _exportBankReadyPdf (export_pdf) dicek via requireSupporterFeature.
+- employee_screen.dart: tombol tambah karyawan (extra_staff) dicek via requireSupporterFeature.
+
+### Verifikasi
+- flutter analyze: bersih pada semua file baru/diubah (hanya info deprecated_member_use & unnecessary_underscores
+  lama di file yang tidak terkait).
+- flutter build web --release: SUKSES.
+
+## Catatan lama
 - Tahap berikutnya (ST7.8-APP): services/supporter_service.dart (baca harga/durasi dari
   platform_financial_configs + fallback), entitlement hasFeature(), reverse trial 14 hari saat KYC
   verified, simpan nomor WA owner dari KYC; lalu UI Program Pendukung (satu kartu Rp50.000/bulan).
+

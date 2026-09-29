@@ -7,6 +7,7 @@ import '../../config/app_theme.dart';
 import '../../models/employee.dart';
 import '../../providers/auth_provider.dart';
 import '../../services/supabase_service.dart';
+import '../../widgets/common/supporter_gate.dart';
 
 class EmployeeScreen extends ConsumerStatefulWidget {
   const EmployeeScreen({super.key});
@@ -175,6 +176,11 @@ class _EmployeeScreenState extends ConsumerState<EmployeeScreen> with SingleTick
         );
       }
     }
+  }
+
+  Future<void> _handleAddEmployee() async {
+    if (!await requireSupporterFeature(context, ref, 'extra_staff')) return;
+    if (mounted) _showAddEmployeeDialog();
   }
 
   void _showAddEmployeeDialog() {
@@ -986,7 +992,7 @@ class _EmployeeScreenState extends ConsumerState<EmployeeScreen> with SingleTick
         backgroundColor: AppTheme.primaryColor,
         icon: const Icon(Icons.person_add, color: Colors.white),
         label: const Text('Karyawan', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
-        onPressed: _showAddEmployeeDialog,
+        onPressed: _handleAddEmployee,
       ),
       body: Center(
         child: ConstrainedBox(

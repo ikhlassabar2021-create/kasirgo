@@ -1,0 +1,499 @@
+import 'dart:convert';
+import 'package:flutter/foundation.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
+import 'payment_service.dart';
+
+/// Model entitlement outlet (Program Pendukung + trial + fitur per-key).
+class Entitlements {
+  final String outletId;
+  final bool isSupporter;
+  final bool adFree;
+  final Map<String, dynamic> features;
+  final DateTime? trialEndsAt;
+  final DateTime? supporterEndDate;
+  final String status; // none | trial | active | expired | cancelled
+
+  const Entitlements({
+    required this.outletId,
+    this.isSupporter = false,
+    this.adFree = false,
+    this.features = const {},
+    this.trialEndsAt,
+    this.supporterEndDate,
+    this.status = 'none',
+  });
+
+  bool get isTrialActive =>
+      trialEndsAt != null && DateTime.now().isBefore(trialEndsAt!);
+
+  /// Akses premium terbuka bila status aktif atau sedang masa trial.
+  bool get hasAccess => isSupporter || isTrialActive;
+
+  int get trialDaysLeft {
+    if (!isTrialActive) return 0;
+    return trialEndsAt!.difference(DateTime.now()).inDays + 1;
+  }
+
+  Entitlements copyWith({
+    bool? isSupporter,
+    bool? adFree,
+    Map<String, dynamic>? features,
+    DateTime? trialEndsAt,
+    DateTime? supporterEndDate,
+    String? status,
+  }) {
+    return Entitlements(
+      outletId: outletId,
+      isSupporter: isSupporter ?? this.isSupporter,
+      adFree: adFree ?? this.adFree,
+      features: features ?? this.features,
+      trialEndsAt: trialEndsAt ?? this.trialEndsAt,
+      supporterEndDate: supporterEndDate ?? this.supporterEndDate,
+      status: status ?? this.status,
+    );
+  }
+}
+
+class SupporterCheckoutResult {
+  final String orderId;
+  final bool success;
+  final String? error;
+  final Map<String, dynamic>? charge;
+
+  const SupporterCheckoutResult({
+    required this.orderId,
+    required this.success,
+    this.error,
+    this.charge,
+  });
+}
+
+/// Service Program Pendukung KasirGo:
+/// - baca harga/durasi dari config DB (cache + fallback)
+/// - entitlement: is_supporter / ad_free / hasFeature(key)
+/// - reverse trial 14 hari otomatis saat KYC verified
+/// - simpan nomor WA owner (dari KYC) untuk wa.me
+/// - checkout via QRIS existing
+class SupporterService {
+  SupporterService({SupabaseClient? client, PaymentService? payment})
+      : _client = client ?? Supabase.instance.client,
+        _payment = payment ?? PaymentService();
+
+  final SupabaseClient _client;
+  final PaymentService _payment;
+
+  static const int _cacheTtlSeconds = 300;
+
+  static const Map<String, dynamic> fallbackBilling = {
+    'supporter_price': 50000,
+    'currency': 'IDR',
+    'period': 'monthly',
+    'trial_days': 14,
+    'auto_renew_default': true,
+  };
+
+  static const Map<String, dynamic> fallbackAds = {
+    'provider': 'sponsor_lokal',
+    'adsterra_key': '',
+    'sponsor_local': <dynamic>[],
+    'blocked_categories': ['judi', 'dewasa', 'pinjol'],
+    'placement': ['catalog', 'qr_menu'],
+    'ad_free_for_supporter': true,
+    'consent_required': true,
+  };
+
+  /// Fitur yang dibuka oleh Program Pendukung (sisanya gratis selamanya).
+  static const Set<String> premiumFeatures = {
+    'wa_marketing',
+    'social_sync',
+    'online_catalog',
+    'qr_table',
+    'ai_pro',
+    'health_score_pro',
+    'advanced_report',
+    'export_excel',
+    'export_pdf',
+    'backup_cloud',
+    'multi_outlet',
+    'extra_staff',
+    'custom_receipt',
+  };
+
+  static const Map<String, String> featureLabels = {
+    'wa_marketing': 'WA Marketing (broadcast + retensi)',
+    'social_sync': 'Social Commerce Sync',
+    'online_catalog': 'Katalog Online',
+    'qr_table': 'QR Meja Dine-in',
+    'ai_pro': 'AI Co-Pilot Pro',
+    'health_score_pro': 'Health Score Bisnis Pro',
+    'advanced_report': 'Laporan Lanjutan',
+    'export_excel': 'Export Excel',
+    'export_pdf': 'Export PDF',
+    'backup_cloud': 'Backup & Restore Cloud',
+    'multi_outlet': 'Multi-Outlet',
+    'extra_staff': 'Slot Staf Tambahan',
+    'custom_receipt': 'Custom Struk / Logo',
+  };
+
+  // ---------------------------------------------------------------------------
+  // CONFIG (platform_configs + fallback + cache SharedPreferences)
+  // ---------------------------------------------------------------------------
+
+  /// Ambil config grup Control Plane (ads/guide/report/kyc/quota/flags/billing).
+  Future<Map<String, dynamic>> getConfig(
+    String key, {
+    Map<String, dynamic>? fallback,
+  }) async {
+    final fb = fallback ?? const <String, dynamic>{};
+    final prefs = await SharedPreferences.getInstance();
+    final cacheKey = 'pcfg_$key';
+    final tsKey = 'pcfg_ts_$key';
+
+    final ts = prefs.getInt(tsKey) ?? 0;
+    final isFresh =
+        DateTime.now().millisecondsSinceEpoch - ts < _cacheTtlSeconds * 1000;
+    final cached = prefs.getString(cacheKey);
+
+    if (!isFresh && cached != null && cached.isNotEmpty) {
+      try {
+        final parsed = Map<String, dynamic>.from(jsonDecode(cached) as Map);
+        return _merge(fb, parsed);
+      } catch (_) {}
+    }
+
+    try {
+      final res = await _client
+          .from('platform_configs')
+          .select('value, version')
+          .eq('key', key)
+          .eq('scope', 'global')
+          .order('version', ascending: false)
+          .limit(1)
+          .maybeSingle();
+      if (res != null && res['value'] != null) {
+        final value = Map<String, dynamic>.from(res['value'] as Map);
+        await prefs.setString(cacheKey, jsonEncode(value));
+        await prefs.setInt(tsKey, DateTime.now().millisecondsSinceEpoch);
+        return _merge(fb, value);
+      }
+    } catch (_) {
+      // tabel/config belum ada -> pakai cache/fallback
+    }
+
+    if (cached != null && cached.isNotEmpty) {
+      try {
+        return _merge(fb, Map<String, dynamic>.from(jsonDecode(cached) as Map));
+      } catch (_) {}
+    }
+    return Map<String, dynamic>.from(fb);
+  }
+
+  Map<String, dynamic> _merge(Map<String, dynamic> base, Map<String, dynamic> over) {
+    final out = Map<String, dynamic>.from(base);
+    over.forEach((k, v) {
+      if (v != null) out[k] = v;
+    });
+    return out;
+  }
+
+  /// Harga & durasi Program Pendukung (satu harga Rp50.000/bulan).
+  Future<Map<String, dynamic>> getBillingConfig() async {
+    // Prioritas: platform_configs('billing') -> platform_financial_configs -> default.
+    final cfg = await getConfig('billing', fallback: fallbackBilling);
+    if (cfg['supporter_price'] != null) return cfg;
+
+    try {
+      final res = await _client
+          .from('platform_financial_configs')
+          .select()
+          .order('updated_at', ascending: false)
+          .limit(1)
+          .maybeSingle();
+      if (res != null && res['supporter_price'] != null) {
+        return _merge(fallbackBilling, Map<String, dynamic>.from(res));
+      }
+    } catch (_) {}
+    return Map<String, dynamic>.from(fallbackBilling);
+  }
+
+  Future<Map<String, dynamic>> getAdsConfig() =>
+      getConfig('ads', fallback: fallbackAds);
+
+  // ---------------------------------------------------------------------------
+  // ENTITLEMENTS
+  // ---------------------------------------------------------------------------
+
+  Future<Entitlements> getEntitlements(String outletId) async {
+    final billing = await getBillingConfig();
+    Entitlements ent = Entitlements(outletId: outletId);
+
+    try {
+      final res = await _client
+          .from('entitlements')
+          .select()
+          .eq('outlet_id', outletId)
+          .maybeSingle();
+      if (res != null) {
+        ent = Entitlements(
+          outletId: outletId,
+          isSupporter: res['is_supporter'] == true,
+          adFree: res['ad_free'] == true,
+          features: (res['features'] is Map)
+              ? Map<String, dynamic>.from(res['features'] as Map)
+              : const {},
+          trialEndsAt: res['trial_ends_at'] != null
+              ? DateTime.tryParse(res['trial_ends_at'].toString())
+              : null,
+        );
+      }
+    } catch (_) {}
+
+    // Lengkapi status + end date dari tabel supporters (aktif terbaru).
+    try {
+      final sup = await _client
+          .from('supporters')
+          .select('tier, status, start_date, end_date')
+          .eq('outlet_id', outletId)
+          .order('start_date', ascending: false)
+          .limit(1)
+          .maybeSingle();
+      if (sup != null) {
+        final status = (sup['status'] ?? '').toString();
+        final end = sup['end_date'] != null
+            ? DateTime.tryParse(sup['end_date'].toString())
+            : null;
+        final isActive = status == 'active' &&
+            (end == null || DateTime.now().isBefore(end));
+        ent = ent.copyWith(
+          isSupporter: ent.isSupporter || isActive,
+          status: ent.isTrialActive ? 'trial' : status,
+          supporterEndDate: end,
+          adFree: ent.adFree || isActive,
+        );
+      }
+    } catch (_) {}
+
+    if (ent.status == 'none' && ent.isTrialActive) ent = ent.copyWith(status: 'trial');
+    // Trial memberi akses premium (ad_free mengikuti harga config).
+    if (ent.isTrialActive && billing['ad_free_for_supporter'] != false) {
+      ent = ent.copyWith(adFree: ent.adFree);
+    }
+    if (ent.isSupporter) {
+      ent = ent.copyWith(adFree: true, status: ent.status == 'none' ? 'active' : ent.status);
+    }
+    return ent;
+  }
+
+  /// Gate fitur. Fitur non-premium selalu true.
+  Future<bool> hasFeature(String outletId, String featureKey) async {
+    if (!premiumFeatures.contains(featureKey)) return true;
+    final ent = await getEntitlements(outletId);
+    if (ent.hasAccess) return true;
+    final override = ent.features[featureKey];
+    return override == true;
+  }
+
+  Future<bool> isSupporter(String outletId) async =>
+      (await getEntitlements(outletId)).hasAccess;
+
+  /// Reverse trial: 14 hari otomatis setelah KYC verified (idempotent).
+  Future<Entitlements> ensureTrial(String outletId) async {
+    final billing = await getBillingConfig();
+    final trialDays = (billing['trial_days'] as num?)?.toInt() ?? 14;
+
+    try {
+      final existing = await _client
+          .from('entitlements')
+          .select()
+          .eq('outlet_id', outletId)
+          .maybeSingle();
+      if (existing != null) {
+        final trialEnd = existing['trial_ends_at'] != null
+            ? DateTime.tryParse(existing['trial_ends_at'].toString())
+            : null;
+        if (existing['is_supporter'] == true || trialEnd != null) {
+          return await getEntitlements(outletId);
+        }
+        // sudah pernah trial habis? jangan reset
+        await _client.from('entitlements').update({
+          'trial_ends_at': DateTime.now().add(Duration(days: trialDays)).toIso8601String(),
+          'updated_at': DateTime.now().toIso8601String(),
+        }).eq('outlet_id', outletId);
+      } else {
+        await _client.from('entitlements').insert({
+          'outlet_id': outletId,
+          'is_supporter': false,
+          'ad_free': false,
+          'features': <String, dynamic>{},
+          'trial_ends_at':
+              DateTime.now().add(Duration(days: trialDays)).toIso8601String(),
+        });
+      }
+
+      // Catat juga di tabel supporters sebagai status trial (bila supported).
+      try {
+        final anySup = await _client
+            .from('supporters')
+            .select('id')
+            .eq('outlet_id', outletId)
+            .limit(1);
+        if ((anySup as List).isEmpty) {
+          await _client.from('supporters').insert({
+            'outlet_id': outletId,
+            'tier': 'pendukung',
+            'amount': 0,
+            'status': 'trial',
+            'trial_started_at': DateTime.now().toIso8601String(),
+            'start_date': DateTime.now().toIso8601String(),
+            'end_date':
+                DateTime.now().add(Duration(days: trialDays)).toIso8601String(),
+            'auto_renew': billing['auto_renew_default'] == true,
+          });
+        }
+      } catch (_) {}
+    } catch (_) {}
+
+    return getEntitlements(outletId);
+  }
+
+  Future<void> setAutoRenew(String outletId, bool value) async {
+    try {
+      await _client
+          .from('supporters')
+          .update({'auto_renew': value, 'updated_at': DateTime.now().toIso8601String()})
+          .eq('outlet_id', outletId);
+    } catch (_) {}
+  }
+
+  // ---------------------------------------------------------------------------
+  // NOMOR WA OWNER (dari KYC) untuk wa.me
+  // ---------------------------------------------------------------------------
+
+  Future<void> saveOwnerWa(String outletId, String waNumber) async {
+    final cleaned = _normalizePhone(waNumber);
+    if (cleaned.isEmpty) return;
+    try {
+      await _client.from('outlets').update({'owner_wa_number': cleaned}).eq('id', outletId);
+    } catch (_) {}
+    try {
+      await _client
+          .from('outlet_kyc')
+          .update({'phone': cleaned})
+          .eq('outlet_id', outletId);
+    } catch (_) {}
+  }
+
+  Future<String?> getOwnerWa(String outletId) async {
+    try {
+      final res = await _client
+          .from('outlets')
+          .select('owner_wa_number')
+          .eq('id', outletId)
+          .maybeSingle();
+      final wa = res?['owner_wa_number']?.toString();
+      if (wa != null && wa.isNotEmpty) return wa;
+    } catch (_) {}
+    try {
+      final kyc = await _client
+          .from('outlet_kyc')
+          .select('phone')
+          .eq('outlet_id', outletId)
+          .maybeSingle();
+      final p = kyc?['phone']?.toString();
+      if (p != null && p.isNotEmpty) return _normalizePhone(p);
+    } catch (_) {}
+    return null;
+  }
+
+  String _normalizePhone(String raw) {
+    var s = raw.replaceAll(RegExp(r'[^0-9+]'), '');
+    if (s.startsWith('+')) s = s.substring(1);
+    if (s.startsWith('0')) s = '62${s.substring(1)}';
+    return s;
+  }
+
+  // ---------------------------------------------------------------------------
+  // CHECKOUT (QRIS existing)
+  // ---------------------------------------------------------------------------
+
+  Future<SupporterCheckoutResult> checkout({
+    required String outletId,
+    double? amount,
+    String qrisType = 'static',
+  }) async {
+    final billing = await getBillingConfig();
+    final price = amount ?? (billing['supporter_price'] as num?)?.toDouble() ?? 50000;
+    final periodDays = (billing['period_days'] as num?)?.toInt() ?? 30;
+    final orderId = 'SUP-${DateTime.now().millisecondsSinceEpoch}';
+
+    Map<String, dynamic>? charge;
+    try {
+      charge = await _payment.createCharge(
+        orderId: orderId,
+        amount: price,
+        qrisType: qrisType,
+      );
+    } catch (e) {
+      return SupporterCheckoutResult(
+          orderId: orderId, success: false, error: e.toString());
+    }
+
+    final now = DateTime.now();
+    try {
+      await _client.from('supporters').insert({
+        'outlet_id': outletId,
+        'tier': 'pendukung',
+        'amount': price,
+        'status': 'active',
+        'start_date': now.toIso8601String(),
+        'end_date': now.add(Duration(days: periodDays)).toIso8601String(),
+        'auto_renew': billing['auto_renew_default'] == true,
+        'pg_reference_id': orderId,
+        'updated_at': now.toIso8601String(),
+      });
+
+      try {
+        await _client.from('entitlements').upsert({
+          'outlet_id': outletId,
+          'is_supporter': true,
+          'ad_free': true,
+          'updated_at': now.toIso8601String(),
+        });
+      } catch (_) {}
+
+      try {
+        await _client.from('billing_events').insert({
+          'outlet_id': outletId,
+          'event': 'supporter_payment',
+          'amount': price,
+          'status': (charge['status'] ?? 'success').toString(),
+          'ref': orderId,
+        });
+      } catch (_) {}
+    } catch (e) {
+      return SupporterCheckoutResult(
+          orderId: orderId, success: false, error: e.toString(), charge: charge);
+    }
+
+    return SupporterCheckoutResult(
+        orderId: orderId, success: true, charge: charge);
+  }
+
+  @visibleForTesting
+  static const List<String> allFeatureKeys = [
+    'wa_marketing',
+    'social_sync',
+    'online_catalog',
+    'qr_table',
+    'ai_pro',
+    'health_score_pro',
+    'advanced_report',
+    'export_excel',
+    'export_pdf',
+    'backup_cloud',
+    'multi_outlet',
+    'extra_staff',
+    'custom_receipt',
+  ];
+}
