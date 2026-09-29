@@ -92,7 +92,10 @@ supabase_flutter, drift, sqlite3_flutter_libs, path_provider, go_router, flutter
 - **Testing APK:** `flutter build apk --debug` untuk test cepat di HP.
 - **APK rilis:** `flutter build apk --release --split-per-abi --obfuscate --split-debug-info=build/debug-info`
   Target: per ABI di bawah 10MB. Gunakan `--split-per-abi` (3 APK: arm64, armeabi, x86_64).
-- **Web build:** `flutter build web --web-renderer html` (file statis, deploy ke Cloudflare Pages / shared hosting).
+- **Web build:** `flutter build web --release --base-href /kasirgo/` (WAJIB --base-href agar
+  gh-pages tidak blank; source web/index.html memakai placeholder $FLUTTER_BASE_HREF).
+  Deploy: salin build/web ke worktree gh-pages (assets, canvaskit, icons, *.* termasuk
+  index.html yang sudah ber-base /kasirgo/).
 - **Ukuran APK ditekan:** hapus package tidak perlu, gambar WebP bukan PNG, font subset Inter, `proguard-rules.pro`, tree-shaking Dart otomatis.
 
 ## Repository & Env
