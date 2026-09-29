@@ -11,6 +11,7 @@ import '../../services/auth_service.dart';
 import '../../services/settlement_service.dart';
 import '../../services/supporter_service.dart';
 import '../../services/supabase_service.dart';
+import '../../screens/auth/onboarding_kyc_screen.dart';
 import '../../utils/formatters.dart';
 import '../../utils/qris_config.dart';
 import 'report_schedule_screen.dart';
@@ -92,9 +93,9 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
         
         if (kycRes != null) {
           _kycData = kycRes;
-          _kycStatus = kycRes['verification_status'] as String? ?? kycRes['kyc_status'] as String?;
+          _kycStatus = kycRes['status'] as String?;
         } else {
-          _kycStatus = 'pending';
+          _kycStatus = 'unsubmitted';
         }
 
         // Load staff quota
@@ -1180,7 +1181,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
 
     bool isVerified = _kycStatus == 'verified';
     bool isRejected = _kycStatus == 'rejected';
-    bool isPending = _kycStatus == 'pending' || _kycStatus == 'manual_review';
+    bool isPending = _kycStatus == 'pending_review';
 
     Color statusColor;
     IconData statusIcon;
@@ -1188,16 +1189,24 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
 
     if (isVerified) {
       statusColor = AppTheme.successColor;
-      statusIcon = Icons.check_circle_rounded;
+      statusIcon = Icons.verified_rounded;
       statusText = 'Terverifikasi';
     } else if (isRejected) {
       statusColor = AppTheme.errorColor;
       statusIcon = Icons.error_rounded;
-      statusText = 'Ditolak - Upload Ulang';
-    } else {
+      statusText = 'Ditolak - Kirim Ulang';
+    } else if (isPending) {
       statusColor = AppTheme.warningColor;
       statusIcon = Icons.hourglass_empty_rounded;
       statusText = 'Sedang Ditinjau';
+    } else if (_kycStatus == 'draft') {
+      statusColor = AppTheme.accentColor;
+      statusIcon = Icons.edit_note_rounded;
+      statusText = 'Draf Tersimpan';
+    } else {
+      statusColor = AppTheme.errorColor;
+      statusIcon = Icons.gpp_maybe_rounded;
+      statusText = 'Belum Diverifikasi';
     }
 
     return Container(
@@ -1229,23 +1238,25 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
           ),
           const SizedBox(height: 12),
           Text(
-            _kycData?['notes'] ?? 
+            _kycData?['reject_reason'] ?? 
             (isPending ? 'Tim kami sedang meninjau dokumen KYC Anda.' : 
-             isRejected ? 'Mohon perbaiki dan upload ulang dokumen.' : ''),
+             isRejected ? 'Mohon perbaiki dan kirim ulang data verifikasi.' :
+             isVerified ? 'Data usaha Anda sudah terverifikasi.' :
+             'Lengkapi verifikasi untuk mulai berjualan.'),
             style: TextStyle(color: AppTheme.textSecondary, fontSize: 12, height: 1.4),
           ),
           const SizedBox(height: 12),
           ElevatedButton.icon(
-            onPressed: () {
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(
-                  content: Text('Upload dokumen KYC akan tersedia pada pembaruan berikutnya.'),
-                  backgroundColor: AppTheme.warningColor,
-                ),
-              );
-            },
+            onPressed: isVerified
+                ? null
+                : () => Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (_) => const OnboardingKycScreen(),
+                      ),
+                    ),
             icon: const Icon(Icons.upload_file_rounded, size: 18),
-            label: const Text('Upload / Update'),
+            label: Text(isVerified ? 'Sudah Terverifikasi' : 'Lengkapi / Perbarui'),
             style: ElevatedButton.styleFrom(
               backgroundColor: statusColor,
               foregroundColor: Colors.white,

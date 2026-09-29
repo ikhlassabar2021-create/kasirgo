@@ -1,178 +1,352 @@
 import 'dart:convert';
+
+import 'package:connectivity_plus/connectivity_plus.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
-import 'package:image_picker/image_picker.dart';
-import 'package:http/http.dart' as http;
 
-class KyCVerificationService {
-  final SupabaseClient _supabase;
-  static const String edgeFunctionUrl = 
-      'https://your-project-id.supabase.co/functions/v1/verify_kyc_flutter';
+/// Status verifikasi KYC outlet.
+/// Alur: unsubmitted -> draft -> pending_review -> verified / rejected.
+enum KycStatus { unsubmitted, draft, pendingReview, verified, rejected }
 
-  KyCVerificationService() : _supabase = Supabase.instance.client;
+extension KycStatusX on KycStatus {
+  String get dbValue => switch (this) {
+        KycStatus.unsubmitted => 'unsubmitted',
+        KycStatus.draft => 'draft',
+        KycStatus.pendingReview => 'pending_review',
+        KycStatus.verified => 'verified',
+        KycStatus.rejected => 'rejected',
+      };
 
-  Future<KYCVerificationResult> verifyKYC({
-    required XFile ktpImage,
-    required XFile selfieImage,
-    required int outletId,
-    required String nik,
-  }) async {
-    try {
-      // Upload KTP image
-      final ktpPath = await _uploadImage(ktpImage, 'ktp_');
-      
-      // Upload selfie image
-      final selfiePath = await _uploadImage(selfieImage, 'selfie_');
+  String get label => switch (this) {
+        KycStatus.unsubmitted => 'Belum diisi',
+        KycStatus.draft => 'Draf tersimpan',
+        KycStatus.pendingReview => 'Sedang ditinjau',
+        KycStatus.verified => 'Terverifikasi',
+        KycStatus.rejected => 'Ditolak',
+      };
 
-      // Call Edge Function for verification
-      final response = await http.post(
-        Uri.parse(edgeFunctionUrl),
-        headers: {'Content-Type': 'application/json'},
-        body: jsonEncode({
-          'ktpPath': ktpPath,
-          'selfiePath': selfiePath,
-          'outletId': outletId,
-          'userId': _supabase.auth.currentUser?.id,
-          'nik': nik,
-        }),
-      );
+  bool get isVerified => this == KycStatus.verified;
 
-      if (response.statusCode != 200) {
-        throw Exception('Verification failed: ${response.body}');
-      }
-
-      final result = jsonDecode(response.body);
-      return KYCVerificationResult(
-        verificationStatus: result['verification_status'],
-        faceMatchScore: result['face_match_score'],
-        message: result['message'],
-        isAutoApproved: result['verification_status'] == 'verified',
-      );
-
-    } catch (e) {
-      throw Exception('KYC verification error: $e');
-    }
-  }
-
-  Future<String> _uploadImage(XFile image, String prefix) async {
-    final userId = _supabase.auth.currentUser?.id ?? 'anonymous';
-    final fileName = '${prefix}${DateTime.now().millisecondsSinceEpoch}.jpg';
-    final filePath = 'kyc/$userId/$fileName';
-
-    final bytes = await image.readAsBytes();
-    
-    try {
-      await _supabase.storage
-          .from('kyc-documents')
-          .upload(filePath, bytes);
-    } catch (e) {
-      throw Exception('Failed to upload document: $e');
-    }
-
-    return filePath;
-  }
-
-  Future<List<KYCRecord>> getPendingKYCs() async {
-    final result = await _supabase
-        .from('outlet_kyc')
-        .select('*')
-        .eq('kyc_status', 'pending')
-        .limit(50);
-
-    return (result as List).map((data) => KYCRecord.fromMap(data)).toList();
-  }
-
-  Future<KYCVerificationStatus> checkKYCStatus(int outletId) async {
-    final result = await _supabase
-        .from('outlet_kyc')
-        .select('kyc_status, verification_status, notes')
-        .eq('outlet_id', outletId)
-        .single();
-
-    return KYCVerificationStatus(
-      status: result['kyc_status'],
-      verificationStatus: result['verification_status'],
-      notes: result['notes'],
-    );
-  }
+  bool get isBlocked =>
+      this == KycStatus.unsubmitted ||
+      this == KycStatus.draft ||
+      this == KycStatus.pendingReview ||
+      this == KycStatus.rejected;
 }
 
-class KYCVerificationResult {
-  final String verificationStatus;
-  final int faceMatchScore;
-  final String message;
-  final bool isAutoApproved;
-
-  KYCVerificationResult({
-    required this.verificationStatus,
-    required this.faceMatchScore,
-    required this.message,
-    required this.isAutoApproved,
-  });
-
-  bool get isVerified => verificationStatus == 'verified';
-  bool get needsManualReview => verificationStatus == 'manual_review';
+KycStatus kycStatusFromDb(String? value) {
+  return switch (value) {
+    'verified' => KycStatus.verified,
+    'rejected' => KycStatus.rejected,
+    'pending_review' || 'pending' => KycStatus.pendingReview,
+    'draft' => KycStatus.draft,
+    _ => KycStatus.unsubmitted,
+  };
 }
 
-class KYCRecord {
-  final int id;
+class KycRecord {
   final String outletId;
-  final String ownerNik;
-  final String ownerFullName;
-  final String ownerPhone;
-  final String kycStatus;
-  final String? ktpPath;
-  final String? selfiePath;
-  final int? faceMatchScore;
-  final String verificationStatus;
+  final String? fullName;
+  final String? phone;
+  final String? email;
+  final String? storeName;
+  final String? storeAddress;
+  final String? ktpImagePath;
+  final String? selfieKtpImagePath;
+  final KycStatus status;
+  final bool autoVerified;
+  final String? rejectReason;
   final DateTime? verifiedAt;
-  final String? verifiedBy;
-  final String? notes;
 
-  KYCRecord({
-    required this.id,
+  const KycRecord({
     required this.outletId,
-    required this.ownerNik,
-    required this.ownerFullName,
-    required this.ownerPhone,
-    required this.kycStatus,
-    this.ktpPath,
-    this.selfiePath,
-    this.faceMatchScore,
-    required this.verificationStatus,
+    this.fullName,
+    this.phone,
+    this.email,
+    this.storeName,
+    this.storeAddress,
+    this.ktpImagePath,
+    this.selfieKtpImagePath,
+    required this.status,
+    this.autoVerified = false,
+    this.rejectReason,
     this.verifiedAt,
-    this.verifiedBy,
-    this.notes,
   });
 
-  factory KYCRecord.fromMap(Map<dynamic, dynamic> data) {
-    return KYCRecord(
-      id: data['id'] as int,
-      outletId: data['outlet_id'],
-      ownerNik: data['owner_nik'],
-      ownerFullName: data['owner_full_name'],
-      ownerPhone: data['owner_phone'],
-      kycStatus: data['kyc_status'],
-      ktpPath: data['ktp_path'],
-      selfiePath: data['selfie_path'],
-      faceMatchScore: data['face_match_score'] as int?,
-      verificationStatus: data['verification_status'],
-      verifiedAt: data['verified_at'] != null 
-          ? DateTime.parse(data['verified_at']) 
-          : null,
-      verifiedBy: data['verified_by'],
-      notes: data['notes'],
+  factory KycRecord.fromMap(Map<String, dynamic> map) {
+    return KycRecord(
+      outletId: map['outlet_id']?.toString() ?? '',
+      fullName: map['full_name'] as String?,
+      phone: map['phone'] as String?,
+      email: map['email'] as String?,
+      storeName: map['store_name'] as String?,
+      storeAddress: map['store_address'] as String?,
+      ktpImagePath: map['ktp_image_path'] as String?,
+      selfieKtpImagePath: map['selfie_ktp_image_path'] as String?,
+      status: kycStatusFromDb(map['status'] as String?),
+      autoVerified: map['auto_verified'] == true,
+      rejectReason: map['reject_reason'] as String?,
+      verifiedAt:
+          map['verified_at'] != null ? DateTime.tryParse(map['verified_at'].toString()) : null,
     );
   }
+
+  Map<String, dynamic> toDraftJson() => {
+        'outlet_id': outletId,
+        'full_name': fullName,
+        'phone': phone,
+        'email': email,
+        'store_name': storeName,
+        'store_address': storeAddress,
+        'ktp_image_path': ktpImagePath,
+        'selfie_ktp_image_path': selfieKtpImagePath,
+      };
+
+  factory KycRecord.fromDraftJson(Map<String, dynamic> map) => KycRecord(
+        outletId: map['outlet_id']?.toString() ?? '',
+        fullName: map['full_name'] as String?,
+        phone: map['phone'] as String?,
+        email: map['email'] as String?,
+        storeName: map['store_name'] as String?,
+        storeAddress: map['store_address'] as String?,
+        ktpImagePath: map['ktp_image_path'] as String?,
+        selfieKtpImagePath: map['selfie_ktp_image_path'] as String?,
+        status: KycStatus.draft,
+      );
 }
 
-class KYCVerificationStatus {
-  final String status;
-  final String verificationStatus;
-  final String? notes;
+class KycSubmitResult {
+  final KycStatus status;
+  final bool autoVerified;
+  final String message;
+  final bool savedOffline;
+  final String? errorCode;
 
-  KYCVerificationStatus({
+  const KycSubmitResult({
     required this.status,
-    required this.verificationStatus,
-    this.notes,
+    required this.autoVerified,
+    required this.message,
+    this.savedOffline = false,
+    this.errorCode,
   });
+
+  bool get isVerified => status == KycStatus.verified;
+  bool get duplicate => errorCode == 'duplicate_nik' || errorCode == 'duplicate_phone';
+}
+
+/// Servis KYC (foto LOKAL, server hanya menyimpan status + field teks).
+///
+/// Auto-verify + anti-duplikat dijalankan di server via RPC `submit_kyc`.
+/// Bila offline, data disimpan sebagai draf lokal dan dikirim saat online.
+class KycService {
+  final SupabaseClient _supabase;
+  KycService({SupabaseClient? client}) : _supabase = client ?? Supabase.instance.client;
+
+  static const Duration _freshWindow = Duration(minutes: 5);
+
+  String _statusKey(String outletId) => 'kyc_status_$outletId';
+  String _checkedKey(String outletId) => 'kyc_checked_$outletId';
+  String _draftKey(String outletId) => 'kyc_draft_$outletId';
+
+  Future<bool> _online() async {
+    try {
+      final r = await Connectivity().checkConnectivity();
+      return r.isNotEmpty && !r.contains(ConnectivityResult.none);
+    } catch (_) {
+      return true;
+    }
+  }
+
+  /// Status KYC dari cache (sinkron, offline-safe). Default unsubmitted.
+  Future<KycStatus> cachedStatus(String outletId) async {
+    if (outletId.isEmpty) return KycStatus.unsubmitted;
+    final prefs = await SharedPreferences.getInstance();
+    if (prefs.getString(_draftKey(outletId)) != null) {
+      final s = prefs.getString(_statusKey(outletId));
+      if (s == null || kycStatusFromDb(s) == KycStatus.unsubmitted) {
+        return KycStatus.draft;
+      }
+    }
+    return kycStatusFromDb(prefs.getString(_statusKey(outletId)));
+  }
+
+  Future<bool> isVerified(String outletId) async {
+    final cached = await cachedStatus(outletId);
+    if (cached.isVerified) return true;
+    final record = await fetchRecord(outletId);
+    return record?.status.isVerified ?? false;
+  }
+
+  /// Ambil record dari server; perbarui cache. null bila belum ada / offline.
+  Future<KycRecord?> fetchRecord(String outletId) async {
+    if (outletId.isEmpty) return null;
+    try {
+      final data = await _supabase
+          .from('outlet_kyc')
+          .select()
+          .eq('outlet_id', outletId)
+          .maybeSingle();
+      if (data == null) {
+        await _setCache(outletId, KycStatus.unsubmitted);
+        return null;
+      }
+      final record = KycRecord.fromMap(data);
+      await _setCache(outletId, record.status);
+      if (record.status.isVerified ||
+          record.status == KycStatus.rejected ||
+          record.status == KycStatus.pendingReview) {
+        await clearDraft(outletId);
+      }
+      return record;
+    } catch (_) {
+      return null;
+    }
+  }
+
+  /// Refresh cache bila sudah kedaluwarsa.
+  Future<bool> refreshIfStale(String outletId) async {
+    if (outletId.isEmpty) return false;
+    final prefs = await SharedPreferences.getInstance();
+    final checked = int.tryParse(prefs.getString(_checkedKey(outletId)) ?? '') ?? 0;
+    final age = DateTime.now().millisecondsSinceEpoch - checked;
+    if (checked != 0 && age < _freshWindow.inMilliseconds) {
+      return (await cachedStatus(outletId)).isVerified;
+    }
+    final record = await fetchRecord(outletId);
+    return record?.status.isVerified ?? (await cachedStatus(outletId)).isVerified;
+  }
+
+  Future<void> _setCache(String outletId, KycStatus status) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString(_statusKey(outletId), status.dbValue);
+    await prefs.setString(
+        _checkedKey(outletId), DateTime.now().millisecondsSinceEpoch.toString());
+  }
+
+  // ---------------------------------------------------------------------------
+  // DRAF lokal
+  // ---------------------------------------------------------------------------
+  Future<void> saveDraft(KycRecord record) async {
+    if (record.outletId.isEmpty) return;
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString(_draftKey(record.outletId), jsonEncode(record.toDraftJson()));
+    await prefs.setString(_statusKey(record.outletId), KycStatus.draft.dbValue);
+  }
+
+  Future<KycRecord?> loadDraft(String outletId) async {
+    if (outletId.isEmpty) return null;
+    final prefs = await SharedPreferences.getInstance();
+    final raw = prefs.getString(_draftKey(outletId));
+    if (raw == null) return null;
+    try {
+      return KycRecord.fromDraftJson(jsonDecode(raw) as Map<String, dynamic>);
+    } catch (_) {
+      return null;
+    }
+  }
+
+  Future<void> clearDraft(String outletId) async {
+    if (outletId.isEmpty) return;
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.remove(_draftKey(outletId));
+  }
+
+  // ---------------------------------------------------------------------------
+  // Kirim verifikasi
+  // ---------------------------------------------------------------------------
+  Future<KycSubmitResult> submit({
+    required String outletId,
+    required String fullName,
+    required String phone,
+    required String email,
+    required String storeName,
+    required String storeAddress,
+    required String? ktpImagePath,
+    required String? selfieKtpImagePath,
+    String? nik,
+    bool consent = false,
+  }) async {
+    final draft = KycRecord(
+      outletId: outletId,
+      fullName: fullName,
+      phone: phone,
+      email: email,
+      storeName: storeName,
+      storeAddress: storeAddress,
+      ktpImagePath: ktpImagePath,
+      selfieKtpImagePath: selfieKtpImagePath,
+      status: KycStatus.draft,
+    );
+
+    if (!await _online()) {
+      await saveDraft(draft);
+      return const KycSubmitResult(
+        status: KycStatus.draft,
+        autoVerified: false,
+        message: 'Tidak ada internet. Data disimpan sebagai draf dan akan dikirim saat online.',
+        savedOffline: true,
+      );
+    }
+
+    try {
+      final res = await _supabase.rpc('submit_kyc', params: {
+        'p_outlet': outletId,
+        'p_full_name': fullName,
+        'p_phone': phone,
+        'p_email': email,
+        'p_store_name': storeName,
+        'p_store_address': storeAddress,
+        'p_ktp_path': ktpImagePath,
+        'p_selfie_path': selfieKtpImagePath,
+        'p_nik': nik,
+        'p_consent': consent,
+      });
+
+      final map = (res as Map).cast<String, dynamic>();
+      final status = kycStatusFromDb(map['status'] as String?);
+      await _setCache(outletId, status);
+      if (status.isVerified || status == KycStatus.pendingReview) {
+        await clearDraft(outletId);
+      }
+      return KycSubmitResult(
+        status: status,
+        autoVerified: map['auto_verified'] == true,
+        message: map['message'] as String? ?? 'Selesai',
+      );
+    } on PostgrestException catch (e) {
+      final code = _mapError(e.message);
+      if (code == 'duplicate_nik' || code == 'duplicate_phone') {
+        return KycSubmitResult(
+          status: KycStatus.unsubmitted,
+          autoVerified: false,
+          message: code == 'duplicate_nik'
+              ? 'NIK ini sudah terdaftar pada outlet lain.'
+              : 'Nomor HP ini sudah terdaftar pada outlet lain.',
+          errorCode: code,
+        );
+      }
+      return KycSubmitResult(
+        status: KycStatus.draft,
+        autoVerified: false,
+        message: 'Gagal mengirim verifikasi: ${e.message}',
+        errorCode: 'submit_failed',
+      );
+    } catch (e) {
+      await saveDraft(draft);
+      return KycSubmitResult(
+        status: KycStatus.draft,
+        autoVerified: false,
+        message: 'Gagal terhubung. Data disimpan sebagai draf: $e',
+        savedOffline: true,
+        errorCode: 'network',
+      );
+    }
+  }
+
+  String? _mapError(String message) {
+    if (message.contains('duplicate_nik')) return 'duplicate_nik';
+    if (message.contains('duplicate_phone')) return 'duplicate_phone';
+    if (message.contains('not_owner')) return 'not_owner';
+    return null;
+  }
 }

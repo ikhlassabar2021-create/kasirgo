@@ -9,7 +9,9 @@ SELESAI: ST7.8-5 - laporan otomatis ke bos (report_schedule_screen + notifikasi 
           + Edge Function report_scheduler)
 SELESAI: ST7.8-6 - iklan pelanggan (ad_service + SponsorAdSlot di halaman pesan pelanggan;
           config ads cache+fallback, ad_free Pendukung, blokir judi/dewasa/pinjol, consent UU PDP)
-BERIKUTNYA: ST7.8-7 (Tahap 2/3) - onboarding KYC wajib (wizard 6 field, gate, status, anti-dup, verify_kyc)
+SELESAI: ST7.8-7 - onboarding KYC wajib (wizard 6 field + gate total, anti-dup hash NIK/HP,
+          auto-verify server via RPC submit_kyc, draf offline, foto LOKAL, status lengkap)
+BERIKUTNYA: ST7.8-8 (Tahap 3/3) - panduan penggunaan (guide_screen dari guide_items: PDF + video)
 
 ## Detail ST7.8-DB
 File: docs/migrations/2026-09-28-kasirgo-7.8.sql (idempotent, aman diulang)
@@ -148,3 +150,28 @@ announcements(is_active), audit_logs(created_at DESC), admin_users(user_id).
   platform_financial_configs + fallback), entitlement hasFeature(), reverse trial 14 hari saat KYC
   verified, simpan nomor WA owner dari KYC; lalu UI Program Pendukung (satu kartu Rp50.000/bulan).
 
+
+
+### ST7.8-7 (KYC wajib / onboarding)
+- docs/migrations/2026-09-29-outlet-kyc.sql (BARU, SUDAH DIJALANKAN di Supabase, terverifikasi):
+  tabel outlet_kyc (outlet_id UNIQUE, status unsubmitted/draft/pending_review/verified/rejected,
+  auto_verified, reject_reason, nik_hash, phone_hash, verified_at) + RLS owner/superadmin +
+  RPC submit_kyc(...) SECURITY DEFINER: auto-verify 6 field (email/HP/nama toko/alamat/nama/KTP+selfie
+  + consent) + anti-duplikat hash NIK/HP (pgcrypto digest sha256, NIK mentah TIDAK disimpan).
+- services/kyc_verification_service.dart (REWRITE): KycStatus enum + mapping, KycRecord, KycService
+  (cachedStatus/fetchRecord/refreshIfStale 5 menit, saveDraft/loadDraft/clearDraft offline,
+  submit() panggil RPC + tangani duplicate_nik/duplicate_phone; foto hanya path lokal).
+- screens/auth/onboarding_kyc_screen.dart (BARU): wizard 3 langkah -> Data Usaha (5 field, auto-isi
+  email/nama toko/alamat/HP dari outlet + user_metadata) -> Dokumen (kamera KTP + selfie memegang KTP,
+  kompres 1200x1600 q80, NIK opsional, tips foto benar/salah) -> Tinjau + consent UU PDP; simpan draf,
+  banner status ditolak/ditinjau, panel terverifikasi; tanpa tombol lewati.
+- widgets/common/kyc_gate.dart (BARU): gate total sebelum verified -> hanya wizard KYC + bantuan + logout;
+  banner "Selesaikan verifikasi untuk mulai berjualan"; staf (admin/kasir) bila outlet belum verified
+  melihat pesan hubungi pemilik (tidak bisa submit KYC owner).
+- app.dart: semua rute owner (produk/POS/laporan/pelanggan/karyawan/pengaturan) + admin + kasir
+  dibungkus KycGate.
+- settings_screen.dart: kartu status KYC pakai skema baru (status/reject_reason) + tombol
+  "Lengkapi / Perbarui" -> OnboardingKycScreen.
+- kyc_upload_screen.dart: jadi alias tipis ke OnboardingKycScreen (kompatibilitas).
+- Catatan: Edge Function verify_kyc TIDAK dipakai lagi; auto-verify + anti-duplikat kini di RPC server
+  (lebih aman, tanpa upload foto). Foto KTP/selfie tetap LOKAL (kebijakan foto lokal).

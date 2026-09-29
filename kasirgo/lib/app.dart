@@ -23,6 +23,7 @@ import 'services/auth_service.dart';
 import 'services/notification_service.dart';
 import 'services/report_scheduler_service.dart';
 import 'providers/auth_provider.dart';
+import 'widgets/common/kyc_gate.dart';
 
 final _router = GoRouter(
   initialLocation: '/login',
@@ -37,42 +38,44 @@ final _router = GoRouter(
     ),
     GoRoute(
       path: '/owner',
-      builder: (context, state) => const OwnerHomeScreen(),
+      builder: (context, state) => const KycGate(child: OwnerHomeScreen()),
     ),
     GoRoute(
       path: '/owner/products',
-      builder: (context, state) => const ProductListScreen(),
+      builder: (context, state) => const KycGate(child: ProductListScreen()),
     ),
     GoRoute(
       path: '/owner/products/add',
-      builder: (context, state) => OwnerHomeScreen(
-        initialIndex: 1,
-        subScreen: ProductFormScreen(product: state.extra as Product?),
+      builder: (context, state) => KycGate(
+        child: OwnerHomeScreen(
+          initialIndex: 1,
+          subScreen: ProductFormScreen(product: state.extra as Product?),
+        ),
       ),
     ),
     GoRoute(
       path: '/owner/pos',
-      builder: (context, state) => const PosScreen(),
+      builder: (context, state) => const KycGate(child: PosScreen()),
     ),
     GoRoute(
       path: '/owner/reports',
-      builder: (context, state) => const ReportScreen(),
+      builder: (context, state) => const KycGate(child: ReportScreen()),
     ),
     GoRoute(
       path: '/owner/customers',
-      builder: (context, state) => const CustomerListScreen(),
+      builder: (context, state) => const KycGate(child: CustomerListScreen()),
     ),
     GoRoute(
       path: '/owner/employees',
-      builder: (context, state) => const EmployeeScreen(),
+      builder: (context, state) => const KycGate(child: EmployeeScreen()),
     ),
     GoRoute(
       path: '/owner/settings',
-      builder: (context, state) => const SettingsScreen(),
+      builder: (context, state) => const KycGate(child: SettingsScreen()),
     ),
     GoRoute(
       path: '/admin',
-      builder: (context, state) => const AdminHomeScreen(),
+      builder: (context, state) => const KycGate(child: AdminHomeScreen()),
     ),
     GoRoute(
       path: '/admin/reports',
@@ -82,11 +85,11 @@ final _router = GoRouter(
     ),
     GoRoute(
       path: '/cashier',
-      builder: (context, state) => const CashierHomeScreen(),
+      builder: (context, state) => const KycGate(child: CashierHomeScreen()),
     ),
     GoRoute(
       path: '/cashier/pos',
-      builder: (context, state) => const CashierPosScreen(),
+      builder: (context, state) => const KycGate(child: CashierPosScreen()),
     ),
     GoRoute(
       path: '/customer',

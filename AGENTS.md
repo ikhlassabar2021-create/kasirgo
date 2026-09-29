@@ -139,7 +139,7 @@ Status: SELESAI. Project Supabase sudah dibuat dan schema terpasang serta diuji.
 - [x] Phase 7.5: Zero-Friction Onboarding + Dual-Mode QRIS + Settlement + Superowner Financial Config
 - [x] Phase 7.6: UI Retrofit "Centennial Modern Ocean White" (semua role + semua fitur, UI-only)
 - [x] Phase 7.7: Control Plane + KYC Auto-Verify + Izin Produk/Staf + Owner Affiliate
-- [ ] Phase 7.8: Monetisasi & Program Pendukung (1 harga Rp50k/bln) + Iklan Pelanggan + Laporan ke Bos + KYC Wajib + Panduan + Skala Superadmin  (BERIKUTNYA)
+- [ ] Phase 7.8: Monetisasi & Program Pendukung (1 harga Rp50k/bln) + Iklan Pelanggan + Laporan ke Bos + KYC Wajib + Panduan + Skala Superadmin  (ST7.8-7 SELESAI; BERIKUTNYA ST7.8-8 Panduan)
 - [ ] Phase 8: Modul outlet_type (BOM/Resep, KDS/QR Meja, Variant, Shift/Tip)
 - [ ] Phase 9: PPOB + Closed-loop + Embedded B2B Restock
 - [ ] Phase 10: Fintech Lead + Hyperlocal Data + Micro-insurance
