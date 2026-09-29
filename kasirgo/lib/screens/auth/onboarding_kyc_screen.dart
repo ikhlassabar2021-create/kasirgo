@@ -1,5 +1,6 @@
-import 'dart:io';
+import 'dart:typed_data';
 
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -42,6 +43,8 @@ class _OnboardingKycScreenState extends ConsumerState<OnboardingKycScreen> {
 
   XFile? _ktpImage;
   XFile? _selfieImage;
+  Uint8List? _ktpBytes;
+  Uint8List? _selfieBytes;
   bool _consent = false;
   bool _loading = false;
   bool _prefilling = true;
@@ -111,6 +114,10 @@ class _OnboardingKycScreenState extends ConsumerState<OnboardingKycScreen> {
         _ktpImage = draft.ktpImagePath != null ? XFile(draft.ktpImagePath!) : null;
         _selfieImage =
             draft.selfieKtpImagePath != null ? XFile(draft.selfieKtpImagePath!) : null;
+        _ktpBytes = await _readPreviewBytes(_ktpImage);
+        if (_ktpBytes == null) _ktpImage = null;
+        _selfieBytes = await _readPreviewBytes(_selfieImage);
+        if (_selfieBytes == null) _selfieImage = null;
       }
 
       final record = await _kyc.fetchRecord(_outletId!);
@@ -125,24 +132,68 @@ class _OnboardingKycScreenState extends ConsumerState<OnboardingKycScreen> {
     if (mounted) setState(() => _prefilling = false);
   }
 
-  Future<void> _pickImage(bool isKtp) async {
+  Future<Uint8List?> _readPreviewBytes(XFile? file) async {
+    if (file == null) return null;
     try {
-      final picker = ImagePicker();
-      final image = await picker.pickImage(
-        source: ImageSource.camera,
+      return await file.readAsBytes();
+    } catch (_) {
+      return null;
+    }
+  }
+
+  Future<void> _pickImage(bool isKtp) async {
+    ImageSource? source;
+    if (kIsWeb) {
+      source = ImageSource.gallery;
+    } else {
+      source = await showModalBottomSheet<ImageSource>(
+        context: context,
+        shape: const RoundedRectangleBorder(
+          borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+        ),
+        builder: (ctx) => SafeArea(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const SizedBox(height: 12),
+              ListTile(
+                leading: const Icon(Icons.photo_camera_rounded,
+                    color: AppTheme.primaryColor),
+                title: const Text('Buka Kamera'),
+                onTap: () => Navigator.pop(ctx, ImageSource.camera),
+              ),
+              ListTile(
+                leading: const Icon(Icons.photo_library_rounded,
+                    color: AppTheme.primaryColor),
+                title: const Text('Pilih dari Galeri'),
+                onTap: () => Navigator.pop(ctx, ImageSource.gallery),
+              ),
+              const SizedBox(height: 8),
+            ],
+          ),
+        ),
+      );
+    }
+    if (source == null) return;
+    try {
+      final image = await ImagePicker().pickImage(
+        source: source,
         maxWidth: 1200,
         maxHeight: 1600,
         imageQuality: 80,
       );
-      if (image != null && mounted) {
-        setState(() {
-          if (isKtp) {
-            _ktpImage = image;
-          } else {
-            _selfieImage = image;
-          }
-        });
-      }
+      if (image == null) return;
+      final bytes = await _readPreviewBytes(image);
+      if (!mounted) return;
+      setState(() {
+        if (isKtp) {
+          _ktpImage = image;
+          _ktpBytes = bytes;
+        } else {
+          _selfieImage = image;
+          _selfieBytes = bytes;
+        }
+      });
     } catch (e) {
       _snack('Gagal memuat gambar: $e', AppTheme.errorColor);
     }
@@ -475,6 +526,7 @@ class _OnboardingKycScreenState extends ConsumerState<OnboardingKycScreen> {
             title: 'Foto KTP',
             subtitle: 'Pastikan jelas, tidak glare, semua sudut terlihat',
             image: _ktpImage,
+            bytes: _ktpBytes,
             onTap: () => _pickImage(true),
           ),
           const SizedBox(height: 16),
@@ -482,6 +534,7 @@ class _OnboardingKycScreenState extends ConsumerState<OnboardingKycScreen> {
             title: 'Selfie Memegang KTP',
             subtitle: 'Wajah & KTP terlihat jelas dalam satu foto',
             image: _selfieImage,
+            bytes: _selfieBytes,
             onTap: () => _pickImage(false),
           ),
           const SizedBox(height: 16),
@@ -566,6 +619,7 @@ class _OnboardingKycScreenState extends ConsumerState<OnboardingKycScreen> {
     required String title,
     required String subtitle,
     required XFile? image,
+    required Uint8List? bytes,
     required VoidCallback onTap,
   }) {
     return GestureDetector(
@@ -580,7 +634,7 @@ class _OnboardingKycScreenState extends ConsumerState<OnboardingKycScreen> {
             width: 2,
           ),
         ),
-        child: image == null
+        child: bytes == null
             ? Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
@@ -607,7 +661,7 @@ class _OnboardingKycScreenState extends ConsumerState<OnboardingKycScreen> {
                 child: Stack(
                   fit: StackFit.expand,
                   children: [
-                    Image.file(File(image.path), fit: BoxFit.cover),
+                    Image.memory(bytes, fit: BoxFit.cover),
                     Positioned(
                       top: 8,
                       right: 8,
