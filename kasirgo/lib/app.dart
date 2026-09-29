@@ -13,6 +13,7 @@ import 'screens/owner/report_screen.dart';
 import 'screens/owner/customer_list_screen.dart';
 import 'screens/owner/employee_screen.dart';
 import 'screens/owner/settings_screen.dart';
+import 'screens/owner/guide_screen.dart';
 import 'screens/admin/admin_home_screen.dart';
 import 'screens/cashier/cashier_home_screen.dart';
 import 'screens/cashier/cashier_pos_screen.dart';
@@ -72,6 +73,10 @@ final _router = GoRouter(
     GoRoute(
       path: '/owner/settings',
       builder: (context, state) => const KycGate(child: SettingsScreen()),
+    ),
+    GoRoute(
+      path: '/owner/guide',
+      builder: (context, state) => const KycGate(child: GuideScreen()),
     ),
     GoRoute(
       path: '/admin',

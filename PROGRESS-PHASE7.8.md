@@ -11,7 +11,10 @@ SELESAI: ST7.8-6 - iklan pelanggan (ad_service + SponsorAdSlot di halaman pesan 
           config ads cache+fallback, ad_free Pendukung, blokir judi/dewasa/pinjol, consent UU PDP)
 SELESAI: ST7.8-7 - onboarding KYC wajib (wizard 6 field + gate total, anti-dup hash NIK/HP,
           auto-verify server via RPC submit_kyc, draf offline, foto LOKAL, status lengkap)
-BERIKUTNYA: ST7.8-8 (Tahap 3/3) - panduan penggunaan (guide_screen dari guide_items: PDF + video)
+SELESAI: ST7.8-8 - panduan penggunaan (guide_service + guide_screen: PDF cache offline + video,
+          filter kategori/role + pencarian, menu Panduan di Pengaturan + ikon bantuan di beranda)
+BERIKUTNYA: ST7.8-9 (Tahap 3/3) - Control Plane superadmin (iklan/panduan/financial/laporan/KYC/
+          kuota/feature flags/otomatisasi/audit) + QA config->app
 
 ## Detail ST7.8-DB
 File: docs/migrations/2026-09-28-kasirgo-7.8.sql (idempotent, aman diulang)
@@ -175,3 +178,18 @@ announcements(is_active), audit_logs(created_at DESC), admin_users(user_id).
 - kyc_upload_screen.dart: jadi alias tipis ke OnboardingKycScreen (kompatibilitas).
 - Catatan: Edge Function verify_kyc TIDAK dipakai lagi; auto-verify + anti-duplikat kini di RPC server
   (lebih aman, tanpa upload foto). Foto KTP/selfie tetap LOKAL (kebijakan foto lokal).
+
+
+### ST7.8-8 (panduan penggunaan)
+- services/guide_service.dart (BARU): GuideKind (pdf/video/unknown) + GuideItem (url/file_key/
+  thumbnail_key/sort_order, resolusi URL R2 dari config `guide.r2_base_url`), loadItems()
+  server -> cache SharedPreferences (TTL 15 menit, offline-safe), cachedPdfPath()/downloadPdf()
+  (cache lokal di applicationSupport/guides, web = langsung buka URL).
+- screens/owner/guide_screen.dart (BARU): daftar panduan + pencarian judul, filter kategori & role
+  (chip), kartu ikon PDF/video, buka PDF (cache lokal dulu, fallback URL) / video YouTube
+  (url_launcher external). Status kosong & tarik-untuk-muat-ulang.
+- settings_screen.dart: entri menu "Panduan" di kartu Akun & Bantuan.
+- owner_home_screen.dart: ikon bantuan (help) di app bar -> buka GuideScreen.
+- app.dart: rute /owner/guide (dibungkus KycGate).
+- Konten dikelola superadmin lewat `guide_items` (Control Plane, ST7.8-9); kini kosong -> layar
+  menampilkan empty state. RLS: client hanya baca is_active=true.

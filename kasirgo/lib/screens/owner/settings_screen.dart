@@ -15,6 +15,7 @@ import '../../screens/auth/onboarding_kyc_screen.dart';
 import '../../utils/formatters.dart';
 import '../../utils/qris_config.dart';
 import 'report_schedule_screen.dart';
+import 'guide_screen.dart';
 
 class SettingsScreen extends ConsumerStatefulWidget {
   const SettingsScreen({super.key});
@@ -679,6 +680,12 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
             style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
           ),
           const SizedBox(height: 12),
+          _buildMenuRow(Icons.menu_book_rounded, 'Panduan', () {
+            Navigator.push(
+              context,
+              MaterialPageRoute(builder: (_) => const GuideScreen()),
+            );
+          }),
           _buildMenuRow(Icons.cloud_upload_outlined, 'Tautkan Akun Google', () {
             _showLinkAccountDialog();
           }),

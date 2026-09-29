@@ -35,6 +35,7 @@ import 'report_screen.dart';
 import 'customer_list_screen.dart';
 import 'employee_screen.dart';
 import 'settings_screen.dart';
+import 'guide_screen.dart';
 
 final homeSummaryProvider = FutureProvider<Map<String, dynamic>>((ref) async {
   final user = ref.watch(currentUserProvider);
@@ -533,6 +534,14 @@ class _OwnerHomeScreenState extends ConsumerState<OwnerHomeScreen> {
           ),
         ),
         actions: [
+          IconButton(
+            tooltip: 'Panduan',
+            icon: const Icon(Icons.help_outline_rounded, color: AppTheme.textPrimary),
+            onPressed: () => Navigator.push(
+              context,
+              MaterialPageRoute(builder: (_) => const GuideScreen()),
+            ),
+          ),
           summaryAsync.maybeWhen(
             data: (summary) {
               final notifs = (summary['notifications'] as List?)?.cast<Map<String, dynamic>>() ?? [];
