@@ -12,6 +12,7 @@ class Product {
   final String? imageLocalPath;
   final String? thumbKey;
   final bool isActive;
+  final bool hasVariants;
   final DateTime? createdAt;
   final DateTime? updatedAt;
 
@@ -32,6 +33,7 @@ class Product {
     this.imageLocalPath,
     this.thumbKey,
     this.isActive = true,
+    this.hasVariants = false,
     this.createdAt,
     this.updatedAt,
   }) : basePrice = basePrice ?? price ?? 0.0;
@@ -57,6 +59,7 @@ class Product {
       isActive: json['is_active'] == null
           ? true
           : (json['is_active'] == true || json['is_active'] == 1),
+      hasVariants: json['has_variants'] == true,
       createdAt: json['created_at'] != null
           ? DateTime.tryParse(json['created_at'].toString())
           : null,
@@ -79,6 +82,7 @@ class Product {
       'expired_date': expiredDate?.toIso8601String().split('T').first,
       'image_local_path': imageLocalPath ?? '',
       'thumb_key': thumbKey,
+      'has_variants': hasVariants,
     };
     if (includeId && id.isNotEmpty) {
       data['id'] = id;
@@ -108,6 +112,7 @@ class Product {
       'image_local_path': imageLocalPath ?? '',
       'thumb_key': thumbKey,
       'is_active': isActive ? 1 : 0,
+      'has_variants': hasVariants ? 1 : 0,
       'created_at': createdAt?.toIso8601String(),
       'updated_at': updatedAt?.toIso8601String(),
     };
@@ -132,6 +137,7 @@ class Product {
       imageLocalPath: map['image_local_path']?.toString(),
       thumbKey: map['thumb_key']?.toString(),
       isActive: map['is_active'] == 1 || map['is_active'] == true,
+      hasVariants: map['has_variants'] == 1 || map['has_variants'] == true,
       createdAt: map['created_at'] != null
           ? DateTime.tryParse(map['created_at'].toString())
           : null,
@@ -156,6 +162,7 @@ class Product {
     String? imageLocalPath,
     String? thumbKey,
     bool? isActive,
+    bool? hasVariants,
     DateTime? createdAt,
     DateTime? updatedAt,
   }) {
@@ -173,6 +180,7 @@ class Product {
       imageLocalPath: imageLocalPath ?? this.imageLocalPath,
       thumbKey: thumbKey ?? this.thumbKey,
       isActive: isActive ?? this.isActive,
+      hasVariants: hasVariants ?? this.hasVariants,
       createdAt: createdAt ?? this.createdAt,
       updatedAt: updatedAt ?? this.updatedAt,
     );

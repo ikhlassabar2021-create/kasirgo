@@ -288,6 +288,8 @@ class SupabaseService {
             .map((item) => <String, dynamic>{
                   'transaction_id': created.id,
                   'product_id': item.productId,
+                  if (item.variantId != null && item.variantId!.isNotEmpty)
+                    'variant_id': item.variantId,
                   'product_name': item.productName,
                   'quantity': item.quantity,
                   'unit_price': item.price,
@@ -957,6 +959,127 @@ class SupabaseService {
       return ProductVariant.fromJson(response);
     } catch (e) {
       return null;
+    }
+  }
+
+  Future<ProductVariant?> updateProductVariant(ProductVariant variant) async {
+    if (variant.id.isEmpty) return null;
+    try {
+      final response = await _client
+          .from('product_variants')
+          .update(variant.toJson())
+          .eq('id', variant.id)
+          .select()
+          .single();
+      return ProductVariant.fromJson(response);
+    } catch (e) {
+      return null;
+    }
+  }
+
+  /// Upsert daftar varian: insert baru, update yang ada, hapus yang hilang.
+  Future<bool> syncProductVariants({
+    required String outletId,
+    required String productId,
+    required List<ProductVariant> variants,
+    List<String> removeIds = const [],
+  }) async {
+    try {
+      for (final id in removeIds) {
+        await _client.from('product_variants').delete().eq('id', id);
+      }
+      for (final v in variants) {
+        final withIds = v.copyWith(outletId: outletId, productId: productId);
+        if (v.id.isEmpty) {
+          await createProductVariant(withIds);
+        } else {
+          await updateProductVariant(withIds);
+        }
+      }
+      return true;
+    } catch (e) {
+      debugPrint('syncProductVariants error: $e');
+      return false;
+    }
+  }
+
+  /// Jumlah varian aktif per produk (untuk badge di daftar produk).
+  Future<Map<String, int>> getVariantCounts(List<String> productIds) async {
+    if (productIds.isEmpty) return {};
+    try {
+      final response = await _client
+          .from('product_variants')
+          .select('product_id')
+          .inFilter('product_id', productIds)
+          .eq('is_active', true);
+      final counts = <String, int>{};
+      for (final row in (response as List)) {
+        final pid = (row as Map)['product_id'].toString();
+        counts[pid] = (counts[pid] ?? 0) + 1;
+      }
+      return counts;
+    } catch (e) {
+      return {};
+    }
+  }
+
+  Future<bool> deleteProductVariant(String variantId) async {
+    try {
+      await _client.from('product_variants').delete().eq('id', variantId);
+      return true;
+    } catch (e) {
+      return false;
+    }
+  }
+
+  /// Set flag has_variants produk.
+  Future<bool> setProductHasVariants(String productId, bool value) async {
+    try {
+      await _client
+          .from('products')
+          .update({'has_variants': value}).eq('id', productId);
+      return true;
+    } catch (e) {
+      return false;
+    }
+  }
+
+  /// Kurangi stok varian manual (mis. koreksi) + catat stock_logs.
+  Future<bool> decrementVariantStock({
+    required String outletId,
+    required String variantId,
+    required double qty,
+    required String reason,
+    String? refId,
+  }) async {
+    try {
+      final rows = await _client
+          .from('product_variants')
+          .select('stock, product_id')
+          .eq('id', variantId)
+          .limit(1);
+      if ((rows as List).isEmpty) return false;
+      final row = rows.first as Map;
+      final current = (row['stock'] as num?)?.toDouble() ?? 0;
+      final newStock = current - qty;
+      await _client
+          .from('product_variants')
+          .update({'stock': newStock, 'updated_at': DateTime.now().toIso8601String()})
+          .eq('id', variantId);
+      await recordStockLog(StockLog(
+        id: '',
+        outletId: outletId,
+        productId: row['product_id']?.toString(),
+        variantId: variantId,
+        delta: -qty,
+        reason: reason,
+        refId: refId,
+        createdAt: DateTime.now(),
+      ));
+      return true;
+    } catch (e) {
+      debugPrint('decrementVariantStock error: $e');
+      return false;
     }
   }
 

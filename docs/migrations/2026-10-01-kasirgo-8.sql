@@ -314,6 +314,51 @@ CREATE INDEX IF NOT EXISTS idx_stock_logs_product ON public.stock_logs(product_i
 CREATE INDEX IF NOT EXISTS idx_stock_logs_variant ON public.stock_logs(variant_id);
 CREATE INDEX IF NOT EXISTS idx_products_outlet_has_variants ON public.products(outlet_id, has_variants);
 
+-- ---------------------------------------------------------------------------
+-- 7. ST8-2: transaction_items.variant_id + trigger stok varian + stock_logs
+-- ---------------------------------------------------------------------------
+ALTER TABLE public.transaction_items
+  ADD COLUMN IF NOT EXISTS variant_id UUID REFERENCES public.product_variants(id) ON DELETE SET NULL;
+
+-- Trigger stok: item dengan variant_id -> kurangi stok VARIAN (+log);
+-- tanpa variant_id -> kurangi stok produk (+log). Satu sumber kebenaran.
+CREATE OR REPLACE FUNCTION public.decrement_stock()
+RETURNS trigger
+LANGUAGE plpgsql
+SECURITY DEFINER
+AS $$
+DECLARE
+  v_outlet UUID;
+  v_user UUID;
+BEGIN
+  SELECT t.outlet_id, t.user_id INTO v_outlet, v_user
+    FROM public.transactions t WHERE t.id = NEW.transaction_id;
+
+  IF NEW.variant_id IS NOT NULL THEN
+    UPDATE public.product_variants
+       SET stock = stock - NEW.quantity, updated_at = NOW()
+     WHERE id = NEW.variant_id;
+    INSERT INTO public.stock_logs (outlet_id, product_id, variant_id, change, reason, ref_id, user_id)
+    SELECT pv.outlet_id, pv.product_id, pv.id, -NEW.quantity, 'penjualan', NEW.transaction_id, v_user
+      FROM public.product_variants pv WHERE pv.id = NEW.variant_id;
+  ELSE
+    UPDATE public.products SET stock = stock - NEW.quantity, updated_at = NOW()
+     WHERE id = NEW.product_id;
+    INSERT INTO public.stock_logs (outlet_id, product_id, change, reason, ref_id, user_id)
+    VALUES (v_outlet, NEW.product_id, -NEW.quantity, 'penjualan', NEW.transaction_id, v_user);
+  END IF;
+  RETURN NEW;
+END;
+$$;
+
+DROP TRIGGER IF EXISTS decrement_stock_trigger ON public.transaction_items;
+CREATE TRIGGER decrement_stock_trigger
+  AFTER INSERT ON public.transaction_items
+  FOR EACH ROW EXECUTE FUNCTION public.decrement_stock();
+
+-- Hapus trigger duplikat dari schema lama (menyebabkan stok berkurang 2x).
+DROP TRIGGER IF EXISTS tr_decrement_stock ON public.transaction_items;
+
 -- ============================================================================
 -- VERIFIKASI:
 --   SELECT table_name FROM information_schema.tables WHERE table_schema='public'

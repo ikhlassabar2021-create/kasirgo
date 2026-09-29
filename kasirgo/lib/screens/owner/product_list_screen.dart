@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../config/app_theme.dart';
 import '../../models/product.dart';
+import '../../models/variant.dart';
 import '../../providers/auth_provider.dart';
 import '../../services/supabase_service.dart';
 import '../../utils/formatters.dart';
@@ -28,6 +29,88 @@ class _ProductListScreenState extends ConsumerState<ProductListScreen> {
   final _searchController = TextEditingController();
   String _searchQuery = '';
   String _selectedCategory = 'Semua';
+  Map<String, int> _variantCounts = {};
+
+  @override
+  void initState() {
+    super.initState();
+    _loadVariantCounts();
+  }
+
+  Future<void> _loadVariantCounts() async {
+    final user = ref.read(currentUserProvider);
+    final outletId = user?.outletId;
+    if (outletId == null || outletId.isEmpty) return;
+    final products = await SupabaseService().getProducts(outletId);
+    final counts = await SupabaseService()
+        .getVariantCounts(products.map((p) => p.id).toList());
+    if (mounted) setState(() => _variantCounts = counts);
+  }
+
+  void _showVariantDetail(Product product) {
+    showModalBottomSheet<void>(
+      context: context,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (ctx) => SafeArea(
+        child: FutureBuilder<List<ProductVariant>>(
+          future: SupabaseService().getProductVariants(product.id),
+          builder: (ctx, snap) {
+            final list = snap.data ?? const <ProductVariant>[];
+            return Padding(
+              padding: const EdgeInsets.fromLTRB(16, 16, 16, 20),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  Text('Varian - ${product.name}',
+                      style: const TextStyle(
+                          fontSize: 15, fontWeight: FontWeight.w800)),
+                  const SizedBox(height: 10),
+                  if (snap.connectionState == ConnectionState.waiting)
+                    const Padding(
+                      padding: EdgeInsets.all(20),
+                      child: Center(
+                          child: CircularProgressIndicator(
+                              color: AppTheme.primaryColor)),
+                    )
+                  else if (list.isEmpty)
+                    const Padding(
+                      padding: EdgeInsets.all(12),
+                      child: Text('Belum ada varian.',
+                          style: TextStyle(color: AppTheme.textSecondary)),
+                    )
+                  else
+                    ...list.map((v) => ListTile(
+                          contentPadding: EdgeInsets.zero,
+                          dense: true,
+                          title: Text(v.name,
+                              style: const TextStyle(
+                                  fontSize: 13.5,
+                                  fontWeight: FontWeight.w600)),
+                          subtitle: Text(
+                              'Stok: ${v.stock.toStringAsFixed(0)}'
+                              '${(v.sku ?? '').isNotEmpty ? ' - SKU ${v.sku}' : ''}',
+                              style: const TextStyle(
+                                  fontSize: 11.5,
+                                  color: AppTheme.textSecondary)),
+                          trailing: Text(
+                            Formatters.currency(product.price + v.priceDelta),
+                            style: const TextStyle(
+                                fontSize: 13,
+                                fontWeight: FontWeight.w700,
+                                color: AppTheme.primaryColor),
+                          ),
+                        )),
+                ],
+              ),
+            );
+          },
+        ),
+      ),
+    );
+  }
 
   @override
   void dispose() {
@@ -373,6 +456,28 @@ class _ProductListScreenState extends ConsumerState<ProductListScreen> {
                                                       fontWeight: FontWeight.w700,
                                                     ),
                                                   ),
+                                                  if ((_variantCounts[product.id] ?? 0) > 0)
+                                                    GestureDetector(
+                                                      onTap: () => _showVariantDetail(product),
+                                                      child: Container(
+                                                        margin: const EdgeInsets.only(top: 2),
+                                                        padding: const EdgeInsets.symmetric(
+                                                            horizontal: 6, vertical: 1),
+                                                        decoration: BoxDecoration(
+                                                          color: AppTheme.accentColor
+                                                              .withValues(alpha: 0.12),
+                                                          borderRadius:
+                                                              BorderRadius.circular(6),
+                                                        ),
+                                                        child: Text(
+                                                          '${_variantCounts[product.id]} varian',
+                                                          style: const TextStyle(
+                                                              fontSize: 9.5,
+                                                              fontWeight: FontWeight.w700,
+                                                              color: AppTheme.accentColor),
+                                                        ),
+                                                      ),
+                                                    ),
                                                   Row(
                                                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                                                     children: [

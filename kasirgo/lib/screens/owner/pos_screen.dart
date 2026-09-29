@@ -7,9 +7,11 @@ import '../../config/app_theme.dart';
 import '../../models/product.dart';
 import '../../models/transaction.dart';
 import '../../services/supabase_service.dart';
+import '../../utils/formatters.dart';
 import '../../widgets/common/centennial_background.dart';
 import '../owner/product_list_screen.dart';
 import '../../widgets/pos/product_grid.dart';
+import '../../models/variant.dart';
 import '../../widgets/pos/cart_panel.dart';
 import '../../widgets/pos/checkout_dialog.dart';
 
@@ -25,6 +27,7 @@ class PosScreen extends ConsumerStatefulWidget {
 class _PosScreenState extends ConsumerState<PosScreen> {
   final _searchController = TextEditingController();
   final List<TransactionItem> _cart = [];
+  final Map<String, List<ProductVariant>> _variantCache = {};
   String _searchQuery = '';
   String _selectedChannel = 'Toko Fisik';
   double _discountAmount = 0.0;
@@ -151,7 +154,11 @@ class _PosScreenState extends ConsumerState<PosScreen> {
     super.dispose();
   }
 
-  void _addToCart(Product product) {
+  Future<void> _addToCart(Product product) async {
+    if (product.hasVariants) {
+      await _pickVariantAndAdd(product);
+      return;
+    }
     if (product.stock <= 0) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Stok produk habis'), backgroundColor: AppTheme.errorColor),
@@ -215,6 +222,136 @@ class _PosScreenState extends ConsumerState<PosScreen> {
         );
       }
     });
+  }
+
+  Future<void> _pickVariantAndAdd(Product product) async {
+    List<ProductVariant>? variants = _variantCache[product.id];
+    if (variants == null) {
+      variants = await SupabaseService().getProductVariants(product.id);
+      _variantCache[product.id] = variants;
+    }
+    final active = variants.where((v) => v.isActive).toList();
+    if (!mounted) return;
+    if (active.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+            content: Text('Produk belum punya varian aktif'),
+            backgroundColor: AppTheme.errorColor),
+      );
+      return;
+    }
+    if (active.length == 1) {
+      _addVariantToCart(product, active.first);
+      return;
+    }
+    await showModalBottomSheet<void>(
+      context: context,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (ctx) => SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(16, 16, 16, 20),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Text('Pilih Varian - ${product.name}',
+                  style: const TextStyle(
+                      fontSize: 15, fontWeight: FontWeight.w800)),
+              const SizedBox(height: 8),
+              ...active.map((v) {
+                final stockLeft = v.stock;
+                final price = _getProductEffectivePrice(product) + v.priceDelta;
+                return ListTile(
+                  contentPadding: EdgeInsets.zero,
+                  enabled: stockLeft > 0,
+                  title: Text(v.name,
+                      style: const TextStyle(
+                          fontSize: 14, fontWeight: FontWeight.w600)),
+                  subtitle: Text(
+                      stockLeft > 0
+                          ? 'Stok: ${stockLeft.toStringAsFixed(0)}'
+                          : 'Stok habis',
+                      style: TextStyle(
+                          fontSize: 11.5,
+                          color: stockLeft > 0
+                              ? AppTheme.textSecondary
+                              : AppTheme.errorColor)),
+                  trailing: Text(Formatters.currency(price),
+                      style: const TextStyle(
+                          fontSize: 13.5,
+                          fontWeight: FontWeight.w700,
+                          color: AppTheme.primaryColor)),
+                  onTap: () {
+                    Navigator.pop(ctx);
+                    _addVariantToCart(product, v);
+                  },
+                );
+              }),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  void _addVariantToCart(Product product, ProductVariant variant) {
+    final base = _getProductEffectivePrice(product);
+    final price = base + variant.priceDelta;
+
+    if (variant.stock <= 0) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+            content: Text('Stok varian habis'),
+            backgroundColor: AppTheme.errorColor),
+      );
+      return;
+    }
+
+    setState(() {
+      final index = _cart.indexWhere((item) =>
+          item.productId == product.id && item.variantId == variant.id);
+      if (index >= 0) {
+        final currentQty = _cart[index].quantity;
+        if (currentQty >= variant.stock) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+                content:
+                    Text('Maksimal stok varian tercapai (${variant.stock.toStringAsFixed(0)})'),
+                backgroundColor: AppTheme.errorColor),
+          );
+          return;
+        }
+        final newQty = currentQty + 1;
+        _cart[index] = _cart[index].copyWith(
+          quantity: newQty,
+          subtotal: price * newQty,
+        );
+      } else {
+        _cart.add(
+          TransactionItem(
+            productId: product.id,
+            variantId: variant.id,
+            productName: '${product.name} - ${variant.name}',
+            price: price,
+            quantity: 1,
+            subtotal: price,
+          ),
+        );
+      }
+    });
+
+    ScaffoldMessenger.of(context).hideCurrentSnackBar();
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content:
+            Text('${product.name} (${variant.name}) masuk keranjang'),
+        duration: const Duration(milliseconds: 700),
+        backgroundColor: AppTheme.primaryColor,
+        behavior: SnackBarBehavior.floating,
+      ),
+    );
   }
 
   void _removeItem(int index) {

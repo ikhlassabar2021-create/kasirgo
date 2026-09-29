@@ -36,6 +36,33 @@ retail = semua kecuali QR Meja & KDS; gerobak = semua kecuali PPOB & QR Meja.
 3. Superadmin buat feature_flag `module_ppob` enabled=false → PPOB hilang dari kelontong
    setelah refresh (cache 5 menit / restart app).
 
+### ST8-2 — Variant Produk (2026-10-01)
+- Migrasi section 7 (RAN live): `transaction_items.variant_id UUID`;
+  trigger `decrement_stock()` baru — item dengan `variant_id` mengurangi stok VARIAN
+  + `stock_logs` reason 'penjualan', tanpa varian tetap produk; trigger lama duplikat
+  `tr_decrement_stock` DIHAPUS (sebabnya stok berkurang 2x).
+- `models/product.dart` +`hasVariants`; `models/variant.dart`: +outletId/barcode/isActive,
+  StockLog sinkron kolom DB (`change`, fallback `delta`).
+- `supabase_service.dart`: +updateProductVariant, syncProductVariants (insert/update/delete),
+  getVariantCounts, deleteProductVariant, setProductHasVariants; `createTransaction`
+  kini mengirim `variant_id` pada item.
+- `widgets/common/variant_editor.dart` (baru); `product_form_screen.dart`: toggle
+  "Produk punya varian" + editor + sync saat simpan.
+- `product_list_screen.dart`: badge "N varian" + bottom sheet detail varian
+  (stok/SKU/harga final).
+- POS (`pos_screen.dart`): produk has_variants → bottom sheet pilih varian
+  (stok per varian dijaga, harga = harga produk + price_delta, nama item
+  "Produk - Varian", keranjang unik per productId+variantId).
+- Catatan: toggle varian saat ini tampil untuk semua outlet_type; gate khusus
+  retail dikerjakan di ST8-6 QA.
+
+### Cara uji ST8-2
+1. Owner retail buat produk "Kopi Sachet" punya varian (Original/Renyah, delta +2000).
+2. POS klik produk → pilih varian → qty 2 → checkout → stok varian berkurang 2,
+   `stock_logs` muncul baris reason 'penjualan' dengan variant_id.
+3. List produk tampil badge "2 varian"; tap badge → detail varian.
+
 ## BERIKUTNYA
-- ST8-2: Variant produk (retail) — model, CRUD, form toggle + daftar varian,
-  badge di list, pilih varian di POS, stok varian + stock_logs.
+- ST8-3: Resep/BOM (cafe/warteg) — recipe_screen, recipe_items, HPP = sum qty x cost
+  bahan, margin + harga saran, stok bahan berkurang saat penjualan produk ber-resep
+  (reason 'resep'), HPP di product_form & laporan.
