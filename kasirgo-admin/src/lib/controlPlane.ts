@@ -288,6 +288,64 @@ export async function listAuditLogs(limit = 50): Promise<AuditLog[]> {
 }
 
 // ---------------------------------------------------------------------------
+// Langganan Pendukung (verifikasi pembayaran QRIS/transfer manual)
+// ---------------------------------------------------------------------------
+export interface PendingSupporter {
+  id: string
+  outlet_id: string
+  outlet_name?: string
+  amount: number
+  status: string
+  pg_reference_id?: string
+  updated_at: string
+}
+
+export async function listPendingSupporters(): Promise<PendingSupporter[]> {
+  const { data, error } = await supabase
+    .from('supporters')
+    .select('id, outlet_id, amount, status, pg_reference_id, updated_at, outlets(name)')
+    .in('status', ['pending', 'pending_verification'])
+    .order('updated_at', { ascending: false })
+    .limit(100)
+  if (error) throw error
+  return (data ?? []).map((r: any) => ({
+    id: r.id,
+    outlet_id: r.outlet_id,
+    outlet_name: r.outlets?.name ?? r.outlet_id,
+    amount: r.amount,
+    status: r.status,
+    pg_reference_id: r.pg_reference_id,
+    updated_at: r.updated_at,
+  }))
+}
+
+export async function setSupporterStatus(id: string, approve: boolean) {
+  const { data, error } = await supabase.rpc('admin_set_supporter_status', {
+    p_supporter_id: id,
+    p_approve: approve,
+  })
+  if (error) throw error
+  await logAdminAction(
+    approve ? 'supporter_approve' : 'supporter_reject',
+    id,
+    { via: 'control_plane' }
+  )
+  return data
+}
+
+async function logAdminAction(action: string, target: string, meta: Record<string, any>) {
+  try {
+    await supabase.rpc('log_admin_action', {
+      p_action: action,
+      p_target: target,
+      p_meta: meta,
+    })
+  } catch (_) {
+    /* audit best-effort */
+  }
+}
+
+// ---------------------------------------------------------------------------
 // Helpers
 // ---------------------------------------------------------------------------
 export function maskSecret(value: any): string {

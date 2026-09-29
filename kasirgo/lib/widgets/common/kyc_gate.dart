@@ -7,6 +7,7 @@ import '../../config/app_theme.dart';
 import '../../providers/auth_provider.dart';
 import '../../screens/auth/onboarding_kyc_screen.dart';
 import '../../services/kyc_verification_service.dart';
+import '../../services/supporter_service.dart';
 import 'centennial_background.dart';
 
 /// Memblokir modul owner sampai KYC `verified`.
@@ -48,6 +49,11 @@ class _KycGateState extends ConsumerState<KycGate> {
     }
     _isOwner = user?.role == 'owner';
     final ok = await _kyc.refreshIfStale(outletId);
+    // Reverse trial 14 hari otomatis (idempotent) setelah KYC verified.
+    if (ok) {
+      // ignore: unawaited_futures
+      SupporterService().ensureTrial(outletId);
+    }
     if (mounted) {
       setState(() {
         _verified = ok;

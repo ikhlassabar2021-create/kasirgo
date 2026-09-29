@@ -315,15 +315,51 @@ class KycService {
       );
     } on PostgrestException catch (e) {
       final code = _mapError(e.message);
-      if (code == 'duplicate_nik' || code == 'duplicate_phone') {
-        return KycSubmitResult(
-          status: KycStatus.unsubmitted,
-          autoVerified: false,
-          message: code == 'duplicate_nik'
-              ? 'NIK ini sudah terdaftar pada outlet lain.'
-              : 'Nomor HP ini sudah terdaftar pada outlet lain.',
-          errorCode: code,
-        );
+      switch (code) {
+        case 'duplicate_nik':
+          return const KycSubmitResult(
+            status: KycStatus.unsubmitted,
+            autoVerified: false,
+            message: 'NIK ini sudah terdaftar pada outlet lain.',
+            errorCode: 'duplicate_nik',
+          );
+        case 'duplicate_phone':
+          return const KycSubmitResult(
+            status: KycStatus.unsubmitted,
+            autoVerified: false,
+            message: 'Nomor HP ini sudah terdaftar pada outlet lain.',
+            errorCode: 'duplicate_phone',
+          );
+        case 'email_unverified':
+          return const KycSubmitResult(
+            status: KycStatus.draft,
+            autoVerified: false,
+            message:
+                'Email Anda belum terverifikasi. Buka email dan klik tautan verifikasi dari KasirGo, lalu kirim ulang KYC.',
+            errorCode: 'email_unverified',
+          );
+        case 'invalid_nik':
+          return const KycSubmitResult(
+            status: KycStatus.draft,
+            autoVerified: false,
+            message:
+                'NIK tidak valid. Harus 16 digit dengan kode provinsi dan tanggal lahir yang benar.',
+            errorCode: 'invalid_nik',
+          );
+        case 'invalid_phone':
+          return const KycSubmitResult(
+            status: KycStatus.draft,
+            autoVerified: false,
+            message: 'Nomor HP tidak valid. Contoh: 081234567890.',
+            errorCode: 'invalid_phone',
+          );
+        case 'not_owner':
+          return const KycSubmitResult(
+            status: KycStatus.draft,
+            autoVerified: false,
+            message: 'Hanya pemilik outlet yang boleh mengirim KYC.',
+            errorCode: 'not_owner',
+          );
       }
       return KycSubmitResult(
         status: KycStatus.draft,
@@ -344,9 +380,16 @@ class KycService {
   }
 
   String? _mapError(String message) {
-    if (message.contains('duplicate_nik')) return 'duplicate_nik';
-    if (message.contains('duplicate_phone')) return 'duplicate_phone';
-    if (message.contains('not_owner')) return 'not_owner';
+    for (final code in [
+      'duplicate_nik',
+      'duplicate_phone',
+      'email_unverified',
+      'invalid_nik',
+      'invalid_phone',
+      'not_owner',
+    ]) {
+      if (message.contains(code)) return code;
+    }
     return null;
   }
 }

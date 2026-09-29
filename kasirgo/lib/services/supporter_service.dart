@@ -1,8 +1,8 @@
 import 'dart:convert';
-import 'package:flutter/foundation.dart';
+import 'package:connectivity_plus/connectivity_plus.dart';
+import 'package:flutter/foundation.dart' show visibleForTesting;
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
-import 'payment_service.dart';
 
 /// Model entitlement outlet (Program Pendukung + trial + fitur per-key).
 class Entitlements {
@@ -60,12 +60,18 @@ class SupporterCheckoutResult {
   final bool success;
   final String? error;
   final Map<String, dynamic>? charge;
+  final double amount;
+  final int periodDays;
+  final String status; // pending | pending_verification | failed
 
   const SupporterCheckoutResult({
     required this.orderId,
     required this.success,
     this.error,
     this.charge,
+    this.amount = 0,
+    this.periodDays = 30,
+    this.status = 'pending',
   });
 }
 
@@ -76,12 +82,19 @@ class SupporterCheckoutResult {
 /// - simpan nomor WA owner (dari KYC) untuk wa.me
 /// - checkout via QRIS existing
 class SupporterService {
-  SupporterService({SupabaseClient? client, PaymentService? payment})
-      : _client = client ?? Supabase.instance.client,
-        _payment = payment ?? PaymentService();
+  SupporterService({SupabaseClient? client})
+      : _client = client ?? Supabase.instance.client;
 
   final SupabaseClient _client;
-  final PaymentService _payment;
+
+  Future<bool> _online() async {
+    try {
+      final r = await Connectivity().checkConnectivity();
+      return r.isNotEmpty && !r.contains(ConnectivityResult.none);
+    } catch (_) {
+      return true;
+    }
+  }
 
   static const int _cacheTtlSeconds = 300;
 
@@ -298,71 +311,30 @@ class SupporterService {
       (await getEntitlements(outletId)).hasAccess;
 
   /// Reverse trial: 14 hari otomatis setelah KYC verified (idempotent).
+  /// Dijalankan server-side via RPC `ensure_supporter_trial` (RLS owner
+  /// tidak boleh menulis supporters/entitlements langsung).
   Future<Entitlements> ensureTrial(String outletId) async {
-    final billing = await getBillingConfig();
-    final trialDays = (billing['trial_days'] as num?)?.toInt() ?? 14;
-
     try {
-      final existing = await _client
-          .from('entitlements')
-          .select()
-          .eq('outlet_id', outletId)
-          .maybeSingle();
-      if (existing != null) {
-        final trialEnd = existing['trial_ends_at'] != null
-            ? DateTime.tryParse(existing['trial_ends_at'].toString())
-            : null;
-        if (existing['is_supporter'] == true || trialEnd != null) {
-          return await getEntitlements(outletId);
-        }
-        // sudah pernah trial habis? jangan reset
-        await _client.from('entitlements').update({
-          'trial_ends_at': DateTime.now().add(Duration(days: trialDays)).toIso8601String(),
-          'updated_at': DateTime.now().toIso8601String(),
-        }).eq('outlet_id', outletId);
-      } else {
-        await _client.from('entitlements').insert({
-          'outlet_id': outletId,
-          'is_supporter': false,
-          'ad_free': false,
-          'features': <String, dynamic>{},
-          'trial_ends_at':
-              DateTime.now().add(Duration(days: trialDays)).toIso8601String(),
-        });
-      }
-
-      // Catat juga di tabel supporters sebagai status trial (bila supported).
-      try {
-        final anySup = await _client
-            .from('supporters')
-            .select('id')
-            .eq('outlet_id', outletId)
-            .limit(1);
-        if ((anySup as List).isEmpty) {
-          await _client.from('supporters').insert({
-            'outlet_id': outletId,
-            'tier': 'pendukung',
-            'amount': 0,
-            'status': 'trial',
-            'trial_started_at': DateTime.now().toIso8601String(),
-            'start_date': DateTime.now().toIso8601String(),
-            'end_date':
-                DateTime.now().add(Duration(days: trialDays)).toIso8601String(),
-            'auto_renew': billing['auto_renew_default'] == true,
-          });
-        }
-      } catch (_) {}
+      await _client.rpc('ensure_supporter_trial', params: {'p_outlet': outletId});
+      await _invalidateCache();
     } catch (_) {}
-
     return getEntitlements(outletId);
+  }
+
+  Future<void> _invalidateCache() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final keys = prefs.getKeys().where((k) => k.startsWith('ent_'));
+      for (final k in keys) {
+        await prefs.remove(k);
+      }
+    } catch (_) {}
   }
 
   Future<void> setAutoRenew(String outletId, bool value) async {
     try {
-      await _client
-          .from('supporters')
-          .update({'auto_renew': value, 'updated_at': DateTime.now().toIso8601String()})
-          .eq('outlet_id', outletId);
+      await _client.rpc('set_supporter_auto_renew',
+          params: {'p_outlet': outletId, 'p_value': value});
     } catch (_) {}
   }
 
@@ -424,60 +396,71 @@ class SupporterService {
   }) async {
     final billing = await getBillingConfig();
     final price = amount ?? (billing['supporter_price'] as num?)?.toDouble() ?? 50000;
-    final periodDays = (billing['period_days'] as num?)?.toInt() ?? 30;
     final orderId = 'SUP-${DateTime.now().millisecondsSinceEpoch}';
 
-    Map<String, dynamic>? charge;
+    if (!await _online()) {
+      return SupporterCheckoutResult(
+          orderId: orderId, success: false, error: 'Tidak ada internet.');
+    }
+
     try {
-      charge = await _payment.createCharge(
-        orderId: orderId,
-        amount: price,
-        qrisType: qrisType,
+      final res = await _client.rpc('create_supporter_checkout', params: {
+        'p_outlet': outletId,
+        'p_order_id': orderId,
+        'p_amount': price,
+      });
+      final map = (res as Map).cast<String, dynamic>();
+      return SupporterCheckoutResult(
+        orderId: (map['order_id'] ?? orderId).toString(),
+        success: true,
+        amount: (map['amount'] as num?)?.toDouble() ?? price,
+        periodDays: (map['period_days'] as num?)?.toInt() ?? 30,
+        status: (map['status'] ?? 'pending').toString(),
+        charge: map,
       );
     } catch (e) {
       return SupporterCheckoutResult(
           orderId: orderId, success: false, error: e.toString());
     }
+  }
 
-    final now = DateTime.now();
+  /// Owner menandai bahwa QRIS/transfer sudah dibayar -> tunggu verifikasi admin.
+  Future<bool> confirmPaymentSent(String outletId, String orderId) async {
     try {
-      await _client.from('supporters').insert({
-        'outlet_id': outletId,
-        'tier': 'pendukung',
-        'amount': price,
-        'status': 'active',
-        'start_date': now.toIso8601String(),
-        'end_date': now.add(Duration(days: periodDays)).toIso8601String(),
-        'auto_renew': billing['auto_renew_default'] == true,
-        'pg_reference_id': orderId,
-        'updated_at': now.toIso8601String(),
-      });
-
-      try {
-        await _client.from('entitlements').upsert({
-          'outlet_id': outletId,
-          'is_supporter': true,
-          'ad_free': true,
-          'updated_at': now.toIso8601String(),
-        });
-      } catch (_) {}
-
-      try {
-        await _client.from('billing_events').insert({
-          'outlet_id': outletId,
-          'event': 'supporter_payment',
-          'amount': price,
-          'status': (charge['status'] ?? 'success').toString(),
-          'ref': orderId,
-        });
-      } catch (_) {}
-    } catch (e) {
-      return SupporterCheckoutResult(
-          orderId: orderId, success: false, error: e.toString(), charge: charge);
+      await _client.rpc('confirm_supporter_payment',
+          params: {'p_outlet': outletId, 'p_order_id': orderId});
+      return true;
+    } catch (_) {
+      return false;
     }
+  }
 
-    return SupporterCheckoutResult(
-        orderId: orderId, success: true, charge: charge);
+  /// Batalkan checkout yang masih menunggu pembayaran.
+  Future<bool> cancelCheckout(String outletId, String orderId) async {
+    try {
+      await _client.rpc('cancel_supporter_checkout',
+          params: {'p_outlet': outletId, 'p_order_id': orderId});
+      return true;
+    } catch (_) {
+      return false;
+    }
+  }
+
+  /// Checkout yang sedang menunggu (pembayaran / verifikasi admin), bila ada.
+  Future<Map<String, dynamic>?> loadPendingCheckout(String outletId) async {
+    try {
+      final res = await _client
+          .from('supporters')
+          .select('id, amount, status, pg_reference_id, updated_at')
+          .eq('outlet_id', outletId)
+          .inFilter('status', ['pending', 'pending_verification'])
+          .order('updated_at', ascending: false)
+          .limit(1)
+          .maybeSingle();
+      return res == null ? null : Map<String, dynamic>.from(res);
+    } catch (_) {
+      return null;
+    }
   }
 
   @visibleForTesting

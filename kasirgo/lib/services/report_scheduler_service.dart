@@ -33,7 +33,7 @@ class ReportSchedule {
       'transaksi': true,
       'rata_rata': true,
       'produk_terlaris': true,
-      'laba': false,
+      'laba': true,
     },
     this.lastSentAt,
   });
@@ -279,9 +279,55 @@ class ReportSchedulerService {
         }
       }
     }
+
+    if (flags['laba'] == true && txs.isNotEmpty) {
+      final laba = await _estimateProfit(outletId, txs);
+      if (laba != null) {
+        buf.writeln('');
+        buf.writeln(
+            'Estimasi Laba (omzet - HPP): ${Formatters.currency(laba)}');
+      }
+    }
+
     buf.writeln('');
     buf.writeln('Dicatat otomatis oleh KasirGo Super-App UMKM.');
     return buf.toString();
+  }
+
+  /// Estimasi laba = omzet - HPP. HPP dihitung dari harga modal produk
+  /// (`products.cost_price`) dikali jumlah terjual. Null bila produk belum
+  /// punya data modal sama sekali (laporan jujur: tidak menebak).
+  Future<double?> _estimateProfit(String outletId, List<dynamic> txs) async {
+    double omzet = 0;
+    double hpp = 0;
+    bool anyCost = false;
+    try {
+      final prods = await _client
+          .from('products')
+          .select('id, cost_price')
+          .eq('outlet_id', outletId);
+      final costById = <String, double>{};
+      for (final p in (prods as List)) {
+        final c = (p as Map)['cost_price'];
+        if (c != null) {
+          costById[p['id'].toString()] = (c as num).toDouble();
+        }
+      }
+      for (final t in txs) {
+        omzet += t.finalAmount as double;
+        for (final it in t.items) {
+          final cost = costById[it.productId?.toString() ?? ''];
+          if (cost != null) {
+            anyCost = true;
+            hpp += cost * (it.quantity as num).toDouble();
+          }
+        }
+      }
+    } catch (_) {
+      return null;
+    }
+    if (!anyCost) return null;
+    return omzet - hpp;
   }
 
   String _normalizePhone(String raw) {

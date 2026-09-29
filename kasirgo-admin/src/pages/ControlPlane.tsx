@@ -36,6 +36,8 @@ import {
   upsertAutomationRule,
   deleteAutomationRule,
   listAuditLogs,
+  listPendingSupporters,
+  setSupporterStatus,
 } from '../lib/controlPlane';
 import type {
   ConfigKey,
@@ -44,6 +46,7 @@ import type {
   FeatureFlag,
   AutomationRule,
   AuditLog,
+  PendingSupporter,
 } from '../lib/controlPlane';
 
 type TabId =
@@ -429,8 +432,24 @@ function StructuredConfigTab({
 function FinancialTab() {
   const [v, setV] = useState<any>({});
   const [loading, setLoading] = useState(false);
+  const [pend, setPend] = useState<PendingSupporter[]>([]);
   const { msg, show } = useToast();
-  useEffect(() => { loadFinancialConfig().then(setV).catch(() => {}); }, []);
+  useEffect(() => {
+    loadFinancialConfig().then(setV).catch(() => {});
+    reloadPend();
+  }, []);
+
+  const reloadPend = async () => {
+    try { setPend(await listPendingSupporters()); } catch { /* ignore */ }
+  };
+
+  const decide = async (id: string, approve: boolean) => {
+    try {
+      await setSupporterStatus(id, approve);
+      show('ok', approve ? 'Langganan disetujui & aktivasi ditulis.' : 'Langganan ditolak.');
+      await reloadPend();
+    } catch (e: any) { show('err', e.message); }
+  };
 
   const num = (k: string, label: string, suffix?: string) => (
     <div>
@@ -472,6 +491,35 @@ function FinancialTab() {
             show('ok', 'Konfigurasi finansial disimpan.');
           } catch (e: any) { show('err', e.message); } finally { setLoading(false); }
         }} />
+      </div>
+      <div className="max-w-[760px] mt-8">
+        <div className="flex items-center justify-between mb-3">
+          <div>
+            <h3 className="font-semibold text-slate-900">Verifikasi Langganan Pendukung</h3>
+            <p className="text-xs text-slate-500">Pembayaran QRIS/transfer yang dikonfirmasi owner menunggu setujui/tolak di sini.</p>
+          </div>
+          <button onClick={reloadPend} className="p-2 rounded-lg hover:bg-slate-100" title="Muat ulang"><RefreshCw size={16} /></button>
+        </div>
+        {pend.length === 0 ? (
+          <p className="text-sm text-slate-400">Tidak ada langganan menunggu verifikasi.</p>
+        ) : (
+          <div className="space-y-2">
+            {pend.map((p) => (
+              <div key={p.id} className="flex items-center justify-between gap-3 rounded-xl border border-slate-200 bg-white px-4 py-3">
+                <div className="min-w-0">
+                  <p className="text-sm font-semibold text-slate-900 truncate">{p.outlet_name}</p>
+                  <p className="text-xs text-slate-500">
+                    Rp {Number(p.amount).toLocaleString('id-ID')} - {p.pg_reference_id ?? '-'} - {p.status === 'pending_verification' ? 'menunggu verifikasi' : 'belum bayar'}
+                  </p>
+                </div>
+                <div className="flex gap-2 shrink-0">
+                  <button onClick={() => decide(p.id, true)} className="rounded-lg bg-emerald-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-emerald-700">Setujui</button>
+                  <button onClick={() => decide(p.id, false)} className="rounded-lg bg-slate-200 px-3 py-1.5 text-xs font-semibold text-slate-700 hover:bg-slate-300">Tolak</button>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
       </div>
       <Toast msg={msg} />
     </Card>
