@@ -1,5 +1,6 @@
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import { createClient } from "jsr:@supabase/supabase-js@2";
+import { PDFDocument, StandardFonts } from "https://esm.sh/pdf-lib@1.17.1";
 
 // Edge Function terjadwal: bangun laporan penjualan + kirim email otomatis.
 //
@@ -46,6 +47,34 @@ function rangeFor(period: string): { start: Date; end: Date } {
     start.setHours(0, 0, 0, 0);
   }
   return { start, end: now };
+}
+
+function toBase64(bytes: Uint8Array): string {
+  let binary = "";
+  const chunk = 0x8000;
+  for (let i = 0; i < bytes.length; i += chunk) {
+    binary += String.fromCharCode(...bytes.subarray(i, i + chunk));
+  }
+  return btoa(binary);
+}
+
+/// Bangun PDF sederhana dari teks laporan (dipakai sebagai lampiran email).
+async function buildReportPdf(text: string): Promise<string> {
+  const pdf = await PDFDocument.create();
+  const font = await pdf.embedFont(StandardFonts.Helvetica);
+  const size = 11;
+  let page = pdf.addPage([595, 842]);
+  let y = 800;
+  for (const rawLine of text.split("\n")) {
+    if (y < 50) {
+      page = pdf.addPage([595, 842]);
+      y = 800;
+    }
+    const line = rawLine.length > 90 ? rawLine.slice(0, 90) + "..." : rawLine;
+    page.drawText(line, { x: 50, y, size, font });
+    y -= 16;
+  }
+  return toBase64(await pdf.save());
 }
 
 Deno.serve(async (req: Request) => {
@@ -148,6 +177,15 @@ Deno.serve(async (req: Request) => {
       const emailRecipients = recipients.filter((r) => r.includes("@"));
       let sent = false;
       if (channels.includes("email") && emailRecipients.length > 0 && resendKey) {
+        let attachments: Array<Record<string, string>> = [];
+        try {
+          attachments = [{
+            filename: "Laporan_KasirGo.pdf",
+            content: await buildReportPdf(text),
+          }];
+        } catch (_) {
+          attachments = [];
+        }
         const res = await fetch("https://api.resend.com/emails", {
           method: "POST",
           headers: {
@@ -159,6 +197,7 @@ Deno.serve(async (req: Request) => {
             to: emailRecipients,
             subject: `Laporan KasirGo - ${name}`,
             html,
+            attachments,
           }),
         });
         sent = res.ok;

@@ -113,12 +113,13 @@ announcements(is_active), audit_logs(created_at DESC), admin_users(user_id).
 - screens/owner/report_schedule_screen.dart (BARU): toggle aktif, periode harian/mingguan/bulanan,
   jam (time picker), hari/tanggal, sampai 3 penerima, toggle isi laporan, toggle kanal WA/email,
   info jadwal berikutnya, tombol Kirim Sekarang + Simpan Jadwal.
+  Kanal email = "Email (PDF)": laporan dibuat PDF (pdf + printing) lalu dibagikan lewat share sheet.
 - settings_screen.dart: entri "Laporan Otomatis ke Bos" -> ReportScheduleScreen.
 - app.dart: inisialisasi NotificationService; tap notifikasi -> buka WA dengan laporan siap kirim.
 - android/app/src/main/AndroidManifest.xml: RECEIVE_BOOT_COMPLETED + ScheduledNotificationReceiver +
   ScheduledNotificationBootReceiver (agar jadwal bertahan setelah reboot).
 - supabase/functions/report_scheduler/index.ts (BARU, BELUM di-deploy): cron bangun laporan +
-  kirim email (Resend via RESEND_API_KEY/REPORT_FROM_EMAIL) + update last_sent_at.
+  kirim email (Resend via RESEND_API_KEY/REPORT_FROM_EMAIL) + lampiran PDF (pdf-lib) + update last_sent_at.
   Deploy: supabase functions deploy report_scheduler --no-verify-jwt + jadwalkan pg_cron (CRON_SECRET).
 - Catatan: notifikasi lokal berjalan di HP; pengiriman email otomatis penuh butuh Edge Function
   ter-deploy + RESEND_API_KEY. Di web, notifikasi mengikuti izin browser (opsional).

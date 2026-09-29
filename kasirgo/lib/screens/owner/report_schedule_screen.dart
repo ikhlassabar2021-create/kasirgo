@@ -1,5 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:pdf/pdf.dart';
+import 'package:pdf/widgets.dart' as pw;
+import 'package:printing/printing.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../../config/app_theme.dart';
 import '../../providers/auth_provider.dart';
@@ -137,14 +140,14 @@ class _ReportScheduleScreenState extends ConsumerState<ReportScheduleScreen> {
     final recipients = _collectRecipients();
     if (recipients.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-        content: Text('Isi minimal 1 nomor WhatsApp penerima.'),
+        content: Text('Isi minimal 1 penerima laporan.'),
         backgroundColor: AppTheme.errorColor,
       ));
       return;
     }
     final temp = _schedule.copyWith(recipients: recipients, contentFlags: _flags);
     final ok = _schedule.channels.contains('email')
-        ? await _svc.sendViaEmail(_outletId!, temp, businessName: _businessName)
+        ? await _sendEmailPdf(temp, recipients)
         : await _svc.sendViaWhatsApp(_outletId!, temp,
             businessName: _businessName);
     if (!ok && mounted) {
@@ -152,6 +155,52 @@ class _ReportScheduleScreenState extends ConsumerState<ReportScheduleScreen> {
         content: Text('Tidak bisa membuka aplikasi tujuan.'),
         backgroundColor: AppTheme.errorColor,
       ));
+    }
+  }
+
+  /// Buat PDF laporan lalu bagikan (email/WhatsApp) lewat share sheet.
+  Future<bool> _sendEmailPdf(ReportSchedule s, List<String> recipients) async {
+    try {
+      final text =
+          await _svc.buildReportText(_outletId!, s, businessName: _businessName);
+      final doc = pw.Document();
+      doc.addPage(
+        pw.MultiPage(
+          pageFormat: PdfPageFormat.a4,
+          build: (ctx) => [
+            pw.Header(
+              level: 0,
+              child: pw.Text('Laporan KasirGo',
+                  style: pw.TextStyle(
+                      fontSize: 16, fontWeight: pw.FontWeight.bold)),
+            ),
+            pw.SizedBox(height: 8),
+            pw.Text(text, style: const pw.TextStyle(fontSize: 11)),
+            pw.SizedBox(height: 16),
+            pw.Text('Dibuat otomatis oleh KasirGo Super-App UMKM.',
+                style: const pw.TextStyle(
+                    fontSize: 9, color: PdfColors.grey700)),
+          ],
+        ),
+      );
+      final bytes = await doc.save();
+      final email =
+          recipients.firstWhere((r) => r.contains('@'), orElse: () => '');
+      await Printing.sharePdf(
+        bytes: bytes,
+        filename: 'Laporan_KasirGo.pdf',
+        subject: 'Laporan KasirGo${_businessName != null ? " - $_businessName" : ""}',
+        body: email.isNotEmpty ? 'Kepada: $email\n\n$text' : text,
+      );
+      return true;
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+          content: Text('Gagal membuat PDF: $e'),
+          backgroundColor: AppTheme.errorColor,
+        ));
+      }
+      return false;
     }
   }
 
@@ -332,7 +381,7 @@ class _ReportScheduleScreenState extends ConsumerState<ReportScheduleScreen> {
                       spacing: 8,
                       children: [
                         _channelChip('WhatsApp', 'wa'),
-                        _channelChip('Email', 'email'),
+                        _channelChip('Email (PDF)', 'email'),
                       ],
                     ),
                     if (_schedule.enabled) ...[
