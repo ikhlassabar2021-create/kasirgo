@@ -13,8 +13,11 @@ SELESAI: ST7.8-7 - onboarding KYC wajib (wizard 6 field + gate total, anti-dup h
           auto-verify server via RPC submit_kyc, draf offline, foto LOKAL, status lengkap)
 SELESAI: ST7.8-8 - panduan penggunaan (guide_service + guide_screen: PDF cache offline + video,
           filter kategori/role + pencarian, menu Panduan di Pengaturan + ikon bantuan di beranda)
-BERIKUTNYA: ST7.8-9 (Tahap 3/3) - Control Plane superadmin (iklan/panduan/financial/laporan/KYC/
-          kuota/feature flags/otomatisasi/audit) + QA config->app
+SELESAI: ST7.8-9 - Control Plane superadmin (kasirgo-admin: 10 tab lengkap, auth superadmin nyata,
+          integrasi+secret masked, audit log) + QA config->app
+SELESAI: PHASE 7.8 (Tahap 1-3) - Monetisasi & Program Pendukung + Iklan Pelanggan + Laporan ke Bos
+          + KYC Wajib + Panduan + Skala Superadmin
+BERIKUTNYA: Phase 8 - Modul per outlet_type (Variant, BOM/Resep, KDS, Shift/Tip)
 
 ## Detail ST7.8-DB
 File: docs/migrations/2026-09-28-kasirgo-7.8.sql (idempotent, aman diulang)
@@ -193,3 +196,27 @@ announcements(is_active), audit_logs(created_at DESC), admin_users(user_id).
 - app.dart: rute /owner/guide (dibungkus KycGate).
 - Konten dikelola superadmin lewat `guide_items` (Control Plane, ST7.8-9); kini kosong -> layar
   menampilkan empty state. RLS: client hanya baca is_active=true.
+
+
+### ST7.8-9 (Control Plane superadmin + QA + dokumen)
+- docs/migrations/2026-09-29-control-plane-admin.sql (BARU, RAN): helper is_platform_admin()
+  (app_metadata.role superadmin/superowner ATAU keanggotaan admin_users), pasang ulang policy
+  superadmin pada 15 tabel Control Plane + RPC log_admin_action (audit_logs).
+- docs/migrations/2026-09-29-platform-integrations.sql (BARU, RAN): platform_integrations +
+  platform_financial_configs + RLS superadmin + view platform_integrations_public (tanpa secret)
+  + RPC get_financial_config() + seed 8 integrasi kosong (pg_duitku, ppob_digiflazz, b2b_distributor,
+  fintech_partner, cloudflare_r2, db_connection, wa_business, affiliate).
+- Superadmin nyata dibuat: superadmin@kasirgo.com (app_metadata.role=superadmin) + baris admin_users.
+- kasirgo-admin/src/lib/controlPlane.ts (BARU): loadConfig/saveConfig (versioned),
+  guide CRUD, integrations CRUD (secret tdk ditimpa kosong), financial config, feature flags,
+  automation rules, audit logs, maskSecret.
+- kasirgo-admin/src/pages/ControlPlane.tsx (REWRITE): 10 tab -> Iklan (provider/adsterra/sponsor lokal/
+  kategori diblokir/placement/ad-free/consent), Panduan (CRUD guide_items), Financial, Laporan (form),
+  KYC (form), Kuota & Limit (form), Feature Flags (+rollout), Otomatisasi (rule if-then),
+  Integrasi & Secret (masked, reveal toggle), Audit Log.
+- Login.tsx + App.tsx: hapus mock fallback, autentikasi Supabase nyata.
+- QA TERVERIFIKASI: superadmin login -> JWT app_metadata.role=superadmin -> is_platform_admin=true;
+  tulis guide_items 201; baca audit; anon (app) baca guide aktif OK; anon TIDAK bisa baca secret
+  (platform_integrations []); simpan config quota (version 2) -> app baca version 2 -> dikembalikan.
+- Deploy: admin build ke gh-pages /kasirgo/admin/ (asset index-BUkJSara.js, CDN 200).
+- Catatan: icon Iklan/Panduan dll di CRUD; secret tampil ter-mask & tidak pernah dikirim ke klien.

@@ -1351,10 +1351,13 @@ Lihat BAGIAN 7C (ST7.6-1 s/d ST7.6-8). UI-only, semua role + semua fitur.
 ### PHASE 7.7 - Control Plane + KYC + Izin + Setting Superadmin
 Lihat BAGIAN 7D (ST7.7-1 s/d ST7.7-6). Semua setting integrasi/margin lewat superadmin, tanpa kodingan.
 
-### PHASE 7.8 - Monetisasi & Program Pendukung (1 harga Rp50k) + Iklan Pelanggan + Laporan ke Bos + KYC Wajib + Panduan + Skala Superadmin
+### PHASE 7.8 - Monetisasi & Program Pendukung (1 harga Rp50k) + Iklan Pelanggan + Laporan ke Bos + KYC Wajib + Panduan + Skala Superadmin  [SELESAI]
 Lihat BAGIAN 7E (ST7.8-1 s/d ST7.8-9). Ganti 3 tier jadi 1 harga Rp50.000/bulan + trial 14 hari;
 pindah sebagian fitur ke Pendukung; iklan hanya sisi pelanggan (web); laporan otomatis ke bos;
 onboarding KYC wajib (app terkunci sampai verified); panduan PDF/video via Control Plane.
+STATUS: SELESAI (ST7.8-DB/2/3/4/5/6/7/8/9). Control Plane superadmin live di /kasirgo/admin/.
+Migrasi tambahan: 2026-09-29-outlet-kyc.sql, 2026-09-29-control-plane-admin.sql,
+2026-09-29-platform-integrations.sql (semua sudah dijalankan di Supabase).
 
 ### PHASE 8 - Modul per outlet_type
 - ST8-1: Variant produk (product_form + product_list + POS pilih varian) - retail

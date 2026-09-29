@@ -18,16 +18,10 @@ export default function App() {
 
   const checkAuth = async () => {
     try {
-      const mockStr = localStorage.getItem('kasirgo_mock_session')
-      if (mockStr) {
-        setSession(JSON.parse(mockStr))
-        return
-      }
-
       const { data: { session } } = await supabase.auth.getSession()
       setSession(session ?? null)
     } catch (err) {
-      console.warn('Supabase session lookup failed, falling back to unauthenticated state:', err)
+      console.warn('Supabase session lookup failed:', err)
       setSession(null)
     } finally {
       setLoading(false)
@@ -41,7 +35,6 @@ export default function App() {
       data: { subscription },
     } = supabase.auth.onAuthStateChange((event, session) => {
       if (event === 'SIGNED_OUT') {
-        localStorage.removeItem('kasirgo_mock_session')
         setSession(null)
       } else if (session) {
         setSession(session)
@@ -49,19 +42,12 @@ export default function App() {
       setLoading(false)
     })
 
-    const handleMockChange = () => {
-      checkAuth()
-    }
-    window.addEventListener('mock_auth_change', handleMockChange)
-
     return () => {
       subscription.unsubscribe()
-      window.removeEventListener('mock_auth_change', handleMockChange)
     }
   }, [])
 
   const handleLogout = async () => {
-    localStorage.removeItem('kasirgo_mock_session')
     try {
       await supabase.auth.signOut()
     } catch (e) {

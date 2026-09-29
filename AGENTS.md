@@ -96,19 +96,17 @@ supabase_flutter, drift, sqlite3_flutter_libs, path_provider, go_router, flutter
 - **Ukuran APK ditekan:** hapus package tidak perlu, gambar WebP bukan PNG, font subset Inter, `proguard-rules.pro`, tree-shaking Dart otomatis.
 
 ## Repository & Env
-- GITHUB_URL: https://github.com/sabar2023/kasirgo.git
-- Remote sudah dikonfigurasi (origin). Branch lokal: master.
-- STATUS PUSH: commit terakhir `439e845` (docs: final memori sebelum compact) BELUM ter-push.
-  Penyebab: credential helper MonkeyCode mengembalikan status 500 (server-nya error), `gh` belum login, tidak ada SSH key, `ssh` tidak terinstall.
-- CARA PUSH (pilih satu):
-  A. Buat Personal Access Token (PAT) di https://github.com/settings/tokens (scope: repo untuk classic, atau Contents: Read+Write untuk fine-grained). Lalu:
-     git remote set-url origin https://<TOKEN>@github.com/sabar2023/kasirgo.git
-     git push -u origin master
-  B. Atau: echo "<TOKEN>" | gh auth login --with-token && git push -u origin master
-  C. Atau push manual dari terminal lokal sendiri: git push -u origin master (pakai PAT sebagai password).
-  Setelah push sukses: HAPUS baris ini dari AGENTS.md (jaga-jaga token jangan tersisa). Status jadi: SUDAH TER-PUSH.
-- SUPABASE_URL & ANON_KEY: placeholder di config/supabase_config.dart, isi manual (Phase 2).
-- Deployment: React admin ke Cloudflare Pages (BUKAN Vercel). Flutter APK release via flutter build apk --release
+- GITHUB_URL: repo aktif = https://github.com/ikhlassabar2021-create/kasirgo.git
+- Remote origin sudah dikonfigurasi. Branch utama: main (bukan master). Branch deploy: gh-pages.
+- STATUS PUSH: SUDAH TER-PUSH (main + gh-pages sinkron).
+- App: https://ikhlassabar2021-create.github.io/kasirgo/ (base /kasirgo/, hash URL).
+- Superadmin React: https://ikhlassabar2021-create.github.io/kasirgo/admin/ (auth Supabase nyata).
+  Akun: superadmin@kasirgo.com / sabar2021 (app_metadata.role=superadmin + baris admin_users).
+- SUPABASE: project id lmvjecdvfzsmrowwwpck; URL & anon key terisi di
+  kasirgo/lib/config/supabase_config.dart dan kasirgo-admin/src/config/supabase.ts.
+  service_role TIDAK disimpan di repo/APK.
+- Deployment: Flutter web -> gh-pages root; React admin -> gh-pages /admin/ (BUKAN Vercel).
+  Flutter APK release via flutter build apk --release.
 
 ## Dokumen Referensi
 - **Prompt siap-tempel tiap sub-task (BARU): docs/PROMPT-GILIRAN.md** -> pakai ini untuk memulai task baru.
@@ -139,7 +137,7 @@ Status: SELESAI. Project Supabase sudah dibuat dan schema terpasang serta diuji.
 - [x] Phase 7.5: Zero-Friction Onboarding + Dual-Mode QRIS + Settlement + Superowner Financial Config
 - [x] Phase 7.6: UI Retrofit "Centennial Modern Ocean White" (semua role + semua fitur, UI-only)
 - [x] Phase 7.7: Control Plane + KYC Auto-Verify + Izin Produk/Staf + Owner Affiliate
-- [ ] Phase 7.8: Monetisasi & Program Pendukung (1 harga Rp50k/bln) + Iklan Pelanggan + Laporan ke Bos + KYC Wajib + Panduan + Skala Superadmin  (ST7.8-8 SELESAI; BERIKUTNYA ST7.8-9 Control Plane)
+- [x] Phase 7.8: Monetisasi & Program Pendukung (1 harga Rp50k/bln) + Iklan Pelanggan + Laporan ke Bos + KYC Wajib + Panduan + Skala Superadmin  (SELESAI)
 - [ ] Phase 8: Modul outlet_type (BOM/Resep, KDS/QR Meja, Variant, Shift/Tip)
 - [ ] Phase 9: PPOB + Closed-loop + Embedded B2B Restock
 - [ ] Phase 10: Fintech Lead + Hyperlocal Data + Micro-insurance
@@ -152,3 +150,5 @@ Phase 7.7 = Control Plane: semua setting integrasi/margin lewat superadmin tanpa
 KYC owner wajib (email/nohp/nama toko/alamat/KTP/selfie) + auto-verify. Spec: Bagian 7D (ST7.7-2).
 Phase 7.8 = Monetisasi: Program Pendukung SATU harga Rp50.000/bulan, iklan HANYA di sisi pelanggan (web,
 tidak di APK, tanpa iklan tersembunyi), laporan ke bos, KYC wajib, panduan in-app, skala Superadmin. Spec: workflow Bagian 4 + Phase 7.8.
+STATUS PHASE 7.8: SELESAI. Control Plane superadmin (10 tab) live di /kasirgo/admin/. Superadmin nyata:
+superadmin@kasirgo.com / sabar2021. Migrasi KYC + control-plane-admin + platform-integrations sudah dijalankan.

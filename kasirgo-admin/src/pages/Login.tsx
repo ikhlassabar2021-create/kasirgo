@@ -9,8 +9,8 @@ interface LoginProps {
 }
 
 export function Login({ onSuccess: _onSuccess }: LoginProps = {}) {
-  const [email, setEmail] = useState('owner@kasirgo.com');
-  const [password, setPassword] = useState('password123');
+  const [email, setEmail] = useState('superadmin@kasirgo.com');
+  const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const navigate = useNavigate();
@@ -21,40 +21,19 @@ export function Login({ onSuccess: _onSuccess }: LoginProps = {}) {
     setLoading(true);
     
     try {
-      let success = false;
       const { data, error } = await supabase.auth.signInWithPassword({
         email: email.trim(),
         password: password,
       });
 
-      if (!error && data.session) {
-        success = true;
-      } else {
-        // Fallback demo login owner & superadmin
-        if (password === 'password123' || password === 'TestFix123!') {
-          const isSuperadmin = email.trim() === 'admin@kasirgo.com';
-          const mockUser = {
-            id: isSuperadmin ? 'mock-superadmin-id' : 'mock-owner-id',
-            email: email.trim(),
-            user_metadata: { 
-              role: isSuperadmin ? 'superadmin' : 'owner', 
-              full_name: isSuperadmin ? 'Super Admin KasirGo' : 'Owner Kopi Senja' 
-            }
-          };
-          localStorage.setItem('kasirgo_mock_session', JSON.stringify({ user: mockUser }));
-          window.dispatchEvent(new Event('mock_auth_change'));
-          success = true;
-        } else {
-          throw error || new Error('Kredensial tidak valid');
-        }
+      if (error || !data.session) {
+        throw error || new Error('Kredensial tidak valid');
       }
-      
-      if (success) {
-        navigate('/owner');
-      }
+
+      navigate('/owner');
     } catch (error: any) {
       console.error('Login error:', error.message);
-      alert(error.message || 'Login failed');
+      alert(error.message || 'Login gagal');
     } finally {
       setLoading(false);
     }
@@ -158,8 +137,8 @@ export function Login({ onSuccess: _onSuccess }: LoginProps = {}) {
 
           {/* Quick Demo Info */}
           <div className="mt-4 p-2.5 rounded-xl bg-sky-50/80 border border-sky-100 flex items-center justify-between text-[11px] text-slate-600">
-            <span className="text-slate-500">Demo Login Owner:</span>
-            <span className="font-mono text-sky-700 font-semibold">owner@kasirgo.com</span>
+            <span className="text-slate-500">Akun Superadmin:</span>
+            <span className="font-mono text-sky-700 font-semibold">superadmin@kasirgo.com</span>
           </div>
         </div>
       </div>
