@@ -136,7 +136,21 @@ retail = semua kecuali QR Meja & KDS; gerobak = semua kecuali PPOB & QR Meja.
 3. Tambahkan tip Rp5.000 pada transaksi -> tercatat di tips.
 4. Tutup Shift -> hitung fisik Rp260.000 -> "KAS PAS", riwayat tampil rekap.
 
+### ST8-6 — QA + Gate + Docs + Deploy (2026-09-29)
+- Gate varian: toggle "Produk punya varian" di product_form hanya tampil
+  untuk outlet_type retail (via `outletTypeProvider`); kasir_home di-retrofit
+  ke API Shift baru (tanpa kolom shift pagi/siang/malam, selisih kas di snackbar,
+  tip menyertakan shift_id aktif).
+- `flutter analyze lib`: 0 error, 0 warning (21 info pre-existing).
+- QA DB lulus: trigger stok varian (sekali per insert, trigger duplikat lama
+  `tr_decrement_stock` dihapus), upsert resep + deduksi bahan (1000->900,
+  stock_logs 'resep'), shift + split bill + tip (expected 260k, selisih 0).
+  Semua data QA dibersihkan.
+- Docs: KASIRGO-WORKFLOW-LENGKAP Bagian Phase 8 (SELESAI), AGENTS.md tracker
+  Phase 8 SELESAI.
+- Deploy: flutter build web --base-href /kasirgo/ -> gh-pages.
+
+## STATUS PHASE 8: SELESAI (ST8-1 s/d ST8-6)
+
 ## BERIKUTNYA
-- ST8-6: QA menyeluruh per outlet_type + gate varian hanya retail + update
-  KASIRGO-WORKFLOW-LENGKAP (Bagian 3.2/8) + AGENTS.md (Phase 8 SELESAI) +
-  build web + deploy gh-pages + commit.
+- Phase 9: PPOB + Closed-loop settlement + Embedded B2B Restock (ST9-1..ST9-3).

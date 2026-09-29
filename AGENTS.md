@@ -141,7 +141,7 @@ Status: SELESAI. Project Supabase sudah dibuat dan schema terpasang serta diuji.
 - [x] Phase 7.6: UI Retrofit "Centennial Modern Ocean White" (semua role + semua fitur, UI-only)
 - [x] Phase 7.7: Control Plane + KYC Auto-Verify + Izin Produk/Staf + Owner Affiliate
 - [x] Phase 7.8: Monetisasi & Program Pendukung (1 harga Rp50k/bln) + Iklan Pelanggan + Laporan ke Bos + KYC Wajib + Panduan + Skala Superadmin  (SELESAI)
-- [ ] Phase 8: Modul outlet_type (BOM/Resep, KDS/QR Meja, Variant, Shift/Tip)
+- [x] Phase 8: Modul outlet_type (BOM/Resep, KDS/QR Meja, Variant, Shift/Tip)  (SELESAI)
 - [ ] Phase 9: PPOB + Closed-loop + Embedded B2B Restock
 - [ ] Phase 10: Fintech Lead + Hyperlocal Data + Micro-insurance
 - [ ] Phase 11: Superadmin Web (12 revenue engine, RBAC, rules engine, monitoring)
@@ -155,3 +155,7 @@ Phase 7.8 = Monetisasi: Program Pendukung SATU harga Rp50.000/bulan, iklan HANYA
 tidak di APK, tanpa iklan tersembunyi), laporan ke bos, KYC wajib, panduan in-app, skala Superadmin. Spec: workflow Bagian 4 + Phase 7.8.
 STATUS PHASE 7.8: SELESAI. Control Plane superadmin (10 tab) live di /kasirgo/admin/. Superadmin nyata:
 superadmin@kasirgo.com / sabar2021. Migrasi KYC + control-plane-admin + platform-integrations sudah dijalankan.
+Phase 8 = Modul per outlet_type: module_registry (override feature_flags `module_<nama>`), product_variants
++ trigger stok varian (stock_logs), recipes/BOM (HPP bahan, deduksi stok bahan saat penjualan),
+KDS dine-in (realtime, filter hari ini), shifts/tips/transaction_payments (shift kasir, split bill).
+Migrasi: docs/migrations/2026-10-01-kasirgo-8.sql. Detail: PROGRESS-PHASE8.md.

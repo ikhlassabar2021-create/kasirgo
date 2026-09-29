@@ -40,7 +40,6 @@ class _CashierHomeScreenState extends ConsumerState<CashierHomeScreen> {
 
   void _handleOpenShift(BuildContext parentContext, String outletId, String userId) {
     final cashController = TextEditingController(text: '0');
-    String selectedShift = 'pagi';
 
     showDialog(
       context: parentContext,
@@ -59,43 +58,7 @@ class _CashierHomeScreenState extends ConsumerState<CashierHomeScreen> {
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text(
-                'Pilih Shift:',
-                style: GoogleFonts.inter(fontSize: 13, fontWeight: FontWeight.w600, color: AppTheme.textSecondary),
-              ),
-              const SizedBox(height: 8),
-              Row(
-                children: ['pagi', 'siang', 'malam'].map((s) {
-                  final isSelected = selectedShift == s;
-                  return Expanded(
-                    child: Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 4),
-                      child: InkWell(
-                        onTap: () => setDialogState(() => selectedShift = s),
-                        borderRadius: BorderRadius.circular(8),
-                        child: Container(
-                          padding: const EdgeInsets.symmetric(vertical: 8),
-                          alignment: Alignment.center,
-                          decoration: BoxDecoration(
-                            color: isSelected ? AppTheme.primaryColor : AppTheme.backgroundColor,
-                            borderRadius: BorderRadius.circular(8),
-                            border: Border.all(color: isSelected ? AppTheme.primaryColor : AppTheme.borderColor),
-                          ),
-                          child: Text(
-                            s.toUpperCase(),
-                            style: TextStyle(
-                              color: isSelected ? Colors.white : AppTheme.textPrimary,
-                              fontWeight: FontWeight.bold,
-                              fontSize: 12,
-                            ),
-                          ),
-                        ),
-                      ),
-                    ),
-                  );
-                }).toList(),
-              ),
-              const SizedBox(height: 16),
+
               TextField(
                 controller: cashController,
                 keyboardType: TextInputType.number,
@@ -118,15 +81,8 @@ class _CashierHomeScreenState extends ConsumerState<CashierHomeScreen> {
                 final openingCash = double.tryParse(cashController.text) ?? 0.0;
                 final messenger = ScaffoldMessenger.of(parentContext);
                 Navigator.pop(ctx);
-                final newShift = Shift(
-                  id: '',
-                  outletId: outletId,
-                  userId: userId,
-                  shift: selectedShift,
-                  openedAt: DateTime.now(),
-                  openingCash: openingCash,
-                );
-                final result = await SupabaseService().openShift(newShift);
+                final result =
+                    await SupabaseService().openShift(outletId, userId, openingCash);
                 if (!mounted) return;
                 ref.invalidate(activeShiftProvider);
                 messenger.showSnackBar(
@@ -164,7 +120,7 @@ class _CashierHomeScreenState extends ConsumerState<CashierHomeScreen> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
-              'Shift ${currentShift.shift.toUpperCase()} dimulai pukul ${Formatters.date(currentShift.openedAt)}',
+              'Shift dimulai pukul ${Formatters.date(currentShift.openedAt)}',
               style: const TextStyle(color: AppTheme.textSecondary, fontSize: 13),
             ),
             const SizedBox(height: 8),
@@ -196,13 +152,21 @@ class _CashierHomeScreenState extends ConsumerState<CashierHomeScreen> {
               final closingCash = double.tryParse(cashController.text) ?? 0.0;
               final messenger = ScaffoldMessenger.of(parentContext);
               Navigator.pop(ctx);
-              final success = await SupabaseService().closeShift(currentShift.id, closingCash);
+              final closed = await SupabaseService()
+                  .closeShift(currentShift.id, closingCash, null);
               if (!mounted) return;
               ref.invalidate(activeShiftProvider);
+              final diff = closed?.difference ?? 0;
               messenger.showSnackBar(
                 SnackBar(
-                  content: Text(success ? 'Shift ditutup. Rekap tersimpan!' : 'Gagal menutup shift'),
-                  backgroundColor: success ? AppTheme.successColor : AppTheme.errorColor,
+                  content: Text(closed == null
+                      ? 'Gagal menutup shift'
+                      : (diff.abs() <= 1
+                          ? 'Shift ditutup. Kas pas!'
+                          : 'Shift ditutup. Selisih: ${diff > 0 ? '+' : ''}${Formatters.currency(diff)}')),
+                  backgroundColor: closed == null
+                      ? AppTheme.errorColor
+                      : (diff.abs() <= 1 ? AppTheme.successColor : AppTheme.warningColor),
                 ),
               );
             },
@@ -251,10 +215,13 @@ class _CashierHomeScreenState extends ConsumerState<CashierHomeScreen> {
               if (amount <= 0) return;
               final messenger = ScaffoldMessenger.of(parentContext);
               Navigator.pop(ctx);
+              final openShift =
+                  await SupabaseService().getOpenShift(outletId);
               final tip = Tip(
                 id: '',
                 outletId: outletId,
                 userId: userId,
+                shiftId: openShift?.id,
                 amount: amount,
                 createdAt: DateTime.now(),
               );
@@ -433,9 +400,7 @@ class _CashierHomeScreenState extends ConsumerState<CashierHomeScreen> {
                             ),
                             const SizedBox(width: 6),
                             Text(
-                              hasActiveShift
-                                  ? 'Shift ${activeShift.shift.toUpperCase()} Aktif'
-                                  : 'Shift Belum Dibuka',
+                              hasActiveShift ? 'Shift Aktif' : 'Shift Belum Dibuka',
                               style: GoogleFonts.inter(
                                 fontSize: 11.5,
                                 color: Colors.white,
@@ -514,7 +479,7 @@ class _CashierHomeScreenState extends ConsumerState<CashierHomeScreen> {
                 ),
                 const SizedBox(height: 6),
                 Text(
-                  activeShift != null ? 'Shift ${activeShift.shift.toUpperCase()}' : 'Tutup',
+                  activeShift != null ? 'Shift Aktif' : 'Tutup',
                   style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14, color: AppTheme.textPrimary),
                 ),
                 Text(

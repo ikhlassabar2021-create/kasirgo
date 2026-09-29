@@ -1359,12 +1359,23 @@ STATUS: SELESAI (ST7.8-DB/2/3/4/5/6/7/8/9). Control Plane superadmin live di /ka
 Migrasi tambahan: 2026-09-29-outlet-kyc.sql, 2026-09-29-control-plane-admin.sql,
 2026-09-29-platform-integrations.sql (semua sudah dijalankan di Supabase).
 
-### PHASE 8 - Modul per outlet_type
-- ST8-1: Variant produk (product_form + product_list + POS pilih varian) - retail
-- ST8-2: BOM/Resep HPP (recipe + recipe_items) + kalkulasi HPP otomatis - cafe
-- ST8-3: Kitchen Display (KDS): daftar order masuk, status, tandai selesai - cafe/warteg
-- ST8-4: Shift kasir (open/close + opening/closing cash) + Tip + split bill
-- Test: sesuai outlet_type.
+### PHASE 8 - Modul per outlet_type  [SELESAI]
+- ST8-1: Migrasi DB (product_variants, recipes, recipe_items, shifts, tips,
+  transaction_payments, stock_logs + products.has_variants) + module_registry
+  (default per outlet_type + override feature_flags `module_<nama>`)
+- ST8-2: Variant produk - form toggle (retail saja) + editor, badge di list,
+  POS pilih varian (stok per varian), trigger `decrement_stock` kurangi stok
+  varian/produk + tulis stock_logs - retail
+- ST8-3: Resep/BOM - recipe_screen editor (yield, bahan, qty, satuan), HPP =
+  sum qty x cost bahan, HPP/porsi + target margin -> harga saran, set HPP produk,
+  deduksi stok bahan saat penjualan (stock_logs reason 'resep') - cafe/warteg
+- ST8-4: KDS lengkap - realtime, filter antrean, status via RPC set_order_status,
+  filter pesanan hari ini, indikator >10 menit - warteg/cafe
+- ST8-5: Shift kasir (buka/tutup, modal awal, rekap cash/qris/transfer/tip,
+  selisih kas) + tip (per transaksi/manual) + split bill (transaction_payments,
+  validasi total = tagihan) - semua role kasir
+- STATUS: SELESAI. Migrasi: docs/migrations/2026-10-01-kasirgo-8.sql (di live DB).
+  Detail implementasi + cara uji per sub-task: PROGRESS-PHASE8.md.
 
 ### PHASE 9 - PPOB + Embedded B2B Restock
 - ST9-1: `services/ppob_service.dart` + `screens/owner/ppob_screen.dart` (pulsa/PLN/BPJS/game);

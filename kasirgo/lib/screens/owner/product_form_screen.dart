@@ -13,6 +13,7 @@ import '../../config/app_theme.dart';
 import '../../models/product.dart';
 import '../../models/variant.dart';
 import '../../providers/auth_provider.dart';
+import '../../providers/outlet_provider.dart';
 import '../../services/supabase_service.dart';
 import '../../widgets/common/variant_editor.dart';
 import '../../utils/validators.dart';
@@ -45,6 +46,8 @@ class _ProductFormScreenState extends ConsumerState<ProductFormScreen> {
   bool _hasVariants = false;
   bool _variantsLoading = false;
   double _recipeYield = 0;
+
+  bool _isRetailOutlet = false;
   List<ProductVariant> _variants = [];
   final Set<String> _removedVariantIds = {};
 
@@ -116,6 +119,20 @@ class _ProductFormScreenState extends ConsumerState<ProductFormScreen> {
       _loadRecipeInfo(p.id);
     }
   }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (!_retailChecked) {
+      _retailChecked = true;
+      final outletId = ref.read(currentUserProvider)?.outletId ?? '';
+      if (outletId.isNotEmpty) {
+        _isRetailOutlet = ref.read(outletTypeProvider(outletId)) == 'retail';
+      }
+    }
+  }
+
+  bool _retailChecked = false;
 
   Future<void> _loadRecipeInfo(String productId) async {
     final recipe = await SupabaseService().getRecipe(productId);
@@ -1130,18 +1147,19 @@ class _ProductFormScreenState extends ConsumerState<ProductFormScreen> {
                       onChanged: (v) => setState(() => _selectedCategory = v),
                     ),
                     const SizedBox(height: 12),
-                    SwitchListTile(
-                      value: _hasVariants,
-                      onChanged: (v) => setState(() => _hasVariants = v),
-                      contentPadding: EdgeInsets.zero,
-                      activeThumbColor: AppTheme.primaryColor,
-                      title: const Text('Produk punya varian',
-                          style: TextStyle(
-                              fontSize: 14, fontWeight: FontWeight.w600)),
-                      subtitle: const Text(
-                          'Mis. ukuran, level pedas, topping. Stok per varian.',
-                          style: TextStyle(fontSize: 12)),
-                    ),
+                    if (_isRetailOutlet)
+                      SwitchListTile(
+                        value: _hasVariants,
+                        onChanged: (v) => setState(() => _hasVariants = v),
+                        contentPadding: EdgeInsets.zero,
+                        activeThumbColor: AppTheme.primaryColor,
+                        title: const Text('Produk punya varian',
+                            style: TextStyle(
+                                fontSize: 14, fontWeight: FontWeight.w600)),
+                        subtitle: const Text(
+                            'Mis. ukuran, level pedas, topping. Stok per varian.',
+                            style: TextStyle(fontSize: 12)),
+                      ),
                     if (_hasVariants) ...[
                       if (_variantsLoading)
                         const Padding(
