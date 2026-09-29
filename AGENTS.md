@@ -29,8 +29,9 @@ Schema SQL lengkap: docs/KASIRGO-WORKFLOW-LENGKAP.md Phase 1.
 | Customer | Scan QR meja -> order (cafe/resto) | Flutter Mobile |
 | Superadmin | User mgmt, impersonate, backup/restore, affiliate, revenue, Control Plane (setting integrasi) | React Web |
 
-## Program Pendukung (bukan langganan) + Kuota Staf
-GRATIS SELAMANYA untuk fitur inti. Fitur kosmetik/bonus via Program Pendukung (Pendukung/Pro/Setia).
+## Program Pendukung + Kuota Staf
+GRATIS SELAMANYA untuk fitur inti. Fitur kosmetik/bonus via Program Pendukung.
+Rencana 7.8: SATU harga Rp50.000/bulan (menggantikan 3 tier Pendukung/Pro/Setia).
 Kuota akun staf gratis per outlet: 1 Admin + 1 Kasir (Owner create & hapus sendiri). Lebih banyak -> Program Pendukung.
 
 ## Control Plane (setting via Superadmin, TANPA ubah koding)
@@ -135,16 +136,19 @@ Status: SELESAI. Project Supabase sudah dibuat dan schema terpasang serta diuji.
 - [x] Phase 5 / 5.5A / 5.5B / 5.5C: Retrofit 3.0 (DB, UI, Security)
 - [x] Phase 6: Kasbon/Piutang + WA + Sponsored Receipt
 - [x] Phase 7: Dynamic QRIS Payment Gateway + webhook HMAC
-- [ ] Phase 7.5: Zero-Friction Onboarding + Dual-Mode QRIS + Settlement + Superowner Financial Config  (BERIKUTNYA)
-- [ ] Phase 7.6: UI Retrofit "Centennial Modern Ocean White" (semua role + semua fitur, UI-only)
-- [ ] Phase 7.7: Control Plane + KYC Auto-Verify + Izin Produk/Staf + Owner Affiliate
+- [x] Phase 7.5: Zero-Friction Onboarding + Dual-Mode QRIS + Settlement + Superowner Financial Config
+- [x] Phase 7.6: UI Retrofit "Centennial Modern Ocean White" (semua role + semua fitur, UI-only)
+- [x] Phase 7.7: Control Plane + KYC Auto-Verify + Izin Produk/Staf + Owner Affiliate
+- [ ] Phase 7.8: Monetisasi & Program Pendukung (1 harga Rp50k/bln) + Iklan Pelanggan + Laporan ke Bos + KYC Wajib + Panduan + Skala Superadmin  (BERIKUTNYA)
 - [ ] Phase 8: Modul outlet_type (BOM/Resep, KDS/QR Meja, Variant, Shift/Tip)
 - [ ] Phase 9: PPOB + Closed-loop + Embedded B2B Restock
 - [ ] Phase 10: Fintech Lead + Hyperlocal Data + Micro-insurance
-- [ ] Phase 11: Superadmin Web (12 revenue engine)
+- [ ] Phase 11: Superadmin Web (12 revenue engine, RBAC, rules engine, monitoring)
 - [ ] Phase 12: Polish + Security Audit + Release
 
 Catatan: Phase 7.6 adalah redesign visual menyeluruh (semua dashboard + fitur Produk/Pelanggan/
 Karyawan/Laporan/Pengaturan) tanpa mengubah fitur/logic. Spec: workflow Bagian 1.6 & 7C.
 Phase 7.7 = Control Plane: semua setting integrasi/margin lewat superadmin tanpa ubah koding. Spec: Bagian 1.10 & 7D.
 KYC owner wajib (email/nohp/nama toko/alamat/KTP/selfie) + auto-verify. Spec: Bagian 7D (ST7.7-2).
+Phase 7.8 = Monetisasi: Program Pendukung SATU harga Rp50.000/bulan, iklan HANYA di sisi pelanggan (web,
+tidak di APK, tanpa iklan tersembunyi), laporan ke bos, KYC wajib, panduan in-app, skala Superadmin. Spec: workflow Bagian 4 + Phase 7.8.
