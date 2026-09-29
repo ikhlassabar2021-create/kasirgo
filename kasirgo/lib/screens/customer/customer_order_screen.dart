@@ -6,7 +6,9 @@ import '../../config/app_theme.dart';
 import '../../models/product.dart';
 import '../../models/transaction.dart';
 import '../../services/supabase_service.dart';
+import '../../services/ad_service.dart';
 import '../../utils/formatters.dart';
+import '../../widgets/ads/sponsor_ad_slot.dart';
 import '../../widgets/pos/cart_panel.dart';
 
 class CustomerOrderScreen extends StatefulWidget {
@@ -35,11 +37,18 @@ class _CustomerOrderScreenState extends State<CustomerOrderScreen> {
   String _selectedCategory = 'Semua';
   String _searchQuery = '';
   String? _error;
+  bool _adConsent = false;
 
   @override
   void initState() {
     super.initState();
     _loadProducts();
+    _loadAdConsent();
+  }
+
+  Future<void> _loadAdConsent() async {
+    final consent = await AdService().getConsent();
+    if (mounted) setState(() => _adConsent = consent == true);
   }
 
   @override
@@ -459,6 +468,12 @@ class _CustomerOrderScreenState extends State<CustomerOrderScreen> {
     final filtered = _filtered;
     return Column(
       children: [
+        SponsorAdSlot(
+          outletId: widget.outletId,
+          consentGiven: _adConsent,
+          compact: availableWidth < 760,
+          onConsentChanged: (v) => setState(() => _adConsent = v),
+        ),
         Padding(
           padding: const EdgeInsets.fromLTRB(12, 10, 12, 4),
           child: TextField(

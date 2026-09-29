@@ -7,7 +7,9 @@ SELESAI: ST7.8-4 - gate hasFeature() fitur pindahan (WA Marketing, Social Sync, 
           Health Score Pro, export Excel/PDF, slot staf tambahan)
 SELESAI: ST7.8-5 - laporan otomatis ke bos (report_schedule_screen + notifikasi lokal + WA/email one-tap
           + Edge Function report_scheduler)
-BERIKUTNYA: ST7.8-6 (Tahap 2/3) - iklan pelanggan (katalog online + QR meja: config ads, non-intrusif, ad_free, blokir, consent)
+SELESAI: ST7.8-6 - iklan pelanggan (ad_service + SponsorAdSlot di halaman pesan pelanggan;
+          config ads cache+fallback, ad_free Pendukung, blokir judi/dewasa/pinjol, consent UU PDP)
+BERIKUTNYA: ST7.8-7 (Tahap 2/3) - onboarding KYC wajib (wizard 6 field, gate, status, anti-dup, verify_kyc)
 
 ## Detail ST7.8-DB
 File: docs/migrations/2026-09-28-kasirgo-7.8.sql (idempotent, aman diulang)
@@ -123,6 +125,23 @@ announcements(is_active), audit_logs(created_at DESC), admin_users(user_id).
   Deploy: supabase functions deploy report_scheduler --no-verify-jwt + jadwalkan pg_cron (CRON_SECRET).
 - Catatan: notifikasi lokal berjalan di HP; pengiriman email otomatis penuh butuh Edge Function
   ter-deploy + RESEND_API_KEY. Di web, notifikasi mengikuti izin browser (opsional).
+
+### ST7.8-6 (iklan pelanggan)
+- services/ad_service.dart (BARU): baca config `ads` via SupporterService.getAdsConfig() (cache+fallback),
+  model SponsorAd, AdDecision; consent tersimpan (SharedPreferences 'ad_consent_state_v1');
+  isOutletAdFree() via RPC get_public_ad_state (fallback ke entitlements);
+  decide(): owner -> tidak ada iklan, Pendukung/ad_free -> skip, consent wajib sebelum tampil,
+  blokir kategori judi/dewasa/pinjol (hardcoded + config), sponsor_lokal diutamakan, adsterra fallback.
+- widgets/ads/sponsor_ad_slot.dart (BARU): kartu iklan WAJAR non-intrusif + label "Iklan Sponsor",
+  kartu consent UU PDP (Setuju/Tolak), tap buka URL sponsored (eksternal). Tidak popunder,
+  tidak menutupi tombol, tidak ada iklan tersembunyi. HANYA dirender di halaman pelanggan.
+- screens/customer/customer_order_screen.dart: SponsorAdSlot di atas katalog (sisi pelanggan QR meja).
+- docs/migrations/2026-09-29-public-ad-state.sql (BARU, SUDAH DIJALANKAN di Supabase, terverifikasi):
+  RPC get_public_ad_state(p_outlet) SECURITY DEFINER untuk anon (boolean aman saja).
+- Catatan: config `ads` (provider, adsterra_key, sponsor_local[], blocked_categories, placement,
+  ad_free_for_supporter, consent_required) dikelola superadmin lewat Control Plane (ST7.8-9).
+  Iklan owner-visible TIDAK ada; katalog online owner tetap bersih.
+
 
 ## Catatan lama
 - Tahap berikutnya (ST7.8-APP): services/supporter_service.dart (baca harga/durasi dari
