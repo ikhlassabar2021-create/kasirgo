@@ -159,27 +159,83 @@ class SupabaseService {
 
   Future<List<Transaction>> getTransactions(String outletId, {int limit = 50, DateTime? startDate, DateTime? endDate}) async {
     try {
-      var query = _client
+      final response = await _queryTransactions(
+        outletId,
+        limit: limit,
+        startDate: startDate,
+        endDate: endDate,
+        withItems: true,
+      );
+      return response;
+    } catch (_) {
+      try {
+        return await _queryTransactions(
+          outletId,
+          limit: limit,
+          startDate: startDate,
+          endDate: endDate,
+          withItems: false,
+        );
+      } catch (_) {
+        return [];
+      }
+    }
+  }
+
+  Future<List<Transaction>> _queryTransactions(
+    String outletId, {
+    required int limit,
+    DateTime? startDate,
+    DateTime? endDate,
+    required bool withItems,
+  }) async {
+    final select = withItems ? '*, transaction_items(*)' : '*';
+    var query = _client.from('transactions').select(select).eq('outlet_id', outletId);
+
+    if (startDate != null) {
+      query = query.gte('created_at', startDate.toIso8601String());
+    }
+    if (endDate != null) {
+      query = query.lte('created_at', endDate.toIso8601String());
+    }
+
+    final response = await query.order('created_at', ascending: false).limit(limit);
+
+    return (response as List)
+        .map((json) => Transaction.fromJson(json as Map<String, dynamic>))
+        .toList();
+  }
+
+  /// Pesanan dine-in (QR meja) untuk kasir/dapur — termasuk rincian item.
+  Future<List<Transaction>> getDineInOrders(String outletId, {int limit = 40}) async {
+    try {
+      final response = await _client
           .from('transactions')
-          .select()
-          .eq('outlet_id', outletId);
-
-      if (startDate != null) {
-        query = query.gte('created_at', startDate.toIso8601String());
-      }
-      if (endDate != null) {
-        query = query.lte('created_at', endDate.toIso8601String());
-      }
-
-      final response = await query
+          .select('*, transaction_items(*)')
+          .eq('outlet_id', outletId)
+          .eq('channel', 'dine_in')
           .order('created_at', ascending: false)
           .limit(limit);
-
       return (response as List)
           .map((json) => Transaction.fromJson(json as Map<String, dynamic>))
           .toList();
     } catch (e) {
+      debugPrint('getDineInOrders error: $e');
       return [];
+    }
+  }
+
+  /// Ubah status pesanan dine-in (baru/diproses/siap/selesai).
+  Future<bool> setOrderStatus(String transactionId, String status) async {
+    try {
+      await _client.rpc('set_order_status', params: {
+        'p_tx': transactionId,
+        'p_status': status,
+      });
+      return true;
+    } catch (e) {
+      debugPrint('setOrderStatus error: $e');
+      return false;
     }
   }
 
@@ -1154,6 +1210,7 @@ class SupabaseService {
     required String outletId,
     required String tableNumber,
     required List<TransactionItem> items,
+    String paymentMethod = 'cash',
   }) async {
     try {
       final orderItems = items
@@ -1162,16 +1219,70 @@ class SupabaseService {
           .toList();
       if (orderItems.isEmpty) return null;
 
-      final result = await _client.rpc('place_dine_in_order', params: {
+      const allowed = {'cash', 'qris', 'bank_transfer'};
+      final method = allowed.contains(paymentMethod) ? paymentMethod : 'cash';
+      final baseParams = {
         'p_outlet': outletId,
         'p_table': tableNumber,
         'p_items': orderItems,
-      });
+      };
+
+      dynamic result;
+      try {
+        result = await _client.rpc('place_dine_in_order', params: {
+          ...baseParams,
+          'p_payment_method': method,
+        });
+      } catch (_) {
+        // Fallback: fungsi 3-arg (migrasi p_payment_method belum dijalankan).
+        result = await _client.rpc('place_dine_in_order', params: baseParams);
+      }
       if (result == null) return null;
       return result.toString();
     } catch (e) {
       debugPrint('placeDineInOrder error: $e');
       return null;
+    }
+  }
+
+  /// Info pembayaran outlet (QRIS/transfer) untuk pelanggan anonim via RPC.
+  Future<Map<String, dynamic>?> getPublicOutletPayment(String outletId) async {
+    try {
+      final res = await _client
+          .rpc('get_public_outlet_payment', params: {'p_outlet': outletId});
+      final list = res as List;
+      if (list.isEmpty) return null;
+      return Map<String, dynamic>.from(list.first as Map);
+    } catch (e) {
+      debugPrint('getPublicOutletPayment error: $e');
+      return null;
+    }
+  }
+
+  /// Simpan info pembayaran outlet (owner). Teks saja.
+  Future<bool> saveOutletPayment({
+    required String outletId,
+    required String merchantName,
+    required String bankWallet,
+    required String accountNumber,
+    required String nmid,
+    String instruction = '',
+  }) async {
+    try {
+      await _client.from('outlet_payment_configs').upsert({
+        'outlet_id': outletId,
+        'merchant_name': merchantName,
+        'bank_wallet': bankWallet,
+        'account_number': accountNumber,
+        'nmid': nmid,
+        'instruction': instruction,
+        'is_active': true,
+        'updated_at': DateTime.now().toUtc().toIso8601String(),
+      });
+      return true;
+    } catch (e) {
+      debugPrint('saveOutletPayment error: $e');
+      return false;
     }
   }
 

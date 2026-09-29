@@ -9,6 +9,7 @@ import '../../config/app_theme.dart';
 import '../../providers/auth_provider.dart';
 import '../../services/auth_service.dart';
 import '../../services/settlement_service.dart';
+import '../../services/supabase_service.dart';
 import '../../utils/formatters.dart';
 import '../../utils/qris_config.dart';
 
@@ -644,6 +645,25 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     try {
       existing = await QrisConfig.load(outletId: outletId);
     } catch (_) {}
+    try {
+      final db = await SupabaseService().getPublicOutletPayment(outletId);
+      if (db != null) {
+        existing = existing.copyWith(
+          merchantName: existing.merchantName.trim().isEmpty
+              ? (db['merchant_name']?.toString() ?? '')
+              : existing.merchantName,
+          bankOrWallet: existing.bankOrWallet.trim().isEmpty
+              ? (db['bank_wallet']?.toString() ?? '')
+              : existing.bankOrWallet,
+          qrisString: existing.qrisString.trim().isEmpty
+              ? (db['account_number']?.toString() ?? '')
+              : existing.qrisString,
+          nmid: existing.nmid.trim().isEmpty
+              ? (db['nmid']?.toString() ?? '')
+              : existing.nmid,
+        );
+      }
+    } catch (_) {}
     if (!mounted) return;
 
     final nameController = TextEditingController(text: existing.merchantName);
@@ -700,7 +720,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
         builder: (context, setDialogState) {
           return AlertDialog(
             backgroundColor: AppTheme.surfaceColor,
-            title: const Text('QRIS Toko', style: TextStyle(fontWeight: FontWeight.bold)),
+            title: const Text('QRIS & Pembayaran Toko', style: TextStyle(fontWeight: FontWeight.bold)),
             content: SizedBox(
               width: 420,
               child: SingleChildScrollView(
@@ -709,7 +729,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     const Text(
-                      'Upload foto QRIS statis milik toko Anda. QR ini otomatis ditampilkan saat kasir memilih metode pembayaran QRIS — tidak perlu ketik ulang.',
+                      'Upload foto QRIS statis milik toko Anda. Bank/E-Wallet dan No. Rekening akan ditampilkan ke pelanggan di meja, agar mereka bisa bayar (transfer/QRIS) tanpa antre di kasir.',
                       style: TextStyle(fontSize: 13, color: AppTheme.textSecondary, height: 1.4),
                     ),
                     const SizedBox(height: 16),
@@ -834,17 +854,24 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                     imageBase64: imageBase64,
                   );
                   await QrisConfig.save(outletId: outletId, config: config);
+                  final saved = await SupabaseService().saveOutletPayment(
+                    outletId: outletId,
+                    merchantName: config.merchantName,
+                    bankWallet: config.bankOrWallet,
+                    accountNumber: config.qrisString,
+                    nmid: config.nmid,
+                  );
                   if (!ctx.mounted) return;
                   Navigator.pop(ctx);
                   if (!mounted) return;
                   ScaffoldMessenger.of(context).showSnackBar(
                     SnackBar(
                       content: Text(
-                        config.isConfigured
-                            ? 'QRIS Toko berhasil disimpan'
-                            : 'Disimpan. Lengkapi Nama Merchant + gambar QRIS/NMID agar QRIS tampil',
+                        saved
+                            ? 'Info pembayaran disimpan. Pelanggan bisa bayar langsung di meja.'
+                            : 'QRIS tersimpan lokal, tetapi gagal simpan info pembayaran ke server. Coba lagi.',
                       ),
-                      backgroundColor: config.isConfigured ? AppTheme.successColor : AppTheme.warningColor,
+                      backgroundColor: saved ? AppTheme.successColor : AppTheme.warningColor,
                     ),
                   );
                 },

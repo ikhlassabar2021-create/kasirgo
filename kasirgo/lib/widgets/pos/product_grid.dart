@@ -40,10 +40,17 @@ class ProductGrid extends StatelessWidget {
 
     return LayoutBuilder(
       builder: (context, constraints) {
-        const crossAxis = 4;
+        final w = constraints.maxWidth;
+        final crossAxis = w >= 1000
+            ? 5
+            : w >= 760
+                ? 4
+                : w >= 520
+                    ? 3
+                    : 2;
         return GridView.builder(
           padding: EdgeInsets.fromLTRB(10, 10, 10, bottomPadding),
-          gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+          gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
             crossAxisCount: crossAxis,
             childAspectRatio: 0.95,
             crossAxisSpacing: 8,

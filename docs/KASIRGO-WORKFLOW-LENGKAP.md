@@ -187,11 +187,12 @@ kasirgo/lib/
   models/
   services/
   providers/
-  screens/auth|owner|admin|cashier|kitchen|customer/
+  screens/auth|owner|admin|cashier|customer/   (mis. cashier/incoming_orders_screen, customer/customer_order_screen)
+  screens/modules/                             (kitchen_display = KDS owner)
   widgets/common/pos/
   utils/
 kasirgo/supabase/functions/
-  stock_alert/  webhook_qris/
+  stock_alert/  webhook_qris/  create_staff/
 kasirgo-admin/src/
 ```
 
@@ -547,6 +548,33 @@ CREATE TABLE affiliate_payouts (
 );
 ```
 
+### 3.2b Tabel & RPC Pesanan Dine-in Pelanggan (QR Meja)
+
+Alur: pelanggan scan QR meja (anon) -> pilih menu -> **bayar di meja** (QRIS/transfer/tunai,
+tanpa antre kasir) -> kirim pesanan -> kasir/dapur menerima via Realtime.
+
+Tabel tambahan:
+```sql
+-- Info pembayaran outlet (teks saja, TANPA gambar sesuai kebijakan foto)
+CREATE TABLE outlet_payment_configs (
+  outlet_id UUID PRIMARY KEY REFERENCES outlets(id) ON DELETE CASCADE,
+  merchant_name TEXT, bank_wallet TEXT, account_number TEXT,
+  nmid TEXT, instruction TEXT, is_active BOOLEAN DEFAULT TRUE,
+  updated_at TIMESTAMPTZ DEFAULT NOW()
+);
+```
+- `transactions` tambah: `notes TEXT` (menyimpan "Meja <no>"), `order_status TEXT DEFAULT 'baru'`
+  (baru/diproses/siap/selesai), `REPLICA IDENTITY FULL`, dan masuk publication `supabase_realtime`.
+
+RPC (SECURITY DEFINER; customer = anon):
+- `get_public_outlet(p_code)` -> outlet publik berdasarkan kode.
+- `get_public_menu(p_outlet)` -> katalog produk publik.
+- `get_public_outlet_payment(p_outlet)` -> info bayar (merchant/bank/no rekening/nmid/instruksi).
+- `place_dine_in_order(p_outlet, p_table, p_items, p_payment_method)` -> buat transaksi `dine_in`
+  + item; harga dihitung server-side (anti manipulasi); `p_payment_method` in (cash/qris/bank_transfer).
+  Ada shim 3-arg (fallback `'cash'`) untuk kompatibilitas app lama.
+- `set_order_status(p_tx, p_status)` -> kasir/owner ubah progres (baru/diproses/siap/selesai).
+
 ### 3.3 Trigger/Function
 - `handle_new_user`: UBAH, isi `outlet_type` dari `user_metadata`.
 - Onboarding owner: Anonymous Auth + `device_uuid` -> auto-create `merchants` + default `outlets`
@@ -558,6 +586,8 @@ CREATE TABLE affiliate_payouts (
 - Edge Function `webhook_qris`: verifikasi HMAC SHA-256, update status transaksi LUNAS.
 - Edge Function `stock_alert`: cek stok menipis + expired, insert `ai_insights`.
 - Cron `auto_settlement`: batch settlement PG sesuai `auto_settlement_schedules` (default 12:00 & 19:00 WIB).
+- RPC dine-in pelanggan: `get_public_outlet`, `get_public_menu`, `get_public_outlet_payment`,
+  `place_dine_in_order`, `set_order_status` -- lihat 3.2b. Grant ke `anon`/`authenticated` sesuai role.
 
 ### 3.4 RLS
 Pola tetap: Owner full akses outlet sendiri; Admin tambah/edit produk + laporan (DELETE produk DITOLAK);
@@ -1032,6 +1062,23 @@ Lihat BAGIAN 7D (ST7.7-1 s/d ST7.7-6). Semua setting integrasi/margin lewat supe
 - ST12-2: Stress test offline-online sync Isolate
 - ST12-3: Build APK release split-per-abi <10MB + deploy superadmin
 - Test: full flow end-to-end semua role + offline + Program Pendukung.
+
+### DELTA TERBARU (2026-09-29) - Pesanan Dine-in QR Meja (Pelanggan -> Kasir/Dapur)
+Bukan phase baru; menyempurnakan alur QR Meja pelanggan yang sudah live.
+- Pelanggan: katalog + keranjang gaya POS (`CartContent`), checkout **bayar di meja**
+  (QRIS/transfer bank-e-wallet/tunai) di `customer_order_screen.dart`.
+- Owner: dialog "QRIS & Pembayaran Toko" di Pengaturan menyimpan info bayar ke DB
+  (`outlet_payment_configs`) -- teks saja, tanpa gambar.
+- Kasir: menu **"Pesanan Masuk"** (`screens/cashier/incoming_orders_screen.dart`) + badge jumlah
+  pesanan aktif di POS; Realtime (`transactions`), rincian item, nomor meja, metode bayar,
+  tombol Proses -> Siap Saji -> Selesai.
+- Dapur (KDS owner): `kitchen_display_screen.dart` kini pakai data nyata `getDineInOrders` +
+  status tersinkron ke DB + auto-refresh Realtime.
+- Migrations: `docs/migrations/2026-09-29-customer-dinein-payment-method.sql` (opsional, tercakup),
+  `2026-09-29-outlet-payment-at-table.sql`, `2026-09-29-dinein-orders-realtime.sql`.
+- Catatan platform: di WEB, SQLite = no-op stub, jadi data (termasuk `customers`) langsung ke Supabase
+  (teks/angka, biaya sangat kecil). Di APK, produk/transaksi/`customers` ada di SQLite lokal + sync;
+  `customers` tidak ikut antrean sync. Foto produk selalu LOKAL (tidak pernah diunggah).
 
 ---
 

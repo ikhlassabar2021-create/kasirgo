@@ -1,10 +1,13 @@
+import 'dart:ui';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../config/app_theme.dart';
 import '../../models/product.dart';
 import '../../models/transaction.dart';
 import '../../services/supabase_service.dart';
 import '../../utils/formatters.dart';
+import '../../widgets/pos/cart_panel.dart';
 
 class CustomerOrderScreen extends StatefulWidget {
   final String outletId;
@@ -24,17 +27,25 @@ class CustomerOrderScreen extends StatefulWidget {
 
 class _CustomerOrderScreenState extends State<CustomerOrderScreen> {
   final _service = SupabaseService();
+  final _searchController = TextEditingController();
   List<Product> _products = [];
-  final Map<String, int> _cart = {};
+  final List<TransactionItem> _cart = [];
   bool _isLoading = true;
   bool _isSubmitting = false;
   String _selectedCategory = 'Semua';
+  String _searchQuery = '';
   String? _error;
 
   @override
   void initState() {
     super.initState();
     _loadProducts();
+  }
+
+  @override
+  void dispose() {
+    _searchController.dispose();
+    super.dispose();
   }
 
   Future<void> _loadProducts() async {
@@ -60,16 +71,13 @@ class _CustomerOrderScreenState extends State<CustomerOrderScreen> {
     return null;
   }
 
-  double get _totalPrice {
-    double total = 0;
-    _cart.forEach((productId, qty) {
-      final product = _productById(productId);
-      if (product != null) total += product.price * qty;
-    });
-    return total;
+  int _qtyOf(String productId) {
+    final index = _cart.indexWhere((item) => item.productId == productId);
+    return index < 0 ? 0 : _cart[index].quantity;
   }
 
-  int get _totalItems => _cart.values.fold(0, (a, b) => a + b);
+  double get _subtotal => _cart.fold(0.0, (sum, item) => sum + item.subtotal);
+  int get _totalItems => _cart.fold(0, (sum, item) => sum + item.quantity);
 
   List<String> get _categories {
     final cats = _products
@@ -81,129 +89,259 @@ class _CustomerOrderScreenState extends State<CustomerOrderScreen> {
     return ['Semua', ...cats];
   }
 
-  void _add(Product product) {
-    final qty = _cart[product.id] ?? 0;
-    if (qty >= product.stock) {
-      ScaffoldMessenger.of(context)
-        ..hideCurrentSnackBar()
-        ..showSnackBar(
-          SnackBar(
-            content: Text('Stok ${product.name} tersisa ${product.stock}'),
-            duration: const Duration(milliseconds: 900),
-            backgroundColor: AppTheme.warningColor,
-          ),
-        );
-      return;
-    }
-    setState(() => _cart[product.id] = qty + 1);
+  List<Product> get _filtered {
+    final query = _searchQuery.trim().toLowerCase();
+    return _products.where((p) {
+      final matchCat =
+          _selectedCategory == 'Semua' || p.category == _selectedCategory;
+      final matchQuery = query.isEmpty ||
+          p.name.toLowerCase().contains(query) ||
+          (p.barcode != null && p.barcode!.toLowerCase().contains(query));
+      return matchCat && matchQuery;
+    }).toList();
   }
 
-  void _remove(Product product) {
-    final qty = _cart[product.id] ?? 0;
+  void _add(Product product) {
+    if (product.stock <= 0) return;
+    final index = _cart.indexWhere((item) => item.productId == product.id);
+    final current = index < 0 ? 0 : _cart[index].quantity;
+    if (current >= product.stock) {
+      _notify('Stok ${product.name} tersisa ${product.stock}',
+          AppTheme.warningColor);
+      return;
+    }
     setState(() {
-      if (qty <= 1) {
-        _cart.remove(product.id);
+      if (index < 0) {
+        _cart.add(TransactionItem(
+          productId: product.id,
+          productName: product.name,
+          price: product.price,
+          quantity: 1,
+          subtotal: product.price,
+        ));
       } else {
-        _cart[product.id] = qty - 1;
+        final qty = current + 1;
+        _cart[index] = _cart[index].copyWith(
+          quantity: qty,
+          subtotal: product.price * qty,
+        );
       }
     });
   }
 
-  void _submitOrder() {
-    if (_cart.isEmpty) return;
-
-    showDialog(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        backgroundColor: AppTheme.surfaceColor,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(16),
-          side: const BorderSide(color: AppTheme.borderColor),
-        ),
-        title: Text(
-          'Konfirmasi Pesanan',
-          style: GoogleFonts.inter(fontWeight: FontWeight.w700, color: AppTheme.textPrimary),
-        ),
-        content: Text(
-          'Kirim pesanan Meja ${widget.tableNumber} ($_totalItems item) senilai ${Formatters.currency(_totalPrice)} ke kasir/dapur?',
-          style: const TextStyle(color: AppTheme.textPrimary, fontSize: 13),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx),
-            child: const Text('Batal'),
-          ),
-          ElevatedButton(
-            style: ElevatedButton.styleFrom(
-              backgroundColor: AppTheme.primaryColor,
-              foregroundColor: Colors.white,
-            ),
-            onPressed: () {
-              Navigator.pop(ctx);
-              _sendOrder();
-            },
-            child: const Text('Kirim Pesanan'),
-          ),
-        ],
-      ),
-    );
+  void _remove(Product product) {
+    final index = _cart.indexWhere((item) => item.productId == product.id);
+    if (index < 0) return;
+    setState(() {
+      if (_cart[index].quantity <= 1) {
+        _cart.removeAt(index);
+      } else {
+        final qty = _cart[index].quantity - 1;
+        _cart[index] = _cart[index].copyWith(
+          quantity: qty,
+          subtotal: _cart[index].price * qty,
+        );
+      }
+    });
   }
 
-  Future<void> _sendOrder() async {
+  void _updateQty(MapEntry<String, int> entry) {
+    final index = _cart.indexWhere((item) => item.productId == entry.key);
+    if (index < 0) return;
+    final product = _productById(entry.key);
+    final maxStock = product?.stock ?? 9999;
+    final target = entry.value.clamp(1, maxStock).toInt();
+    setState(() {
+      _cart[index] = _cart[index].copyWith(
+        quantity: target,
+        subtotal: _cart[index].price * target,
+      );
+    });
+  }
+
+  void _removeItem(int index) {
+    setState(() => _cart.removeAt(index));
+  }
+
+  Future<void> _openCheckout() async {
+    if (_cart.isEmpty || _isSubmitting) return;
+
+    final result = await showDialog<CustomerCheckoutResult>(
+      context: context,
+      builder: (_) => CustomerCheckoutDialog(
+        outletId: widget.outletId,
+        total: _subtotal,
+        itemCount: _totalItems,
+        tableNumber: widget.tableNumber,
+      ),
+    );
+    if (result == null) return;
+    await _sendOrder(result.paymentMethod);
+  }
+
+  Future<void> _sendOrder(String paymentMethod) async {
     setState(() => _isSubmitting = true);
 
-    final items = <TransactionItem>[];
-    _cart.forEach((id, qty) {
-      final product = _productById(id);
-      if (product == null) return;
-      items.add(TransactionItem(
-        productId: product.id,
-        productName: product.name,
-        price: product.price,
-        quantity: qty,
-        subtotal: product.price * qty,
-      ));
-    });
-
-    if (items.isEmpty) {
-      setState(() => _isSubmitting = false);
-      return;
-    }
-
+    final total = _subtotal;
+    final itemCount = _totalItems;
     final txId = await _service.placeDineInOrder(
       outletId: widget.outletId,
       tableNumber: widget.tableNumber,
-      items: items,
+      items: List.from(_cart),
+      paymentMethod: paymentMethod,
     );
 
     if (!mounted) return;
     setState(() => _isSubmitting = false);
 
     if (txId == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Gagal mengirim pesanan. Pastikan koneksi internet, lalu coba lagi.'),
-          backgroundColor: AppTheme.errorColor,
-        ),
-      );
+      _notify('Gagal mengirim pesanan. Periksa koneksi lalu coba lagi.',
+          AppTheme.errorColor);
       return;
     }
 
     setState(() => _cart.clear());
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text('Pesanan Meja ${widget.tableNumber} berhasil dikirim! Silakan tunggu di meja.'),
-        backgroundColor: AppTheme.successColor,
+    await _showSuccess(total, itemCount, txId, paymentMethod);
+  }
+
+  Future<void> _showSuccess(
+    double total,
+    int itemCount,
+    String txId,
+    String paymentMethod,
+  ) {
+    return showDialog<void>(
+      context: context,
+      barrierDismissible: false,
+      builder: (ctx) => Dialog(
+        backgroundColor: Colors.transparent,
+        elevation: 0,
+        insetPadding: const EdgeInsets.symmetric(horizontal: 24, vertical: 24),
+        child: Container(
+          constraints: const BoxConstraints(maxWidth: 420),
+          padding: const EdgeInsets.all(24),
+          decoration: BoxDecoration(
+            color: AppTheme.surfaceColor,
+            borderRadius: BorderRadius.circular(24),
+            border: Border.all(color: AppTheme.borderColor),
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Container(
+                width: 74,
+                height: 74,
+                decoration: BoxDecoration(
+                  color: AppTheme.successColor.withValues(alpha: 0.14),
+                  shape: BoxShape.circle,
+                ),
+                child: const Icon(Icons.check_circle_rounded,
+                    color: AppTheme.successColor, size: 46),
+              ),
+              const SizedBox(height: 16),
+              Text(
+                'Pesanan Terkirim!',
+                style: GoogleFonts.inter(
+                  color: AppTheme.textPrimary,
+                  fontSize: 19,
+                  fontWeight: FontWeight.w800,
+                ),
+              ),
+              const SizedBox(height: 6),
+              Text(
+                'Pesanan Meja ${widget.tableNumber} sudah diteruskan ke kasir/dapur. Silakan menunggu di meja.',
+                textAlign: TextAlign.center,
+                style: GoogleFonts.inter(
+                    color: AppTheme.textSecondary, fontSize: 12.5, height: 1.4),
+              ),
+              const SizedBox(height: 18),
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.all(14),
+                decoration: BoxDecoration(
+                  color: AppTheme.backgroundColor,
+                  borderRadius: BorderRadius.circular(14),
+                  border: Border.all(color: AppTheme.borderColor),
+                ),
+                child: Column(
+                  children: [
+                    _SuccessRow(label: 'Jumlah item', value: '$itemCount item'),
+                    const SizedBox(height: 8),
+                    _SuccessRow(
+                      label: 'Metode pembayaran',
+                      value: paymentMethod == 'cash'
+                          ? 'Tunai di Kasir'
+                          : paymentMethod == 'qris'
+                              ? 'QRIS (di meja)'
+                              : 'Transfer (di meja)',
+                    ),
+                    const Padding(
+                      padding: EdgeInsets.symmetric(vertical: 10),
+                      child: Divider(height: 1, color: AppTheme.borderColor),
+                    ),
+                    _SuccessRow(
+                      label: 'Total',
+                      value: Formatters.currency(total),
+                    ),
+                    const SizedBox(height: 8),
+                    Text(
+                      'Pesanan Anda sudah kami terima. Terima kasih!',
+                      textAlign: TextAlign.center,
+                      style: GoogleFonts.inter(
+                          color: AppTheme.textSecondary, fontSize: 11),
+                    ),
+                    const Padding(
+                      padding: EdgeInsets.symmetric(vertical: 10),
+                      child: Divider(height: 1, color: AppTheme.borderColor),
+                    ),
+                    _SuccessRow(
+                      label: 'Total',
+                      value: Formatters.currency(total),
+                      emphasize: true,
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 20),
+              SizedBox(
+                width: double.infinity,
+                height: AppTheme.touchTargetLarge,
+                child: ElevatedButton(
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: AppTheme.primaryColor,
+                    foregroundColor: Colors.white,
+                    elevation: 0,
+                    shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(14)),
+                  ),
+                  onPressed: () => Navigator.of(ctx).pop(),
+                  child: Text(
+                    'Pesan Lagi',
+                    style: GoogleFonts.inter(
+                        fontWeight: FontWeight.w700, fontSize: 15),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
       ),
     );
   }
 
+  void _notify(String message, Color color) {
+    ScaffoldMessenger.of(context)
+      ..hideCurrentSnackBar()
+      ..showSnackBar(SnackBar(
+        content: Text(message),
+        backgroundColor: color,
+        behavior: SnackBarBehavior.floating,
+        duration: const Duration(milliseconds: 1400),
+      ));
+  }
+
   @override
   Widget build(BuildContext context) {
-    final filtered = _selectedCategory == 'Semua'
-        ? _products
-        : _products.where((p) => p.category == _selectedCategory).toList();
-
     return Scaffold(
       backgroundColor: AppTheme.backgroundColor,
       appBar: AppBar(
@@ -215,65 +353,156 @@ class _CustomerOrderScreenState extends State<CustomerOrderScreen> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
-              widget.outletName.isNotEmpty ? widget.outletName : 'Menu Pesanan',
+              widget.outletName.isNotEmpty
+                  ? widget.outletName
+                  : 'Menu Pesanan',
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
-              style: GoogleFonts.inter(fontWeight: FontWeight.w700, fontSize: 16, color: AppTheme.textPrimary),
+              style: GoogleFonts.inter(
+                  fontWeight: FontWeight.w700,
+                  fontSize: 16,
+                  color: AppTheme.textPrimary),
             ),
             Text(
               'Meja ${widget.tableNumber}',
-              style: GoogleFonts.inter(fontWeight: FontWeight.w600, fontSize: 12, color: AppTheme.primaryColor),
+              style: GoogleFonts.inter(
+                  fontWeight: FontWeight.w600,
+                  fontSize: 12,
+                  color: AppTheme.primaryColor),
             ),
           ],
         ),
       ),
       body: Center(
         child: ConstrainedBox(
-          constraints: const BoxConstraints(maxWidth: 1100),
-          child: _isLoading
-              ? const Center(child: CircularProgressIndicator(color: AppTheme.primaryColor))
-              : _buildContent(filtered),
-        ),
-      ),
-      bottomNavigationBar: _cart.isEmpty ? null : _buildCartBar(),
-    );
-  }
-
-  Widget _buildContent(List<Product> filtered) {
-    if (_error != null) {
-      return Center(
-        child: Padding(
-          padding: const EdgeInsets.all(32),
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
+          constraints: const BoxConstraints(maxWidth: 1200),
+          child: Stack(
             children: [
-              const Icon(Icons.no_meals_rounded, size: 52, color: AppTheme.textSecondary),
-              const SizedBox(height: 12),
-              Text(
-                _error!,
-                textAlign: TextAlign.center,
-                style: const TextStyle(color: AppTheme.textSecondary),
-              ),
-              const SizedBox(height: 16),
-              OutlinedButton.icon(
-                onPressed: _loadProducts,
-                icon: const Icon(Icons.refresh_rounded),
-                label: const Text('Muat ulang'),
-              ),
+              Positioned.fill(child: _buildBody()),
+              if (_isSubmitting) const _SendingOverlay(),
             ],
           ),
         ),
-      );
-    }
+      ),
+    );
+  }
 
+  Widget _buildBody() {
+    if (_isLoading) {
+      return const Center(
+          child: CircularProgressIndicator(color: AppTheme.primaryColor));
+    }
+    if (_error != null) return _buildErrorState();
+
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final isWide = constraints.maxWidth >= 760;
+        if (isWide) {
+          return Row(
+            children: [
+              Expanded(
+                  flex: 65,
+                  child: _buildCatalog(constraints.maxWidth * 0.35)),
+              SizedBox(
+                width: constraints.maxWidth * 0.35,
+                child: _buildPersistentCart(),
+              ),
+            ],
+          );
+        }
+        return Stack(
+          children: [
+            Positioned.fill(
+              child: _buildCatalog(constraints.maxWidth, bottomPadding: 240),
+            ),
+            if (_cart.isNotEmpty)
+              CartPanel(
+                items: _cart,
+                onCheckout: _openCheckout,
+                onRemoveItem: _removeItem,
+                onUpdateQty: _updateQty,
+              ),
+          ],
+        );
+      },
+    );
+  }
+
+  Widget _buildErrorState() {
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(32),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            const Icon(Icons.no_meals_rounded,
+                size: 52, color: AppTheme.textSecondary),
+            const SizedBox(height: 12),
+            Text(
+              _error!,
+              textAlign: TextAlign.center,
+              style: const TextStyle(color: AppTheme.textSecondary),
+            ),
+            const SizedBox(height: 16),
+            OutlinedButton.icon(
+              onPressed: _loadProducts,
+              icon: const Icon(Icons.refresh_rounded),
+              label: const Text('Muat ulang'),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildCatalog(double availableWidth, {double bottomPadding = 16}) {
+    final filtered = _filtered;
     return Column(
       children: [
+        Padding(
+          padding: const EdgeInsets.fromLTRB(12, 10, 12, 4),
+          child: TextField(
+            controller: _searchController,
+            style: const TextStyle(color: AppTheme.textPrimary, fontSize: 14),
+            onChanged: (v) => setState(() => _searchQuery = v),
+            decoration: InputDecoration(
+              hintText: 'Cari produk...',
+              filled: true,
+              fillColor: AppTheme.surfaceColor,
+              prefixIcon:
+                  const Icon(Icons.search_rounded, color: AppTheme.textSecondary),
+              suffixIcon: _searchQuery.isNotEmpty
+                  ? IconButton(
+                      icon: const Icon(Icons.clear_rounded,
+                          color: AppTheme.textSecondary),
+                      onPressed: () {
+                        _searchController.clear();
+                        setState(() => _searchQuery = '');
+                      },
+                    )
+                  : null,
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(14),
+                borderSide: const BorderSide(color: AppTheme.borderColor),
+              ),
+              enabledBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(14),
+                borderSide: const BorderSide(color: AppTheme.borderColor),
+              ),
+              focusedBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(14),
+                borderSide: const BorderSide(
+                    color: AppTheme.primaryColor, width: 1.5),
+              ),
+            ),
+          ),
+        ),
         if (_categories.length > 1)
           SizedBox(
-            height: 54,
+            height: 46,
             child: ListView.separated(
               scrollDirection: Axis.horizontal,
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
               itemCount: _categories.length,
               separatorBuilder: (_, _) => const SizedBox(width: 8),
               itemBuilder: (context, idx) {
@@ -285,7 +514,9 @@ class _CustomerOrderScreenState extends State<CustomerOrderScreen> {
                   showCheckmark: false,
                   selectedColor: AppTheme.primaryColor,
                   backgroundColor: AppTheme.surfaceColor,
-                  side: BorderSide(color: isSel ? AppTheme.primaryColor : AppTheme.borderColor),
+                  side: BorderSide(
+                      color:
+                          isSel ? AppTheme.primaryColor : AppTheme.borderColor),
                   labelStyle: TextStyle(
                     color: isSel ? Colors.white : AppTheme.textSecondary,
                     fontSize: 12,
@@ -300,7 +531,7 @@ class _CustomerOrderScreenState extends State<CustomerOrderScreen> {
           child: filtered.isEmpty
               ? const Center(
                   child: Text(
-                    'Tidak ada produk di kategori ini',
+                    'Tidak ada produk ditemukan',
                     style: TextStyle(color: AppTheme.textSecondary),
                   ),
                 )
@@ -315,7 +546,7 @@ class _CustomerOrderScreenState extends State<CustomerOrderScreen> {
                                 ? 3
                                 : 2;
                     return GridView.builder(
-                      padding: const EdgeInsets.fromLTRB(12, 6, 12, 24),
+                      padding: EdgeInsets.fromLTRB(12, 6, 12, bottomPadding),
                       gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
                         crossAxisCount: cols,
                         childAspectRatio: 0.82,
@@ -323,7 +554,8 @@ class _CustomerOrderScreenState extends State<CustomerOrderScreen> {
                         mainAxisSpacing: 10,
                       ),
                       itemCount: filtered.length,
-                      itemBuilder: (context, index) => _buildProductCard(filtered[index]),
+                      itemBuilder: (context, index) =>
+                          _buildProductCard(filtered[index]),
                     );
                   },
                 ),
@@ -332,8 +564,31 @@ class _CustomerOrderScreenState extends State<CustomerOrderScreen> {
     );
   }
 
+  Widget _buildPersistentCart() {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(0, 10, 12, 10),
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(20),
+        child: Container(
+          decoration: BoxDecoration(
+            color: AppTheme.surfaceColor,
+            borderRadius: BorderRadius.circular(20),
+            border: Border.all(color: AppTheme.borderColor),
+          ),
+          child: CartContent(
+            items: _cart,
+            showDragHandle: false,
+            onCheckout: _openCheckout,
+            onRemoveItem: _removeItem,
+            onUpdateQty: _updateQty,
+          ),
+        ),
+      ),
+    );
+  }
+
   Widget _buildProductCard(Product product) {
-    final qty = _cart[product.id] ?? 0;
+    final qty = _qtyOf(product.id);
     final inCart = qty > 0;
     final isOut = product.stock <= 0;
 
@@ -364,7 +619,9 @@ class _CustomerOrderScreenState extends State<CustomerOrderScreen> {
                     children: [
                       Center(
                         child: Text(
-                          product.name.isNotEmpty ? product.name[0].toUpperCase() : '?',
+                          product.name.isNotEmpty
+                              ? product.name[0].toUpperCase()
+                              : '?',
                           style: GoogleFonts.inter(
                             fontSize: 32,
                             fontWeight: FontWeight.w800,
@@ -376,7 +633,8 @@ class _CustomerOrderScreenState extends State<CustomerOrderScreen> {
                         top: 6,
                         left: 6,
                         child: Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 3),
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 7, vertical: 3),
                           decoration: BoxDecoration(
                             color: isOut
                                 ? AppTheme.errorColor
@@ -386,7 +644,9 @@ class _CustomerOrderScreenState extends State<CustomerOrderScreen> {
                             borderRadius: BorderRadius.circular(8),
                           ),
                           child: Text(
-                            isOut ? 'HABIS' : '${product.stock} ${product.unit ?? 'pcs'}',
+                            isOut
+                                ? 'HABIS'
+                                : '${product.stock} ${product.unit ?? 'pcs'}',
                             style: const TextStyle(
                               color: Colors.white,
                               fontSize: 9.5,
@@ -438,11 +698,14 @@ class _CustomerOrderScreenState extends State<CustomerOrderScreen> {
                               foregroundColor: Colors.white,
                               elevation: 0,
                               padding: EdgeInsets.zero,
-                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(9)),
+                              shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(9)),
                             ),
                             onPressed: () => _add(product),
                             icon: const Icon(Icons.add_rounded, size: 16),
-                            label: const Text('Tambah', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12)),
+                            label: const Text('Tambah',
+                                style: TextStyle(
+                                    fontWeight: FontWeight.bold, fontSize: 12)),
                           ),
                         )
                       else
@@ -450,12 +713,16 @@ class _CustomerOrderScreenState extends State<CustomerOrderScreen> {
                           height: 34,
                           child: Row(
                             children: [
-                              _qtyBtn(Icons.remove_rounded, () => _remove(product)),
+                              _qtyBtn(
+                                  Icons.remove_rounded, () => _remove(product)),
                               Expanded(
                                 child: Center(
                                   child: Text(
                                     '$qty',
-                                    style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14, color: AppTheme.textPrimary),
+                                    style: const TextStyle(
+                                        fontWeight: FontWeight.bold,
+                                        fontSize: 14,
+                                        color: AppTheme.textPrimary),
                                   ),
                                 ),
                               ),
@@ -484,97 +751,645 @@ class _CustomerOrderScreenState extends State<CustomerOrderScreen> {
         decoration: BoxDecoration(
           color: AppTheme.primaryColor.withValues(alpha: 0.1),
           borderRadius: BorderRadius.circular(9),
-          border: Border.all(color: AppTheme.primaryColor.withValues(alpha: 0.3)),
+          border:
+              Border.all(color: AppTheme.primaryColor.withValues(alpha: 0.3)),
         ),
         child: Icon(icon, size: 18, color: AppTheme.primaryColor),
       ),
     );
   }
+}
 
-  Widget _buildCartBar() {
-    return SafeArea(
-      top: false,
-      child: Container(
-        padding: const EdgeInsets.fromLTRB(16, 12, 16, 12),
-        decoration: const BoxDecoration(
-          color: AppTheme.surfaceColor,
-          border: Border(top: BorderSide(color: AppTheme.borderColor)),
-        ),
-        child: Row(
-          children: [
-            Container(
-              width: 44,
-              height: 44,
-              decoration: BoxDecoration(
-                color: AppTheme.primaryColor.withValues(alpha: 0.1),
-                borderRadius: BorderRadius.circular(12),
-              ),
-              child: Stack(
-                alignment: Alignment.center,
-                children: [
-                  const Icon(Icons.shopping_cart_rounded, color: AppTheme.primaryColor, size: 22),
-                  if (_totalItems > 0)
-                    Positioned(
-                      top: 4,
-                      right: 4,
-                      child: Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 1),
-                        decoration: BoxDecoration(
-                          color: AppTheme.accentColor,
-                          borderRadius: BorderRadius.circular(8),
-                        ),
-                        child: Text(
-                          '$_totalItems',
-                          style: const TextStyle(color: Colors.white, fontSize: 9, fontWeight: FontWeight.w800),
-                        ),
-                      ),
-                    ),
-                ],
-              ),
+class CustomerCheckoutResult {
+  final String paymentMethod;
+  const CustomerCheckoutResult(this.paymentMethod);
+}
+
+class CustomerCheckoutDialog extends StatefulWidget {
+  final String outletId;
+  final double total;
+  final int itemCount;
+  final String tableNumber;
+
+  const CustomerCheckoutDialog({
+    super.key,
+    required this.outletId,
+    required this.total,
+    required this.itemCount,
+    required this.tableNumber,
+  });
+
+  @override
+  State<CustomerCheckoutDialog> createState() => _CustomerCheckoutDialogState();
+}
+
+class _CustomerCheckoutDialogState extends State<CustomerCheckoutDialog> {
+  final _service = SupabaseService();
+  String _paymentMethod = 'cash';
+  bool _loadingPayment = true;
+  Map<String, dynamic>? _pay;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadPaymentInfo();
+  }
+
+  Future<void> _loadPaymentInfo() async {
+    final data = await _service.getPublicOutletPayment(widget.outletId);
+    if (!mounted) return;
+    final hasTransfer = data != null &&
+        ((data['account_number']?.toString().trim().isNotEmpty ?? false) ||
+            (data['bank_wallet']?.toString().trim().isNotEmpty ?? false));
+    final hasQris =
+        data != null && (data['nmid']?.toString().trim().isNotEmpty ?? false);
+    setState(() {
+      _pay = data;
+      _loadingPayment = false;
+      _paymentMethod =
+          hasTransfer ? 'bank_transfer' : (hasQris ? 'qris' : 'cash');
+    });
+  }
+
+  String _str(String key) => _pay?[key]?.toString().trim() ?? '';
+
+  String get _merchantName {
+    final v = _str('merchant_name');
+    return v.isNotEmpty ? v : 'Toko';
+  }
+
+  bool get _hasTransfer =>
+      _str('account_number').isNotEmpty || _str('bank_wallet').isNotEmpty;
+
+  bool get _hasAnyPaymentInfo => _loadingPayment
+      ? false
+      : (_hasTransfer || _str('nmid').isNotEmpty);
+
+  Future<void> _copy(String value, String label) async {
+    await Clipboard.setData(ClipboardData(text: value));
+    if (!mounted) return;
+    ScaffoldMessenger.of(context)
+      ..hideCurrentSnackBar()
+      ..showSnackBar(SnackBar(
+        content: Text('$label disalin'),
+        duration: const Duration(milliseconds: 1200),
+        backgroundColor: AppTheme.successColor,
+      ));
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Dialog(
+      backgroundColor: Colors.transparent,
+      elevation: 0,
+      insetPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 24),
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(24),
+        child: BackdropFilter(
+          filter: ImageFilter.blur(sigmaX: 20, sigmaY: 20),
+          child: Container(
+            decoration: BoxDecoration(
+              color: AppTheme.surfaceColor,
+              borderRadius: BorderRadius.circular(24),
+              border: Border.all(color: AppTheme.borderColor),
             ),
-            const SizedBox(width: 12),
-            Expanded(
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(maxWidth: 460, maxHeight: 720),
               child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  Text(
-                    '$_totalItems item dipilih',
-                    style: const TextStyle(fontSize: 11, color: AppTheme.textSecondary),
+                  Container(
+                    padding: const EdgeInsets.fromLTRB(20, 16, 12, 14),
+                    decoration: const BoxDecoration(
+                      border:
+                          Border(bottom: BorderSide(color: AppTheme.borderColor)),
+                    ),
+                    child: Row(
+                      children: [
+                        Container(
+                          padding: const EdgeInsets.all(8),
+                          decoration: BoxDecoration(
+                            color:
+                                AppTheme.primaryColor.withValues(alpha: 0.15),
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          child: const Icon(Icons.qr_code_scanner_rounded,
+                              color: AppTheme.accentColor, size: 20),
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                'Bayar di Meja',
+                                style: GoogleFonts.inter(
+                                  color: AppTheme.textPrimary,
+                                  fontSize: 18,
+                                  fontWeight: FontWeight.w800,
+                                ),
+                              ),
+                              Text(
+                                'Tanpa antre di kasir',
+                                style: GoogleFonts.inter(
+                                  color: AppTheme.textSecondary,
+                                  fontSize: 11.5,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                        IconButton(
+                          icon: const Icon(Icons.close_rounded,
+                              color: AppTheme.textSecondary),
+                          onPressed: () => Navigator.of(context).pop(),
+                        ),
+                      ],
+                    ),
                   ),
-                  Text(
-                    Formatters.currency(_totalPrice),
-                    style: GoogleFonts.inter(
-                      fontSize: 17,
-                      fontWeight: FontWeight.w800,
-                      color: AppTheme.primaryColor,
+                  Flexible(
+                    child: SingleChildScrollView(
+                      padding: const EdgeInsets.fromLTRB(20, 16, 20, 20),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          _buildTotalCard(),
+                          const SizedBox(height: 18),
+                          if (_loadingPayment)
+                            const Padding(
+                              padding: EdgeInsets.symmetric(vertical: 16),
+                              child: Center(
+                                child: SizedBox(
+                                  width: 22,
+                                  height: 22,
+                                  child: CircularProgressIndicator(
+                                      strokeWidth: 2.4,
+                                      color: AppTheme.primaryColor),
+                                ),
+                              ),
+                            )
+                          else ...[
+                            Text(
+                              'Pilih Cara Bayar',
+                              style: GoogleFonts.inter(
+                                color: AppTheme.textPrimary,
+                                fontSize: 14,
+                                fontWeight: FontWeight.w700,
+                              ),
+                            ),
+                            const SizedBox(height: 10),
+                            _buildPaymentOption('bank_transfer',
+                                'Transfer Bank / E-Wallet', Icons.account_balance_rounded),
+                            _buildPaymentOption(
+                                'qris', 'QRIS (scan di meja)', Icons.qr_code_2_rounded),
+                            _buildPaymentOption('cash',
+                                'Tunai (bayar di kasir)', Icons.payments_rounded),
+                            const SizedBox(height: 12),
+                            if (_paymentMethod == 'bank_transfer')
+                              _buildTransferInfo()
+                            else if (_paymentMethod == 'qris')
+                              _buildQrisInfo()
+                            else
+                              _buildCashInfo(),
+                          ],
+                          const SizedBox(height: 22),
+                          SizedBox(
+                            width: double.infinity,
+                            height: AppTheme.touchTargetLarge,
+                            child: ElevatedButton.icon(
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: AppTheme.primaryColor,
+                                foregroundColor: Colors.white,
+                                elevation: 0,
+                                shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(14)),
+                              ),
+                              onPressed: _loadingPayment
+                                  ? null
+                                  : () => Navigator.of(context)
+                                      .pop(CustomerCheckoutResult(_paymentMethod)),
+                              icon: Icon(
+                                _paymentMethod == 'cash'
+                                    ? Icons.send_rounded
+                                    : Icons.check_circle_rounded,
+                                size: 20,
+                              ),
+                              label: Text(
+                                _paymentMethod == 'cash'
+                                    ? 'Kirim Pesanan'
+                                    : 'Saya Sudah Bayar - Kirim Pesanan',
+                                style: GoogleFonts.inter(
+                                    fontWeight: FontWeight.w700, fontSize: 15),
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
                     ),
                   ),
                 ],
               ),
             ),
-            ElevatedButton.icon(
-              style: ElevatedButton.styleFrom(
-                backgroundColor: AppTheme.primaryColor,
-                foregroundColor: Colors.white,
-                elevation: 0,
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 14),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildTransferInfo() {
+    final bank = _str('bank_wallet');
+    final acc = _str('account_number');
+    return Container(
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: AppTheme.backgroundColor,
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: AppTheme.borderColor),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              const Icon(Icons.account_balance_rounded,
+                  color: AppTheme.primaryColor, size: 18),
+              const SizedBox(width: 8),
+              Text(
+                'Transfer tepat sesuai nominal',
+                style: GoogleFonts.inter(
+                    color: AppTheme.textPrimary,
+                    fontSize: 13,
+                    fontWeight: FontWeight.w700),
               ),
-              onPressed: _isSubmitting ? null : _submitOrder,
-              icon: _isSubmitting
-                  ? const SizedBox(
-                      width: 18,
-                      height: 18,
-                      child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2),
-                    )
-                  : const Icon(Icons.send_rounded, size: 18),
-              label: Text(
-                _isSubmitting ? 'Mengirim...' : 'Pesan',
-                style: GoogleFonts.inter(fontWeight: FontWeight.w700, fontSize: 14),
+            ],
+          ),
+          const SizedBox(height: 10),
+          _infoRow('Bank / E-Wallet',
+              bank.isNotEmpty ? bank : 'Belum diatur owner', copyable: false),
+          const SizedBox(height: 6),
+          _infoRow('No. Rekening / HP',
+              acc.isNotEmpty ? acc : 'Belum diatur owner',
+              copyable: acc.isNotEmpty),
+          const SizedBox(height: 6),
+          if (_merchantName != 'Toko')
+            _infoRow('Atas Nama', _merchantName, copyable: false),
+          const Padding(
+            padding: EdgeInsets.symmetric(vertical: 10),
+            child: Divider(height: 1, color: AppTheme.borderColor),
+          ),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text('Nominal transfer',
+                  style: GoogleFonts.inter(
+                      color: AppTheme.textSecondary, fontSize: 12)),
+              Text(
+                Formatters.currency(widget.total),
+                style: GoogleFonts.inter(
+                  color: AppTheme.primaryColor,
+                  fontSize: 17,
+                  fontWeight: FontWeight.w800,
+                  fontFeatures: const [FontFeature.tabularFigures()],
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          Text(
+            'Setelah transfer, tekan tombol "Saya Sudah Bayar". Pesanan langsung masuk ke dapur.',
+            style: GoogleFonts.inter(
+                color: AppTheme.textSecondary, fontSize: 11.5, height: 1.35),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildQrisInfo() {
+    final nmid = _str('nmid');
+    return Container(
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: AppTheme.backgroundColor,
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: AppTheme.borderColor),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              const Icon(Icons.qr_code_2_rounded,
+                  color: AppTheme.primaryColor, size: 18),
+              const SizedBox(width: 8),
+              Text(
+                'Scan QRIS di meja',
+                style: GoogleFonts.inter(
+                    color: AppTheme.textPrimary,
+                    fontSize: 13,
+                    fontWeight: FontWeight.w700),
+              ),
+            ],
+          ),
+          const SizedBox(height: 10),
+          Text(
+            'Scan stiker QRIS $_merchantName yang tersedia di meja, lalu masukkan nominal berikut:',
+            style: GoogleFonts.inter(
+                color: AppTheme.textSecondary, fontSize: 11.5, height: 1.35),
+          ),
+          const SizedBox(height: 10),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text('Nominal',
+                  style: GoogleFonts.inter(
+                      color: AppTheme.textSecondary, fontSize: 12)),
+              Text(
+                Formatters.currency(widget.total),
+                style: GoogleFonts.inter(
+                  color: AppTheme.primaryColor,
+                  fontSize: 17,
+                  fontWeight: FontWeight.w800,
+                  fontFeatures: const [FontFeature.tabularFigures()],
+                ),
+              ),
+            ],
+          ),
+          if (nmid.isNotEmpty) ...[
+            const SizedBox(height: 6),
+            _infoRow('NMID', nmid, copyable: false),
+          ],
+          const SizedBox(height: 8),
+          Text(
+            'Setelah berhasil scan & bayar, tekan tombol "Saya Sudah Bayar".',
+            style: GoogleFonts.inter(
+                color: AppTheme.textSecondary, fontSize: 11.5, height: 1.35),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildCashInfo() {
+    return Container(
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: AppTheme.warningColor.withValues(alpha: 0.1),
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: AppTheme.warningColor.withValues(alpha: 0.35)),
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Icon(Icons.info_outline_rounded,
+              color: AppTheme.warningColor, size: 18),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Text(
+              _hasAnyPaymentInfo
+                  ? 'Pesanan dikirim ke dapur, lalu bayar tunai di kasir saat pulang.'
+                  : 'Owner belum mengatur info transfer/QRIS. Anda dapat bayar langsung ke kasir.',
+              style: GoogleFonts.inter(
+                  color: AppTheme.textSecondary, fontSize: 11.5, height: 1.35),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _infoRow(String label, String value, {required bool copyable}) {
+    return Row(
+      children: [
+        SizedBox(
+          width: 132,
+          child: Text(
+            label,
+            style: GoogleFonts.inter(
+                color: AppTheme.textSecondary, fontSize: 12),
+          ),
+        ),
+        Expanded(
+          child: Text(
+            value,
+            style: GoogleFonts.inter(
+              color: AppTheme.textPrimary,
+              fontSize: 13,
+              fontWeight: FontWeight.w700,
+            ),
+          ),
+        ),
+        if (copyable)
+          InkWell(
+            onTap: () => _copy(value, label),
+            borderRadius: BorderRadius.circular(8),
+            child: const Padding(
+              padding: EdgeInsets.all(4),
+              child: Icon(Icons.copy_rounded,
+                  size: 16, color: AppTheme.primaryColor),
+            ),
+          ),
+      ],
+    );
+  }
+
+  Widget _buildTotalCard() {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(18),
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [
+            AppTheme.primaryColor.withValues(alpha: 0.30),
+            AppTheme.secondaryColor.withValues(alpha: 0.18),
+          ],
+        ),
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(color: AppTheme.borderColor),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Text(
+                'MEJA ${widget.tableNumber}',
+                style: GoogleFonts.inter(
+                  color: AppTheme.primaryColor,
+                  fontSize: 11,
+                  fontWeight: FontWeight.w800,
+                  letterSpacing: 1.0,
+                ),
+              ),
+              const Spacer(),
+              Text(
+                '${widget.itemCount} item',
+                style: GoogleFonts.inter(
+                  color: AppTheme.textSecondary,
+                  fontSize: 11,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 10),
+          Text(
+            'TOTAL TAGIHAN',
+            style: GoogleFonts.inter(
+              color: AppTheme.textSecondary,
+              fontSize: 10.5,
+              fontWeight: FontWeight.w700,
+              letterSpacing: 1.2,
+            ),
+          ),
+          const SizedBox(height: 4),
+          Text(
+            Formatters.currency(widget.total),
+            style: GoogleFonts.inter(
+              color: AppTheme.textPrimary,
+              fontSize: 30,
+              fontWeight: FontWeight.w800,
+              letterSpacing: -0.8,
+              fontFeatures: const [FontFeature.tabularFigures()],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildPaymentOption(String value, String label, IconData icon) {
+    final isSelected = _paymentMethod == value;
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 8),
+      child: InkWell(
+        onTap: () => setState(() => _paymentMethod = value),
+        borderRadius: BorderRadius.circular(14),
+        child: Container(
+          constraints: const BoxConstraints(minHeight: 56),
+          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+          decoration: BoxDecoration(
+            color: isSelected
+                ? AppTheme.primaryColor.withValues(alpha: 0.15)
+                : AppTheme.backgroundColor,
+            borderRadius: BorderRadius.circular(14),
+            border: Border.all(
+              color: isSelected ? AppTheme.primaryColor : AppTheme.borderColor,
+              width: isSelected ? 1.6 : 1,
+            ),
+          ),
+          child: Row(
+            children: [
+              Icon(icon,
+                  size: 22,
+                  color: isSelected
+                      ? AppTheme.accentColor
+                      : AppTheme.textSecondary),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Text(
+                  label,
+                  style: GoogleFonts.inter(
+                    color: isSelected
+                        ? AppTheme.textPrimary
+                        : AppTheme.textSecondary,
+                    fontWeight:
+                        isSelected ? FontWeight.w700 : FontWeight.w500,
+                    fontSize: 14,
+                  ),
+                ),
+              ),
+              if (isSelected)
+                const Icon(Icons.check_circle_rounded,
+                    size: 20, color: AppTheme.accentColor),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _SuccessRow extends StatelessWidget {
+  final String label;
+  final String value;
+  final bool emphasize;
+
+  const _SuccessRow(
+      {required this.label, required this.value, this.emphasize = false});
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      children: [
+        Text(
+          label,
+          style: GoogleFonts.inter(
+              color: AppTheme.textSecondary, fontSize: 12.5),
+        ),
+        Flexible(
+          child: Text(
+            value,
+            textAlign: TextAlign.end,
+            style: GoogleFonts.inter(
+              color: emphasize
+                  ? AppTheme.primaryColor
+                  : AppTheme.textPrimary,
+              fontSize: emphasize ? 16 : 13,
+              fontWeight: FontWeight.w800,
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _SendingOverlay extends StatelessWidget {
+  const _SendingOverlay();
+
+  @override
+  Widget build(BuildContext context) {
+    return Positioned.fill(
+      child: ClipRRect(
+        child: BackdropFilter(
+          filter: ImageFilter.blur(sigmaX: 6, sigmaY: 6),
+          child: Container(
+            color: Colors.black.withValues(alpha: 0.45),
+            child: Center(
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 22, vertical: 18),
+                decoration: BoxDecoration(
+                  color: AppTheme.surfaceColor,
+                  borderRadius: BorderRadius.circular(18),
+                  border: Border.all(
+                      color: AppTheme.accentColor.withValues(alpha: 0.3)),
+                ),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    const SizedBox(
+                      width: 26,
+                      height: 26,
+                      child: CircularProgressIndicator(
+                          strokeWidth: 2.4, color: AppTheme.accentColor),
+                    ),
+                    const SizedBox(height: 12),
+                    Text(
+                      'Mengirim pesanan...',
+                      style: GoogleFonts.inter(
+                          color: AppTheme.textPrimary,
+                          fontSize: 13,
+                          fontWeight: FontWeight.w600),
+                    ),
+                  ],
+                ),
               ),
             ),
-          ],
+          ),
         ),
       ),
     );

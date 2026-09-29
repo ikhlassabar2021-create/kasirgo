@@ -6,12 +6,14 @@ import '../../config/app_theme.dart';
 import '../../models/product.dart';
 import '../../models/transaction.dart';
 import '../../models/tip.dart';
+import '../../providers/auth_provider.dart';
 import '../../services/supabase_service.dart';
 import '../owner/product_list_screen.dart';
 import '../../widgets/pos/product_grid.dart';
 import '../../widgets/pos/cart_panel.dart';
 import '../../widgets/pos/checkout_dialog.dart';
 import '../../widgets/common/logout_button.dart';
+import 'incoming_orders_screen.dart';
 
 class CashierPosScreen extends ConsumerStatefulWidget {
   const CashierPosScreen({super.key});
@@ -25,9 +27,61 @@ class _CashierPosScreenState extends ConsumerState<CashierPosScreen> {
   final List<TransactionItem> _cart = [];
   String _searchQuery = '';
   bool _isLoading = false;
+  int _incomingCount = 0;
+  sb.RealtimeChannel? _ordersChannel;
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) => _initOrders());
+  }
+
+  Future<void> _initOrders() async {
+    final outletId = ref.read(currentUserProvider)?.outletId;
+    if (outletId == null) return;
+    await _refreshIncomingCount();
+    _ordersChannel = sb.Supabase.instance.client
+        .channel('cashier-dinein-$outletId')
+        .onPostgresChanges(
+          event: sb.PostgresChangeEvent.all,
+          schema: 'public',
+          table: 'transactions',
+          filter: sb.PostgresChangeFilter(
+            type: sb.PostgresChangeFilterType.eq,
+            column: 'outlet_id',
+            value: outletId,
+          ),
+          callback: (payload) {
+            final ch = payload.newRecord['channel']?.toString();
+            if (ch != null && ch.isNotEmpty && ch != 'dine_in') return;
+            _refreshIncomingCount();
+          },
+        )
+        .subscribe();
+  }
+
+  Future<void> _refreshIncomingCount() async {
+    final outletId = ref.read(currentUserProvider)?.outletId;
+    if (outletId == null) return;
+    final list = await SupabaseService().getDineInOrders(outletId, limit: 40);
+    if (!mounted) return;
+    setState(() {
+      _incomingCount =
+          list.where((t) => t.orderStatus != 'selesai').length;
+    });
+  }
+
+  void _openIncomingOrders() async {
+    await Navigator.push(
+      context,
+      MaterialPageRoute(builder: (_) => const IncomingOrdersScreen()),
+    );
+    _refreshIncomingCount();
+  }
 
   @override
   void dispose() {
+    _ordersChannel?.unsubscribe();
     _searchController.dispose();
     super.dispose();
   }
@@ -205,7 +259,42 @@ class _CashierPosScreenState extends ConsumerState<CashierPosScreen> {
         scrolledUnderElevation: 0,
         shape: const Border(bottom: BorderSide(color: AppTheme.borderColor)),
         title: const Text('Kasir POS'),
-        actions: const [LogoutButton()],
+        actions: [
+          Stack(
+            alignment: Alignment.center,
+            children: [
+              IconButton(
+                tooltip: 'Pesanan Masuk',
+                icon: const Icon(Icons.receipt_long_rounded,
+                    color: AppTheme.primaryColor),
+                onPressed: _openIncomingOrders,
+              ),
+              if (_incomingCount > 0)
+                Positioned(
+                  top: 6,
+                  right: 6,
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 5, vertical: 1),
+                    constraints: const BoxConstraints(minWidth: 18),
+                    decoration: BoxDecoration(
+                      color: AppTheme.errorColor,
+                      borderRadius: BorderRadius.circular(9),
+                    ),
+                    child: Text(
+                      '$_incomingCount',
+                      textAlign: TextAlign.center,
+                      style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 10,
+                          fontWeight: FontWeight.w800),
+                    ),
+                  ),
+                ),
+            ],
+          ),
+          const LogoutButton(),
+        ],
       ),
       body: CentennialBackground(
         child: productsAsync.when(

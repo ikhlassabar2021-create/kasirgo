@@ -24,7 +24,7 @@ class TransactionItem {
       productId: json['product_id'] ?? '',
       productName: json['product_name'] ?? '',
       price: (json['price'] ?? 0).toDouble(),
-      quantity: json['quantity'] ?? 0,
+      quantity: (json['quantity'] as num?)?.toInt() ?? 0,
       subtotal: (json['subtotal'] ?? 0).toDouble(),
       variantId: json['variant_id']?.toString(),
       note: json['note']?.toString(),
@@ -77,6 +77,7 @@ class Transaction {
   final String paymentMethod;
   final String? paymentStatus;
   final String? notes;
+  final String orderStatus;
   final bool isSynced;
   final String channel;
   final DateTime createdAt;
@@ -102,6 +103,7 @@ class Transaction {
     required this.paymentMethod,
     this.paymentStatus,
     this.notes,
+    this.orderStatus = 'baru',
     this.isSynced = false,
     this.channel = 'offline',
     required this.createdAt,
@@ -142,6 +144,9 @@ class Transaction {
       paymentMethod: json['payment_method'] ?? 'Tunai',
       paymentStatus: json['payment_status'] ?? json['status'],
       notes: json['notes'],
+      orderStatus: (json['order_status']?.toString().trim().isNotEmpty ?? false)
+          ? json['order_status'].toString()
+          : 'baru',
       isSynced: json['is_synced'] == true || json['is_synced'] == 1,
       channel: json['channel']?.toString() ?? 'offline',
       createdAt: json['created_at'] != null
@@ -248,6 +253,9 @@ class Transaction {
       paymentMethod: map['payment_method'] ?? 'Tunai',
       paymentStatus: map['payment_status'] ?? map['status'],
       notes: map['notes'],
+      orderStatus: (map['order_status']?.toString().trim().isNotEmpty ?? false)
+          ? map['order_status'].toString()
+          : 'baru',
       isSynced: map['is_synced'] == 1 || map['is_synced'] == true,
       channel: map['channel']?.toString() ?? 'offline',
       createdAt: map['created_at'] != null
@@ -277,6 +285,7 @@ class Transaction {
     String? paymentMethod,
     String? paymentStatus,
     String? notes,
+    String? orderStatus,
     bool? isSynced,
     String? channel,
     DateTime? createdAt,
@@ -302,6 +311,7 @@ class Transaction {
       paymentMethod: paymentMethod ?? this.paymentMethod,
       paymentStatus: paymentStatus ?? this.paymentStatus,
       notes: notes ?? this.notes,
+      orderStatus: orderStatus ?? this.orderStatus,
       isSynced: isSynced ?? this.isSynced,
       channel: channel ?? this.channel,
       createdAt: createdAt ?? this.createdAt,

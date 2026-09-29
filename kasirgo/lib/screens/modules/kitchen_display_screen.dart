@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:supabase_flutter/supabase_flutter.dart' as sb;
 import '../../config/app_theme.dart';
 import '../../providers/auth_provider.dart';
 import '../../services/supabase_service.dart';
@@ -89,10 +90,51 @@ class _KitchenDisplayScreenState extends ConsumerState<KitchenDisplayScreen> {
     ),
   ];
 
+  sb.RealtimeChannel? _channel;
+
   @override
   void initState() {
     super.initState();
     _loadRealTransactions();
+    WidgetsBinding.instance.addPostFrameCallback((_) => _subscribeRealtime());
+  }
+
+  void _subscribeRealtime() {
+    final outletId = ref.read(currentUserProvider)?.outletId;
+    if (outletId == null) return;
+    _channel = sb.Supabase.instance.client
+        .channel('owner-kds-$outletId')
+        .onPostgresChanges(
+          event: sb.PostgresChangeEvent.all,
+          schema: 'public',
+          table: 'transactions',
+          filter: sb.PostgresChangeFilter(
+            type: sb.PostgresChangeFilterType.eq,
+            column: 'outlet_id',
+            value: outletId,
+          ),
+          callback: (_) => _loadRealTransactions(),
+        )
+        .subscribe();
+  }
+
+  @override
+  void dispose() {
+    _channel?.unsubscribe();
+    super.dispose();
+  }
+
+  String _mapStatus(String s) {
+    switch (s) {
+      case 'diproses':
+        return 'cooking';
+      case 'siap':
+        return 'ready';
+      case 'selesai':
+        return 'served';
+      default:
+        return 'pending';
+    }
   }
 
   Future<void> _loadRealTransactions() async {
@@ -101,29 +143,33 @@ class _KitchenDisplayScreenState extends ConsumerState<KitchenDisplayScreen> {
 
     setState(() => _isLoading = true);
     try {
-      final txs = await SupabaseService().getTransactions(user!.outletId!, limit: 20);
-      if (txs.isNotEmpty && mounted) {
-        final realOrders = txs.take(6).map((t) {
-          final isRecent = DateTime.now().difference(t.createdAt).inMinutes < 15;
-          final status = isRecent ? 'cooking' : 'ready';
+      final txs = await SupabaseService().getDineInOrders(user!.outletId!, limit: 30);
+      if (mounted) {
+        final realOrders = txs.map((t) {
+          final notes = t.notes?.trim();
           return KitchenOrder(
             id: t.id,
-            orderNumber: '#${t.id.substring(0, t.id.length >= 4 ? 4 : t.id.length).toUpperCase()}',
-            tableNumber: t.notes?.contains('Meja') == true ? t.notes! : 'Dine-In',
+            orderNumber:
+                '#${t.id.substring(0, t.id.length >= 4 ? 4 : t.id.length).toUpperCase()}',
+            tableNumber: (notes?.isNotEmpty ?? false) ? notes! : 'Dine-In',
             orderTime: t.createdAt,
-            status: status,
+            status: _mapStatus(t.orderStatus),
             notes: t.notes,
-            items: t.items.map((i) => KitchenOrderItem(name: i.productName, quantity: i.quantity)).toList(),
+            items: t.items
+                .map((i) =>
+                    KitchenOrderItem(name: i.productName, quantity: i.quantity))
+                .toList(),
           );
         }).toList();
 
         setState(() {
-          _orders.clear();
-          _orders.addAll(realOrders);
+          _orders
+            ..clear()
+            ..addAll(realOrders);
         });
       }
     } catch (_) {
-      // fallback sample orders
+      // keep current list on error
     } finally {
       if (mounted) setState(() => _isLoading = false);
     }
@@ -156,15 +202,22 @@ class _KitchenDisplayScreenState extends ConsumerState<KitchenDisplayScreen> {
   }
 
   void _nextStatus(KitchenOrder order) {
+    String? dbStatus;
     setState(() {
       if (order.status == 'pending') {
         order.status = 'cooking';
+        dbStatus = 'diproses';
       } else if (order.status == 'cooking') {
         order.status = 'ready';
+        dbStatus = 'siap';
       } else if (order.status == 'ready') {
         order.status = 'served';
+        dbStatus = 'selesai';
       }
     });
+    if (dbStatus != null && !order.id.startsWith('kds-')) {
+      SupabaseService().setOrderStatus(order.id, dbStatus!);
+    }
   }
 
   @override
