@@ -3,7 +3,9 @@ class Tip {
   final String outletId;
   final String? transactionId;
   final String? userId;
+  final String? shiftId;
   final double amount;
+  final String? note;
   final DateTime createdAt;
 
   const Tip({
@@ -11,7 +13,9 @@ class Tip {
     required this.outletId,
     this.transactionId,
     this.userId,
+    this.shiftId,
     required this.amount,
+    this.note,
     required this.createdAt,
   });
 
@@ -21,7 +25,9 @@ class Tip {
       outletId: json['outlet_id'] ?? '',
       transactionId: json['transaction_id'],
       userId: json['user_id'],
+      shiftId: json['shift_id'],
       amount: (json['amount'] ?? 0).toDouble(),
+      note: json['note']?.toString(),
       createdAt: json['created_at'] != null
           ? DateTime.parse(json['created_at'])
           : DateTime.now(),
@@ -34,8 +40,9 @@ class Tip {
       'outlet_id': outletId,
       'transaction_id': transactionId,
       'user_id': userId,
+      'shift_id': shiftId,
       'amount': amount,
-      'created_at': createdAt.toIso8601String(),
+      if (note != null) 'note': note,
     };
   }
 

@@ -12,6 +12,14 @@ import '../../utils/qris_config.dart';
 import '../../utils/wa_helper.dart';
 import '../common/app_button.dart';
 
+class SplitPayment {
+  final String method;
+  final double amount;
+  final String? ref;
+
+  const SplitPayment({required this.method, required this.amount, this.ref});
+}
+
 class CheckoutResult {
   final String paymentMethod;
   final double amount;
@@ -20,6 +28,7 @@ class CheckoutResult {
   final double tipAmount;
   final String? notes;
   final bool sendWhatsApp;
+  final List<SplitPayment> payments;
 
   const CheckoutResult({
     required this.paymentMethod,
@@ -29,6 +38,7 @@ class CheckoutResult {
     this.tipAmount = 0.0,
     this.notes,
     this.sendWhatsApp = false,
+    this.payments = const [],
   });
 }
 
@@ -64,11 +74,22 @@ class _CheckoutDialogState extends State<CheckoutDialog> {
   bool _sendWaReceipt = false;
   bool _isLoadingQris = false;
   QrisConfig _qrisConfig = const QrisConfig();
+  final List<Map<String, dynamic>> _splitEntries = [];
 
   double get _tipAmount => double.tryParse(_tipController.text.replaceAll(RegExp(r'[^0-9]'), '')) ?? 0.0;
   double get _grandTotal => widget.totalAmount + _tipAmount;
   double get _cashPaid => double.tryParse(_cashController.text.replaceAll(RegExp(r'[^0-9]'), '')) ?? 0.0;
   double get _change => (_cashPaid - _grandTotal).clamp(0.0, double.infinity);
+
+  double get _splitTotal {
+    double sum = 0;
+    for (final e in _splitEntries) {
+      sum += (e['amount'] as double? ?? 0);
+    }
+    return sum;
+  }
+
+  double get _splitRemaining => (_grandTotal - _splitTotal);
 
   @override
   void initState() {
@@ -140,14 +161,42 @@ class _CheckoutDialogState extends State<CheckoutDialog> {
       return;
     }
 
+    List<SplitPayment> payments = const [];
+    if (_paymentMethod == 'split') {
+      final valid = _splitEntries
+          .where((e) => (e['amount'] as double? ?? 0) > 0)
+          .map((e) => SplitPayment(
+              method: e['method'] as String,
+              amount: e['amount'] as double,
+              ref: e['ref'] as String?))
+          .toList();
+      if (valid.isEmpty) {
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+            content: Text('Tambah minimal 1 pembayaran'),
+            backgroundColor: AppTheme.errorColor));
+        return;
+      }
+      if (_splitRemaining.abs() > 1) {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+            content: Text(
+                'Total pembayaran harus sama dengan tagihan. Sisa: Rp ${_splitRemaining.toStringAsFixed(0)}'),
+            backgroundColor: AppTheme.errorColor));
+        return;
+      }
+      payments = valid;
+    }
+
     final result = CheckoutResult(
-      paymentMethod: _paymentMethod,
+      paymentMethod: _paymentMethod == 'split'
+          ? (payments.isNotEmpty ? payments.first.method : 'cash')
+          : _paymentMethod,
       amount: _grandTotal,
       change: _paymentMethod == 'cash' ? _change : 0.0,
       cashPaid: _paymentMethod == 'cash' ? _cashPaid : _grandTotal,
       tipAmount: _tipAmount,
       notes: _notesController.text.trim().isNotEmpty ? _notesController.text.trim() : null,
       sendWhatsApp: _sendWaReceipt,
+      payments: payments,
     );
 
     if (_sendWaReceipt && _customerWaController.text.trim().isNotEmpty) {
@@ -321,10 +370,12 @@ class _CheckoutDialogState extends State<CheckoutDialog> {
                             ),
                           ],
                           _buildPaymentOption('bank_transfer', 'Transfer Bank', Icons.account_balance_rounded),
+                          _buildPaymentOption('split', 'Split Bill (Bayar Gabungan)', Icons.call_split_rounded),
                           const SizedBox(height: 14),
                           if (_paymentMethod == 'cash') _buildCashSection(),
                           if (_paymentMethod == 'qris') _buildQrisSection(mode: _qrisMode),
                           if (_paymentMethod == 'bank_transfer') _buildTransferSection(),
+                          if (_paymentMethod == 'split') _buildSplitSection(),
                           const SizedBox(height: 16),
                           _buildWaReceiptSection(),
                           const SizedBox(height: 16),
@@ -370,6 +421,111 @@ class _CheckoutDialogState extends State<CheckoutDialog> {
           ),
         ),
       ),
+    );
+  }
+
+  Widget _buildSplitSection() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        ..._splitEntries.asMap().entries.map((entry) {
+          final i = entry.key;
+          final e = entry.value;
+          return Container(
+            margin: const EdgeInsets.only(bottom: 8),
+            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+            decoration: BoxDecoration(
+              color: AppTheme.backgroundColor.withValues(alpha: 0.4),
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(color: AppTheme.borderColor),
+            ),
+            child: Row(
+              children: [
+                Expanded(
+                  child: DropdownButtonHideUnderline(
+                    child: DropdownButton<String>(
+                      value: e['method'] as String,
+                      isDense: true,
+                      items: const [
+                        DropdownMenuItem(value: 'cash', child: Text('Cash', style: TextStyle(fontSize: 12.5))),
+                        DropdownMenuItem(value: 'qris', child: Text('QRIS', style: TextStyle(fontSize: 12.5))),
+                        DropdownMenuItem(value: 'bank_transfer', child: Text('Transfer', style: TextStyle(fontSize: 12.5))),
+                      ],
+                      onChanged: (v) => setState(() => e['method'] = v ?? 'cash'),
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 8),
+                Expanded(
+                  flex: 2,
+                  child: TextFormField(
+                    initialValue: (e['amount'] as double? ?? 0) > 0
+                        ? (e['amount'] as double).toStringAsFixed(0)
+                        : '',
+                    keyboardType: TextInputType.number,
+                    inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+                    style: const TextStyle(fontSize: 13, color: AppTheme.textPrimary),
+                    decoration: const InputDecoration(
+                      isDense: true,
+                      prefixText: 'Rp ',
+                      labelText: 'Nominal',
+                      labelStyle: TextStyle(fontSize: 11),
+                    ),
+                    onChanged: (v) {
+                      e['amount'] =
+                          double.tryParse(v.replaceAll(RegExp(r'[^0-9]'), '')) ?? 0;
+                      setState(() {});
+                    },
+                  ),
+                ),
+                IconButton(
+                  onPressed: () => setState(() => _splitEntries.removeAt(i)),
+                  icon: const Icon(Icons.close_rounded, size: 18, color: AppTheme.errorColor),
+                ),
+              ],
+            ),
+          );
+        }),
+        TextButton.icon(
+          onPressed: () => setState(() {
+            _splitEntries.add({'method': 'cash', 'amount': 0.0, 'ref': null});
+          }),
+          icon: const Icon(Icons.add_rounded, size: 18),
+          label: Text('Tambah Pembayaran',
+              style: GoogleFonts.inter(fontSize: 12.5, fontWeight: FontWeight.w700)),
+          style: TextButton.styleFrom(
+              foregroundColor: AppTheme.primaryColor,
+              alignment: Alignment.centerLeft),
+        ),
+        const SizedBox(height: 6),
+        Container(
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+          decoration: BoxDecoration(
+            color: _splitRemaining.abs() <= 1
+                ? AppTheme.successColor.withValues(alpha: 0.1)
+                : AppTheme.warningColor.withValues(alpha: 0.1),
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(
+                color: _splitRemaining.abs() <= 1
+                    ? AppTheme.successColor.withValues(alpha: 0.35)
+                    : AppTheme.warningColor.withValues(alpha: 0.35)),
+          ),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text('Sisa belum dibayar',
+                  style: GoogleFonts.inter(fontSize: 12, color: AppTheme.textSecondary)),
+              Text('Rp ${_splitRemaining.toStringAsFixed(0)}',
+                  style: GoogleFonts.inter(
+                      fontSize: 14,
+                      fontWeight: FontWeight.w800,
+                      color: _splitRemaining.abs() <= 1
+                          ? AppTheme.successColor
+                          : AppTheme.warningColor)),
+            ],
+          ),
+        ),
+      ],
     );
   }
 

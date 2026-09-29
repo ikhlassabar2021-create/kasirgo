@@ -860,7 +860,7 @@ class SupabaseService {
   }
 
   // ==========================================
-  // SHIFTS & TIPS
+  // SHIFTS & TIPS (metode lengkap di bagian SHIFT KASIR, TIP & SPLIT BILL)
   // ==========================================
 
   Future<Shift?> getActiveShift(String outletId, {String? userId}) async {
@@ -869,7 +869,7 @@ class SupabaseService {
           .from('shifts')
           .select()
           .eq('outlet_id', outletId)
-          .filter('closed_at', 'is', 'null');
+          .eq('status', 'open');
       if (userId != null) {
         query = query.eq('user_id', userId);
       }
@@ -878,31 +878,6 @@ class SupabaseService {
       return Shift.fromJson(response);
     } catch (e) {
       return null;
-    }
-  }
-
-  Future<Shift?> openShift(Shift shift) async {
-    try {
-      final response = await _client
-          .from('shifts')
-          .insert(shift.toJson())
-          .select()
-          .single();
-      return Shift.fromJson(response);
-    } catch (e) {
-      return null;
-    }
-  }
-
-  Future<bool> closeShift(String shiftId, double closingCash) async {
-    try {
-      await _client.from('shifts').update({
-        'closing_cash': closingCash,
-        'closed_at': DateTime.now().toIso8601String(),
-      }).eq('id', shiftId);
-      return true;
-    } catch (e) {
-      return false;
     }
   }
 
@@ -1222,6 +1197,178 @@ class SupabaseService {
       }
     } catch (e) {
       // best effort: kegagalan pengurangan bahan tidak memblokir transaksi
+    }
+  }
+
+  // ==========================================
+  // SHIFT KASIR, TIP & SPLIT BILL
+  // ==========================================
+
+  Future<Shift?> getOpenShift(String outletId) async {
+    try {
+      final response = await _client
+          .from('shifts')
+          .select()
+          .eq('outlet_id', outletId)
+          .eq('status', 'open')
+          .order('opened_at', ascending: false)
+          .limit(1)
+          .maybeSingle();
+      if (response == null) return null;
+      return Shift.fromJson(response);
+    } catch (e) {
+      return null;
+    }
+  }
+
+  Future<Shift?> openShift(
+      String outletId, String userId, double openingCash) async {
+    try {
+      final existing = await getOpenShift(outletId);
+      if (existing != null) return existing;
+      final response = await _client
+          .from('shifts')
+          .insert({
+            'outlet_id': outletId,
+            'user_id': userId,
+            'status': 'open',
+            'opened_at': DateTime.now().toIso8601String(),
+            'opening_cash': openingCash,
+            'total_tip': 0,
+          })
+          .select()
+          .single();
+      return Shift.fromJson(response);
+    } catch (e) {
+      return null;
+    }
+  }
+
+  Future<List<Shift>> getShiftHistory(String outletId, {int limit = 20}) async {
+    try {
+      final response = await _client
+          .from('shifts')
+          .select()
+          .eq('outlet_id', outletId)
+          .order('opened_at', ascending: false)
+          .limit(limit);
+      return (response as List)
+          .map((r) => Shift.fromJson(r as Map<String, dynamic>))
+          .toList();
+    } catch (e) {
+      return [];
+    }
+  }
+
+  /// Tutup shift: hitung total cash/qris/transfer dari transaction_payments
+  /// (shift_id), tip dari tips, expected = opening + cash, difference = closing - expected.
+  Future<Shift?> closeShift(String shiftId, double closingCash, String? note) async {
+    try {
+      final payRes = await _client
+          .from('transaction_payments')
+          .select('method, amount')
+          .eq('shift_id', shiftId);
+      double cash = 0, qris = 0, transfer = 0;
+      for (final row in (payRes as List)) {
+        final amount = double.tryParse(row['amount']?.toString() ?? '0') ?? 0;
+        switch (row['method']?.toString()) {
+          case 'cash':
+            cash += amount;
+            break;
+          case 'qris':
+            qris += amount;
+            break;
+          case 'bank_transfer':
+            transfer += amount;
+            break;
+        }
+      }
+      final tipRes = await _client
+          .from('tips')
+          .select('amount')
+          .eq('shift_id', shiftId);
+      double tip = 0;
+      for (final row in (tipRes as List)) {
+        tip += double.tryParse(row['amount']?.toString() ?? '0') ?? 0;
+      }
+
+      final cur = await _client
+          .from('shifts')
+          .select('opening_cash')
+          .eq('id', shiftId)
+          .single();
+      final opening = double.tryParse(cur['opening_cash']?.toString() ?? '0') ?? 0;
+      final expected = opening + cash;
+      final diff = closingCash - expected;
+
+      final response = await _client
+          .from('shifts')
+          .update({
+            'status': 'closed',
+            'closed_at': DateTime.now().toIso8601String(),
+            'closing_cash': closingCash,
+            'expected_cash': expected,
+            'difference': diff,
+            'total_cash': cash,
+            'total_qris': qris,
+            'total_transfer': transfer,
+            'total_tip': tip,
+            if (note != null && note.trim().isNotEmpty) 'note': note.trim(),
+          })
+          .eq('id', shiftId)
+          .select()
+          .single();
+      return Shift.fromJson(response);
+    } catch (e) {
+      return null;
+    }
+  }
+
+  Future<bool> addTransactionPayment({
+    required String outletId,
+    required String transactionId,
+    required String method,
+    required double amount,
+    String? ref,
+    String? userId,
+    String? shiftId,
+  }) async {
+    try {
+      await _client.from('transaction_payments').insert({
+        'outlet_id': outletId,
+        'transaction_id': transactionId,
+        'method': method,
+        'amount': amount,
+        if (ref != null) 'ref': ref,
+        if (userId != null) 'user_id': userId,
+        if (shiftId != null) 'shift_id': shiftId,
+      });
+      return true;
+    } catch (e) {
+      return false;
+    }
+  }
+
+  Future<bool> addTip({
+    required String outletId,
+    required double amount,
+    String? transactionId,
+    String? userId,
+    String? shiftId,
+    String? note,
+  }) async {
+    try {
+      await _client.from('tips').insert({
+        'outlet_id': outletId,
+        'amount': amount,
+        if (transactionId != null) 'transaction_id': transactionId,
+        if (userId != null) 'user_id': userId,
+        if (shiftId != null) 'shift_id': shiftId,
+        if (note != null && note.trim().isNotEmpty) 'note': note.trim(),
+      });
+      return true;
+    } catch (e) {
+      return false;
     }
   }
 

@@ -27,6 +27,7 @@ import 'online_catalog_screen.dart';
 import 'health_score_screen.dart';
 import '../modules/kitchen_display_screen.dart';
 import 'recipe_screen.dart';
+import 'shift_screen.dart';
 import '../modules/ppob_screen.dart';
 import '../modules/restock_screen.dart';
 import '../modules/supporter_screen.dart';
@@ -908,6 +909,18 @@ class _OwnerHomeScreenState extends ConsumerState<OwnerHomeScreen> {
           subtitle: 'Pesanan dapur',
           color: AppTheme.secondaryColor,
           onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const KitchenDisplayScreen())),
+        ),
+      );
+    }
+
+    if (modules.contains(BusinessModule.splitBill)) {
+      quickActionItems.add(
+        _ModuleCard(
+          icon: Icons.point_of_sale_rounded,
+          title: 'Shift Kasir',
+          subtitle: 'Setoran & selisih',
+          color: AppTheme.secondaryColor,
+          onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const ShiftScreen())),
         ),
       );
     }

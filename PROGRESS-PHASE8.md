@@ -105,8 +105,38 @@ retail = semua kecuali QR Meja & KDS; gerobak = semua kecuali PPOB & QR Meja.
 2. Tekan tiket -> MENUNGGU -> DIMASAK -> SIAP SAJI -> hilang dari antrean.
 3. Tiket >10 menit tampil merah; umur tiket bertambah sendiri tiap 30 detik.
 
+### ST8-5 — Shift Kasir + Tip + Split Bill (2026-09-29)
+- `models/shift.dart` REWRITE ke skema baru (status open/closed, opening/closing/
+  expected cash, difference, total cash/qris/transfer/tip, note, user_id);
+  `models/tip.dart` +shift_id +note.
+- `supabase_service.dart`:
+  - +getOpenShift, openShift (tolak double open), getShiftHistory,
+    closeShift (rekap dari transaction_payments per metode + tips,
+    expected = opening + cash, difference = fisik - expected),
+    addTransactionPayment, addTip;
+  - hapus stub lama openShift/closeShift duplikat; getActiveShift pakai status='open'.
+- `checkout_dialog.dart`: +SplitPayment; opsi "Split Bill (Bayar Gabungan)" -
+  baris [metode | nominal], indikator "Sisa belum dibayar", validasi total
+  pembayaran = tagihan (toleransi Rp1) sebelum LUNAS; tip tetap terpisah.
+- `pos_screen.dart`: muat shift terbuka saat init; setelah transaksi sukses
+  catat transaction_payments (per split, atau tunggal) + tips dengan shift_id.
+- `screens/owner/shift_screen.dart` (baru): banner shift aktif (modal awal, tip),
+  tombol Buka Shift (modal awal) / Tutup Shift (hitung fisik + catatan,
+  tampilkan selisih), riwayat shift dengan badge "KAS PAS"/"Selisih".
+- `owner_home_screen.dart`: kartu "Shift Kasir" (gated splitBill).
+- QA DB (cafe outlet): shift open + split cash 60k/qris 40k (= tagihan 100k)
+  + tip 5k -> closeShift total_cash 60k, total_qris 40k, tip 5k,
+  expected 260k (modal 200k+cash), difference 0. Data QA dibersihkan.
+- Catatan: shifts.user_id & tips.user_id FK ke auth.users (NOT NULL utk shifts).
+
+### Cara uji ST8-5
+1. Owner/kasir: "Shift Kasir" -> Buka Shift modal Rp200.000.
+2. POS belanja Rp100.000 -> pilih Split Bill -> cash 60.000 + QRIS 40.000 ->
+   sisa 0 -> konfirmasi (tanpa split, pembayaran tunggal tercatat normal).
+3. Tambahkan tip Rp5.000 pada transaksi -> tercatat di tips.
+4. Tutup Shift -> hitung fisik Rp260.000 -> "KAS PAS", riwayat tampil rekap.
+
 ## BERIKUTNYA
-- ST8-5: Shift & Tip + Split Bill - shift_screen (buka/tutup kasir, setoran,
-  selisih), tip per transaksi, transaction_payments (bayar parsial cash/qris/
-  transfer, validasi total = tagihan sebelum LUNAS). Rewrite models/shift.dart +
-  tip.dart ke skema baru.
+- ST8-6: QA menyeluruh per outlet_type + gate varian hanya retail + update
+  KASIRGO-WORKFLOW-LENGKAP (Bagian 3.2/8) + AGENTS.md (Phase 8 SELESAI) +
+  build web + deploy gh-pages + commit.

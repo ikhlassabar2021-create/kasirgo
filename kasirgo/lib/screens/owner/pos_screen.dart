@@ -6,11 +6,13 @@ import 'package:supabase_flutter/supabase_flutter.dart' as sb;
 import '../../config/app_theme.dart';
 import '../../models/product.dart';
 import '../../models/transaction.dart';
+import '../../providers/auth_provider.dart';
 import '../../services/supabase_service.dart';
 import '../../utils/formatters.dart';
 import '../../widgets/common/centennial_background.dart';
 import '../owner/product_list_screen.dart';
 import '../../widgets/pos/product_grid.dart';
+import '../../models/shift.dart';
 import '../../models/variant.dart';
 import '../../widgets/pos/cart_panel.dart';
 import '../../widgets/pos/checkout_dialog.dart';
@@ -28,6 +30,7 @@ class _PosScreenState extends ConsumerState<PosScreen> {
   final _searchController = TextEditingController();
   final List<TransactionItem> _cart = [];
   final Map<String, List<ProductVariant>> _variantCache = {};
+  Shift? _openShift;
   String _searchQuery = '';
   String _selectedChannel = 'Toko Fisik';
   double _discountAmount = 0.0;
@@ -46,6 +49,7 @@ class _PosScreenState extends ConsumerState<PosScreen> {
 
   @override
   void initState() {
+    _loadOpenShift();
     super.initState();
     _loadPricingAndDiscounts();
   }
@@ -363,6 +367,16 @@ class _PosScreenState extends ConsumerState<PosScreen> {
   double get _subtotal => _cart.fold(0.0, (sum, item) => sum + item.subtotal);
   double get _total => (_subtotal - _discountAmount).clamp(0.0, double.infinity);
 
+  Future<void> _loadOpenShift() async {
+    final client = sb.Supabase.instance.client;
+    final outletId = client.auth.currentUser != null
+        ? (ref.read(currentUserProvider)?.outletId ?? '')
+        : '';
+    if (outletId.isEmpty) return;
+    final shift = await SupabaseService().getOpenShift(outletId);
+    if (mounted) setState(() => _openShift = shift);
+  }
+
   Future<void> _handleCheckout(List<Product> products) async {
     if (_cart.isEmpty) return;
 
@@ -417,6 +431,39 @@ class _PosScreenState extends ConsumerState<PosScreen> {
           SupabaseService()
               .deductRecipeIngredients(outletId, item.productId, qty, created.id);
         }
+      }
+
+      // Catat pembayaran (split bill / tunggal) + tip - best effort.
+      final shiftId = _openShift?.isOpen == true ? _openShift!.id : null;
+      if (result.payments.isNotEmpty) {
+        for (final p in result.payments) {
+          await SupabaseService().addTransactionPayment(
+            outletId: outletId,
+            transactionId: created.id,
+            method: p.method,
+            amount: p.amount,
+            userId: user?.id,
+            shiftId: shiftId,
+          );
+        }
+      } else {
+        await SupabaseService().addTransactionPayment(
+          outletId: outletId,
+          transactionId: created.id,
+          method: result.paymentMethod,
+          amount: result.amount,
+          userId: user?.id,
+          shiftId: shiftId,
+        );
+      }
+      if (result.tipAmount > 0) {
+        await SupabaseService().addTip(
+          outletId: outletId,
+          amount: result.tipAmount,
+          transactionId: created.id,
+          userId: user?.id,
+          shiftId: shiftId,
+        );
       }
 
       ref.invalidate(productsProvider);
