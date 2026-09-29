@@ -209,11 +209,14 @@ class SupabaseService {
   /// Pesanan dine-in (QR meja) untuk kasir/dapur — termasuk rincian item.
   Future<List<Transaction>> getDineInOrders(String outletId, {int limit = 40}) async {
     try {
+      final now = DateTime.now();
+      final startOfDay = DateTime(now.year, now.month, now.day).toIso8601String();
       final response = await _client
           .from('transactions')
           .select('*, transaction_items(*)')
           .eq('outlet_id', outletId)
           .eq('channel', 'dine_in')
+          .gte('created_at', startOfDay)
           .order('created_at', ascending: false)
           .limit(limit);
       return (response as List)

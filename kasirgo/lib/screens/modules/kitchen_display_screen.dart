@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
@@ -91,12 +93,17 @@ class _KitchenDisplayScreenState extends ConsumerState<KitchenDisplayScreen> {
   ];
 
   sb.RealtimeChannel? _channel;
+  Timer? _tickTimer;
 
   @override
   void initState() {
     super.initState();
     _loadRealTransactions();
     WidgetsBinding.instance.addPostFrameCallback((_) => _subscribeRealtime());
+    _tickTimer = Timer.periodic(
+        const Duration(seconds: 30), (_) {
+      if (mounted) setState(() {});
+    });
   }
 
   void _subscribeRealtime() {
@@ -120,6 +127,7 @@ class _KitchenDisplayScreenState extends ConsumerState<KitchenDisplayScreen> {
 
   @override
   void dispose() {
+    _tickTimer?.cancel();
     _channel?.unsubscribe();
     super.dispose();
   }
@@ -392,8 +400,8 @@ class _KitchenDisplayScreenState extends ConsumerState<KitchenDisplayScreen> {
                                                 '${waitMinutes}m lalu',
                                                 style: TextStyle(
                                                   fontSize: 11,
-                                                  color: waitMinutes > 15 ? AppTheme.errorColor : AppTheme.textSecondary,
-                                                  fontWeight: waitMinutes > 15 ? FontWeight.bold : FontWeight.normal,
+                                                  color: waitMinutes > 10 ? AppTheme.errorColor : AppTheme.textSecondary,
+                                                  fontWeight: waitMinutes > 10 ? FontWeight.bold : FontWeight.normal,
                                                 ),
                                               ),
                                             ],

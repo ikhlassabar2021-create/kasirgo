@@ -90,6 +90,23 @@ retail = semua kecuali QR Meja & KDS; gerobak = semua kecuali PPOB & QR Meja.
 3. POS jual 2 Es Teh -> stok Gula berkurang 40, stock_logs ada baris reason 'resep'.
 4. Laporan -> Estimasi Laba memakai HPP baru.
 
+### ST8-4 — KDS Lengkap (2026-09-29)
+- KDS sudah punya: Realtime (postgres_changes transactions per outlet),
+  filter chips Semua/Menunggu/Dimasak/Siap, transisi status via RPC
+  `set_order_status(p_tx, p_status)` (RPC ada di live DB).
+- Peningkatan ST8-4:
+  - `getDineInOrders` kini hanya pesanan HARI INI (gte start of day) -
+    tiket kemarin tidak lagi menggantung.
+  - Indikator antrean >10 menit merah tebal (sebelumnya 15).
+  - Timer 30 detik menyegarkan umur tiket tanpa menunggu event.
+
+### Cara uji ST8-4
+1. Pelanggan scan QR meja (channel dine_in) -> pesanan muncul di KDS tanpa refresh.
+2. Tekan tiket -> MENUNGGU -> DIMASAK -> SIAP SAJI -> hilang dari antrean.
+3. Tiket >10 menit tampil merah; umur tiket bertambah sendiri tiap 30 detik.
+
 ## BERIKUTNYA
-- ST8-4: KDS lengkap (kolom status, RPC set_order_status, Realtime, indikator
-  >10 menit, gate warteg/cafe/Pendukung).
+- ST8-5: Shift & Tip + Split Bill - shift_screen (buka/tutup kasir, setoran,
+  selisih), tip per transaksi, transaction_payments (bayar parsial cash/qris/
+  transfer, validasi total = tagihan sebelum LUNAS). Rewrite models/shift.dart +
+  tip.dart ke skema baru.
