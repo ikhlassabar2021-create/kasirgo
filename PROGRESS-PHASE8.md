@@ -62,7 +62,34 @@ retail = semua kecuali QR Meja & KDS; gerobak = semua kecuali PPOB & QR Meja.
    `stock_logs` muncul baris reason 'penjualan' dengan variant_id.
 3. List produk tampil badge "2 varian"; tap badge → detail varian.
 
+### ST8-3 — Resep/BOM + HPP (2026-09-29)
+- `models/recipe.dart`: RecipeItem +`unit` (gram/ml/biji).
+- `supabase_service.dart`:
+  - `saveRecipe` jadi UPSERT (`ON CONFLICT outlet_id,product_id`), replace items,
+    kirim `outlet_id` pada items (kolom NOT NULL di DB);
+  - +`deleteRecipe`, `getRecipesForOutlet` (join product name/price/cost);
+  - +`deductRecipeIngredients`: konsumsi bahan = qty_resep x (terjual / yield_qty),
+    kurangi stok bahan + `stock_logs` reason 'resep' ref_id=transaction id (best effort).
+- `screens/owner/recipe_screen.dart` (baru): daftar produk dengan/tanpa resep,
+  editor resep (yield porsi, pilih bahan + qty + satuan), HPP resep = sum qty x
+  cost bahan, HPP per porsi, slider target margin -> harga saran,
+  opsi "Set HPP produk = HPP per porsi" (dipakai laporan laba).
+- `owner_home_screen.dart`: kartu modul "Resep & HPP" (gated recipeIngredients).
+- `pos_screen.dart`: setelah transaksi sukses, kurangi stok bahan per item
+  (deductRecipeIngredients per product, fire-and-forget).
+- `product_form_screen.dart`: info "produk punya resep" di dekat Harga Modal.
+- QA DB (cafe outlet): upsert resep OK (UNIQUE outlet+product), item tercatat,
+  deduksi 1000 -> 900 (yield 2, jual 2, qty 100 gram), stock_logs reason 'resep' OK.
+  Data QA dibersihkan.
+- Catatan: `stock_logs.ref_id` bertipe UUID (id transaksi/resep, bukan string bebas).
+
+### Cara uji ST8-3
+1. Owner cafe: Produk -> buat "Gula Pasir" (modal Rp15.000/kg) & "Es Teh" (jual Rp5.000).
+2. Menu "Resep & HPP" -> Es Teh -> Buat Resep -> bahan Gula 20 gram, yield 1 ->
+   HPP porsi = 300; target margin 60% -> harga saran ~Rp750; aktifkan Set HPP.
+3. POS jual 2 Es Teh -> stok Gula berkurang 40, stock_logs ada baris reason 'resep'.
+4. Laporan -> Estimasi Laba memakai HPP baru.
+
 ## BERIKUTNYA
-- ST8-3: Resep/BOM (cafe/warteg) — recipe_screen, recipe_items, HPP = sum qty x cost
-  bahan, margin + harga saran, stok bahan berkurang saat penjualan produk ber-resep
-  (reason 'resep'), HPP di product_form & laporan.
+- ST8-4: KDS lengkap (kolom status, RPC set_order_status, Realtime, indikator
+  >10 menit, gate warteg/cafe/Pendukung).

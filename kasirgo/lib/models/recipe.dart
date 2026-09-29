@@ -83,12 +83,14 @@ class RecipeItem {
   final String recipeId;
   final String? ingredientProductId;
   final double qty;
+  final String? unit;
 
   const RecipeItem({
     required this.id,
     required this.recipeId,
     this.ingredientProductId,
     required this.qty,
+    this.unit,
   });
 
   factory RecipeItem.fromJson(Map<String, dynamic> json) {
@@ -97,6 +99,7 @@ class RecipeItem {
       recipeId: json['recipe_id'] ?? '',
       ingredientProductId: json['ingredient_product_id']?.toString(),
       qty: (json['qty'] ?? 0).toDouble(),
+      unit: json['unit']?.toString(),
     );
   }
 
@@ -106,6 +109,7 @@ class RecipeItem {
       'recipe_id': recipeId,
       'ingredient_product_id': ingredientProductId,
       'qty': qty,
+      'unit': (unit == null || unit!.isEmpty) ? null : unit,
     };
   }
 
@@ -115,6 +119,7 @@ class RecipeItem {
       'recipe_id': recipeId,
       'ingredient_product_id': ingredientProductId,
       'qty': qty,
+      'unit': unit,
     };
   }
 
@@ -124,6 +129,7 @@ class RecipeItem {
       recipeId: map['recipe_id'] ?? '',
       ingredientProductId: map['ingredient_product_id']?.toString(),
       qty: (map['qty'] ?? 0).toDouble(),
+      unit: map['unit']?.toString(),
     );
   }
 
@@ -132,12 +138,14 @@ class RecipeItem {
     String? recipeId,
     String? ingredientProductId,
     double? qty,
+    String? unit,
   }) {
     return RecipeItem(
       id: id ?? this.id,
       recipeId: recipeId ?? this.recipeId,
       ingredientProductId: ingredientProductId ?? this.ingredientProductId,
       qty: qty ?? this.qty,
+      unit: unit ?? this.unit,
     );
   }
 }

@@ -410,6 +410,15 @@ class _PosScreenState extends ConsumerState<PosScreen> {
         throw Exception('Gagal menyimpan transaksi');
       }
 
+      // Pengurangan bahan resep (BOM) - best effort, tidak memblokir.
+      for (final item in _cart) {
+        final qty = item.quantity.toDouble();
+        if (qty > 0 && item.productId.isNotEmpty) {
+          SupabaseService()
+              .deductRecipeIngredients(outletId, item.productId, qty, created.id);
+        }
+      }
+
       ref.invalidate(productsProvider);
 
       if (mounted) {

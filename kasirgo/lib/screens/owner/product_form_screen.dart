@@ -44,6 +44,7 @@ class _ProductFormScreenState extends ConsumerState<ProductFormScreen> {
   // Varian produk (ST8-2, outlet retail).
   bool _hasVariants = false;
   bool _variantsLoading = false;
+  double _recipeYield = 0;
   List<ProductVariant> _variants = [];
   final Set<String> _removedVariantIds = {};
 
@@ -112,6 +113,14 @@ class _ProductFormScreenState extends ConsumerState<ProductFormScreen> {
       _loadChannelPrices(p.id);
       _loadProductDiscount(p.id);
       if (_hasVariants) _loadVariants(p.id);
+      _loadRecipeInfo(p.id);
+    }
+  }
+
+  Future<void> _loadRecipeInfo(String productId) async {
+    final recipe = await SupabaseService().getRecipe(productId);
+    if (mounted && recipe != null) {
+      setState(() => _recipeYield = recipe.yieldQty);
     }
   }
 
@@ -1182,6 +1191,25 @@ class _ProductFormScreenState extends ConsumerState<ProductFormScreen> {
                         ),
                       ],
                     ),
+                    if (_recipeYield > 0)
+                      Padding(
+                        padding: const EdgeInsets.only(top: 6),
+                        child: Row(
+                          children: [
+                            const Icon(Icons.soup_kitchen_rounded,
+                                size: 15, color: AppTheme.primaryColor),
+                            const SizedBox(width: 6),
+                            Expanded(
+                              child: Text(
+                                'Produk ini punya resep (${_recipeYield.toStringAsFixed(0)} porsi) - HPP dihitung dari bahan di menu Resep & HPP',
+                                style: TextStyle(
+                                    fontSize: 11,
+                                    color: AppTheme.textSecondary),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
                     const SizedBox(height: 12),
                     Row(
                       children: [

@@ -1129,17 +1129,96 @@ class SupabaseService {
     try {
       final recRes = await _client
           .from('recipes')
-          .insert(recipe.toJson())
+          .upsert(recipe.toJson(), onConflict: 'outlet_id,product_id')
           .select()
           .single();
       final savedRecipe = Recipe.fromJson(recRes);
+      await _client.from('recipe_items').delete().eq('recipe_id', savedRecipe.id);
       if (items.isNotEmpty) {
-        final itemsPayload = items.map((i) => i.copyWith(recipeId: savedRecipe.id).toJson()).toList();
-        await _client.from('recipe_items').insert(itemsPayload);
+        final itemsPayload = items
+            .where((i) => (i.ingredientProductId ?? '').isNotEmpty)
+            .map((i) => <String, dynamic>{
+                  ...i.copyWith(recipeId: savedRecipe.id, id: '').toJson(),
+                  'outlet_id': savedRecipe.outletId,
+                })
+            .toList();
+        if (itemsPayload.isNotEmpty) {
+          await _client.from('recipe_items').insert(itemsPayload);
+        }
       }
       return savedRecipe;
     } catch (e) {
       return null;
+    }
+  }
+
+  Future<bool> deleteRecipe(String recipeId) async {
+    try {
+      await _client.from('recipe_items').delete().eq('recipe_id', recipeId);
+      await _client.from('recipes').delete().eq('id', recipeId);
+      return true;
+    } catch (e) {
+      return false;
+    }
+  }
+
+  Future<List<Recipe>> getRecipesForOutlet(String outletId) async {
+    try {
+      final response = await _client
+          .from('recipes')
+          .select('*, recipe_items(*), product:products(id, name, price, cost_price)')
+          .eq('outlet_id', outletId);
+      return (response as List)
+          .map((r) => Recipe.fromJson(r as Map<String, dynamic>))
+          .toList();
+    } catch (e) {
+      return [];
+    }
+  }
+
+  /// Kurangi stok bahan sesuai resep saat produk terjual.
+  /// Konsumsi per bahan = qty_resep x (jumlah terjual / yield_qty).
+  /// Best effort: gagal tidak memblokir transaksi.
+  Future<void> deductRecipeIngredients(
+      String outletId, String productId, double soldQty, String refTxId) async {
+    try {
+      final recipe = await getRecipe(productId);
+      if (recipe == null || recipe.items.isEmpty || recipe.yieldQty <= 0) return;
+      final factor = soldQty / recipe.yieldQty;
+      for (final item in recipe.items) {
+        final ingredientId = item.ingredientProductId;
+        if (ingredientId == null || ingredientId.isEmpty) continue;
+        final consume = item.qty * factor;
+        if (consume <= 0) continue;
+        final ing = await _client
+            .from('products')
+            .select('id, outlet_id, stock')
+            .eq('id', ingredientId)
+            .maybeSingle();
+        if (ing == null) continue;
+        final currentStock =
+            double.tryParse(ing['stock']?.toString() ?? '0') ?? 0;
+        final newStock = currentStock - consume;
+        await _client
+            .from('products')
+            .update({
+              'stock': newStock,
+              'updated_at': DateTime.now().toIso8601String(),
+            })
+            .eq('id', ingredientId);
+        await _client.from('stock_logs').insert({
+          'outlet_id':
+              (ing['outlet_id']?.toString().isNotEmpty ?? false)
+                  ? ing['outlet_id']
+                  : outletId,
+          'product_id': ingredientId,
+          'change': -consume,
+          'reason': 'resep',
+          'ref_id': refTxId,
+        });
+      }
+    } catch (e) {
+      // best effort: kegagalan pengurangan bahan tidak memblokir transaksi
     }
   }
 

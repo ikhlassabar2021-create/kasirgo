@@ -26,6 +26,7 @@ import 'qr_table_screen.dart';
 import 'online_catalog_screen.dart';
 import 'health_score_screen.dart';
 import '../modules/kitchen_display_screen.dart';
+import 'recipe_screen.dart';
 import '../modules/ppob_screen.dart';
 import '../modules/restock_screen.dart';
 import '../modules/supporter_screen.dart';
@@ -907,6 +908,18 @@ class _OwnerHomeScreenState extends ConsumerState<OwnerHomeScreen> {
           subtitle: 'Pesanan dapur',
           color: AppTheme.secondaryColor,
           onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const KitchenDisplayScreen())),
+        ),
+      );
+    }
+
+    if (modules.contains(BusinessModule.recipeIngredients)) {
+      quickActionItems.add(
+        _ModuleCard(
+          icon: Icons.soup_kitchen_rounded,
+          title: 'Resep & HPP',
+          subtitle: 'BOM & harga saran',
+          color: AppTheme.primaryColor,
+          onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const RecipeScreen())),
         ),
       );
     }
