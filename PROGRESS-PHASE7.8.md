@@ -5,7 +5,9 @@ SELESAI: ST7.8-2 - services/supporter_service.dart (config cache+fallback, entit
 SELESAI: ST7.8-3 - UI Program Pendukung SATU kartu Rp50.000/bulan (settings + layar modul Pendukung)
 SELESAI: ST7.8-4 - gate hasFeature() fitur pindahan (WA Marketing, Social Sync, Katalog Online, QR Meja,
           Health Score Pro, export Excel/PDF, slot staf tambahan)
-BERIKUTNYA: ST7.8-5 (Tahap 2/3) - laporan otomatis ke bos (report_schedule_screen + notifikasi lokal + WA one-tap)
+SELESAI: ST7.8-5 - laporan otomatis ke bos (report_schedule_screen + notifikasi lokal + WA/email one-tap
+          + Edge Function report_scheduler)
+BERIKUTNYA: ST7.8-6 (Tahap 2/3) - iklan pelanggan (katalog online + QR meja: config ads, non-intrusif, ad_free, blokir, consent)
 
 ## Detail ST7.8-DB
 File: docs/migrations/2026-09-28-kasirgo-7.8.sql (idempotent, aman diulang)
@@ -98,6 +100,28 @@ announcements(is_active), audit_logs(created_at DESC), admin_users(user_id).
 - flutter analyze: bersih pada semua file baru/diubah (hanya info deprecated_member_use & unnecessary_underscores
   lama di file yang tidak terkait).
 - flutter build web --release: SUKSES.
+
+### ST7.8-5 (laporan otomatis ke bos)
+- pubspec: + flutter_local_notifications ^22.3.1, + timezone ^0.11.1.
+- services/notification_service.dart (BARU): init (izin Android 13+/iOS), scheduleReportReminder()
+  (zonedSchedule, repeat daily/weekly/monthly, zona Asia/Jakarta), cancelReportReminder();
+  payload 'report:<outletId>'.
+- services/report_scheduler_service.dart (BARU): model ReportSchedule (period, send_time, day_of_week,
+  day_of_month, recipients<=3, channels, content_flags), load/save ke report_schedules,
+  nextRun() hitung jadwal berikutnya, applyLocalReminder(), buildReportText() (omzet, transaksi,
+  rata-rata, produk terlaris), sendViaWhatsApp()/sendViaEmail() (one-tap via url_launcher).
+- screens/owner/report_schedule_screen.dart (BARU): toggle aktif, periode harian/mingguan/bulanan,
+  jam (time picker), hari/tanggal, sampai 3 penerima, toggle isi laporan, toggle kanal WA/email,
+  info jadwal berikutnya, tombol Kirim Sekarang + Simpan Jadwal.
+- settings_screen.dart: entri "Laporan Otomatis ke Bos" -> ReportScheduleScreen.
+- app.dart: inisialisasi NotificationService; tap notifikasi -> buka WA dengan laporan siap kirim.
+- android/app/src/main/AndroidManifest.xml: RECEIVE_BOOT_COMPLETED + ScheduledNotificationReceiver +
+  ScheduledNotificationBootReceiver (agar jadwal bertahan setelah reboot).
+- supabase/functions/report_scheduler/index.ts (BARU, BELUM di-deploy): cron bangun laporan +
+  kirim email (Resend via RESEND_API_KEY/REPORT_FROM_EMAIL) + update last_sent_at.
+  Deploy: supabase functions deploy report_scheduler --no-verify-jwt + jadwalkan pg_cron (CRON_SECRET).
+- Catatan: notifikasi lokal berjalan di HP; pengiriman email otomatis penuh butuh Edge Function
+  ter-deploy + RESEND_API_KEY. Di web, notifikasi mengikuti izin browser (opsional).
 
 ## Catatan lama
 - Tahap berikutnya (ST7.8-APP): services/supporter_service.dart (baca harga/durasi dari

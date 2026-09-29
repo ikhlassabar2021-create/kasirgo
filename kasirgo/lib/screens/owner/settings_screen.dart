@@ -13,6 +13,7 @@ import '../../services/supporter_service.dart';
 import '../../services/supabase_service.dart';
 import '../../utils/formatters.dart';
 import '../../utils/qris_config.dart';
+import 'report_schedule_screen.dart';
 
 class SettingsScreen extends ConsumerStatefulWidget {
   const SettingsScreen({super.key});
@@ -292,6 +293,8 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                         _buildForeverFreeBanner(),
                         const SizedBox(height: 16),
                         _buildSupporterProgramCard(),
+                        const SizedBox(height: 16),
+                        _buildReportScheduleEntry(),
                         const SizedBox(height: 16),
                         _buildKYCStatusCard(),
                         const SizedBox(height: 16),
@@ -580,6 +583,47 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                     fontSize: 12.5, color: AppTheme.textPrimary, height: 1.35)),
           ),
         ],
+      ),
+    );
+  }
+
+  Widget _buildReportScheduleEntry() {
+    return Container(
+      decoration: BoxDecoration(
+        color: AppTheme.surfaceColor.withValues(alpha: 0.8),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: AppTheme.borderColor.withValues(alpha: 0.5)),
+      ),
+      child: ListTile(
+        shape:
+            RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        leading: Container(
+          padding: const EdgeInsets.all(10),
+          decoration: BoxDecoration(
+            color: AppTheme.primaryColor.withValues(alpha: 0.1),
+            borderRadius: BorderRadius.circular(12),
+          ),
+          child: const Icon(Icons.assessment_outlined,
+              color: AppTheme.primaryColor, size: 22),
+        ),
+        title: const Text(
+          'Laporan Otomatis ke Bos',
+          style: TextStyle(
+              fontSize: 15,
+              fontWeight: FontWeight.bold,
+              color: AppTheme.textPrimary),
+        ),
+        subtitle: const Text(
+          'Jadwal harian/mingguan/bulanan, kirim via WhatsApp/email',
+          style: TextStyle(fontSize: 12, color: AppTheme.textSecondary),
+        ),
+        trailing:
+            const Icon(Icons.chevron_right, color: AppTheme.textSecondary),
+        onTap: () => Navigator.push(
+          context,
+          MaterialPageRoute(
+              builder: (_) => const ReportScheduleScreen()),
+        ),
       ),
     );
   }

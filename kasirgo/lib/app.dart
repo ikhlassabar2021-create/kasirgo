@@ -20,6 +20,8 @@ import 'screens/customer/customer_menu_screen.dart';
 import 'services/local_db_service.dart';
 import 'services/sync_service.dart';
 import 'services/auth_service.dart';
+import 'services/notification_service.dart';
+import 'services/report_scheduler_service.dart';
 import 'providers/auth_provider.dart';
 
 final _router = GoRouter(
@@ -140,6 +142,9 @@ class _KasirGoAppState extends ConsumerState<KasirGoApp> {
       // Offline engine unavailable (e.g. web preview); app still works online.
     }
 
+    // Notifikasi lokal untuk pengingat "Laporan Otomatis ke Bos".
+    NotificationService.instance.initialize(onTap: _handleNotificationTap);
+
     final authService = AuthService();
     final user = await authService.getCurrentUser();
     if (!mounted || user == null) return;
@@ -151,6 +156,19 @@ class _KasirGoAppState extends ConsumerState<KasirGoApp> {
       _ => '/owner',
     };
     _router.go(route);
+  }
+
+  Future<void> _handleNotificationTap(String? payload) async {
+    if (payload == null || !payload.startsWith('report:')) return;
+    final outletId = payload.substring('report:'.length);
+    if (outletId.isEmpty) return;
+    try {
+      final svc = ReportSchedulerService();
+      final schedule = await svc.load(outletId);
+      if (schedule != null) {
+        await svc.sendViaWhatsApp(outletId, schedule);
+      }
+    } catch (_) {}
   }
 
   @override
