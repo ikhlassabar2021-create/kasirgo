@@ -7,6 +7,7 @@ import '../../config/app_theme.dart';
 import '../../models/product.dart';
 import '../../models/transaction.dart';
 import '../../providers/auth_provider.dart';
+import '../../services/offline_transaction_service.dart';
 import '../../services/supabase_service.dart';
 import '../../utils/formatters.dart';
 import '../../widgets/common/centennial_background.dart';
@@ -421,7 +422,27 @@ class _PosScreenState extends ConsumerState<PosScreen> {
 
       final created = await SupabaseService().createTransaction(tx);
       if (created == null) {
-        throw Exception('Gagal menyimpan transaksi');
+        // Offline / gagal jaringan: simpan lokal, sync otomatis saat online.
+        final savedOffline =
+            await OfflineTransactionService().saveOfflineCheckout(tx);
+        ref.invalidate(productsProvider);
+        if (mounted) {
+          setState(() {
+            _cart.clear();
+            _discountAmount = 0.0;
+          });
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(savedOffline
+                  ? 'Disimpan offline. Terkirim otomatis saat online.'
+                  : 'Gagal menyimpan transaksi.'),
+              backgroundColor:
+                  savedOffline ? AppTheme.warningColor : AppTheme.errorColor,
+              behavior: SnackBarBehavior.floating,
+            ),
+          );
+        }
+        return;
       }
 
       // Pengurangan bahan resep (BOM) - best effort, tidak memblokir.

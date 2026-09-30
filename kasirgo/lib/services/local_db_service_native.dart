@@ -12,6 +12,10 @@ import '../models/variant.dart';
 import '../models/ppob.dart';
 
 class LocalDatabase {
+  LocalDatabase._internal();
+  static final LocalDatabase shared = LocalDatabase._internal();
+  factory LocalDatabase() => shared;
+
   Database? _db;
   bool _initialized = false;
   static const _storage = FlutterSecureStorage();
@@ -39,6 +43,16 @@ class LocalDatabase {
     _db!.execute("PRAGMA key = '$encryptionKey';");
     _createTables();
     _initialized = true;
+  }
+
+  /// Inisialisasi aman: false bila engine lokal tak tersedia (mis. web).
+  Future<bool> ensureInitialized() async {
+    try {
+      await initialize();
+      return true;
+    } catch (_) {
+      return false;
+    }
   }
 
   void _createTables() {

@@ -51,5 +51,48 @@
   disarankan (housekeeping user).
 
 ## BERIKUTNYA
-- ST12-2: stress test sync offline<->online (Isolate, LWW, idempotent
-  event_id), uji beban stok/antrean/memori, perbaiki bottleneck.
+- ST12-3: web build + deploy gh-pages, dokumen APK CI, E2E, Phase 12 SELESAI.
+
+## ST12-2 — Stress Test Sync Offline<->Online (2026-10-02)
+
+### Temuan stress test (serius)
+1. **BUG DATA-LOSS (fix):** resolver stok di Isolate menggabungkan delta stok
+   dan menaruh hasilnya di AKHIR list, sehingga indeks `preparedQueue`
+   TIDAK sejajar dengan antrean mentah — padahal penghapusan antrean pakai
+   indeks mentah. Sync parsial (beberapa item gagal) => **item salah
+   terhapus**. Fix: resolver kini menjaga posisi (agregat di posisi
+   kemunculan pertama, duplikat jadi null) + `removeMany` atomik.
+2. **PIPELINE OFFLINE TIDAK PERNAH DI-WIRE (fix):** `queueOperation`/
+   `queueSyncEvent` tidak pernah dipanggil siapa pun; `getUnsynced*` SQLite
+   tidak pernah dibaca; checkout POS hanya memanggil Supabase langsung —
+   transaksi offline HILANG. Fix (wiring end-to-end):
+   - Checkout offline -> `OfflineTransactionService.saveOfflineCheckout`:
+     transaksi (event_id, pending) + kurangi stok lokal + stock_logs ke
+     SQLite. Snackbar "Disimpan offline".
+   - `SyncService.syncQueue` kini mendorong baris lokal unsynced:
+     transaksi (upsert onConflict id) + transaction_items (id DETERMINISTIK
+     via IdGen.deterministic -> retry aman, trigger decrement_stock hanya
+     jalan sekali) + kasbon + stock_logs (event_id UNIQUE) + PPOB.
+   - Katalog offline: productsProvider cache SQLite (batchInsertProducts
+     saat online; baca cache saat offline).
+3. **O(n^2) + race di OfflineQueue (fix):** setiap add/remove decode+encode
+   seluruh antrean tanpa lock; remove satu-per-satu saat sync (n tulis
+   penuh). Fix: lock serial + cache memori + removeMany satu tulis.
+4. **Retry habis = data dibuang diam-diam (fix):** kini masuk dead-letter
+   (`offline_sync_dead_letter`) untuk inspeksi/replay.
+5. **Dedupe event_id** saat menyiapkan batch (re-queue setelah crash tidak
+   dobel). Delta stok server tidak pernah dikirim manual dari penjualan
+   offline — trigger `decrement_stock` server-side yang mengurangi, jadi
+   tidak ada deincrement ganda.
+
+### Verifikasi
+- `test/sync_stress_test.dart`: 10/10 PASS —
+  300 add konkurensi + removeMany tanpa kehilangan; race add/remove lock;
+  dead-letter; persist antar-restart; agregasi delta + LWW; idempotency
+  resolver; dedupe event_id; beban 5000 event <1s; IdGen uuidV4 unik;
+  deterministic id stabil.
+- `flutter analyze`: 21 isu = baseline (0 baru).
+
+### Catatan
+- Tip/split payment offline belum tersimpan lokal (best-effort online saja);
+  dicatat sebagai keterbatasan, tidak memblokir rilis.

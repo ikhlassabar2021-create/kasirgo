@@ -7,9 +7,15 @@ import '../models/variant.dart';
 import '../models/ppob.dart';
 
 class LocalDatabase {
+  LocalDatabase._internal();
+  static final LocalDatabase shared = LocalDatabase._internal();
+  factory LocalDatabase() => shared;
+
   Future<void> initialize() async {
     throw UnsupportedError('SQLite not available on web');
   }
+
+  Future<bool> ensureInitialized() async => false;
 
   Future<List<Product>> getAllProducts(String outletId) async => [];
   Future<Product?> getProduct(String id) async => null;

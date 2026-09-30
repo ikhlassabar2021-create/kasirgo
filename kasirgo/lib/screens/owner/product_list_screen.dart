@@ -1,4 +1,5 @@
 import 'dart:io';
+import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -7,13 +8,44 @@ import '../../config/app_theme.dart';
 import '../../models/product.dart';
 import '../../models/variant.dart';
 import '../../providers/auth_provider.dart';
+import '../../services/local_db_service.dart';
 import '../../services/supabase_service.dart';
 import '../../utils/formatters.dart';
 
+/// Katalog produk offline-first: online -> Supabase + cache SQLite;
+/// offline -> baca cache SQLite (stok terakhir termasuk hasil penjualan offline).
 final productsProvider = FutureProvider<List<Product>>((ref) async {
   final user = ref.watch(currentUserProvider);
   if (user?.outletId == null) return [];
-  return SupabaseService().getProducts(user!.outletId!);
+  final outletId = user!.outletId!;
+  final db = LocalDatabase.shared;
+  final dbReady = await db.ensureInitialized();
+
+  Future<List<Product>> readCache() async {
+    if (!dbReady) return [];
+    return db.getAllProducts(outletId);
+  }
+
+  try {
+    final conn = await Connectivity().checkConnectivity();
+    final online = conn.isNotEmpty && !conn.contains(ConnectivityResult.none);
+    if (!online) return await readCache();
+
+    final products = await SupabaseService().getProducts(outletId);
+    if (dbReady && products.isNotEmpty) {
+      try {
+        db.batchInsertProducts(products);
+      } catch (_) {}
+    }
+    if (products.isEmpty) {
+      // Supabase bisa gagal dalam (getProducts menelan error) -> pakai cache.
+      final cached = await readCache();
+      if (cached.isNotEmpty) return cached;
+    }
+    return products;
+  } catch (_) {
+    return await readCache();
+  }
 });
 
 class ProductListScreen extends ConsumerStatefulWidget {

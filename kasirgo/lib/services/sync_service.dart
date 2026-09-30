@@ -2,7 +2,10 @@ import 'dart:async';
 import 'package:flutter/foundation.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:connectivity_plus/connectivity_plus.dart';
+import '../models/debt.dart';
+import '../utils/id_gen.dart';
 import '../utils/offline_queue.dart';
+import 'local_db_service.dart';
 
 class SyncEvent {
   final String eventId;
@@ -68,65 +71,93 @@ class SyncService {
     _isSyncing = true;
 
     try {
+      // 1) Dorong baris lokal yang belum tersinkron (SQLite -> Supabase).
+      await _pushUnsyncedLocalRows();
+
+      // 2) Proses antrean operasi generik (SharedPreferences).
       final rawQueue = await _offlineQueue.getQueue();
       if (rawQueue.isEmpty) return;
 
-      // Group stock delta updates to resolve multi-cashier stock conflicts
-      final preparedQueue = await compute(_prepareAndResolveConflictQueue, rawQueue);
+      // Resolver menjaga POSISI: item stok digabung di posisi kemunculan
+      // pertamanya, duplikatnya jadi null -> indeks hasil == indeks mentah.
+      // (Bug lama: indeks tidak align -> item salah terhapus = data loss.)
+      final preparedQueue =
+          await compute(prepareAndResolveConflictQueue, rawQueue);
 
-      final processedIndices = <int>[];
+      final processedIndices = <int>{};
+      final deadLetters = <int, Map<String, dynamic>>{};
 
       for (var i = 0; i < preparedQueue.length; i++) {
         final item = preparedQueue[i];
+        if (item == null) {
+          // Digabung ke event agregat lain; aman dihapus.
+          processedIndices.add(i);
+          continue;
+        }
         final success = await _processQueueItem(item);
 
         if (success) {
           processedIndices.add(i);
         } else {
           item['retryCount'] = (item['retryCount'] ?? 0) + 1;
-          if (item['retryCount'] >= 5) {
-            processedIndices.add(i);
+          if (item['retryCount'] >= OfflineQueue.maxRetries) {
+            deadLetters[i] = item;
           }
         }
       }
 
-      for (final index in processedIndices.reversed) {
-        await _offlineQueue.removeFromQueue(index);
+      await _offlineQueue.removeMany(processedIndices);
+      if (deadLetters.isNotEmpty) {
+        await _offlineQueue.moveToDeadLetter(deadLetters);
       }
     } finally {
       _isSyncing = false;
     }
   }
 
-  /// Background Isolate worker: Aggregates delta stock events by atomic counter/timestamp
-  /// and validates idempotency before uploading.
-  static List<Map<String, dynamic>> _prepareAndResolveConflictQueue(
+  /// Background Isolate worker: menggabungkan delta stok per produk
+  /// (akumulasi atomik + LWW timestamp) dan mendeduplikasi event yang sama.
+  ///
+  /// Output SEJAJAR dengan input (panjang & posisi sama); slot null berarti
+  /// item telah digabung ke slot lain atau duplikat event_id.
+  @visibleForTesting
+  static List<Map<String, dynamic>?> prepareAndResolveConflictQueue(
     List<Map<String, dynamic>> queue,
   ) {
     final stockDeltas = <String, Map<String, dynamic>>{};
-    final resolved = <Map<String, dynamic>>[];
+    final firstStockIndex = <String, int>{};
+    final seenEventIds = <String>{};
+    final out = List<Map<String, dynamic>?>.filled(queue.length, null);
 
-    for (final item in queue) {
+    for (var i = 0; i < queue.length; i++) {
+      final item = queue[i];
       final operation = item['operation'] as String?;
       final data = Map<String, dynamic>.from(item['data'] as Map? ?? {});
+
+      // Dedupe event identik (re-queue setelah crash): event_id sama = buang.
+      final eventId = data['event_id'];
+      if (eventId is String && eventId.isNotEmpty) {
+        if (!seenEventIds.add('$operation|$eventId')) continue;
+      }
 
       if (operation == 'update_stock' || operation == 'create_stock_log') {
         final productId = data['product_id'] as String?;
         if (productId != null) {
           final delta = (data['change_amount'] ?? data['delta'] ?? 0) as num;
-          final current = stockDeltas[productId];
-          final timestamp = DateTime.tryParse(item['timestamp'] as String? ?? '') ??
-              DateTime.now();
+          final timestamp =
+              DateTime.tryParse(item['timestamp'] as String? ?? '') ??
+                  DateTime.now();
 
+          final current = stockDeltas[productId];
           if (current == null) {
             stockDeltas[productId] = {
-              'product_id': productId,
               'delta': delta,
               'latest_timestamp': timestamp,
               'original_item': item,
             };
+            firstStockIndex[productId] = i;
           } else {
-            // Atomic counter accumulation: sum up stock deltas
+            // Akumulasi delta atomik + ambil timestamp terbaru (LWW).
             current['delta'] = (current['delta'] as num) + delta;
             final prevTime = current['latest_timestamp'] as DateTime;
             if (timestamp.isAfter(prevTime)) {
@@ -136,20 +167,23 @@ class SyncService {
           continue;
         }
       }
-      resolved.add(item);
+      out[i] = item;
     }
 
-    // Append merged stock resolution delta events
+    // Tulis event agregat di posisi kemunculan pertama tiap produk.
     stockDeltas.forEach((productId, summary) {
-      final baseItem = Map<String, dynamic>.from(summary['original_item'] as Map);
+      final idx = firstStockIndex[productId]!;
+      final baseItem =
+          Map<String, dynamic>.from(summary['original_item'] as Map);
       final baseData = Map<String, dynamic>.from(baseItem['data'] as Map);
       baseData['aggregated_delta'] = summary['delta'];
-      baseData['resolved_at'] = (summary['latest_timestamp'] as DateTime).toIso8601String();
+      baseData['resolved_at'] =
+          (summary['latest_timestamp'] as DateTime).toIso8601String();
       baseItem['data'] = baseData;
-      resolved.add(baseItem);
+      out[idx] = baseItem;
     });
 
-    return resolved;
+    return out;
   }
 
   Future<bool> _processQueueItem(Map<String, dynamic> item) async {
@@ -245,6 +279,118 @@ class SyncService {
       return false;
     }
   }
+
+  // ============================================================
+  // Push baris lokal unsynced (SQLite) -> Supabase (idempotent).
+  // Stok TIDAK dikirim manual: trigger decrement_stock di server
+  // berjalan saat transaction_items benar-benar INSERT (upsert yang
+  // konflik id tidak men-trigger ulang -> tanpa deincrement ganda).
+  // ============================================================
+  Future<void> _pushUnsyncedLocalRows() async {
+    final db = LocalDatabase.shared;
+    if (!await db.ensureInitialized()) return;
+
+    // 1) Transaksi + item (id item deterministik -> retry aman).
+    for (final tx in db.getUnsyncedTransactions()) {
+      try {
+        final payload = tx.toSupabaseJson();
+        payload['id'] = tx.id.isNotEmpty ? tx.id : IdGen.uuidV4();
+        payload['sync_status'] = 'synced';
+        payload['event_id'] =
+            (tx.eventId?.isNotEmpty ?? false) ? tx.eventId : IdGen.uuidV4();
+        payload['device_id'] = tx.deviceId;
+        await _client.from('transactions').upsert(payload, onConflict: 'id');
+
+        final rows = <Map<String, dynamic>>[];
+        for (var i = 0; i < tx.items.length; i++) {
+          final item = tx.items[i];
+          if (item.productId.isEmpty) continue;
+          rows.add({
+            'id': IdGen.deterministic('${payload['id']}|${item.productId}|$i'),
+            'transaction_id': payload['id'],
+            'product_id': item.productId,
+            if (item.variantId != null && item.variantId!.isNotEmpty)
+              'variant_id': item.variantId,
+            'product_name': item.productName,
+            'quantity': item.quantity,
+            'unit_price': item.price,
+            'discount': 0,
+            'subtotal': item.subtotal,
+            if (item.note != null && item.note!.isNotEmpty) 'note': item.note,
+          });
+        }
+        if (rows.isNotEmpty) {
+          await _client
+              .from('transaction_items')
+              .upsert(rows, onConflict: 'id');
+        }
+        db.markTransactionSynced(tx.id);
+      } catch (_) {
+        // Tetap pending; dicoba lagi pada tick berikutnya.
+      }
+    }
+
+    // 2) Kasbon.
+    for (final debt in db.getUnsyncedDebts()) {
+      try {
+        await _client.from('debts').upsert(_debtPayload(debt),
+            onConflict: 'id');
+        db.markDebtSynced(debt.id);
+      } catch (_) {}
+    }
+
+    // 3) Log stok (buku besar; event_id UNIQUE -> idempotent).
+    for (final log in db.getUnsyncedStockLogs()) {
+      try {
+        final payload = {
+          'id': log.id,
+          'outlet_id': log.outletId,
+          'product_id': log.productId,
+          'variant_id': log.variantId,
+          'delta': log.delta,
+          'reason': log.reason,
+          'ref_id': log.refId,
+          'device_id': log.deviceId,
+          'event_id': (log.eventId?.isNotEmpty ?? false)
+              ? log.eventId
+              : IdGen.uuidV4(),
+          'created_at': log.createdAt.toIso8601String(),
+        };
+        await _client.from('stock_logs').upsert(payload, onConflict: 'event_id');
+        db.markStockLogSynced(log.id);
+      } catch (_) {}
+    }
+
+    // 4) Transaksi PPOB.
+    for (final ptx in db.getUnsyncedPpobTransactions()) {
+      try {
+        await _client.from('ppob_transactions').upsert({
+          'id': ptx.id,
+          'outlet_id': ptx.outletId,
+          'ppob_product_id': ptx.ppobProductId,
+          'customer_ref': ptx.customerRef,
+          'amount': ptx.amount,
+          'status': ptx.status,
+          'provider_ref': ptx.providerRef,
+          'created_at': ptx.createdAt.toIso8601String(),
+        }, onConflict: 'id');
+        db.markPpobTransactionSynced(ptx.id);
+      } catch (_) {}
+    }
+  }
+
+  Map<String, dynamic> _debtPayload(Debt debt) => {
+        'id': debt.id,
+        'outlet_id': debt.outletId,
+        'customer_id': debt.customerId,
+        'transaction_id': debt.transactionId,
+        'amount': debt.amount,
+        'paid_amount': debt.paidAmount,
+        'status': debt.status,
+        'due_date': debt.dueDate?.toIso8601String(),
+        'note': debt.note,
+        'created_at': debt.createdAt.toIso8601String(),
+      };
 
   Future<void> queueOperation(String operation, Map<String, dynamic> data) async {
     await _offlineQueue.addToQueue(operation, data);
