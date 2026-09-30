@@ -3,6 +3,7 @@ import '../services/module_registry.dart';
 import '../services/ppob_service.dart';
 import '../services/fintech_service.dart';
 import '../services/hyperlocal_service.dart';
+import '../services/insurance_service.dart';
 import 'outlet_provider.dart';
 
 enum BusinessModule {
@@ -165,4 +166,11 @@ final fintechEnabledProvider = FutureProvider<bool>((ref) async {
 final hyperlocalEnabledProvider = FutureProvider<bool>((ref) async {
   final svc = HyperlocalService();
   return svc.loadConfig();
+});
+
+/// Asuransi Mikro aktif via config superadmin (produk list di config).
+final insuranceEnabledProvider = FutureProvider<bool>((ref) async {
+  final svc = InsuranceService();
+  final cfg = await svc.loadConfig();
+  return cfg.enabled && cfg.products.isNotEmpty;
 });

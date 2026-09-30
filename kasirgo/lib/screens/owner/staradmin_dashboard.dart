@@ -3,6 +3,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../core/widgets/staradmin_widgets.dart';
+import '../../services/insurance_service.dart';
+import '../../utils/formatters.dart';
 
 class StarAdminDashboard extends ConsumerStatefulWidget {
   const StarAdminDashboard({super.key});
@@ -16,11 +18,21 @@ class _StarAdminDashboardState extends ConsumerState<StarAdminDashboard>
   int _selectedNavIndex = 0;
   late TabController _tabController;
   final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
+  Map<String, dynamic>? _revenueSummary;
 
   @override
   void initState() {
     super.initState();
     _tabController = TabController(length: 4, vsync: this);
+    _loadRevenueSummary();
+  }
+
+  /// Rekap fintech + asuransi (RPC platform_revenue_summary, superadmin only).
+  Future<void> _loadRevenueSummary() async {
+    final summary =
+        await InsuranceService().getPlatformRevenueSummary();
+    if (!mounted) return;
+    setState(() => _revenueSummary = summary);
   }
 
   @override
@@ -143,6 +155,8 @@ class _StarAdminDashboardState extends ConsumerState<StarAdminDashboard>
                               children: [
                                 const SizedBox(height: 24),
                                 _buildMarketOverview(),
+                                const SizedBox(height: 16),
+                                _buildPhase10Revenue(),
                                 const SizedBox(height: 32),
                                 _buildQuickActions(),
                                 const SizedBox(height: 32),
@@ -342,8 +356,107 @@ class _StarAdminDashboardState extends ConsumerState<StarAdminDashboard>
     );
   }
 
-  Widget _buildMetricCard(Map<String, dynamic> metric) {
-    final icon = metric['icon'] as IconData;
+  /// Kartu rekap pendapatan Phase 10 (fintech lead + komisi asuransi).
+  Widget _buildPhase10Revenue() {
+    final fintech =
+        (_revenueSummary?['fintech'] as Map?)?.cast<String, dynamic>();
+    final insurance =
+        (_revenueSummary?['insurance'] as Map?)?.cast<String, dynamic>();
+
+    return StarAdminCard(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text(
+                'PENDAPATAN PARTNER (PHASE 10)',
+                style: GoogleFonts.inter(
+                  fontSize: 12,
+                  fontWeight: FontWeight.w600,
+                  color: const Color(0xFF6B7280),
+                  letterSpacing: 1,
+                ),
+              ),
+              IconButton(
+                visualDensity: VisualDensity.compact,
+                onPressed: _loadRevenueSummary,
+                icon: const Icon(Icons.refresh_rounded, size: 18),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          if (_revenueSummary == null)
+            Text('Memuat rekap...',
+                style: GoogleFonts.inter(
+                    fontSize: 12, color: const Color(0xFF6B7280)))
+          else
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Expanded(
+                  child: _revenueColumn('Modal Usaha (Fintech)', [
+                    ('Total lead', '${fintech?['leads_total'] ?? 0}'),
+                    ('Diajukan', '${fintech?['leads_apply'] ?? 0}'),
+                    ('Disetujui', '${fintech?['leads_approved'] ?? 0}'),
+                    ('Nilai diajukan',
+                        Formatters.currency((fintech?['amount_requested'] as num?)?.toDouble() ?? 0)),
+                  ]),
+                ),
+                const SizedBox(width: 20),
+                Expanded(
+                  child: _revenueColumn('Asuransi Mikro', [
+                    ('Total lead', '${insurance?['leads_total'] ?? 0}'),
+                    ('Disetujui', '${insurance?['leads_approved'] ?? 0}'),
+                    ('Komisi platform',
+                        Formatters.currency((insurance?['commission'] as num?)?.toDouble() ?? 0)),
+                    ('Polis aktif', '${insurance?['policies_active'] ?? 0}'),
+                  ]),
+                ),
+              ],
+            ),
+        ],
+      ),
+    );
+  }
+
+  Widget _revenueColumn(String title, List<(String, String)> rows) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(title,
+            style: GoogleFonts.inter(
+                fontSize: 12.5,
+                fontWeight: FontWeight.w700,
+                color: const Color(0xFF111827))),
+        const SizedBox(height: 6),
+        ...rows.map(
+          (r) => Padding(
+            padding: const EdgeInsets.only(bottom: 3),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text(r.$1,
+                    style: GoogleFonts.inter(
+                        fontSize: 11.5, color: const Color(0xFF6B7280))),
+                Flexible(
+                  child: Text(r.$2,
+                      textAlign: TextAlign.right,
+                      style: GoogleFonts.inter(
+                          fontSize: 11.5,
+                          fontWeight: FontWeight.w700,
+                          color: const Color(0xFF111827))),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildMetricCard(Map<String, dynamic> metric) {    final icon = metric['icon'] as IconData;
     final iconColor = metric['color'] as Color;
     final percentage = metric['percentage'] as String;
     final isPositive = metric['isPositive'] as bool;

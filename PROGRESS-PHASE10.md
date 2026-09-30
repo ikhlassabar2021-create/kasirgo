@@ -75,3 +75,58 @@ Migrasi: docs/migrations/2026-10-01-kasirgo-10.sql (idempotent).
 
 ## BERIKUTNYA (lanjutan)
 - ST10-3: Micro-insurance toko.
+
+## STATUS PHASE 10: SELESAI
+
+### ST10-3 — Micro-Insurance Toko (2026-09-30)
+- DB (bagian 3 kasirgo-10.sql) — RAN live:
+  - `insurance_leads`: outlet_id, user_id, product_code/name/type
+    (toko|kebakaran|barang|lainnya), premi, coverage_amount, commission,
+    status lead|apply|approved|rejected|cancelled, ref, note.
+  - `insurance_policies`: outlet_id, lead_id, product_code,
+    policy_number UNIQUE, premi, coverage, commission,
+    status active|expired|cancelled, started/expires_at.
+  - RLS: Owner FULL; staf read (+insert leads); index.
+  - Config `platform_configs('insurance', global)`: enabled, partner_name,
+    apply_url='', wa_number='', commission_percent=10, master 4 produk
+    (ASR-TOKO 300rb/25jt, ASR-APIKAI 150rb/10jt, ASR-BARANG 200rb/15jt,
+    ASR-PENGIRIM 50rb/3jt).
+  - RPC `platform_revenue_summary()` — rekap fintech+asuransi semua
+    outlet, HANYA superadmin terdaftar `admin_users` aktif (owner/staf
+    lain -> forbidden). Dipakai dashboard superadmin (dan nanti web
+    Phase 11).
+- `lib/services/insurance_service.dart` (baru): InsuranceProduct +
+  InsuranceConfig (parse produk dari config), `loadConfig()`,
+  `submitLead()` (komisi otomatis = premi x komisi%), `getLeads()`,
+  `getPolicies()`, `buildWaLink()`, `getPlatformRevenueSummary()`.
+- `lib/screens/owner/insurance_screen.dart` (baru): daftar produk asuransi
+  mikro (badge tipe, premi/tahun, perlindungan, catatan) + tombol Ajukan
+  (konfirmasi -> lead tercatat -> buka link/wa.me partner); POLIS AKTIF +
+  riwayat pengajuan; state "belum tersedia" bila config kosong/nonaktif.
+- Laporan superadmin: `staradmin_dashboard.dart` tambah kartu
+  "PENDAPATAN PARTNER (PHASE 10)" — fintech (lead/nilai) + asuransi
+  (lead, komisi platform, polis aktif), sumber RPC summary.
+- Kartu "Asuransi Mikro" di owner home, gated `insuranceEnabledProvider`
+  (config enabled DAN ada produk).
+- QA DB: insert lead (ASR-QA-0001, komisi 30.000 = 10% premi 300rb) OK;
+  RPC summary: owner -> forbidden, superadmin -> JSON benar (komisi
+  terbaca); config seed 4 produk; data QA dibersihkan.
+
+### Cara uji ST10-3
+1. Owner: kartu "Asuransi Mikro" -> pilih produk (cth Asuransi Toko
+   300rb/tahun, perlindungan 25jt) -> Ajukan -> lead APPLY di riwayat,
+   WA/link partner terbuka bila sudah diatur superadmin.
+2. Superadmin (login superadmin@kasirgo.com): dashboard -> kartu
+   "Pendapatan Partner (Phase 10)" menampilkan lead fintech + asuransi,
+   komisi platform, polis aktif. Non-superadmin memanggil RPC ditolak.
+3. Superadmin: ubah `platform_configs('insurance').products` (harga/
+   premi/komisi) -> daftar produk & komisi ikut tanpa update APK.
+
+## BERIKUTNYA
+- Phase 11: Superadmin Web (12 revenue engine, RBAC, rules engine,
+  monitoring) - lihat workflow Bagian PHASE 11; mulai dari
+  docs/PROMPT-GILIRAN.md.
+
+## SELESAI
+
+### ST10-1 — Fintech Lead: Modal Usaha (2026-09-30)

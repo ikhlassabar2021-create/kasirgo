@@ -159,3 +159,164 @@ WHERE NOT EXISTS (
 );
 
 -- ============================================================================
+
+-- ---------------------------------------------------------------------------
+-- 3. ST10-3: insurance_leads + insurance_policies (micro-insurance toko)
+--    Master produk asuransi + komisi dari platform_configs('insurance').
+-- ---------------------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS public.insurance_leads (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  outlet_id UUID NOT NULL REFERENCES public.outlets(id) ON DELETE CASCADE,
+  user_id UUID REFERENCES auth.users(id) ON DELETE SET NULL,
+  product_code TEXT NOT NULL DEFAULT '',
+  product_name TEXT NOT NULL DEFAULT '',
+  product_type TEXT NOT NULL DEFAULT 'toko'
+    CHECK (product_type IN ('toko','kebakaran','barang','lainnya')),
+  premi NUMERIC(14,2) NOT NULL DEFAULT 0,
+  coverage_amount NUMERIC(14,2) NOT NULL DEFAULT 0,
+  commission NUMERIC(14,2) NOT NULL DEFAULT 0,
+  status TEXT NOT NULL DEFAULT 'lead'
+    CHECK (status IN ('lead','apply','approved','rejected','cancelled')),
+  ref TEXT,
+  note TEXT,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+ALTER TABLE public.insurance_leads ENABLE ROW LEVEL SECURITY;
+
+DROP POLICY IF EXISTS "Owner full insurance leads" ON public.insurance_leads;
+CREATE POLICY "Owner full insurance leads"
+  ON public.insurance_leads FOR ALL
+  TO authenticated
+  USING (EXISTS (SELECT 1 FROM public.outlets o
+                 WHERE o.id = insurance_leads.outlet_id AND o.owner_id = auth.uid()))
+  WITH CHECK (EXISTS (SELECT 1 FROM public.outlets o
+                 WHERE o.id = insurance_leads.outlet_id AND o.owner_id = auth.uid()));
+
+DROP POLICY IF EXISTS "Staff read insurance leads" ON public.insurance_leads;
+CREATE POLICY "Staff read insurance leads"
+  ON public.insurance_leads FOR SELECT
+  TO authenticated
+  USING (EXISTS (SELECT 1 FROM public.user_roles ur
+                 WHERE ur.user_id = auth.uid()
+                   AND ur.outlet_id = insurance_leads.outlet_id));
+
+DROP POLICY IF EXISTS "Staff insert insurance leads" ON public.insurance_leads;
+CREATE POLICY "Staff insert insurance leads"
+  ON public.insurance_leads FOR INSERT
+  TO authenticated
+  WITH CHECK (EXISTS (SELECT 1 FROM public.user_roles ur
+                 WHERE ur.user_id = auth.uid()
+                   AND ur.outlet_id = insurance_leads.outlet_id));
+
+CREATE INDEX IF NOT EXISTS idx_insurance_outlet_created
+  ON public.insurance_leads (outlet_id, created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_insurance_status
+  ON public.insurance_leads (status);
+
+CREATE TABLE IF NOT EXISTS public.insurance_policies (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  outlet_id UUID NOT NULL REFERENCES public.outlets(id) ON DELETE CASCADE,
+  lead_id UUID REFERENCES public.insurance_leads(id) ON DELETE SET NULL,
+  product_code TEXT NOT NULL DEFAULT '',
+  policy_number TEXT NOT NULL UNIQUE,
+  premi NUMERIC(14,2) NOT NULL DEFAULT 0,
+  coverage_amount NUMERIC(14,2) NOT NULL DEFAULT 0,
+  commission NUMERIC(14,2) NOT NULL DEFAULT 0,
+  status TEXT NOT NULL DEFAULT 'active'
+    CHECK (status IN ('active','expired','cancelled')),
+  started_at TIMESTAMPTZ,
+  expires_at TIMESTAMPTZ,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+ALTER TABLE public.insurance_policies ENABLE ROW LEVEL SECURITY;
+
+DROP POLICY IF EXISTS "Owner full insurance policies" ON public.insurance_policies;
+CREATE POLICY "Owner full insurance policies"
+  ON public.insurance_policies FOR ALL
+  TO authenticated
+  USING (EXISTS (SELECT 1 FROM public.outlets o
+                 WHERE o.id = insurance_policies.outlet_id AND o.owner_id = auth.uid()))
+  WITH CHECK (EXISTS (SELECT 1 FROM public.outlets o
+                 WHERE o.id = insurance_policies.outlet_id AND o.owner_id = auth.uid()));
+
+DROP POLICY IF EXISTS "Staff read insurance policies" ON public.insurance_policies;
+CREATE POLICY "Staff read insurance policies"
+  ON public.insurance_policies FOR SELECT
+  TO authenticated
+  USING (EXISTS (SELECT 1 FROM public.user_roles ur
+                 WHERE ur.user_id = auth.uid()
+                   AND ur.outlet_id = insurance_policies.outlet_id));
+
+CREATE INDEX IF NOT EXISTS idx_insurance_pol_outlet_created
+  ON public.insurance_policies (outlet_id, created_at DESC);
+
+-- Master produk asuransi + partner + komisi (superadmin atur).
+INSERT INTO public.platform_configs (key, scope, value)
+SELECT 'insurance', 'global', jsonb_build_object(
+  'enabled', true,
+  'partner_name', 'Mitra Asuransi Mikro KasirGo',
+  'apply_url', '',
+  'wa_number', '',
+  'commission_percent', 10,
+  'products', jsonb_build_array(
+    jsonb_build_object('code','ASR-TOKO','name','Asuransi Toko Komprehensif',
+      'type','toko','premi',300000,'coverage',25000000,
+      'note','Kebakaran, pencurian, kerusakan bangunan & isi toko'),
+    jsonb_build_object('code','ASR-APIKAI','name','Perlindungan Kebakaran',
+      'type','kebakaran','premi',150000,'coverage',10000000,
+      'note','Kebakaran bangunan & stok barang dagangan'),
+    jsonb_build_object('code','ASR-BARANG','name','Asuransi Barang Dagangan',
+      'type','barang','premi',200000,'coverage',15000000,
+      'note','Kerusakan/hilangnya stok karena bencana'),
+    jsonb_build_object('code','ASR-PENGIRIM','name','Asuransi Pengiriman',
+      'type','lainnya','premi',50000,'coverage',3000000,
+      'note','Barang hilang/rusak saat dikirim pelanggan')
+  ),
+  'updated_at', NOW()
+)
+WHERE NOT EXISTS (
+  SELECT 1 FROM public.platform_configs
+  WHERE key = 'insurance' AND scope = 'global'
+);
+
+-- Rekap pendapatan platform utk superadmin (fintech + asuransi).
+-- HANYA superadmin terdaftar di admin_users (aktif) yang boleh memanggil.
+CREATE OR REPLACE FUNCTION public.platform_revenue_summary()
+RETURNS jsonb
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+DECLARE
+  v_ok boolean;
+BEGIN
+  SELECT EXISTS (
+    SELECT 1 FROM public.admin_users
+    WHERE user_id = auth.uid() AND is_active = TRUE
+  ) INTO v_ok;
+  IF NOT v_ok THEN
+    RAISE EXCEPTION 'forbidden';
+  END IF;
+
+  RETURN jsonb_build_object(
+    'fintech', jsonb_build_object(
+      'leads_total', (SELECT count(*) FROM public.fintech_leads),
+      'leads_apply', (SELECT count(*) FROM public.fintech_leads WHERE status = 'apply'),
+      'leads_approved', (SELECT count(*) FROM public.fintech_leads WHERE status = 'approved'),
+      'amount_requested', COALESCE((SELECT sum(amount_requested) FROM public.fintech_leads), 0)
+    ),
+    'insurance', jsonb_build_object(
+      'leads_total', (SELECT count(*) FROM public.insurance_leads),
+      'leads_approved', (SELECT count(*) FROM public.insurance_leads WHERE status = 'approved'),
+      'commission', COALESCE((SELECT sum(commission) FROM public.insurance_leads WHERE status IN ('apply','approved')), 0),
+      'policies_active', (SELECT count(*) FROM public.insurance_policies WHERE status = 'active')
+    )
+  );
+END;
+$$;
+
+-- ============================================================================

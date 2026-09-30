@@ -27,6 +27,7 @@ import 'online_catalog_screen.dart';
 import 'health_score_screen.dart';
 import '../../screens/owner/fintech_screen.dart';
 import '../../screens/owner/hyperlocal_screen.dart';
+import '../../screens/owner/insurance_screen.dart';
 import '../modules/kitchen_display_screen.dart';
 import 'recipe_screen.dart';
 import 'shift_screen.dart';
@@ -925,6 +926,18 @@ class _OwnerHomeScreenState extends ConsumerState<OwnerHomeScreen> {
           subtitle: 'Insight anonim',
           color: AppTheme.secondaryColor,
           onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const HyperlocalScreen())),
+        ),
+      );
+    }
+
+    if (ref.watch(insuranceEnabledProvider).valueOrNull ?? true) {
+      quickActionItems.add(
+        _ModuleCard(
+          icon: Icons.health_and_safety_rounded,
+          title: 'Asuransi Mikro',
+          subtitle: 'Lindungi toko',
+          color: AppTheme.warningColor,
+          onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const InsuranceScreen())),
         ),
       );
     }
