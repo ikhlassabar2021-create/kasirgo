@@ -145,7 +145,13 @@ Status: SELESAI. Project Supabase sudah dibuat dan schema terpasang serta diuji.
 - [x] Phase 9: PPOB + Closed-loop + Embedded B2B Restock  (SELESAI)
 - [x] Phase 10: Fintech Lead + Hyperlocal Data + Micro-insurance  (SELESAI)
 - [x] Phase 11: Superadmin Web (12 revenue engine, RBAC, rules engine, monitoring)  (SELESAI)
-- [ ] Phase 12: Polish + Security Audit + Release
+- [x] Phase 12: Polish + Security Audit + Release
+  (ST12-1: tutup bocor secret_config, strip api_key, RLS kitchen, INTERNET
+  permission, R8 minify -- migrasi 2026-10-02-kasirgo-12-security.sql;
+  ST12-2: wiring offline end-to-end + fix data-loss resolver + lock antrean +
+  dead-letter + katalog offline -- 10 test pass;
+  ST12-3: web+admin deploy gh-pages, CI APK release-apk.yml, panduan
+  docs/RELEASE.md. Detail: PROGRESS-PHASE12.md)
 
 Catatan: Phase 7.6 adalah redesign visual menyeluruh (semua dashboard + fitur Produk/Pelanggan/
 Karyawan/Laporan/Pengaturan) tanpa mengubah fitur/logic. Spec: workflow Bagian 1.6 & 7C.

@@ -1,5 +1,20 @@
 # PROGRESS PHASE 12 — Polish + Security Audit + Release
 
+## SELESAI (Phase 12 selesai — aplikasi siap rilis)
+
+### ST12-3 — Build Web + Deploy + APK CI (2026-10-02)
+- `flutter build web --release --base-href /kasirgo/` OK.
+- `npm run build` admin OK (1.1MB js / 296KB gzip — catatan: saran code-split
+  untuk fase lanjut).
+- Deploy gh-pages: app root + admin di /kasirgo/admin/ (commit `0edef08`).
+  Smoke test: https://ikhlassabar2021-create.github.io/kasirgo/ (200) dan
+  /kasirgo/admin/ (200), main.dart.js + chunk admin terlayani.
+- APK rilis TIDAK dibangun di sandbox (sesuai aturan): workflow CI
+  `.github/workflows/release-apk.yml` (picu via tag v* atau manual) build
+  `--split-per-abi --obfuscate --split-debug-info`. Panduan lengkap:
+  `docs/RELEASE.md` (termasuk WAJIB keystore rilis + urutan migrasi SQL +
+  checklist E2E manual per role/offline/Program Pendukung).
+
 ## SELESAI
 
 ### ST12-1 — Security Audit + Hardening (2026-10-02)
@@ -96,3 +111,9 @@
 ### Catatan
 - Tip/split payment offline belum tersimpan lokal (best-effort online saja);
   dicatat sebagai keterbatasan, tidak memblokir rilis.
+
+## LANGKAH RILIS (untuk user)
+1. Jalankan di SQL Editor: `2026-10-01-kasirgo-11.sql` (ulang) lalu
+   `2026-10-02-kasirgo-12-security.sql`.
+2. QA manual checklist di `docs/RELEASE.md`.
+3. Buat keystore + `git tag v1.0.0 && git push origin v1.0.0` -> CI build APK.
