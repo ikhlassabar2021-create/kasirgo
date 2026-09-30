@@ -26,6 +26,7 @@ import 'qr_table_screen.dart';
 import 'online_catalog_screen.dart';
 import 'health_score_screen.dart';
 import '../../screens/owner/fintech_screen.dart';
+import '../../screens/owner/hyperlocal_screen.dart';
 import '../modules/kitchen_display_screen.dart';
 import 'recipe_screen.dart';
 import 'shift_screen.dart';
@@ -912,6 +913,18 @@ class _OwnerHomeScreenState extends ConsumerState<OwnerHomeScreen> {
           subtitle: 'Estimasi plafon',
           color: const Color(0xFF4F46E5),
           onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const FintechScreen())),
+        ),
+      );
+    }
+
+    if (ref.watch(hyperlocalEnabledProvider).valueOrNull ?? true) {
+      quickActionItems.add(
+        _ModuleCard(
+          icon: Icons.travel_explore_rounded,
+          title: 'Tren Wilayah',
+          subtitle: 'Insight anonim',
+          color: AppTheme.secondaryColor,
+          onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const HyperlocalScreen())),
         ),
       );
     }

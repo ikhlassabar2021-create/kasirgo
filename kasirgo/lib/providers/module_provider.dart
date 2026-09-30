@@ -2,6 +2,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../services/module_registry.dart';
 import '../services/ppob_service.dart';
 import '../services/fintech_service.dart';
+import '../services/hyperlocal_service.dart';
 import 'outlet_provider.dart';
 
 enum BusinessModule {
@@ -157,4 +158,11 @@ final ppobEnabledProvider = FutureProvider<bool>((ref) async {
 final fintechEnabledProvider = FutureProvider<bool>((ref) async {
   final cfg = await FintechService().loadConfig();
   return cfg.enabled;
+});
+
+/// Tren Wilayah (hyperlocal) aktif via config superadmin; consent owner
+/// ditanyakan terpisah di dalam screen (UU PDP).
+final hyperlocalEnabledProvider = FutureProvider<bool>((ref) async {
+  final svc = HyperlocalService();
+  return svc.loadConfig();
 });

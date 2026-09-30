@@ -72,3 +72,90 @@ WHERE NOT EXISTS (
 );
 
 -- ============================================================================
+
+-- ---------------------------------------------------------------------------
+-- 2. ST10-2: hyperlocal_reports (agregat ANONIM per wilayah, UU PDP)
+--    Tidak ada data pelanggan; payload dibangun dari transaksi teragregasi.
+-- ---------------------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS public.hyperlocal_reports (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  outlet_id UUID NOT NULL REFERENCES public.outlets(id) ON DELETE CASCADE,
+  region TEXT NOT NULL DEFAULT '',
+  period TEXT NOT NULL,
+  payload JSONB NOT NULL DEFAULT '{}'::jsonb,
+  is_anonymous BOOLEAN NOT NULL DEFAULT TRUE,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+ALTER TABLE public.hyperlocal_reports ENABLE ROW LEVEL SECURITY;
+
+-- Baca: semua user terautentikasi (data sudah anonim & teragregasi).
+DROP POLICY IF EXISTS "Authenticated read hyperlocal" ON public.hyperlocal_reports;
+CREATE POLICY "Authenticated read hyperlocal"
+  ON public.hyperlocal_reports FOR SELECT
+  TO authenticated
+  USING (is_anonymous = TRUE);
+
+-- Tulis: HANYA via RPC definer (validasi ownership + paksa anonim).
+DROP POLICY IF EXISTS "Owner insert hyperlocal" ON public.hyperlocal_reports;
+CREATE POLICY "Owner insert hyperlocal"
+  ON public.hyperlocal_reports FOR INSERT
+  TO authenticated
+  WITH CHECK (
+    is_anonymous = TRUE
+    AND EXISTS (SELECT 1 FROM public.outlets o
+                WHERE o.id = hyperlocal_reports.outlet_id
+                  AND o.owner_id = auth.uid())
+  );
+
+CREATE INDEX IF NOT EXISTS idx_hyperlocal_region_period
+  ON public.hyperlocal_reports (region, period DESC);
+CREATE INDEX IF NOT EXISTS idx_hyperlocal_outlet_created
+  ON public.hyperlocal_reports (outlet_id, created_at DESC);
+
+-- Kirim laporan anonim (owner outlet sendiri; paksa is_anonymous=true).
+CREATE OR REPLACE FUNCTION public.hyperlocal_submit(
+  p_outlet uuid, p_region text, p_period text, p_payload jsonb)
+RETURNS uuid
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+DECLARE
+  v_outlet uuid;
+  v_id uuid;
+BEGIN
+  IF p_period IS NULL OR p_period !~ '^\d{4}-\d{2}$' THEN
+    RAISE EXCEPTION 'invalid_period';
+  END IF;
+
+  SELECT o.id INTO v_outlet FROM public.outlets o
+   WHERE o.id = p_outlet AND o.owner_id = auth.uid();
+  IF v_outlet IS NULL THEN
+    RAISE EXCEPTION 'forbidden';
+  END IF;
+
+  INSERT INTO public.hyperlocal_reports
+    (outlet_id, region, period, payload, is_anonymous)
+  VALUES
+    (p_outlet, COALESCE(NULLIF(TRIM(p_region), ''), 'tak-dikenal'),
+     p_period, COALESCE(p_payload, '{}'::jsonb), TRUE)
+  RETURNING id INTO v_id;
+
+  RETURN v_id;
+END;
+$$;
+
+-- Config hyperlocal (opt-in; default OFF - consent owner dulu).
+INSERT INTO public.platform_configs (key, scope, value)
+SELECT 'hyperlocal', 'global', jsonb_build_object(
+  'enabled', true,
+  'note', 'Data agregat anonim per wilayah; tanpa PII pelanggan (UU PDP)',
+  'updated_at', NOW()
+)
+WHERE NOT EXISTS (
+  SELECT 1 FROM public.platform_configs
+  WHERE key = 'hyperlocal' AND scope = 'global'
+);
+
+-- ============================================================================

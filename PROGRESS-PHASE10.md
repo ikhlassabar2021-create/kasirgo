@@ -38,5 +38,40 @@ Migrasi: docs/migrations/2026-10-01-kasirgo-10.sql (idempotent).
    -> channel pengajuan berubah tanpa update APK.
 
 ## BERIKUTNYA
-- ST10-2: Hyperlocal data report (agregat anonim per wilayah + consent
-  UU PDP).
+- ST10-3: Micro-insurance toko (produk asuransi dari config, ajukan
+  polis, riwayat + komisi).
+
+### ST10-2 — Hyperlocal Data Report (2026-09-30)
+- DB (bagian 2 kasirgo-10.sql) — RAN live:
+  - `hyperlocal_reports`: outlet_id, region, period (YYYY-MM), payload
+    jsonb, is_anonymous=TRUE (dipaksa), created_at.
+  - RLS: SELECT semua authenticated (data sudah anonim-teragregasi);
+    INSERT hanya owner outlet sendiri + wajib is_anonymous=TRUE.
+  - RPC `hyperlocal_submit(p_outlet, p_region, p_period, p_payload)`
+    (SECURITY DEFINER: validasi ownership + periode, paksa anonim).
+  - Index (region+period, outlet+created). Config `hyperlocal` (enabled).
+- `lib/services/hyperlocal_service.dart` (baru):
+  - Consent opt-in owner (SharedPreferences per outlet, UU PDP).
+  - `buildAggregate()` — dari transaksi bulan berjalan: tx_count,
+    total_omzet, avg_basket, busy_hours (histogram jam), top_products /
+    top_products_omzet — TANPA PII pelanggan.
+  - `submit()` via RPC; `getRegionInsights()` — gabung laporan anonim
+    region periode terbaru (jumlah toko peserta, rata-rata belanja,
+    jam ramai gabungan, produk terlaris wilayah).
+- `lib/screens/owner/hyperlocal_screen.dart` (baru): kartu consent
+  (switch + dialog persetujuan UU PDP), form wilayah + tombol kirim
+  (hanya saat consent), kartu insight wilayah (tren, jam ramai,
+  produk terlaris, jumlah toko anonim).
+- Kartu "Tren Wilayah" di owner home, gated `hyperlocalEnabledProvider`.
+- QA DB: submit via RPC OK (is_anonymous=true tersimpan); submit untuk
+  outlet lain -> exception forbidden; data QA dibersihkan.
+
+### Cara uji ST10-2
+1. Owner: kartu "Tren Wilayah" -> aktifkan izin (dialog persetujuan) ->
+   isi wilayah -> "Kirim Laporan Bulan Ini" -> insight wilayah tampil
+   (saat toko lain di region sama ikut kirim, angka tergabung).
+2. Privasi: matikan switch -> data berhenti dikirim; DB hanya menyimpan
+   payload agregat (is_anonymous=true, tanpa PII).
+
+## BERIKUTNYA (lanjutan)
+- ST10-3: Micro-insurance toko.
