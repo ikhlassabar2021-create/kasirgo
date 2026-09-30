@@ -152,6 +152,12 @@ Status: SELESAI. Project Supabase sudah dibuat dan schema terpasang serta diuji.
   dead-letter + katalog offline -- 10 test pass;
   ST12-3: web+admin deploy gh-pages, CI APK release-apk.yml, panduan
   docs/RELEASE.md. Detail: PROGRESS-PHASE12.md)
+- [x] Phase 13: Superadmin Web + Control Plane
+  (ST13-1: halaman Laporan Utama /Outlet Terdaftar/Fitur Utama + migrasi
+  2026-10-03-kasirgo-13-admin.sql;
+  ST13-2: Control Plane Iklan (banner lokal) + Payment Gateway + PPOB +
+  B2B Kulakan + Modal Usaha + migrasi
+  2026-10-04-kasirgo-13-control-plane.sql. Detail: PROGRESS-PHASE13.md)
 
 Catatan: Phase 7.6 adalah redesign visual menyeluruh (semua dashboard + fitur Produk/Pelanggan/
 Karyawan/Laporan/Pengaturan) tanpa mengubah fitur/logic. Spec: workflow Bagian 1.6 & 7C.

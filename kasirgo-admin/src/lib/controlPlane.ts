@@ -8,6 +8,9 @@ export type ConfigKey =
   | 'quota'
   | 'flags'
   | 'billing'
+  | 'ppob'
+  | 'b2b_restock'
+  | 'fintech_partner'
 
 export interface PlatformConfig {
   id?: string
@@ -174,6 +177,47 @@ export async function saveIntegration(integration: Integration) {
   }
   await logAction('integration.save', `platform_integrations:${integration.key}`, {
     active: integration.is_active,
+  })
+}
+
+export async function getIntegration(key: string): Promise<Integration | null> {
+  const { data, error } = await supabase
+    .from('platform_integrations')
+    .select('*')
+    .eq('key', key)
+    .maybeSingle()
+  if (error) throw error
+  return (data ?? null) as Integration | null
+}
+
+/// Simpan secret integrasi saja (tanpa menimpa base_url/public_config).
+/// Dipakai tab Payment Gateway & PPOB: field API Key/Secret disimpan terpisah
+/// dari config yang dibaca klien (ST12-1: secret tidak pernah ke APK).
+export async function saveIntegrationSecrets(
+  key: string,
+  label: string,
+  secret: Record<string, any>,
+  publicConfig: Record<string, any> = {},
+  isActive = true,
+) {
+  const nonEmpty = Object.fromEntries(
+    Object.entries(secret).filter(([, v]) => v !== '' && v !== null && v !== undefined),
+  )
+  const payload: Record<string, any> = {
+    key,
+    label,
+    public_config: publicConfig,
+    is_active: isActive,
+    updated_at: new Date().toISOString(),
+  }
+  if (Object.keys(nonEmpty).length > 0) payload.secret_config = nonEmpty
+  const { error } = await supabase
+    .from('platform_integrations')
+    .upsert(payload, { onConflict: 'key' })
+  if (error) throw error
+  await logAction('integration.save', `platform_integrations:${key}`, {
+    active: isActive,
+    secrets: Object.keys(nonEmpty),
   })
 }
 

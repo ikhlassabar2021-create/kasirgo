@@ -7,7 +7,6 @@ import {
   Users,
   Flag,
   Zap,
-  Plug,
   ScrollText,
   Save,
   Plus,
@@ -17,9 +16,13 @@ import {
   Eye,
   EyeOff,
   SlidersHorizontal,
-  Lock,
   Layers,
   Activity,
+  Wallet,
+  Store,
+  Truck,
+  ImagePlus,
+  X,
 } from 'lucide-react';
 import {
   loadConfig,
@@ -27,8 +30,6 @@ import {
   listGuideItems,
   upsertGuideItem,
   deleteGuideItem,
-  listIntegrations,
-  saveIntegration,
   loadFinancialConfig,
   saveFinancialConfig,
   listFeatureFlags,
@@ -40,11 +41,12 @@ import {
   listAuditLogs,
   listPendingSupporters,
   setSupporterStatus,
+  getIntegration,
+  saveIntegrationSecrets,
 } from '../lib/controlPlane';
 import type {
   ConfigKey,
   GuideItem,
-  Integration,
   FeatureFlag,
   AutomationRule,
   AuditLog,
@@ -57,12 +59,14 @@ type TabId =
   | 'ads'
   | 'guide'
   | 'financial'
+  | 'ppob'
+  | 'b2b'
+  | 'modal_usaha'
   | 'report'
   | 'kyc'
   | 'quota'
   | 'flags'
   | 'automation'
-  | 'integrations'
   | 'override'
   | 'announcements'
   | 'monitoring'
@@ -72,13 +76,15 @@ type TabId =
 const TABS: { id: TabId; name: string; icon: any }[] = [
   { id: 'ads', name: 'Iklan', icon: Megaphone },
   { id: 'guide', name: 'Panduan', icon: BookOpen },
-  { id: 'financial', name: 'Financial', icon: Coins },
+  { id: 'financial', name: 'Payment Gateway', icon: Coins },
+  { id: 'ppob', name: 'PPOB', icon: Wallet },
+  { id: 'b2b', name: 'B2B Kulakan', icon: Truck },
+  { id: 'modal_usaha', name: 'Modal Usaha', icon: Store },
   { id: 'report', name: 'Laporan', icon: ScrollText },
   { id: 'kyc', name: 'KYC', icon: ShieldCheck },
   { id: 'quota', name: 'Kuota & Limit', icon: Users },
   { id: 'flags', name: 'Feature Flags', icon: Flag },
   { id: 'automation', name: 'Otomatisasi', icon: Zap },
-  { id: 'integrations', name: 'Integrasi & Secret', icon: Plug },
   { id: 'override', name: 'Override & Riwayat', icon: Layers },
   { id: 'announcements', name: 'Pengumuman', icon: Megaphone },
   { id: 'monitoring', name: 'Monitoring', icon: Activity },
@@ -145,42 +151,107 @@ function Toast({ msg }: { msg: { type: 'ok' | 'err'; text: string } | null }) {
 }
 
 // ===========================================================================
-// Generic JSON config sub-form components
+// Iklan: banner lokal (base64) + kode HTML/script/URL. Tanpa sponsor lokal /
+// adsterra (dihapus). Kreatif disimpan langsung di platform_configs 'ads'.
 // ===========================================================================
+type AdCreative = {
+  id: string;
+  name: string;
+  title: string;
+  subtitle: string;
+  cta_label: string;
+  target_url: string;
+  html_code: string;
+  script_code: string;
+  image_base64: string;
+  image_mime: string;
+  media_type: 'image' | 'video' | 'html' | 'none';
+  category: string;
+  is_active: boolean;
+};
+
+function newCreative(): AdCreative {
+  return {
+    id: 'ad_' + Math.random().toString(36).slice(2, 10),
+    name: '',
+    title: '',
+    subtitle: '',
+    cta_label: '',
+    target_url: '',
+    html_code: '',
+    script_code: '',
+    image_base64: '',
+    image_mime: '',
+    media_type: 'image',
+    category: '',
+    is_active: true,
+  };
+}
+
 function AdsTab() {
   const [v, setV] = useState<any>({
-    provider: 'sponsor_lokal',
-    adsterra_key: '',
-    sponsor_local: [],
-    blocked_categories: ['judi', 'dewasa', 'pinjol'],
     placement: ['catalog', 'qr_menu'],
+    blocked_categories: ['judi', 'dewasa', 'pinjol'],
     ad_free_for_supporter: true,
     consent_required: true,
+    creatives: [],
   });
   const [loading, setLoading] = useState(false);
+  const [busy, setBusy] = useState<string | null>(null);
   const { msg, show } = useToast();
 
   useEffect(() => {
-    loadConfig('ads').then((d) => d && setV({ ...v, ...d })).catch(() => {});
+    loadConfig('ads')
+      .then((d) => d && setV((prev: any) => ({ ...prev, ...d, creatives: d.creatives ?? [] })))
+      .catch(() => {});
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  const sponsors: string[] = v.sponsor_local ?? [];
+  const creatives: AdCreative[] = Array.isArray(v.creatives) ? v.creatives : [];
+
+  const setCreative = (idx: number, patch: Partial<AdCreative>) => {
+    const next = [...creatives];
+    next[idx] = { ...next[idx], ...patch };
+    setV({ ...v, creatives: next });
+  };
+
+  const addCreative = () => setV({ ...v, creatives: [...creatives, newCreative()] });
+  const removeCreative = (idx: number) =>
+    setV({ ...v, creatives: creatives.filter((_, i) => i !== idx) });
+
+  const uploadBanner = async (idx: number, file: File) => {
+    const isVideo = file.type.startsWith('video/');
+    const maxBytes = isVideo ? 3 * 1024 * 1024 : 1024 * 1024;
+    if (file.size > maxBytes) {
+      show('err', `Ukuran maks ${isVideo ? '3MB' : '1MB'} (${(file.size / 1024 / 1024).toFixed(2)}MB).`);
+      return;
+    }
+    setBusy(creatives[idx].id);
+    try {
+      const base64: string = await new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = () => {
+          const s = String(reader.result ?? '');
+          resolve(s.includes(',') ? s.slice(s.indexOf(',') + 1) : s);
+        };
+        reader.onerror = reject;
+        reader.readAsDataURL(file);
+      });
+      setCreative(idx, {
+        image_base64: base64,
+        image_mime: file.type,
+        media_type: isVideo ? 'video' : 'image',
+      });
+    } catch (e: any) {
+      show('err', e.message ?? 'Gagal membaca file.');
+    } finally {
+      setBusy(null);
+    }
+  };
 
   return (
-    <Card title="Iklan Sisi Pelanggan" subtitle="Iklan hanya tampil di halaman pelanggan. Owner tidak melihat iklan.">
-      <div className="max-w-[760px] space-y-3.5">
-        <div>
-          <label className={labelCls}>Provider</label>
-          <select className={inputCls} value={v.provider} onChange={(e) => setV({ ...v, provider: e.target.value })}>
-            <option value="sponsor_lokal">Sponsor Lokal (diutamakan)</option>
-            <option value="adsterra">Adsterra</option>
-          </select>
-        </div>
-        <div>
-          <label className={labelCls}>Adsterra Key / Zona</label>
-          <input className={inputCls} type="password" value={v.adsterra_key ?? ''} onChange={(e) => setV({ ...v, adsterra_key: e.target.value })} placeholder="••••••••" />
-        </div>
+    <Card title="Iklan Sisi Pelanggan" subtitle="Iklan hanya tampil di halaman pelanggan. Banner gambar disimpan lokal (embedded), bukan di storage.">
+      <div className="max-w-[860px] space-y-4">
         <div>
           <label className={labelCls}>Kategori Diblokir (pisahkan koma)</label>
           <input className={inputCls} value={(v.blocked_categories ?? []).join(', ')} onChange={(e) => setV({ ...v, blocked_categories: e.target.value.split(',').map((s) => s.trim()).filter(Boolean) })} />
@@ -203,35 +274,93 @@ function AdsTab() {
 
         <div className="pt-2 border-t border-slate-100">
           <div className="flex items-center justify-between mb-2">
-            <label className={labelCls}>Sponsor Lokal</label>
-            <button
-              onClick={() => setV({ ...v, sponsor_local: [...sponsors, ''] })}
-              className="flex items-center gap-1 text-[11px] font-bold text-sky-600 hover:text-sky-700"
-            >
-              <Plus className="w-3.5 h-3.5" /> Tambah
+            <label className={labelCls}>Kreatif Iklan</label>
+            <button onClick={addCreative} className="flex items-center gap-1 text-[11px] font-bold text-sky-600 hover:text-sky-700">
+              <Plus className="w-3.5 h-3.5" /> Tambah Iklan
             </button>
           </div>
-          {sponsors.length === 0 && <p className="text-[11px] text-slate-400">Belum ada sponsor lokal.</p>}
-          {sponsors.map((s, i) => (
-            <div key={i} className="flex gap-2 mb-2">
-              <input
-                className={inputCls}
-                value={s}
-                placeholder="https://sponsor.example.com"
-                onChange={(e) => {
-                  const next = [...sponsors];
-                  next[i] = e.target.value;
-                  setV({ ...v, sponsor_local: next });
-                }}
-              />
-              <button
-                onClick={() => setV({ ...v, sponsor_local: sponsors.filter((_, j) => j !== i) })}
-                className="px-3 rounded-xl bg-red-50 text-red-500 hover:bg-red-100"
-              >
-                <Trash2 className="w-4 h-4" />
-              </button>
-            </div>
-          ))}
+          {creatives.length === 0 && <p className="text-[11px] text-slate-400">Belum ada iklan.</p>}
+          <div className="space-y-3">
+            {creatives.map((c, i) => (
+              <div key={c.id} className="p-4 rounded-xl border border-slate-200 bg-slate-50/40 space-y-3">
+                <div className="grid grid-cols-1 sm:grid-cols-[1fr_auto] gap-3">
+                  <div>
+                    <label className={labelCls}>Nama Iklan (internal)</label>
+                    <input className={inputCls} value={c.name} onChange={(e) => setCreative(i, { name: e.target.value })} placeholder="Promo Kopi A" />
+                  </div>
+                  <div className="flex items-end gap-2">
+                    <label className="flex items-center gap-2 text-xs font-semibold text-slate-600 mb-2">
+                      <input type="checkbox" checked={c.is_active} onChange={(e) => setCreative(i, { is_active: e.target.checked })} /> Aktif
+                    </label>
+                    <button onClick={() => removeCreative(i)} className="mb-1 p-2 rounded-lg bg-red-50 text-red-500 hover:bg-red-100">
+                      <Trash2 className="w-4 h-4" />
+                    </button>
+                  </div>
+                </div>
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                  <div>
+                    <label className={labelCls}>Judul</label>
+                    <input className={inputCls} value={c.title} onChange={(e) => setCreative(i, { title: e.target.value })} />
+                  </div>
+                  <div>
+                    <label className={labelCls}>Subjudul</label>
+                    <input className={inputCls} value={c.subtitle} onChange={(e) => setCreative(i, { subtitle: e.target.value })} />
+                  </div>
+                  <div>
+                    <label className={labelCls}>Label CTA</label>
+                    <input className={inputCls} value={c.cta_label} onChange={(e) => setCreative(i, { cta_label: e.target.value })} placeholder="Order sekarang" />
+                  </div>
+                </div>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div>
+                    <label className={labelCls}>URL Tujuan</label>
+                    <input className={inputCls} value={c.target_url} onChange={(e) => setCreative(i, { target_url: e.target.value })} placeholder="https://wa.me/62..." />
+                  </div>
+                  <div>
+                    <label className={labelCls}>Kategori (opsional)</label>
+                    <input className={inputCls} value={c.category} onChange={(e) => setCreative(i, { category: e.target.value })} placeholder="makanan, promo" />
+                  </div>
+                </div>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div>
+                    <label className={labelCls}>Kode HTML (opsional)</label>
+                    <textarea className={`${inputCls} font-mono min-h-[70px]`} value={c.html_code} onChange={(e) => setCreative(i, { html_code: e.target.value })} placeholder="<div>...</div>" />
+                  </div>
+                  <div>
+                    <label className={labelCls}>Kode Script (opsional)</label>
+                    <textarea className={`${inputCls} font-mono min-h-[70px]`} value={c.script_code} onChange={(e) => setCreative(i, { script_code: e.target.value })} placeholder="<script>...</script>" />
+                  </div>
+                </div>
+
+                <div className="flex flex-wrap items-center gap-3">
+                  <label className="flex items-center gap-2 px-3 py-2 rounded-xl border border-dashed border-slate-300 bg-white text-[11px] font-semibold text-slate-600 cursor-pointer hover:border-sky-400">
+                    <ImagePlus className="w-4 h-4 text-sky-500" />
+                    {busy === c.id ? 'Memproses...' : 'Upload Banner (gambar/video, disimpan lokal)'}
+                    <input type="file" accept="image/*,video/*" className="hidden"
+                      onChange={(e) => { const f = e.target.files?.[0]; if (f) uploadBanner(i, f); e.currentTarget.value = ''; }} />
+                  </label>
+                  <div>
+                    <label className={labelCls}>Atau URL Gambar</label>
+                    <input className={inputCls} value={c.image_base64.startsWith('http') ? c.image_base64 : ''} placeholder="https://..."
+                      onChange={(e) => setCreative(i, { image_base64: e.target.value, media_type: 'image', image_mime: '' })} />
+                  </div>
+                  {(c.image_base64 || c.image_mime) && (
+                    <div className="relative">
+                      {c.image_mime.startsWith('video/') ? (
+                        <video src={`data:${c.image_mime};base64,${c.image_base64}`} className="h-16 rounded-lg" muted />
+                      ) : (
+                        <img src={c.image_base64.startsWith('http') ? c.image_base64 : `data:${c.image_mime || 'image/png'};base64,${c.image_base64}`} className="h-16 rounded-lg object-cover" alt="banner" />
+                      )}
+                      <button onClick={() => setCreative(i, { image_base64: '', image_mime: '' })}
+                        className="absolute -top-2 -right-2 p-1 rounded-full bg-white border border-slate-200 text-slate-500 shadow">
+                        <X className="w-3 h-3" />
+                      </button>
+                    </div>
+                  )}
+                </div>
+              </div>
+            ))}
+          </div>
         </div>
 
         <SaveButton loading={loading} onClick={async () => {
@@ -445,14 +574,53 @@ function FinancialTab() {
   const [v, setV] = useState<any>({});
   const [loading, setLoading] = useState(false);
   const [pend, setPend] = useState<PendingSupporter[]>([]);
+  const [pgSecrets, setPgSecrets] = useState<Record<string, string>>({});
+  const [pgExisting, setPgExisting] = useState<string[]>([]);
+  const [pgActive, setPgActive] = useState(true);
+  const [revealPg, setRevealPg] = useState(false);
+  const [loadingPg, setLoadingPg] = useState(false);
   const { msg, show } = useToast();
   useEffect(() => {
     loadFinancialConfig().then(setV).catch(() => {});
     reloadPend();
+    reloadPg();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const reloadPend = async () => {
     try { setPend(await listPendingSupporters()); } catch { /* ignore */ }
+  };
+
+  const reloadPg = async () => {
+    try {
+      const it = await getIntegration('payment_gateway');
+      if (it) {
+        setPgExisting(Object.keys(it.secret_config ?? {}));
+        setPgActive(it.is_active);
+      }
+    } catch { /* integrasi belum ada */ }
+  };
+
+  const PG_FIELDS: { key: string; label: string }[] = [
+    { key: 'api_key', label: 'API Key' },
+    { key: 'server_key', label: 'Server Key' },
+    { key: 'secret', label: 'Secret' },
+    { key: 'client_key', label: 'Client Key' },
+    { key: 'public_key', label: 'Public Key' },
+    { key: 'merchant_id', label: 'Merchant ID' },
+    { key: 'callback_url', label: 'Callback / Webhook URL' },
+    { key: 'sdk_script_url', label: 'Script / SDK Library URL' },
+  ];
+
+  const savePg = async () => {
+    if (Object.values(pgSecrets).every((x) => !x)) { show('err', 'Isi minimal satu field kredensial.'); return; }
+    setLoadingPg(true);
+    try {
+      await saveIntegrationSecrets('payment_gateway', 'Payment Gateway', pgSecrets, {}, pgActive);
+      show('ok', 'Kredensial Payment Gateway disimpan (aman, tidak pernah ke APK).');
+      setPgSecrets({});
+      await reloadPg();
+    } catch (e: any) { show('err', e.message); } finally { setLoadingPg(false); }
   };
 
   const decide = async (id: string, approve: boolean) => {
@@ -471,7 +639,7 @@ function FinancialTab() {
   );
 
   return (
-    <Card title="Konfigurasi Finansial" subtitle="Margin, limit QRIS, dan fee pencairan platform.">
+    <Card title="Payment Gateway" subtitle="Margin QRIS, fee pencairan, dan kredensial Payment Gateway (disimpan aman di Control Plane).">
       <div className="max-w-[760px] space-y-3.5">
         <div className="grid grid-cols-2 gap-3">
           {num('qris_base_mdr_percent', 'MDR Base QRIS', '%')}
@@ -503,6 +671,42 @@ function FinancialTab() {
             show('ok', 'Konfigurasi finansial disimpan.');
           } catch (e: any) { show('err', e.message); } finally { setLoading(false); }
         }} />
+
+        <div className="pt-4 border-t border-slate-100 space-y-3">
+          <div className="flex items-center justify-between">
+            <div>
+              <h3 className="font-semibold text-slate-900 text-sm">Kredensial Payment Gateway</h3>
+              <p className="text-[11px] text-slate-500">Secret hanya dibaca server/Edge Function. Ditampilkan ter-mask & tidak pernah dikirim ke aplikasi klien.</p>
+            </div>
+            <label className="flex items-center gap-2 text-[11px] font-semibold text-slate-600">
+              <input type="checkbox" checked={pgActive} onChange={(e) => setPgActive(e.target.checked)} /> Aktif
+            </label>
+          </div>
+          {pgExisting.length > 0 && (
+            <p className="text-[11px] text-amber-600">Tersimpan: {pgExisting.join(', ')}. Isi hanya field yang ingin diubah.</p>
+          )}
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            {PG_FIELDS.map((f) => (
+              <div key={f.key}>
+                <label className={labelCls}>{f.label}</label>
+                <div className="relative">
+                  <input
+                    className={`${inputCls} ${revealPg ? '' : 'font-mono'}`}
+                    type={revealPg ? 'text' : 'password'}
+                    value={pgSecrets[f.key] ?? ''}
+                    placeholder={pgExisting.includes(f.key) ? '••••••••' : ''}
+                    onChange={(e) => setPgSecrets({ ...pgSecrets, [f.key]: e.target.value })}
+                  />
+                  <button type="button" onClick={() => setRevealPg(!revealPg)}
+                    className="absolute top-2 right-2 p-1.5 rounded-lg text-slate-400 hover:text-slate-600">
+                    {revealPg ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
+          <SaveButton loading={loadingPg} label="Simpan Kredensial" onClick={savePg} />
+        </div>
       </div>
       <div className="max-w-[760px] mt-8">
         <div className="flex items-center justify-between mb-3">
@@ -652,102 +856,241 @@ function AutomationTab() {
   );
 }
 
-function IntegrationsTab() {
-  const [items, setItems] = useState<Integration[]>([]);
-  const [shape, setShape] = useState<Record<string, { base_url: string; public_config: string; secret_config: string; is_active: boolean }>>({});
-  const [reveal, setReveal] = useState<Record<string, boolean>>({});
-  const [loading, setLoading] = useState(true);
+// ===========================================================================
+// PPOB: margin & endpoint di platform_configs('ppob'), kredensial di
+// platform_integrations('ppob'). Harga jual = modal + margin% (otomatis).
+// ===========================================================================
+function SecretField({
+  label,
+  value,
+  existing,
+  reveal,
+  onChange,
+}: {
+  label: string;
+  value: string;
+  existing: boolean;
+  reveal: boolean;
+  onChange: (v: string) => void;
+}) {
+  return (
+    <div>
+      <label className={labelCls}>{label}</label>
+      <input
+        className={inputCls}
+        type={reveal ? 'text' : 'password'}
+        value={value}
+        placeholder={existing ? '••••••••' : ''}
+        onChange={(e) => onChange(e.target.value)}
+      />
+    </div>
+  );
+}
+
+function PpobTab() {
+  const [v, setV] = useState<any>({ provider: 'demo', endpoint: '', margin_percent: 5, enabled: true, ip_whitelist: [], product_codes: [] });
+  const [secrets, setSecrets] = useState<Record<string, string>>({});
+  const [existing, setExisting] = useState<string[]>([]);
+  const [active, setActive] = useState(true);
+  const [reveal, setReveal] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [savingSecret, setSavingSecret] = useState(false);
   const { msg, show } = useToast();
 
-  const reload = async () => {
-    setLoading(true);
-    try {
-      const data = await listIntegrations();
-      setItems(data);
-      const s: any = {};
-      data.forEach((it) => {
-        s[it.key] = {
-          base_url: it.base_url ?? '',
-          public_config: JSON.stringify(it.public_config ?? {}, null, 2),
-          secret_config: JSON.stringify(it.secret_config ?? {}, null, 2),
-          is_active: it.is_active,
-        };
-      });
-      setShape(s);
-    } catch (e: any) { show('err', e.message); } finally { setLoading(false); }
-  };
-  useEffect(() => { reload(); /* eslint-disable-next-line */ }, []);
+  useEffect(() => {
+    loadConfig('ppob').then((d) => d && setV((prev: any) => ({ ...prev, ...d }))).catch(() => {});
+    getIntegration('ppob').then((it) => {
+      if (it) { setExisting(Object.keys(it.secret_config ?? {})); setActive(it.is_active); }
+    }).catch(() => {});
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
-  const save = async (it: Integration) => {
-    const form = shape[it.key];
+  const saveSecret = async () => {
+    if (Object.values(secrets).every((x) => !x)) { show('err', 'Isi minimal satu field kredensial.'); return; }
+    setSavingSecret(true);
     try {
-      await saveIntegration({
-        ...it,
-        base_url: form.base_url || null,
-        public_config: JSON.parse(form.public_config || '{}'),
-        secret_config: JSON.parse(form.secret_config || '{}'),
-        is_active: form.is_active,
-      });
-      show('ok', `${it.label ?? it.key} disimpan.`);
-      await reload();
-    } catch (e: any) { show('err', e.message); }
+      await saveIntegrationSecrets('ppob', 'PPOB', secrets, {}, active);
+      show('ok', 'Kredensial PPOB disimpan.');
+      setSecrets({});
+      const it = await getIntegration('ppob');
+      setExisting(Object.keys(it?.secret_config ?? {}));
+    } catch (e: any) { show('err', e.message); } finally { setSavingSecret(false); }
   };
-
-  if (loading) return <Card title="Integrasi & Secret" subtitle="Memuat..."><p className="text-xs text-slate-400">Memuat...</p></Card>;
 
   return (
-    <Card title="Integrasi & Secret" subtitle="Kredensial integrasi. Secret disimpan aman & tidak pernah dikirim ke aplikasi klien.">
-      <div className="space-y-4">
-        {items.map((it) => {
-          const form = shape[it.key] ?? { base_url: '', public_config: '{}', secret_config: '{}', is_active: false };
-          const secrets = Object.keys(JSON.parse(form.secret_config || '{}'));
-          return (
-            <div key={it.key} className="p-4 rounded-xl border border-slate-200">
-              <div className="flex items-center justify-between mb-3">
-                <div className="flex items-center gap-2">
-                  <Lock className="w-4 h-4 text-slate-400" />
-                  <span className="text-xs font-bold text-slate-800">{it.label ?? it.key}</span>
-                  <span className="text-[10px] text-slate-400 font-mono">{it.key}</span>
-                </div>
-                <label className="flex items-center gap-2 text-[11px] font-semibold text-slate-600">
-                  <input type="checkbox" checked={form.is_active} onChange={(e) => setShape({ ...shape, [it.key]: { ...form, is_active: e.target.checked } })} />
-                  Aktif
-                </label>
-              </div>
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
-                <div>
-                  <label className={labelCls}>Base URL</label>
-                  <input className={inputCls} value={form.base_url} onChange={(e) => setShape({ ...shape, [it.key]: { ...form, base_url: e.target.value } })} />
-                </div>
-                <div>
-                  <label className={labelCls}>Secret (JSON) {secrets.length > 0 && <span className="text-amber-500">· {secrets.length} tersimpan</span>}</label>
-                  <div className="relative">
-                    <textarea
-                      className={`${inputCls} font-mono min-h-[90px]`}
-                      style={reveal[it.key] ? {} : { color: 'transparent', textShadow: '0 0 8px rgba(15,23,42,0.6)' }}
-                      value={form.secret_config}
-                      onChange={(e) => setShape({ ...shape, [it.key]: { ...form, secret_config: e.target.value } })}
-                    />
-                    <button
-                      onClick={() => setReveal({ ...reveal, [it.key]: !reveal[it.key] })}
-                      className="absolute top-2 right-2 p-1.5 rounded-lg bg-white border border-slate-200 text-slate-500"
-                    >
-                      {reveal[it.key] ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
-                    </button>
-                  </div>
-                  <p className="text-[10px] text-slate-400 mt-1">Nilai secret yang ada ditampilkan ter-mask. Isi hanya bila ingin mengubah.</p>
-                </div>
-                <div className="lg:col-span-2">
-                  <label className={labelCls}>Public Config (JSON, aman ke klien)</label>
-                  <textarea className={`${inputCls} font-mono min-h-[70px]`} value={form.public_config} onChange={(e) => setShape({ ...shape, [it.key]: { ...form, public_config: e.target.value } })} />
-                </div>
-              </div>
-              <div className="mt-3">
-                <SaveButton label="Simpan Integrasi" onClick={() => save(it)} />
-              </div>
+    <Card title="PPOB" subtitle="Provider, margin, endpoint & kredensial. Harga jual = modal + margin% (otomatis).">
+      <div className="max-w-[860px] space-y-4">
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+          <div>
+            <label className={labelCls}>Provider</label>
+            <input className={inputCls} value={v.provider ?? ''} onChange={(e) => setV({ ...v, provider: e.target.value })} placeholder="demo / digiflazz" />
+          </div>
+          <div>
+            <label className={labelCls}>Margin (%)</label>
+            <input className={inputCls} type="number" value={v.margin_percent ?? 0} onChange={(e) => setV({ ...v, margin_percent: Number(e.target.value) })} />
+          </div>
+          <div className="flex items-end pb-2">
+            <label className="flex items-center gap-2 text-xs font-semibold text-slate-600">
+              <input type="checkbox" checked={v.enabled !== false} onChange={(e) => setV({ ...v, enabled: e.target.checked })} /> PPOB Aktif
+            </label>
+          </div>
+        </div>
+        <div>
+          <label className={labelCls}>Endpoint URL</label>
+          <input className={inputCls} value={v.endpoint ?? ''} onChange={(e) => setV({ ...v, endpoint: e.target.value })} placeholder="https://api.provider.com" />
+        </div>
+        <div>
+          <label className={labelCls}>Callback URL</label>
+          <input className={inputCls} value={v.callback_url ?? ''} onChange={(e) => setV({ ...v, callback_url: e.target.value })} placeholder="https://.../functions/v1/ppob-callback" />
+        </div>
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          <div>
+            <label className={labelCls}>IP Whitelist (pisahkan koma)</label>
+            <input className={inputCls} value={(v.ip_whitelist ?? []).join(', ')} onChange={(e) => setV({ ...v, ip_whitelist: e.target.value.split(',').map((s) => s.trim()).filter(Boolean) })} placeholder="103.0.0.1, 103.0.0.2" />
+          </div>
+          <div>
+            <label className={labelCls}>Kode Produk (pisahkan koma)</label>
+            <input className={inputCls} value={(v.product_codes ?? []).join(', ')} onChange={(e) => setV({ ...v, product_codes: e.target.value.split(',').map((s) => s.trim()).filter(Boolean) })} placeholder="PULSA10, PLN50" />
+          </div>
+        </div>
+        <SaveButton loading={loading} label="Simpan Konfigurasi PPOB" onClick={async () => {
+          setLoading(true);
+          try { await saveConfig('ppob', v); show('ok', 'Konfigurasi PPOB disimpan.'); }
+          catch (e: any) { show('err', e.message); } finally { setLoading(false); }
+        }} />
+
+        <div className="pt-4 border-t border-slate-100 space-y-3">
+          <div className="flex items-center justify-between">
+            <div>
+              <h3 className="font-semibold text-slate-900 text-sm">Kredensial Provider PPOB</h3>
+              <p className="text-[11px] text-slate-500">Disimpan aman, hanya dibaca Edge Function. Tidak pernah dikirim ke aplikasi klien.</p>
             </div>
-          );
-        })}
+            <label className="flex items-center gap-2 text-[11px] font-semibold text-slate-600">
+              <input type="checkbox" checked={active} onChange={(e) => setActive(e.target.checked)} /> Aktif
+            </label>
+          </div>
+          {existing.length > 0 && <p className="text-[11px] text-amber-600">Tersimpan: {existing.join(', ')}. Isi hanya field yang ingin diubah.</p>}
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+            <SecretField label="API Key" value={secrets.api_key ?? ''} existing={existing.includes('api_key')} reveal={reveal} onChange={(x) => setSecrets({ ...secrets, api_key: x })} />
+            <SecretField label="API Secret" value={secrets.api_secret ?? ''} existing={existing.includes('api_secret')} reveal={reveal} onChange={(x) => setSecrets({ ...secrets, api_secret: x })} />
+            <SecretField label="API Token" value={secrets.api_token ?? ''} existing={existing.includes('api_token')} reveal={reveal} onChange={(x) => setSecrets({ ...secrets, api_token: x })} />
+          </div>
+          <div className="flex items-center gap-3">
+            <SaveButton loading={savingSecret} label="Simpan Kredensial" onClick={saveSecret} />
+            <button type="button" onClick={() => setReveal(!reveal)} className="p-2 rounded-lg border border-slate-200 text-slate-500 hover:bg-slate-50">
+              {reveal ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+            </button>
+          </div>
+        </div>
+      </div>
+      <Toast msg={msg} />
+    </Card>
+  );
+}
+
+// ===========================================================================
+// B2B Kulakan & Modal Usaha: kode HTML/script + URL tujuan (platform_configs)
+// ===========================================================================
+function B2bTab() {
+  const [v, setV] = useState<any>({ enabled: false, distributor_name: '', distributor_url: '', allowed_domains: [], commission_percent: 2, html_code: '', script_code: '', target_url: '' });
+  const [loading, setLoading] = useState(false);
+  const { msg, show } = useToast();
+  useEffect(() => {
+    loadConfig('b2b_restock').then((d) => d && setV((prev: any) => ({ ...prev, ...d }))).catch(() => {});
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+  return (
+    <Card title="B2B Kulakan" subtitle="Link distributor, komisi, dan embed (kode HTML/script) ke halaman kulakan.">
+      <div className="max-w-[760px] space-y-3.5">
+        <label className="flex items-center gap-2 text-xs font-semibold text-slate-600">
+          <input type="checkbox" checked={v.enabled !== false} onChange={(e) => setV({ ...v, enabled: e.target.checked })} /> Aktifkan B2B Kulakan
+        </label>
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          <div>
+            <label className={labelCls}>Nama Distributor</label>
+            <input className={inputCls} value={v.distributor_name ?? ''} onChange={(e) => setV({ ...v, distributor_name: e.target.value })} />
+          </div>
+          <div>
+            <label className={labelCls}>Komisi (%)</label>
+            <input className={inputCls} type="number" value={v.commission_percent ?? 0} onChange={(e) => setV({ ...v, commission_percent: Number(e.target.value) })} />
+          </div>
+        </div>
+        <div>
+          <label className={labelCls}>URL Tujuan / Katalog Distributor</label>
+          <input className={inputCls} value={v.distributor_url ?? ''} onChange={(e) => setV({ ...v, distributor_url: e.target.value })} placeholder="https://distributor.com/katalog" />
+        </div>
+        <div>
+          <label className={labelCls}>Domain Diizinkan (pisahkan koma)</label>
+          <input className={inputCls} value={(v.allowed_domains ?? []).join(', ')} onChange={(e) => setV({ ...v, allowed_domains: e.target.value.split(',').map((s) => s.trim()).filter(Boolean) })} />
+        </div>
+        <div>
+          <label className={labelCls}>URL Tujuan Tambahan</label>
+          <input className={inputCls} value={v.target_url ?? ''} onChange={(e) => setV({ ...v, target_url: e.target.value })} placeholder="https://..." />
+        </div>
+        <div>
+          <label className={labelCls}>Kode HTML (opsional)</label>
+          <textarea className={`${inputCls} font-mono min-h-[80px]`} value={v.html_code ?? ''} onChange={(e) => setV({ ...v, html_code: e.target.value })} />
+        </div>
+        <div>
+          <label className={labelCls}>Kode Script (opsional)</label>
+          <textarea className={`${inputCls} font-mono min-h-[80px]`} value={v.script_code ?? ''} onChange={(e) => setV({ ...v, script_code: e.target.value })} />
+        </div>
+        <SaveButton loading={loading} label="Simpan B2B Kulakan" onClick={async () => {
+          setLoading(true);
+          try { await saveConfig('b2b_restock', v); show('ok', 'Konfigurasi B2B disimpan.'); }
+          catch (e: any) { show('err', e.message); } finally { setLoading(false); }
+        }} />
+      </div>
+      <Toast msg={msg} />
+    </Card>
+  );
+}
+
+function ModalUsahaTab() {
+  const [v, setV] = useState<any>({ enabled: true, partner_name: '', apply_url: '', wa_number: '', target_url: '', html_code: '', script_code: '' });
+  const [loading, setLoading] = useState(false);
+  const { msg, show } = useToast();
+  useEffect(() => {
+    loadConfig('fintech_partner').then((d) => d && setV((prev: any) => ({ ...prev, ...d }))).catch(() => {});
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+  return (
+    <Card title="Modal Usaha" subtitle="Mitra pembiayaan: link pengajuan, WA, dan embed (kode HTML/script).">
+      <div className="max-w-[760px] space-y-3.5">
+        <label className="flex items-center gap-2 text-xs font-semibold text-slate-600">
+          <input type="checkbox" checked={v.enabled !== false} onChange={(e) => setV({ ...v, enabled: e.target.checked })} /> Aktifkan Modal Usaha
+        </label>
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          <div>
+            <label className={labelCls}>Nama Mitra</label>
+            <input className={inputCls} value={v.partner_name ?? ''} onChange={(e) => setV({ ...v, partner_name: e.target.value })} />
+          </div>
+          <div>
+            <label className={labelCls}>Nomor WA (fallback)</label>
+            <input className={inputCls} value={v.wa_number ?? ''} onChange={(e) => setV({ ...v, wa_number: e.target.value })} placeholder="628123..." />
+          </div>
+        </div>
+        <div>
+          <label className={labelCls}>URL Tujuan / Pengajuan</label>
+          <input className={inputCls} value={v.apply_url ?? ''} onChange={(e) => setV({ ...v, apply_url: e.target.value })} placeholder="https://mitra.com/ajukan" />
+        </div>
+        <div>
+          <label className={labelCls}>URL Tujuan Tambahan</label>
+          <input className={inputCls} value={v.target_url ?? ''} onChange={(e) => setV({ ...v, target_url: e.target.value })} />
+        </div>
+        <div>
+          <label className={labelCls}>Kode HTML (opsional)</label>
+          <textarea className={`${inputCls} font-mono min-h-[80px]`} value={v.html_code ?? ''} onChange={(e) => setV({ ...v, html_code: e.target.value })} />
+        </div>
+        <div>
+          <label className={labelCls}>Kode Script (opsional)</label>
+          <textarea className={`${inputCls} font-mono min-h-[80px]`} value={v.script_code ?? ''} onChange={(e) => setV({ ...v, script_code: e.target.value })} />
+        </div>
+        <SaveButton loading={loading} label="Simpan Modal Usaha" onClick={async () => {
+          setLoading(true);
+          try { await saveConfig('fintech_partner', v); show('ok', 'Konfigurasi Modal Usaha disimpan.'); }
+          catch (e: any) { show('err', e.message); } finally { setLoading(false); }
+        }} />
       </div>
       <Toast msg={msg} />
     </Card>
@@ -801,6 +1144,9 @@ const CONFIG_KEYS: { key: ConfigKey; label: string }[] = [
   { key: 'quota', label: 'Kuota & Limit' },
   { key: 'flags', label: 'Feature Flags' },
   { key: 'billing', label: 'Billing' },
+  { key: 'ppob', label: 'PPOB' },
+  { key: 'b2b_restock', label: 'B2B Kulakan' },
+  { key: 'fintech_partner', label: 'Modal Usaha' },
 ];
 
 function OverrideTab() {
@@ -1411,7 +1757,9 @@ export function ControlPlanePage() {
           ]} />}
           {activeId === 'flags' && <FlagsTab />}
           {activeId === 'automation' && <AutomationTab />}
-          {activeId === 'integrations' && <IntegrationsTab />}
+          {activeId === 'ppob' && <PpobTab />}
+          {activeId === 'b2b' && <B2bTab />}
+          {activeId === 'modal_usaha' && <ModalUsahaTab />}
           {activeId === 'override' && <OverrideTab />}
           {activeId === 'announcements' && <AnnouncementsTab />}
           {activeId === 'monitoring' && <MonitoringTab />}

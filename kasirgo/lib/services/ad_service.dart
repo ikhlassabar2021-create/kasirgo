@@ -13,6 +13,15 @@ class SponsorAd {
   final String? url;
   final String? category;
 
+  /// Banner disimpan LOKAL sebagai base64 (embedded di config), bukan storage.
+  final String? imageBase64;
+  final String? imageMime;
+
+  /// Embed opsional dari Control Plane (kode HTML/script).
+  final String? htmlCode;
+  final String? scriptCode;
+  final String mediaType;
+
   const SponsorAd({
     required this.id,
     required this.title,
@@ -21,7 +30,29 @@ class SponsorAd {
     this.ctaLabel,
     this.url,
     this.category,
+    this.imageBase64,
+    this.imageMime,
+    this.htmlCode,
+    this.scriptCode,
+    this.mediaType = 'image',
   });
+
+  bool get hasImage => (imageUrl != null && imageUrl!.isNotEmpty) ||
+      (imageBase64 != null && imageBase64!.isNotEmpty);
+
+  /// Sumber gambar untuk `Image.network`: URL langsung atau data URI base64.
+  String? get imageSrc {
+    if (imageUrl != null && imageUrl!.isNotEmpty) return imageUrl;
+    final b64 = imageBase64;
+    if (b64 != null && b64.isNotEmpty) {
+      if (b64.startsWith('http')) return b64;
+      final mime = (imageMime != null && imageMime!.isNotEmpty)
+          ? imageMime!
+          : 'image/png';
+      return 'data:$mime;base64,$b64';
+    }
+    return null;
+  }
 
   factory SponsorAd.fromJson(Map<String, dynamic> json) {
     return SponsorAd(
@@ -29,9 +60,18 @@ class SponsorAd {
       title: (json['title'] ?? json['name'] ?? 'Sponsor').toString(),
       subtitle: json['subtitle']?.toString() ?? json['description']?.toString(),
       imageUrl: json['image_url']?.toString() ?? json['image']?.toString(),
-      ctaLabel: json['cta']?.toString() ?? json['cta_label']?.toString(),
-      url: json['url']?.toString() ?? json['link']?.toString(),
+      ctaLabel: json['cta']?.toString() ??
+          json['cta_label']?.toString() ??
+          json['ctaLabel']?.toString(),
+      url: json['url']?.toString() ??
+          json['link']?.toString() ??
+          json['target_url']?.toString(),
       category: json['category']?.toString(),
+      imageBase64: json['image_base64']?.toString() ?? json['banner']?.toString(),
+      imageMime: json['image_mime']?.toString(),
+      htmlCode: json['html_code']?.toString(),
+      scriptCode: json['script_code']?.toString(),
+      mediaType: (json['media_type']?.toString() ?? 'image'),
     );
   }
 }
@@ -42,14 +82,12 @@ class AdDecision {
   final bool adFree;
   final bool needsConsent;
   final List<SponsorAd> ads;
-  final String provider;
 
   const AdDecision({
     this.showAds = false,
     this.adFree = false,
     this.needsConsent = false,
     this.ads = const [],
-    this.provider = 'sponsor_lokal',
   });
 }
 
@@ -61,7 +99,7 @@ class AdDecision {
 /// - Pendukung (ad_free) bebas iklan
 /// - kategori judi/dewasa/pinjol DIBLOKIR
 /// - consent UU PDP wajib sebelum iklan tampil
-/// - sponsor_lokal diutamakan, adsterra fallback; tidak ada iklan tersembunyi
+/// - creatives (banner lokal base64 / kode HTML) dari Control Plane
 class AdService {
   AdService({SupabaseClient? client})
       : _client = client ?? Supabase.instance.client;
@@ -156,56 +194,42 @@ class AdService {
     bool consentGiven = false,
   }) async {
     final cfg = await _adsConfig();
-    final provider = (cfg['provider'] ?? 'sponsor_lokal').toString();
     final adFreeSupplier = cfg['ad_free_for_supporter'] != false;
     final consentRequired = cfg['consent_required'] != false;
 
     // Owner tidak melihat iklan sama sekali.
     if (isOwner) {
-      return const AdDecision(provider: 'sponsor_lokal');
+      return const AdDecision();
     }
 
     final adFree = await isOutletAdFree(outletId);
     if (adFree && adFreeSupplier) {
-      return AdDecision(adFree: true, provider: provider);
+      return const AdDecision(adFree: true);
     }
 
     if (consentRequired && !consentGiven) {
-      return AdDecision(needsConsent: true, provider: provider);
+      return const AdDecision(needsConsent: true);
     }
 
     final blocked = _blockedFrom(cfg);
 
-    // Kumpulkan kreatif yang bisa dirender (sponsor lokal diutamakan).
+    // Kreatif dari Control Plane (banner lokal base64 / kode embed).
     final ads = <SponsorAd>[];
-    final sponsorLocal = cfg['sponsor_local'];
-    if (sponsorLocal is List) {
-      for (final item in sponsorLocal) {
+    final raw = cfg['creatives'] ?? cfg['sponsor_local'];
+    if (raw is List) {
+      for (final item in raw) {
         if (item is Map) {
-          final ad = SponsorAd.fromJson(Map<String, dynamic>.from(item));
+          final map = Map<String, dynamic>.from(item);
+          if (map['is_active'] == false) continue;
+          final ad = SponsorAd.fromJson(map);
           if (!_isBlocked(ad, blocked)) ads.add(ad);
         }
-      }
-    }
-
-    if (ads.isEmpty && provider == 'adsterra') {
-      final key = (cfg['adsterra_key'] ?? '').toString();
-      if (key.isNotEmpty) {
-        // Kreatif Adsterra dirender oleh web shell; di app hanya penanda jujur
-        // bahwa slot ini bersponsor (tidak ada iklan tersembunyi).
-        ads.add(const SponsorAd(
-          id: 'adsterra',
-          title: 'Iklan sponsor',
-          subtitle: 'Slot iklan mitra',
-          ctaLabel: '',
-        ));
       }
     }
 
     return AdDecision(
       showAds: ads.isNotEmpty,
       adFree: adFree,
-      provider: provider,
       ads: ads,
     );
   }

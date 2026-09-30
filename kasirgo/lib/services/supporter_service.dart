@@ -107,13 +107,11 @@ class SupporterService {
   };
 
   static const Map<String, dynamic> fallbackAds = {
-    'provider': 'sponsor_lokal',
-    'adsterra_key': '',
-    'sponsor_local': <dynamic>[],
     'blocked_categories': ['judi', 'dewasa', 'pinjol'],
     'placement': ['catalog', 'qr_menu'],
     'ad_free_for_supporter': true,
     'consent_required': true,
+    'creatives': <dynamic>[],
   };
 
   /// Fitur yang dibuka oleh Program Pendukung (sisanya gratis selamanya).

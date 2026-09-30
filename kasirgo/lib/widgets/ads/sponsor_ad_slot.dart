@@ -111,11 +111,11 @@ class _SponsorAdSlotState extends State<SponsorAdSlot> {
                     borderRadius: BorderRadius.circular(10),
                   ),
                   alignment: Alignment.center,
-                  child: (ad.imageUrl != null && ad.imageUrl!.isNotEmpty)
+                  child: (ad.imageSrc != null)
                       ? ClipRRect(
                           borderRadius: BorderRadius.circular(10),
                           child: Image.network(
-                            ad.imageUrl!,
+                            ad.imageSrc!,
                             width: 46,
                             height: 46,
                             fit: BoxFit.cover,
