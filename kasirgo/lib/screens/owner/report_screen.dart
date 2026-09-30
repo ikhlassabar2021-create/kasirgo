@@ -7,6 +7,7 @@ import 'package:pdf/pdf.dart';
 import 'package:pdf/widgets.dart' as pw;
 import 'package:printing/printing.dart';
 import 'package:url_launcher/url_launcher.dart';
+import '../../services/ppob_service.dart';
 import '../../config/app_theme.dart';
 import '../../models/product.dart';
 import '../../models/transaction.dart';
@@ -34,6 +35,7 @@ class _ReportScreenState extends ConsumerState<ReportScreen> with SingleTickerPr
   bool _isLoading = true;
   List<Transaction> _transactions = [];
   Map<String, Product> _productMap = {};
+  Map<String, double> _ppobSummary = {'sales': 0, 'cost': 0, 'profit': 0};
 
   @override
   void initState() {
@@ -96,10 +98,15 @@ class _ReportScreenState extends ConsumerState<ReportScreen> with SingleTickerPr
         pMap[p.id] = p;
       }
 
+      final ppob = PpobService();
+      final ppobSummary =
+          await ppob.getSummary(user.outletId!, range.start, range.end);
+
       if (mounted) {
         setState(() {
           _transactions = txList;
           _productMap = pMap;
+          _ppobSummary = ppobSummary;
           _isLoading = false;
         });
       }
@@ -616,6 +623,42 @@ class _ReportScreenState extends ConsumerState<ReportScreen> with SingleTickerPr
               ],
             ),
             const SizedBox(height: 24),
+            if (_ppobSummary['sales']! > 0) ...[
+              Text(
+                'PPOB (Pulsa, Token, Tagihan)',
+                style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
+              ),
+              const SizedBox(height: 12),
+              Row(
+                children: [
+                  Expanded(
+                    child: _ReportCard(
+                      title: 'Penjualan PPOB',
+                      value: Formatters.currency(_ppobSummary['sales'] ?? 0),
+                      icon: Icons.phone_android_rounded,
+                      color: AppTheme.secondaryColor,
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: _ReportCard(
+                      title: 'Laba PPOB',
+                      value: Formatters.currency(_ppobSummary['profit'] ?? 0),
+                      icon: Icons.phone_android_rounded,
+                      color: AppTheme.successColor,
+                    ),
+                  ),
+                ],
+              ),
+              Padding(
+                padding: const EdgeInsets.only(top: 6),
+                child: Text(
+                  'Modal PPOB: ${Formatters.currency(_ppobSummary['cost'] ?? 0)} - laba = jual - modal, hanya transaksi sukses.',
+                  style: TextStyle(fontSize: 11, color: AppTheme.textSecondary),
+                ),
+              ),
+              const SizedBox(height: 24),
+            ],
             const Text(
               'Grafik Tren Omzet',
               style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),

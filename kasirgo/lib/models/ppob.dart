@@ -89,33 +89,53 @@ class PpobProduct {
 class PpobTransaction {
   final String id;
   final String outletId;
+  final String? userId;
   final String? ppobProductId;
-  final String? customerRef;
+  final String productName;
+  final String customerRef;
   final double amount;
+  final double costAmount;
+  final double profit;
   final String status; // pending, success, failed
+  final String paymentMethod; // cash, qris, saldo
   final String? providerRef;
+  final String? note;
   final DateTime createdAt;
 
   const PpobTransaction({
     required this.id,
     required this.outletId,
+    this.userId,
     this.ppobProductId,
-    this.customerRef,
+    this.productName = '',
+    this.customerRef = '',
     required this.amount,
+    this.costAmount = 0,
+    this.profit = 0,
     this.status = 'pending',
+    this.paymentMethod = 'cash',
     this.providerRef,
+    this.note,
     required this.createdAt,
   });
 
   factory PpobTransaction.fromJson(Map<String, dynamic> json) {
+    double d(dynamic v) =>
+        v is num ? v.toDouble() : (double.tryParse(v?.toString() ?? '') ?? 0);
     return PpobTransaction(
       id: json['id'] ?? '',
       outletId: json['outlet_id'] ?? '',
+      userId: json['user_id']?.toString(),
       ppobProductId: json['ppob_product_id'],
-      customerRef: json['customer_ref'],
-      amount: (json['amount'] ?? 0).toDouble(),
+      productName: json['product_name']?.toString() ?? '',
+      customerRef: json['customer_ref']?.toString() ?? '',
+      amount: d(json['amount']),
+      costAmount: d(json['cost_amount']),
+      profit: d(json['profit']),
       status: json['status'] ?? 'pending',
+      paymentMethod: json['payment_method']?.toString() ?? 'cash',
       providerRef: json['provider_ref'],
+      note: json['note']?.toString(),
       createdAt: json['created_at'] != null
           ? DateTime.parse(json['created_at'])
           : DateTime.now(),
@@ -126,61 +146,54 @@ class PpobTransaction {
     return {
       if (id.isNotEmpty) 'id': id,
       'outlet_id': outletId,
+      if (userId != null) 'user_id': userId,
       'ppob_product_id': ppobProductId,
+      'product_name': productName,
       'customer_ref': customerRef,
       'amount': amount,
+      'cost_amount': costAmount,
+      'profit': profit,
       'status': status,
-      'provider_ref': providerRef,
-      'created_at': createdAt.toIso8601String(),
-    };
-  }
-
-  Map<String, dynamic> toMap() {
-    return {
-      'id': id,
-      'outlet_id': outletId,
-      'ppob_product_id': ppobProductId,
-      'customer_ref': customerRef,
-      'amount': amount,
-      'status': status,
-      'provider_ref': providerRef,
-      'created_at': createdAt.toIso8601String(),
+      'payment_method': paymentMethod,
+      if (providerRef != null) 'provider_ref': providerRef,
+      if (note != null) 'note': note,
     };
   }
 
   factory PpobTransaction.fromMap(Map<String, dynamic> map) {
-    return PpobTransaction(
-      id: map['id'] ?? '',
-      outletId: map['outlet_id'] ?? '',
-      ppobProductId: map['ppob_product_id'],
-      customerRef: map['customer_ref'],
-      amount: (map['amount'] ?? 0).toDouble(),
-      status: map['status'] ?? 'pending',
-      providerRef: map['provider_ref'],
-      createdAt: map['created_at'] != null
-          ? DateTime.parse(map['created_at'])
-          : DateTime.now(),
-    );
+    return PpobTransaction.fromJson(map);
   }
 
   PpobTransaction copyWith({
     String? id,
     String? outletId,
+    String? userId,
     String? ppobProductId,
+    String? productName,
     String? customerRef,
     double? amount,
+    double? costAmount,
+    double? profit,
     String? status,
+    String? paymentMethod,
     String? providerRef,
+    String? note,
     DateTime? createdAt,
   }) {
     return PpobTransaction(
       id: id ?? this.id,
       outletId: outletId ?? this.outletId,
+      userId: userId ?? this.userId,
       ppobProductId: ppobProductId ?? this.ppobProductId,
+      productName: productName ?? this.productName,
       customerRef: customerRef ?? this.customerRef,
       amount: amount ?? this.amount,
+      costAmount: costAmount ?? this.costAmount,
+      profit: profit ?? this.profit,
       status: status ?? this.status,
+      paymentMethod: paymentMethod ?? this.paymentMethod,
       providerRef: providerRef ?? this.providerRef,
+      note: note ?? this.note,
       createdAt: createdAt ?? this.createdAt,
     );
   }

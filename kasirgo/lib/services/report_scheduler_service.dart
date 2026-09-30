@@ -289,9 +289,42 @@ class ReportSchedulerService {
       }
     }
 
+    // Laba PPOB (transaksi sukses pada periode) - selalu tampil bila ada.
+    final ppob = await _ppobSummary(outletId, range.start, range.end);
+    if (ppob != null && ppob['sales']! > 0) {
+      buf.writeln('');
+      buf.writeln('PPOB: jual ${Formatters.currency(ppob['sales']!)}'
+          ' - laba ${Formatters.currency(ppob['profit']!)}');
+    }
+
     buf.writeln('');
     buf.writeln('Dicatat otomatis oleh KasirGo Super-App UMKM.');
     return buf.toString();
+  }
+
+  /// Rekap PPOB periode (status success). Null bila tabel PPOB belum ada.
+  Future<Map<String, double>?> _ppobSummary(
+      String outletId, DateTime start, DateTime end) async {
+    try {
+      final res = await _client
+          .from('ppob_transactions')
+          .select('amount, cost_amount, profit')
+          .eq('outlet_id', outletId)
+          .eq('status', 'success')
+          .gte('created_at', start.toIso8601String())
+          .lte('created_at', end.toIso8601String());
+      double sales = 0, profit = 0;
+      for (final row in (res as List)) {
+        final m = row as Map;
+        double d(dynamic v) =>
+            v is num ? v.toDouble() : (double.tryParse('$v') ?? 0);
+        sales += d(m['amount']);
+        profit += d(m['profit']);
+      }
+      return {'sales': sales, 'profit': profit};
+    } catch (_) {
+      return null;
+    }
   }
 
   /// Estimasi laba = omzet - HPP. HPP dihitung dari harga modal produk
