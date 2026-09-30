@@ -23,8 +23,15 @@ android {
 
     buildTypes {
         release {
-            // TODO: Add your own signing config for the release build.
-            // Signing with the debug keys for now, so `flutter run --release` works.
+            // Obfuscation + shrinking (ST12-1): R8 minify + resource shrink;
+            // obfuscate Dart via --obfuscate --split-debug-info (lihat AGENTS.md).
+            isMinifyEnabled = true
+            isShrinkResources = true
+            proguardFiles(
+                getDefaultProguardFile("proguard-android-optimize.txt"),
+                "proguard-rules.pro"
+            )
+            // TODO: ganti ke keystore rilis sebelum publish (JANGAN debug key).
             signingConfig = signingConfigs.getByName("debug")
         }
     }

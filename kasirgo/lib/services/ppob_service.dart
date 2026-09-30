@@ -124,9 +124,11 @@ class PpobService {
         final value =
             PpobConfig.fromMap(Map<String, dynamic>.from(res['value'] as Map));
         _config = value;
+        // ST12-1: api_key TIDAK disimpan di client (config/maupun cache).
+        // Secret provider hanya di platform_integrations.secret_config yang
+        // dibaca Edge Function; integrasi provider nyata lewat Edge Function.
         await prefs.setString(_cacheKey, jsonEncode({
           'provider': value.provider,
-          'api_key': value.apiKey,
           'endpoint': value.endpoint,
           'margin_percent': value.marginPercent,
           'enabled': value.enabled,
