@@ -6,6 +6,13 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../models/ppob.dart';
 
+class PpobException implements Exception {
+  final String message;
+  PpobException(this.message);
+  @override
+  String toString() => message;
+}
+
 /// Config PPOB dari Control Plane (platform_configs 'ppob', scope global).
 /// Superadmin atur provider + api_key + margin tanpa ubah koding.
 class PpobConfig {
@@ -13,12 +20,14 @@ class PpobConfig {
   final String apiKey;
   final String endpoint;
   final double marginPercent;
+  final bool enabled;
 
   const PpobConfig({
     this.provider = 'demo',
     this.apiKey = '',
     this.endpoint = '',
     this.marginPercent = 5,
+    this.enabled = true,
   });
 
   bool get isDemoMode => provider == 'demo' || apiKey.trim().isEmpty;
@@ -33,6 +42,8 @@ class PpobConfig {
       apiKey: m['api_key']?.toString() ?? '',
       endpoint: m['endpoint']?.toString() ?? '',
       marginPercent: d(m['margin_percent']),
+      // Tanpa key 'enabled' dianggap aktif (backward compatible).
+      enabled: m['enabled'] is bool ? m['enabled'] as bool : true,
     );
   }
 }
@@ -118,6 +129,7 @@ class PpobService {
           'api_key': value.apiKey,
           'endpoint': value.endpoint,
           'margin_percent': value.marginPercent,
+          'enabled': value.enabled,
         }));
         await prefs.setInt(_cacheTsKey, DateTime.now().millisecondsSinceEpoch);
         return _config;
@@ -242,13 +254,28 @@ class PpobService {
       createdAt: DateTime.now(),
     );
 
+    PpobTransaction? result;
     try {
-      var saved = await _client
+      final saved = await _client
           .from('ppob_transactions')
           .insert(tx.toJson())
           .select()
           .single();
-      var result = PpobTransaction.fromJson(saved);
+      result = PpobTransaction.fromJson(saved);
+
+      // Saldo (closed-loop): kurangi saldo outlet via RPC atomik.
+      if (paymentMethod == 'saldo') {
+        await _client.rpc('ppob_use_saldo', params: {
+          'p_outlet': outletId,
+          'p_tx': result.id,
+          'p_amount': inquiry.sellPrice,
+        });
+        return result.copyWith(
+          status: 'success',
+          paymentMethod: 'saldo',
+          providerRef: 'SALDO-${result.id}',
+        );
+      }
 
       if (isDemo) {
         // Demo: sukses instan (tanpa biaya), provider_ref jelas sumbernya.
@@ -263,6 +290,26 @@ class PpobService {
       // Provider nyata: kirim ke endpoint (jika diatur). Gagal kirim -> pending.
       await _submitToProvider(result);
       return await getById(result.id);
+    } on PostgrestException catch (e) {
+      final msg = e.message;
+      if (msg.contains('insufficient_saldo')) {
+        // Tandai tx pending jadi gagal agar riwayat tidak menampilkan phantom.
+        try {
+          if (result != null) {
+            await updateStatus(result.id, 'failed', 'SALDO-KURANG');
+          }
+        } catch (_) {}
+        throw PpobException(
+            'Saldo tidak cukup. Setor hasil QRIS ke saldo terlebih dahulu.');
+      }
+      if (msg.contains('tx_not_pending')) {
+        throw PpobException('Transaksi sudah diproses sebelumnya.');
+      }
+      if (msg.contains('forbidden')) {
+        throw PpobException('Tidak punya akses ke saldo outlet ini.');
+      }
+      debugPrint('PpobService.purchase error: $e');
+      return null;
     } catch (e) {
       debugPrint('PpobService.purchase error: $e');
       return null;
@@ -316,13 +363,67 @@ class PpobService {
         .from('ppob_transactions')
         .update({
           'status': status,
-          if (providerRef != null) 'provider_ref': providerRef,
+          'provider_ref': ?providerRef,
           'updated_at': DateTime.now().toIso8601String(),
         })
         .eq('id', id)
         .select()
         .single();
     return PpobTransaction.fromJson(res);
+  }
+
+  // ---------------------------------------------------------------------------
+  // SALDO CLOSED-LOOP (settlement QRIS -> beli PPOB)
+  // ---------------------------------------------------------------------------
+
+  /// Saldo outlet = SUM(settlements.amount) status success/PPOB_USED.
+  Future<double> getSaldo(String outletId) async {
+    try {
+      final res = await _client.rpc(
+        'get_outlet_saldo',
+        params: {'p_outlet': outletId},
+      );
+      return res is num ? res.toDouble() : double.tryParse('$res') ?? 0;
+    } catch (e) {
+      // Fallback offline-safe: hitung manual dari tabel settlements.
+      try {
+        final rows = await _client
+            .from('settlements')
+            .select('amount')
+            .eq('outlet_id', outletId)
+            .inFilter('status', ['success', 'PPOB_USED']);
+        double sum = 0;
+        for (final r in (rows as List)) {
+          final v = r['amount'];
+          sum += v is num
+              ? v.toDouble()
+              : (double.tryParse(v?.toString() ?? '') ?? 0);
+        }
+        return sum;
+      } catch (e2) {
+        debugPrint('PpobService.getSaldo error: $e / $e2');
+        return 0;
+      }
+    }
+  }
+
+  /// Setor hasil settlement QRIS ke saldo (owner). Return saldo baru.
+  Future<double> addQrisToSaldo(String outletId, double amount,
+      {String? note}) async {
+    final res = await _client.rpc('settlement_add_qris', params: {
+      'p_outlet': outletId,
+      'p_amount': amount,
+      'p_note': note,
+    });
+    return res is num ? res.toDouble() : double.tryParse('$res') ?? 0;
+  }
+
+  /// Sinkronkan status transaksi pending dari provider (rekonsiliasi).
+  Future<PpobTransaction?> refreshStatus(PpobTransaction tx) async {
+    if (tx.status != 'pending') return tx;
+    await loadConfig();
+    await _submitToProvider(tx);
+    return getById(tx.id);
   }
 
   // ---------------------------------------------------------------------------

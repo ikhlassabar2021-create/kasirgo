@@ -877,7 +877,9 @@ class _OwnerHomeScreenState extends ConsumerState<OwnerHomeScreen> {
       );
     }
 
-    if (modules.contains(BusinessModule.ppob)) {
+    final ppobEnabled = ref.watch(ppobEnabledProvider).valueOrNull ?? true;
+
+    if (modules.contains(BusinessModule.ppob) && ppobEnabled) {
       quickActionItems.add(
         _ModuleCard(
           icon: Icons.phone_android_rounded,

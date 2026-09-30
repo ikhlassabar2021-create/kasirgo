@@ -22,7 +22,8 @@ class _PpobScreenState extends ConsumerState<PpobScreen> {
   List<String> _categories = [];
   List<PpobProduct> _products = [];
   List<PpobTransaction> _history = [];
-  double _marginPercent = 5;
+  double _saldo = 0;
+  bool _cfgEnabled = true;
 
   @override
   void initState() {
@@ -36,16 +37,126 @@ class _PpobScreenState extends ConsumerState<PpobScreen> {
     final cats = await _ppob.getCategories();
     final products = await _ppob.getProducts(category: _selectedCategory);
     final outletId = ref.read(currentUserProvider)?.outletId ?? '';
-    final history =
-        outletId.isEmpty ? <PpobTransaction>[] : await _ppob.getHistory(outletId, limit: 30);
+    List<PpobTransaction> history = [];
+    double saldo = 0;
+    if (outletId.isNotEmpty) {
+      history = await _ppob.getHistory(outletId, limit: 30);
+      saldo = await _ppob.getSaldo(outletId);
+    }
     if (!mounted) return;
     setState(() {
-      _marginPercent = cfg.marginPercent;
+      _cfgEnabled = cfg.enabled;
       _categories = cats;
       _products = products;
       _history = history;
+      _saldo = saldo;
       _loading = false;
     });
+  }
+
+  bool get _showMargin {
+    final role = ref.read(currentUserProvider)?.role ?? 'cashier';
+    return role != 'cashier';
+  }
+
+  Future<void> _refreshSaldo() async {
+    final outletId = ref.read(currentUserProvider)?.outletId ?? '';
+    if (outletId.isEmpty) return;
+    final saldo = await _ppob.getSaldo(outletId);
+    if (!mounted) return;
+    setState(() => _saldo = saldo);
+  }
+
+  /// Owner setor hasil settlement QRIS ke saldo (closed-loop).
+  Future<void> _addSaldo() async {
+    final outletId = ref.read(currentUserProvider)?.outletId ?? '';
+    if (outletId.isEmpty) return;
+    final amountCtl = TextEditingController();
+    final noteCtl = TextEditingController();
+
+    final ok = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: AppTheme.surfaceColor,
+        shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(AppTheme.radiusLarge)),
+        title: Text('Setor QRIS ke Saldo',
+            style: GoogleFonts.inter(
+                fontSize: 16,
+                fontWeight: FontWeight.w800,
+                color: AppTheme.textPrimary)),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(
+                'Masukkan jumlah dana QRIS yang diterima di rekening. '
+                'Saldo ini otomatis dipakai untuk beli PPOB.',
+                style: GoogleFonts.inter(
+                    fontSize: 12, color: AppTheme.textSecondary)),
+            const SizedBox(height: 12),
+            TextField(
+              controller: amountCtl,
+              keyboardType: TextInputType.number,
+              autofocus: true,
+              style: GoogleFonts.inter(
+                  fontSize: 15, color: AppTheme.textPrimary),
+              decoration: const InputDecoration(
+                labelText: 'Jumlah (Rp)',
+                prefixText: 'Rp ',
+              ),
+            ),
+            const SizedBox(height: 8),
+            TextField(
+              controller: noteCtl,
+              style: GoogleFonts.inter(
+                  fontSize: 13, color: AppTheme.textPrimary),
+              decoration: const InputDecoration(
+                labelText: 'Catatan (opsional)',
+                hintText: 'cth: Setoran QRIS 30 Sep',
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+              onPressed: () => Navigator.pop(ctx, false),
+              child: Text('Batal',
+                  style: GoogleFonts.inter(color: AppTheme.textSecondary))),
+          TextButton(
+              onPressed: () => Navigator.pop(ctx, true),
+              child: Text('Setor',
+                  style: GoogleFonts.inter(
+                      color: AppTheme.primaryColor,
+                      fontWeight: FontWeight.w800))),
+        ],
+      ),
+    );
+    if (ok != true || !mounted) return;
+
+    final amount = double.tryParse(
+            amountCtl.text.replaceAll(RegExp(r'[^0-9.]'), '')) ??
+        0;
+    if (amount <= 0) {
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+          content: Text('Jumlah tidak valid'),
+          backgroundColor: AppTheme.errorColor));
+      return;
+    }
+    try {
+      final newSaldo =
+          await _ppob.addQrisToSaldo(outletId, amount, note: noteCtl.text);
+      if (!mounted) return;
+      setState(() => _saldo = newSaldo);
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+          content:
+              Text('Saldo bertambah. Saldo sekarang: ${Formatters.currency(newSaldo)}'),
+          backgroundColor: AppTheme.successColor));
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+          content: Text('Gagal setor saldo: $e'),
+          backgroundColor: AppTheme.errorColor));
+    }
   }
 
   Future<void> _openInquiry(PpobProduct product) async {
@@ -102,8 +213,7 @@ class _PpobScreenState extends ConsumerState<PpobScreen> {
                             color: AppTheme.textPrimary)),
                     const SizedBox(height: 4),
                     Text(
-                        'Harga: ${Formatters.currency(inquiry.sellPrice)}'
-                        ' (margin ${_marginPercent.toStringAsFixed(0)}%)',
+                        'Harga: ${Formatters.currency(inquiry.sellPrice)}',
                         style: GoogleFonts.inter(
                             fontSize: 12.5, color: AppTheme.textSecondary)),
                     const SizedBox(height: 12),
@@ -141,31 +251,66 @@ class _PpobScreenState extends ConsumerState<PpobScreen> {
                               Icons.qr_code_2_rounded, method, paymentMethodCtl),
                           const SizedBox(width: 8),
                           Expanded(
-                            child: Opacity(
-                              opacity: 0.45,
-                              child: Container(
-                                height: 48,
-                                decoration: BoxDecoration(
-                                  color: AppTheme.backgroundColor,
-                                  borderRadius: BorderRadius.circular(
-                                      AppTheme.radiusMedium),
-                                  border:
-                                      Border.all(color: AppTheme.borderColor),
-                                ),
-                                child: Column(
-                                  mainAxisAlignment: MainAxisAlignment.center,
-                                  children: [
-                                    const Icon(Icons.account_balance_wallet_rounded,
-                                        size: 18, color: AppTheme.textSecondary),
-                                    Text('Saldo (Segera)',
-                                        style: GoogleFonts.inter(fontSize: 10.5)),
-                                  ],
-                                ),
-                              ),
-                            ),
+                            child: _saldo >= inquiry.sellPrice
+                                ? _payOption(
+                                    'saldo',
+                                    'Saldo ${Formatters.currency(_saldo)}',
+                                    Icons.account_balance_wallet_rounded,
+                                    method,
+                                    paymentMethodCtl)
+                                : Opacity(
+                                    opacity: 0.45,
+                                    child: Container(
+                                      height: 48,
+                                      decoration: BoxDecoration(
+                                        color: AppTheme.backgroundColor,
+                                        borderRadius: BorderRadius.circular(
+                                            AppTheme.radiusMedium),
+                                        border: Border.all(
+                                            color: AppTheme.borderColor),
+                                      ),
+                                      child: Column(
+                                        mainAxisAlignment:
+                                            MainAxisAlignment.center,
+                                        children: [
+                                          const Icon(
+                                              Icons
+                                                  .account_balance_wallet_rounded,
+                                              size: 18,
+                                              color: AppTheme.textSecondary),
+                                          Text('Saldo kurang',
+                                              style: GoogleFonts.inter(
+                                                  fontSize: 10.5)),
+                                        ],
+                                      ),
+                                    ),
+                                  ),
                           ),
                         ],
                       ),
+                    ),
+                    const SizedBox(height: 12),
+                    // Rincian transparan (modal & margin hanya untuk owner/admin).
+                    Container(
+                      padding: const EdgeInsets.all(10),
+                      decoration: BoxDecoration(
+                        color: AppTheme.backgroundColor,
+                        borderRadius:
+                            BorderRadius.circular(AppTheme.radiusMedium),
+                      ),
+                      child: _showMargin
+                          ? Column(
+                              children: [
+                                _resultRow('Harga jual',
+                                    Formatters.currency(inquiry.sellPrice)),
+                                _resultRow('Modal provider',
+                                    Formatters.currency(inquiry.costPrice)),
+                                _resultRow('Margin',
+                                    Formatters.currency(inquiry.profit)),
+                              ],
+                            )
+                          : _resultRow('Harga',
+                              Formatters.currency(inquiry.sellPrice)),
                     ),
                     const SizedBox(height: 16),
                     SizedBox(
@@ -266,18 +411,67 @@ class _PpobScreenState extends ConsumerState<PpobScreen> {
       ),
     );
 
-    final result = await _ppob.purchase(
-      outletId: outletId,
-      userId: userId,
-      product: product,
-      customerRef: customerRef,
-      paymentMethod: paymentMethod,
-    );
+    PpobTransaction? result;
+    String? errorMsg;
+    try {
+      result = await _ppob.purchase(
+        outletId: outletId,
+        userId: userId,
+        product: product,
+        customerRef: customerRef,
+        paymentMethod: paymentMethod,
+      );
+    } on PpobException catch (e) {
+      errorMsg = e.message;
+    } catch (e) {
+      errorMsg = 'Terjadi kesalahan. Coba lagi.';
+    }
 
     if (!mounted) return;
     Navigator.pop(context);
 
+    if (errorMsg != null) {
+      showDialog(
+        context: context,
+        builder: (ctx) => AlertDialog(
+          backgroundColor: AppTheme.surfaceColor,
+          shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(AppTheme.radiusLarge)),
+          title: Column(
+            children: [
+              const Icon(Icons.error_outline_rounded,
+                  color: AppTheme.errorColor, size: 44),
+              const SizedBox(height: 8),
+              Text('Transaksi Gagal',
+                  style: GoogleFonts.inter(
+                      fontSize: 16,
+                      fontWeight: FontWeight.w800,
+                      color: AppTheme.textPrimary)),
+            ],
+          ),
+          content: Text(errorMsg!,
+              textAlign: TextAlign.center,
+              style: GoogleFonts.inter(
+                  fontSize: 12.5, color: AppTheme.textSecondary)),
+          actions: [
+            TextButton(
+                onPressed: () => Navigator.pop(ctx),
+                child: Text('Tutup',
+                    style: GoogleFonts.inter(
+                        color: AppTheme.primaryColor,
+                        fontWeight: FontWeight.w700))),
+          ],
+        ),
+      );
+      _load();
+      return;
+    }
+
     final ok = result != null && result.status == 'success';
+    if (ok && paymentMethod == 'saldo') {
+      await _refreshSaldo();
+      if (!mounted) return;
+    }
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
@@ -321,6 +515,10 @@ class _PpobScreenState extends ConsumerState<PpobScreen> {
                   _resultRow('Produk', result.productName),
                   _resultRow('Tujuan', result.customerRef),
                   _resultRow('Harga', Formatters.currency(result.amount)),
+                  if (result.paymentMethod == 'saldo' && ok) ...[
+                    _resultRow('Metode', 'Saldo QRIS'),
+                    _resultRow('Sisa Saldo', Formatters.currency(_saldo)),
+                  ],
                   if (result.providerRef != null)
                     _resultRow('Ref', result.providerRef!),
                   const SizedBox(height: 6),
@@ -401,6 +599,10 @@ class _PpobScreenState extends ConsumerState<PpobScreen> {
               child: ListView(
                 padding: const EdgeInsets.all(16),
                 children: [
+                  _buildSaldoCard(),
+                  if (!_cfgEnabled) ...[
+                    _buildDisabledCard(),
+                  ] else ...[
                   SizedBox(
                     height: 38,
                     child: ListView(
@@ -504,10 +706,117 @@ class _PpobScreenState extends ConsumerState<PpobScreen> {
                     )
                   else
                     ..._history.map(_historyCard),
+                  ],
                   const SizedBox(height: 32),
                 ],
               ),
             ),
+    );
+  }
+
+  /// Kartu saldo closed-loop (settlement QRIS -> beli PPOB).
+  Widget _buildSaldoCard() {
+    final role = ref.read(currentUserProvider)?.role ?? 'cashier';
+    final isOwner = role == 'owner';
+    return Container(
+      margin: const EdgeInsets.only(bottom: 14),
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        gradient: const LinearGradient(
+          colors: [Color(0xFF06B6D4), AppTheme.primaryColor],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+        borderRadius: BorderRadius.circular(AppTheme.radiusLarge),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              const Icon(Icons.account_balance_wallet_rounded,
+                  size: 18, color: Colors.white70),
+              const SizedBox(width: 6),
+              Text('SALDO QRIS (CLOSED-LOOP)',
+                  style: GoogleFonts.inter(
+                      fontSize: 10.5,
+                      fontWeight: FontWeight.w800,
+                      letterSpacing: 0.5,
+                      color: Colors.white70)),
+              const Spacer(),
+              IconButton(
+                visualDensity: VisualDensity.compact,
+                onPressed: _refreshSaldo,
+                icon: const Icon(Icons.refresh_rounded,
+                    size: 18, color: Colors.white),
+              ),
+            ],
+          ),
+          Text(Formatters.currency(_saldo),
+              style: GoogleFonts.inter(
+                  fontSize: 24,
+                  fontWeight: FontWeight.w800,
+                  color: Colors.white)),
+          const SizedBox(height: 2),
+          Text(
+            'Saldo dari settlement QRIS. Otomatis dipakai saat beli PPOB '
+            'dengan metode Saldo.',
+            style: GoogleFonts.inter(
+                fontSize: 11, color: Colors.white.withValues(alpha: 0.85)),
+          ),
+          if (isOwner) ...[
+            const SizedBox(height: 10),
+            SizedBox(
+              height: 40,
+              child: OutlinedButton.icon(
+                onPressed: _addSaldo,
+                icon: const Icon(Icons.add_rounded, size: 18),
+                label: Text('Setor QRIS ke Saldo',
+                    style: GoogleFonts.inter(
+                        fontSize: 12.5, fontWeight: FontWeight.w700)),
+                style: OutlinedButton.styleFrom(
+                  foregroundColor: Colors.white,
+                  side: const BorderSide(color: Colors.white70),
+                  shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(AppTheme.radiusMedium)),
+                ),
+              ),
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+
+  /// PPOB dinonaktifkan superadmin via Control Plane.
+  Widget _buildDisabledCard() {
+    return Container(
+      padding: const EdgeInsets.all(24),
+      decoration: BoxDecoration(
+        color: AppTheme.surfaceColor,
+        borderRadius: BorderRadius.circular(AppTheme.radiusMedium),
+        border: Border.all(color: AppTheme.borderColor),
+      ),
+      child: Column(
+        children: [
+          const Icon(Icons.power_settings_new_rounded,
+              size: 40, color: AppTheme.textSecondary),
+          const SizedBox(height: 10),
+          Text('PPOB Belum Diaktifkan',
+              style: GoogleFonts.inter(
+                  fontSize: 15,
+                  fontWeight: FontWeight.w800,
+                  color: AppTheme.textPrimary)),
+          const SizedBox(height: 6),
+          Text(
+            'Fitur PPOB sedang dinonaktifkan oleh pengelola aplikasi. '
+            'Hubungi dukungan untuk informasi lebih lanjut.',
+            textAlign: TextAlign.center,
+            style: GoogleFonts.inter(
+                fontSize: 12.5, color: AppTheme.textSecondary),
+          ),
+        ],
+      ),
     );
   }
 
@@ -572,20 +881,52 @@ class _PpobScreenState extends ConsumerState<PpobScreen> {
                 fontSize: 11, color: AppTheme.textSecondary),
           ),
         ),
-        trailing: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          crossAxisAlignment: CrossAxisAlignment.end,
+        trailing: Row(
+          mainAxisSize: MainAxisSize.min,
           children: [
-            Text(Formatters.currency(tx.amount),
-                style: GoogleFonts.inter(
-                    fontSize: 13,
-                    fontWeight: FontWeight.w800,
-                    color: AppTheme.textPrimary)),
-            Text(tx.status.toUpperCase(),
-                style: GoogleFonts.inter(
-                    fontSize: 10,
-                    fontWeight: FontWeight.w800,
-                    color: color)),
+            Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              crossAxisAlignment: CrossAxisAlignment.end,
+              children: [
+                Text(Formatters.currency(tx.amount),
+                    style: GoogleFonts.inter(
+                        fontSize: 13,
+                        fontWeight: FontWeight.w800,
+                        color: AppTheme.textPrimary)),
+                Text(tx.status.toUpperCase(),
+                    style: GoogleFonts.inter(
+                        fontSize: 10,
+                        fontWeight: FontWeight.w800,
+                        color: color)),
+              ],
+            ),
+            if (tx.status == 'pending') ...[
+              const SizedBox(width: 6),
+              SizedBox(
+                height: 32,
+                child: TextButton(
+                  onPressed: () async {
+                    final updated = await _ppob.refreshStatus(tx);
+                    if (!mounted) return;
+                    ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+                        content: Text(updated == null
+                            ? 'Gagal cek status.'
+                            : 'Status: ${updated.status.toUpperCase()}'),
+                        backgroundColor: updated?.status == 'success'
+                            ? AppTheme.successColor
+                            : AppTheme.warningColor));
+                    _load();
+                  },
+                  style: TextButton.styleFrom(
+                      padding: const EdgeInsets.symmetric(horizontal: 8)),
+                  child: Text('Cek',
+                      style: GoogleFonts.inter(
+                          fontSize: 11.5,
+                          fontWeight: FontWeight.w800,
+                          color: AppTheme.primaryColor)),
+                ),
+              ),
+            ],
           ],
         ),
       ),

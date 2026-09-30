@@ -1,5 +1,6 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../services/module_registry.dart';
+import '../services/ppob_service.dart';
 import 'outlet_provider.dart';
 
 enum BusinessModule {
@@ -142,4 +143,11 @@ final isModuleEnabledProvider =
         (ref, arg) {
   final modules = ref.watch(activeModulesProvider(arg.outletId));
   return modules.contains(arg.module);
+});
+
+/// PPOB hanya aktif bila modul outlet_type mengizinkan DAN config superadmin
+/// (platform_configs 'ppob'.enabled) aktif. Cache offline-safe di service.
+final ppobEnabledProvider = FutureProvider<bool>((ref) async {
+  final cfg = await PpobService().loadConfig();
+  return cfg.enabled;
 });

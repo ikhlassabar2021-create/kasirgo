@@ -150,3 +150,215 @@ WHERE NOT EXISTS (
 --   SELECT value->>'margin_percent' FROM public.platform_configs
 --     WHERE key='ppob' AND scope='global';                 -- 5
 -- ============================================================================
+
+-- ---------------------------------------------------------------------------
+-- 6. ST9-2: settlements (ledger saldo closed-loop)
+--    Saldo outlet = SUM(amount) WHERE status IN ('success','PPOB_USED').
+--    amount positif = QRIS masuk; negatif = dipakai PPOB.
+-- ---------------------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS public.settlements (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  outlet_id UUID NOT NULL REFERENCES public.outlets(id) ON DELETE CASCADE,
+  amount NUMERIC(14,2) NOT NULL DEFAULT 0,
+  source TEXT NOT NULL DEFAULT 'qris'
+    CHECK (source IN ('qris','ppob','manual')),
+  status TEXT NOT NULL DEFAULT 'success'
+    CHECK (status IN ('pending','success','failed','PPOB_USED')),
+  ppob_transaction_id UUID REFERENCES public.ppob_transactions(id) ON DELETE SET NULL,
+  note TEXT,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+ALTER TABLE public.settlements ENABLE ROW LEVEL SECURITY;
+
+DROP POLICY IF EXISTS "Owner full settlements" ON public.settlements;
+CREATE POLICY "Owner full settlements"
+  ON public.settlements FOR ALL
+  TO authenticated
+  USING (EXISTS (SELECT 1 FROM public.outlets o
+                 WHERE o.id = settlements.outlet_id AND o.owner_id = auth.uid()))
+  WITH CHECK (EXISTS (SELECT 1 FROM public.outlets o
+                 WHERE o.id = settlements.outlet_id AND o.owner_id = auth.uid()));
+
+DROP POLICY IF EXISTS "Staff read settlements" ON public.settlements;
+CREATE POLICY "Staff read settlements"
+  ON public.settlements FOR SELECT
+  TO authenticated
+  USING (EXISTS (SELECT 1 FROM public.user_roles ur
+                 WHERE ur.user_id = auth.uid()
+                   AND ur.outlet_id = settlements.outlet_id));
+
+CREATE INDEX IF NOT EXISTS idx_settlements_outlet_created
+  ON public.settlements (outlet_id, created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_settlements_status
+  ON public.settlements (status);
+
+-- Saldo outlet (closed-loop).
+CREATE OR REPLACE FUNCTION public.get_outlet_saldo(p_outlet uuid)
+RETURNS numeric
+LANGUAGE sql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+  SELECT COALESCE(SUM(amount), 0)
+  FROM public.settlements
+  WHERE outlet_id = p_outlet AND status IN ('success','PPOB_USED');
+$$;
+
+-- Pakai saldo untuk PPOB: atomik (cek cukup -> catat PPOB_USED -> sukseskan tx).
+CREATE OR REPLACE FUNCTION public.ppob_use_saldo(
+  p_outlet uuid, p_tx uuid, p_amount numeric)
+RETURNS numeric
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+DECLARE
+  v_saldo numeric;
+  v_new numeric;
+BEGIN
+  IF p_amount IS NULL OR p_amount <= 0 THEN
+    RAISE EXCEPTION 'invalid_amount';
+  END IF;
+
+  -- Hak akses: owner outlet ATAU staf terdaftar.
+  IF NOT (
+    EXISTS (SELECT 1 FROM public.outlets o
+            WHERE o.id = p_outlet AND o.owner_id = auth.uid())
+    OR EXISTS (SELECT 1 FROM public.user_roles ur
+               WHERE ur.user_id = auth.uid() AND ur.outlet_id = p_outlet)
+  ) THEN
+    RAISE EXCEPTION 'forbidden';
+  END IF;
+
+  SELECT public.get_outlet_saldo(p_outlet) INTO v_saldo;
+  IF v_saldo < p_amount THEN
+    RAISE EXCEPTION 'insufficient_saldo';
+  END IF;
+
+  -- Tx harus pending & milik outlet yang sama.
+  UPDATE public.ppob_transactions
+     SET status = 'success',
+         payment_method = 'saldo',
+         provider_ref = COALESCE(provider_ref, 'SALDO-' || p_tx::text),
+         updated_at = NOW()
+   WHERE id = p_tx AND outlet_id = p_outlet AND status = 'pending';
+  IF NOT FOUND THEN
+    RAISE EXCEPTION 'tx_not_pending';
+  END IF;
+
+  INSERT INTO public.settlements
+    (outlet_id, amount, source, status, ppob_transaction_id, note)
+  VALUES
+    (p_outlet, -p_amount, 'ppob', 'PPOB_USED', p_tx, 'Pembelian PPOB');
+
+  v_new := v_saldo - p_amount;
+  RETURN v_new;
+END;
+$$;
+
+-- QRIS settlement masuk ke saldo (dipanggil webhook/setoran owner).
+CREATE OR REPLACE FUNCTION public.settlement_add_qris(
+  p_outlet uuid, p_amount numeric, p_note text DEFAULT NULL)
+RETURNS numeric
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+DECLARE
+  v_outlet uuid;
+BEGIN
+  IF p_amount IS NULL OR p_amount <= 0 THEN
+    RAISE EXCEPTION 'invalid_amount';
+  END IF;
+
+  -- Hanya owner outlet yang boleh menyetor manual.
+  SELECT o.id INTO v_outlet FROM public.outlets o
+   WHERE o.id = p_outlet AND o.owner_id = auth.uid();
+  IF v_outlet IS NULL THEN
+    RAISE EXCEPTION 'forbidden';
+  END IF;
+
+  INSERT INTO public.settlements
+    (outlet_id, amount, source, status, note)
+  VALUES (p_outlet, p_amount, 'qris', 'success', p_note);
+
+  RETURN public.get_outlet_saldo(p_outlet);
+END;
+$$;
+
+-- ---------------------------------------------------------------------------
+-- 7. ST9-3: restock_orders (B2B) + config b2b_restock
+-- ---------------------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS public.restock_orders (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  outlet_id UUID NOT NULL REFERENCES public.outlets(id) ON DELETE CASCADE,
+  user_id UUID REFERENCES auth.users(id) ON DELETE SET NULL,
+  distributor TEXT NOT NULL DEFAULT '',
+  tracking_id TEXT NOT NULL UNIQUE,
+  amount NUMERIC(14,2) NOT NULL DEFAULT 0,
+  commission NUMERIC(14,2) NOT NULL DEFAULT 0,
+  status TEXT NOT NULL DEFAULT 'pending'
+    CHECK (status IN ('draft','pending','confirmed','shipped','completed','cancelled')),
+  items_note TEXT,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+ALTER TABLE public.restock_orders ENABLE ROW LEVEL SECURITY;
+
+DROP POLICY IF EXISTS "Owner full restock" ON public.restock_orders;
+CREATE POLICY "Owner full restock"
+  ON public.restock_orders FOR ALL
+  TO authenticated
+  USING (EXISTS (SELECT 1 FROM public.outlets o
+                 WHERE o.id = restock_orders.outlet_id AND o.owner_id = auth.uid()))
+  WITH CHECK (EXISTS (SELECT 1 FROM public.outlets o
+                 WHERE o.id = restock_orders.outlet_id AND o.owner_id = auth.uid()));
+
+DROP POLICY IF EXISTS "Staff read restock" ON public.restock_orders;
+CREATE POLICY "Staff read restock"
+  ON public.restock_orders FOR SELECT
+  TO authenticated
+  USING (EXISTS (SELECT 1 FROM public.user_roles ur
+                 WHERE ur.user_id = auth.uid()
+                   AND ur.outlet_id = restock_orders.outlet_id));
+
+DROP POLICY IF EXISTS "Staff insert restock" ON public.restock_orders;
+CREATE POLICY "Staff insert restock"
+  ON public.restock_orders FOR INSERT
+  TO authenticated
+  WITH CHECK (EXISTS (SELECT 1 FROM public.user_roles ur
+                 WHERE ur.user_id = auth.uid()
+                   AND ur.outlet_id = restock_orders.outlet_id));
+
+CREATE INDEX IF NOT EXISTS idx_restock_outlet_created
+  ON public.restock_orders (outlet_id, created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_restock_status
+  ON public.restock_orders (status);
+
+-- Config B2B restock (link distributor + komisi; superadmin yang mengubah).
+INSERT INTO public.platform_configs (key, scope, value)
+SELECT 'b2b_restock', 'global', jsonb_build_object(
+  'enabled', false,
+  'distributor_url', '',
+  'distributor_name', 'Distributor B2B',
+  'commission_percent', 2,
+  'allowed_domains', '[]'::jsonb,
+  'updated_at', NOW()
+)
+WHERE NOT EXISTS (
+  SELECT 1 FROM public.platform_configs
+  WHERE key = 'b2b_restock' AND scope = 'global'
+);
+
+-- PPOB aktif by default (demo mode) + gate enabled.
+UPDATE public.platform_configs
+   SET value = CASE
+         WHEN value ? 'enabled' THEN value
+         ELSE jsonb_set(value, '{enabled}', 'true'::jsonb, true)
+       END
+ WHERE key = 'ppob' AND scope = 'global'
+   AND NOT COALESCE((value->>'enabled')::boolean, false);
+
+-- ============================================================================
