@@ -8,6 +8,7 @@ import 'package:pdf/widgets.dart' as pw;
 import 'package:printing/printing.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../../services/ppob_service.dart';
+import '../../services/b2b_service.dart';
 import '../../config/app_theme.dart';
 import '../../models/product.dart';
 import '../../models/transaction.dart';
@@ -36,6 +37,7 @@ class _ReportScreenState extends ConsumerState<ReportScreen> with SingleTickerPr
   List<Transaction> _transactions = [];
   Map<String, Product> _productMap = {};
   Map<String, double> _ppobSummary = {'sales': 0, 'cost': 0, 'profit': 0};
+  Map<String, double> _restockSummary = {'total': 0, 'commission': 0};
 
   @override
   void initState() {
@@ -102,11 +104,16 @@ class _ReportScreenState extends ConsumerState<ReportScreen> with SingleTickerPr
       final ppobSummary =
           await ppob.getSummary(user.outletId!, range.start, range.end);
 
+      final b2b = B2bService();
+      final restockSummary =
+          await b2b.getSummary(user.outletId!, range.start, range.end);
+
       if (mounted) {
         setState(() {
           _transactions = txList;
           _productMap = pMap;
           _ppobSummary = ppobSummary;
+          _restockSummary = restockSummary;
           _isLoading = false;
         });
       }
@@ -654,6 +661,43 @@ class _ReportScreenState extends ConsumerState<ReportScreen> with SingleTickerPr
                 padding: const EdgeInsets.only(top: 6),
                 child: Text(
                   'Modal PPOB: ${Formatters.currency(_ppobSummary['cost'] ?? 0)} - laba = jual - modal, hanya transaksi sukses.',
+                  style: TextStyle(fontSize: 11, color: AppTheme.textSecondary),
+                ),
+              ),
+              const SizedBox(height: 24),
+            ],
+            if (_restockSummary['total']! > 0) ...[
+              Text(
+                'Restock B2B (Kulakan)',
+                style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
+              ),
+              const SizedBox(height: 12),
+              Row(
+                children: [
+                  Expanded(
+                    child: _ReportCard(
+                      title: 'Total Restock',
+                      value: Formatters.currency(_restockSummary['total'] ?? 0),
+                      icon: Icons.local_shipping_rounded,
+                      color: AppTheme.secondaryColor,
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: _ReportCard(
+                      title: 'Komisi Platform',
+                      value:
+                          Formatters.currency(_restockSummary['commission'] ?? 0),
+                      icon: Icons.handshake_rounded,
+                      color: AppTheme.successColor,
+                    ),
+                  ),
+                ],
+              ),
+              Padding(
+                padding: const EdgeInsets.only(top: 6),
+                child: Text(
+                  'Komisi = % dari total order kulakan (diatur superadmin).',
                   style: TextStyle(fontSize: 11, color: AppTheme.textSecondary),
                 ),
               ),

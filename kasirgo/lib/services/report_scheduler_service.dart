@@ -297,6 +297,14 @@ class ReportSchedulerService {
           ' - laba ${Formatters.currency(ppob['profit']!)}');
     }
 
+    // Restock B2B (order kulakan pada periode) - tampil bila ada.
+    final restock = await _restockSummary(outletId, range.start, range.end);
+    if (restock != null && restock['total']! > 0) {
+      buf.writeln('');
+      buf.writeln('Restock B2B: order ${Formatters.currency(restock['total']!)}'
+          ' - komisi ${Formatters.currency(restock['commission']!)}');
+    }
+
     buf.writeln('');
     buf.writeln('Dicatat otomatis oleh KasirGo Super-App UMKM.');
     return buf.toString();
@@ -322,6 +330,31 @@ class ReportSchedulerService {
         profit += d(m['profit']);
       }
       return {'sales': sales, 'profit': profit};
+    } catch (_) {
+      return null;
+    }
+  }
+
+  /// Rekap restock B2B periode. Null bila tabel belum ada.
+  Future<Map<String, double>?> _restockSummary(
+      String outletId, DateTime start, DateTime end) async {
+    try {
+      final res = await _client
+          .from('restock_orders')
+          .select('amount, commission')
+          .eq('outlet_id', outletId)
+          .inFilter('status', ['pending', 'confirmed', 'shipped', 'completed'])
+          .gte('created_at', start.toIso8601String())
+          .lte('created_at', end.toIso8601String());
+      double total = 0, commission = 0;
+      for (final row in (res as List)) {
+        final m = row as Map;
+        double d(dynamic v) =>
+            v is num ? v.toDouble() : (double.tryParse('$v') ?? 0);
+        total += d(m['amount']);
+        commission += d(m['commission']);
+      }
+      return {'total': total, 'commission': commission};
     } catch (_) {
       return null;
     }
