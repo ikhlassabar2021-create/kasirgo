@@ -19,6 +19,7 @@ import {
   SlidersHorizontal,
   Lock,
   Layers,
+  Activity,
 } from 'lucide-react';
 import {
   loadConfig,
@@ -63,6 +64,9 @@ type TabId =
   | 'automation'
   | 'integrations'
   | 'override'
+  | 'announcements'
+  | 'monitoring'
+  | 'admins'
   | 'audit';
 
 const TABS: { id: TabId; name: string; icon: any }[] = [
@@ -76,6 +80,9 @@ const TABS: { id: TabId; name: string; icon: any }[] = [
   { id: 'automation', name: 'Otomatisasi', icon: Zap },
   { id: 'integrations', name: 'Integrasi & Secret', icon: Plug },
   { id: 'override', name: 'Override & Riwayat', icon: Layers },
+  { id: 'announcements', name: 'Pengumuman', icon: Megaphone },
+  { id: 'monitoring', name: 'Monitoring', icon: Activity },
+  { id: 'admins', name: 'Admin & RBAC', icon: ShieldCheck },
   { id: 'audit', name: 'Audit Log', icon: ScrollText },
 ];
 
@@ -1008,6 +1015,327 @@ function OverrideTab() {
 }
 
 // ===========================================================================
+// ST11-4: Announcements (pengumuman in-app per audiens)
+// ===========================================================================
+function AnnouncementsTab() {
+  const [rows, setRows] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [form, setForm] = useState({ title: '', body: '', audience: 'all', is_active: true });
+  const { msg, show } = useToast();
+
+  const load = useCallback(async () => {
+    setLoading(true);
+    try {
+      const res = await supabaseRpc<any>('platform_announcement_list');
+      setRows(res?.rows ?? []);
+    } catch (e: any) {
+      show('err', e.message ?? 'Gagal memuat pengumuman');
+    } finally {
+      setLoading(false);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  useEffect(() => { load(); }, [load]);
+
+  const save = async () => {
+    if (!form.title.trim()) { show('err', 'Judul wajib diisi.'); return; }
+    setSaving(true);
+    try {
+      await supabaseRpc('platform_announcement_upsert', {
+        p_title: form.title, p_body: form.body,
+        p_audience: form.audience, p_is_active: form.is_active,
+      });
+      show('ok', 'Pengumuman disimpan.');
+      setForm({ title: '', body: '', audience: 'all', is_active: true });
+      await load();
+    } catch (e: any) {
+      show('err', e.message ?? 'Gagal menyimpan');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const toggle = async (r: any) => {
+    try {
+      await supabaseRpc('platform_announcement_upsert', {
+        p_id: r.id, p_title: r.title, p_body: r.body ?? '',
+        p_audience: r.audience ?? 'all',
+        p_starts_at: r.starts_at ?? null, p_ends_at: r.ends_at ?? null,
+        p_is_active: !r.is_active,
+      });
+      await load();
+    } catch (e: any) { show('err', e.message ?? 'Gagal mengubah'); }
+  };
+
+  const remove = async (r: any) => {
+    if (!window.confirm(`Hapus pengumuman "${r.title}"?`)) return;
+    try {
+      await supabaseRpc('platform_announcement_delete', { p_id: r.id });
+      await load();
+    } catch (e: any) { show('err', e.message ?? 'Gagal menghapus'); }
+  };
+
+  return (
+    <Card title="Pengumuman In-App" subtitle="Tampil di aplikasi sesuai audiens (all / owner / supporter).">
+      <div className="max-w-[760px] space-y-3.5">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          <div>
+            <label className={labelCls}>Judul</label>
+            <input className={inputCls} value={form.title} onChange={(e) => setForm({ ...form, title: e.target.value })} />
+          </div>
+          <div>
+            <label className={labelCls}>Audiens</label>
+            <select className={inputCls} value={form.audience} onChange={(e) => setForm({ ...form, audience: e.target.value })}>
+              <option value="all">Semua</option>
+              <option value="owner">Owner</option>
+              <option value="supporter">Pendukung</option>
+            </select>
+          </div>
+        </div>
+        <div>
+          <label className={labelCls}>Isi</label>
+          <textarea className={`${inputCls} min-h-[80px]`} value={form.body} onChange={(e) => setForm({ ...form, body: e.target.value })} />
+        </div>
+        <label className="flex items-center gap-2 text-xs font-semibold text-slate-600">
+          <input type="checkbox" checked={form.is_active} onChange={(e) => setForm({ ...form, is_active: e.target.checked })} />
+          Aktif
+        </label>
+        <SaveButton loading={saving} onClick={save} label="Tambah Pengumuman" />
+
+        <div className="pt-3 border-t border-slate-100">
+          {loading ? <p className="text-[11px] text-slate-400">Memuat...</p> : rows.length === 0 ? (
+            <p className="text-[11px] text-slate-400">Belum ada pengumuman.</p>
+          ) : (
+            <div className="bg-white border border-slate-200/80 rounded-xl divide-y divide-slate-50">
+              {rows.map((r) => (
+                <div key={r.id} className="flex items-center justify-between px-3 py-2.5 gap-2">
+                  <div className="min-w-0">
+                    <p className="text-xs font-bold text-slate-800 truncate">{r.title}</p>
+                    <p className="text-[10px] text-slate-400 truncate">{r.audience} &bull; {r.is_active ? 'aktif' : 'nonaktif'}</p>
+                  </div>
+                  <div className="flex gap-1.5 shrink-0">
+                    <button onClick={() => toggle(r)} className="px-3 py-1.5 rounded-lg border border-sky-200 bg-sky-50 text-sky-700 text-[10px] font-bold hover:bg-sky-100">
+                      {r.is_active ? 'Matikan' : 'Aktifkan'}
+                    </button>
+                    <button onClick={() => remove(r)} className="p-2 rounded-lg bg-red-50 text-red-500 hover:bg-red-100">
+                      <Trash2 className="w-3.5 h-3.5" />
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      </div>
+      <Toast msg={msg} />
+    </Card>
+  );
+}
+
+// ===========================================================================
+// ST11-4: Monitoring kesehatan platform + jalankan rules engine
+// ===========================================================================
+function MonitoringTab() {
+  const [data, setData] = useState<any>(null);
+  const [loading, setLoading] = useState(true);
+  const [running, setRunning] = useState(false);
+  const [ruleResults, setRuleResults] = useState<any[] | null>(null);
+  const { msg, show } = useToast();
+
+  const load = useCallback(async () => {
+    setLoading(true);
+    try { setData(await supabaseRpc<any>('platform_monitoring')); }
+    catch (e: any) { show('err', e.message ?? 'Gagal memuat monitoring'); }
+    finally { setLoading(false); }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  useEffect(() => { load(); }, [load]);
+
+  const runRules = async () => {
+    setRunning(true);
+    try {
+      const res = await supabaseRpc<any>('platform_rules_run');
+      setRuleResults(res?.results ?? []);
+      show('ok', 'Rules engine dijalankan; hasil match tercatat di audit.');
+    } catch (e: any) {
+      show('err', e.message ?? 'Gagal menjalankan rules');
+    } finally {
+      setRunning(false);
+    }
+  };
+
+  const items: { label: string; value: any; warn?: boolean }[] = data ? [
+    { label: 'Total outlet', value: data.outlets_total },
+    { label: 'Outlet aktif 30 hari', value: data.outlets_active_30d },
+    { label: 'Pendukung menunggu verifikasi', value: data.pending_supporters, warn: data.pending_supporters > 0 },
+    { label: 'PPOB gagal 24 jam', value: data.ppob_failed_24h, warn: data.ppob_failed_24h > 0 },
+    { label: 'PPOB pending 24 jam', value: data.ppob_pending_24h },
+    { label: 'Transaksi sync macet >1 jam', value: data.tx_sync_stuck, warn: data.tx_sync_stuck > 0 },
+    { label: 'Backup terjadwal jatuh tempo', value: data.backup_schedules_due, warn: data.backup_schedules_due > 0 },
+    { label: 'Rules aktif / flags aktif', value: `${data.automation_rules_active} / ${data.feature_flags_enabled}` },
+  ] : [];
+
+  return (
+    <Card title="Monitoring Platform" subtitle="Kesehatan sistem & antrean yang perlu ditindak.">
+      <div className="space-y-4">
+        {loading && <p className="text-[11px] text-slate-400">Memuat...</p>}
+        {data && (
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+            {items.map((it) => (
+              <div key={it.label} className={`rounded-xl border p-3 ${it.warn ? 'bg-amber-50 border-amber-200' : 'bg-white border-slate-200/80'}`}>
+                <p className="text-[9px] font-bold text-slate-400 uppercase">{it.label}</p>
+                <p className={`text-lg font-extrabold mt-0.5 ${it.warn ? 'text-amber-600' : 'text-slate-900'}`}>{String(it.value ?? 0)}</p>
+              </div>
+            ))}
+          </div>
+        )}
+
+        <div className="pt-3 border-t border-slate-100">
+          <div className="flex items-center justify-between mb-2">
+            <div>
+              <label className={labelCls}>Rules Engine</label>
+              <p className="text-[11px] text-slate-400">Evaluasi semua automation_rules aktif; hasil match dicatat di audit.</p>
+            </div>
+            <button onClick={runRules} disabled={running}
+              className="bg-gradient-to-r from-cyan-500 to-sky-600 text-white px-4 py-2.5 rounded-xl text-xs font-semibold shadow-md shadow-sky-500/25 active:scale-95 transition disabled:opacity-50">
+              {running ? 'Menjalankan...' : 'Jalankan Rules'}
+            </button>
+          </div>
+          {ruleResults && (
+            <div className="bg-white border border-slate-200/80 rounded-xl divide-y divide-slate-50">
+              {ruleResults.map((r, i) => (
+                <div key={i} className="flex items-center justify-between px-3 py-2 gap-2">
+                  <div className="min-w-0">
+                    <p className="text-xs font-bold text-slate-700 truncate">{r.rule}</p>
+                    <p className="text-[10px] text-slate-400 truncate">{r.detail ?? r.trigger}</p>
+                  </div>
+                  <span className={`shrink-0 px-2 py-0.5 rounded-full text-[9px] font-bold border ${r.matched ? 'bg-emerald-50 text-emerald-600 border-emerald-200' : 'bg-slate-50 text-slate-400 border-slate-200'}`}>
+                    {r.matched ? 'MATCH' : 'tidak'}
+                  </span>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      </div>
+      <Toast msg={msg} />
+    </Card>
+  );
+}
+
+// ===========================================================================
+// ST11-4: Admin & RBAC (kelola admin_users)
+// ===========================================================================
+const ADMIN_ROLES = ['superadmin', 'finance', 'support', 'ops'];
+
+function AdminsTab() {
+  const [rows, setRows] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [email, setEmail] = useState('');
+  const [role, setRole] = useState('support');
+  const [saving, setSaving] = useState(false);
+  const { msg, show } = useToast();
+
+  const load = useCallback(async () => {
+    setLoading(true);
+    try {
+      const res = await supabaseRpc<any>('platform_admin_list');
+      setRows(res?.rows ?? []);
+    } catch (e: any) {
+      show('err', e.message ?? 'Gagal memuat admin');
+    } finally {
+      setLoading(false);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  useEffect(() => { load(); }, [load]);
+
+  const upsert = async () => {
+    if (!email.trim()) { show('err', 'Email wajib diisi.'); return; }
+    setSaving(true);
+    try {
+      await supabaseRpc('platform_admin_upsert', { p_email: email.trim(), p_role: role });
+      show('ok', 'Admin disimpan.');
+      setEmail('');
+      await load();
+    } catch (e: any) {
+      show('err', e.message ?? 'Gagal menyimpan (user harus sudah terdaftar di aplikasi)');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const setActive = async (userId: string, active: boolean) => {
+    try {
+      await supabaseRpc('platform_admin_set_active', { p_user_id: userId, p_active: active });
+      await load();
+    } catch (e: any) { show('err', e.message ?? 'Gagal mengubah'); }
+  };
+
+  const changeRole = async (userId: string, newRole: string) => {
+    const r = rows.find((x) => x.user_id === userId);
+    if (!r) return;
+    try {
+      await supabaseRpc('platform_admin_upsert', { p_email: r.email, p_role: newRole });
+      await load();
+    } catch (e: any) { show('err', e.message ?? 'Gagal mengubah role'); }
+  };
+
+  return (
+    <Card title="Admin & RBAC" subtitle="Role: superadmin (semua), finance, support, ops. Route guard aktif otomatis.">
+      <div className="max-w-[760px] space-y-4">
+        <div className="grid grid-cols-1 sm:grid-cols-[1fr_160px_auto] gap-3 items-end">
+          <div>
+            <label className={labelCls}>Email user terdaftar</label>
+            <input className={inputCls} type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="nama@email.com" />
+          </div>
+          <div>
+            <label className={labelCls}>Role</label>
+            <select className={inputCls} value={role} onChange={(e) => setRole(e.target.value)}>
+              {ADMIN_ROLES.map((r) => <option key={r} value={r}>{r}</option>)}
+            </select>
+          </div>
+          <SaveButton loading={saving} onClick={upsert} label="Tambah / Update" />
+        </div>
+
+        <div className="bg-white border border-slate-200/80 rounded-xl divide-y divide-slate-50">
+          {loading && <p className="px-3 py-4 text-[11px] text-slate-400">Memuat...</p>}
+          {!loading && rows.length === 0 && <p className="px-3 py-4 text-[11px] text-slate-400">Belum ada admin.</p>}
+          {rows.map((r) => (
+            <div key={r.id} className="flex flex-col sm:flex-row sm:items-center justify-between px-3 py-2.5 gap-2">
+              <div className="min-w-0">
+                <p className="text-xs font-bold text-slate-800 truncate">{r.email}</p>
+                <p className="text-[10px] text-slate-400">{r.is_active ? 'aktif' : 'nonaktif'} &bull; sejak {new Date(r.created_at).toLocaleDateString('id-ID')}</p>
+              </div>
+              <div className="flex items-center gap-2 shrink-0">
+                <select
+                  value={r.role ?? 'support'}
+                  onChange={(e) => changeRole(r.user_id, e.target.value)}
+                  className="border border-slate-200 rounded-lg px-2 py-1.5 text-[11px] bg-white"
+                >
+                  {ADMIN_ROLES.map((x) => <option key={x} value={x}>{x}</option>)}
+                </select>
+                <button
+                  onClick={() => setActive(r.user_id, !r.is_active)}
+                  className={`px-3 py-1.5 rounded-lg text-[10px] font-bold border ${r.is_active ? 'bg-rose-50 text-rose-600 border-rose-200 hover:bg-rose-100' : 'bg-emerald-50 text-emerald-600 border-emerald-200 hover:bg-emerald-100'}`}
+                >
+                  {r.is_active ? 'Nonaktifkan' : 'Aktifkan'}
+                </button>
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+      <Toast msg={msg} />
+    </Card>
+  );
+}
+
+// ===========================================================================
 export function ControlPlanePage() {
   const [activeId, setActiveId] = useState<TabId>('ads');
   const [warning] = useState<string | null>(null);
@@ -1085,6 +1413,9 @@ export function ControlPlanePage() {
           {activeId === 'automation' && <AutomationTab />}
           {activeId === 'integrations' && <IntegrationsTab />}
           {activeId === 'override' && <OverrideTab />}
+          {activeId === 'announcements' && <AnnouncementsTab />}
+          {activeId === 'monitoring' && <MonitoringTab />}
+          {activeId === 'admins' && <AdminsTab />}
           {activeId === 'audit' && <AuditTab />}
         </div>
       </div>

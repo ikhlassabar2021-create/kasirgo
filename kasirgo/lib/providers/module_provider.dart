@@ -133,12 +133,19 @@ class ModuleConfig {
 final moduleFlagsProvider =
     FutureProvider<Map<String, bool>>((ref) => ModuleRegistry.loadFlags());
 
+/// Flags efektif per outlet via RPC (rollout_pct + outlet_types + segments
+/// dievaluasi server-side; ST11-4 staged rollout). Cache TTL 5 menit.
+final outletFlagsProvider =
+    FutureProvider.family<Map<String, bool>, String>(
+        (ref, outletId) => ModuleRegistry.loadFlagsForOutlet(outletId));
+
 final activeModulesProvider =
     Provider.family<Set<BusinessModule>, String>((ref, outletId) {
   final outletType = ref.watch(outletTypeProvider(outletId));
-  // Memuat flag di latar belakang; provider ini reaktif saat selesai.
-  ref.watch(moduleFlagsProvider);
-  return ModuleRegistry.effectiveModules(outletType);
+  // Flags per outlet (staged rollout) dipakai bila sudah termuat;
+  // fallback: cache registry / default per outlet_type.
+  final flags = ref.watch(outletFlagsProvider(outletId)).asData?.value;
+  return ModuleRegistry.effectiveModules(outletType, flags: flags);
 });
 
 final isModuleEnabledProvider =

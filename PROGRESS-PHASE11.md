@@ -1,7 +1,12 @@
 # PROGRESS PHASE 11 — Superadmin Web: Revenue Engine, RBAC, Control Plane, Monitoring
 
+**STATUS PHASE 11: SELESAI (ST11-1..ST11-4).** BERIKUTNYA: Phase 12 (Polish +
+Security Audit + Release).
+
 Roadmap: docs/KASIRGO-WORKFLOW-LENGKAP.md Bagian PHASE 11 (ST11-1..ST11-4).
-Migrasi: docs/migrations/2026-10-01-kasirgo-11.sql (idempotent).
+Migrasi: docs/migrations/2026-10-01-kasirgo-11.sql (idempotent; bagian 2-4
+**perlu dijalankan ke live** via SQL Editor — access token tidak tersedia
+saat pengembangan; bagian 1 sudah live).
 Admin: kasirgo-admin (React+Vite, Ocean White tokens), semua data via RPC
 SECURITY DEFINER ber-flag admin (admin_users aktif); secret TIDAK dibaca client.
 
@@ -107,3 +112,58 @@ SECURITY DEFINER ber-flag admin (admin_users aktif); secret TIDAK dibaca client.
 - npm run build BERSIH.
 - QA live PENDING (setelah SQL dijalankan): simpan override outlet ->
   platform_config_effective mengembalikan source=outlet; rollback versi.
+
+### ST11-4 — RBAC + Route Guard, Announcements, Monitoring, Rules Engine, Feature Flags Rollout (2026-09-30)
+- DB (bagian 4 kasirgo-11.sql) — **BELUM DIJALANKAN ke live**:
+  - RBAC: `platform_admin_list/upsert/set_active` (role superadmin/finance/
+    support/ops; email dicari di auth.users).
+  - Announcements: `platform_announcement_list/upsert/delete`.
+  - `platform_monitoring()` — outlet aktif, pendukung pending verifikasi,
+    PPOB gagal/pending 24 jam, transaksi sync macet, backup jatuh tempo,
+    rules/flags aktif, error audit terakhir.
+  - `platform_rules_run()` — rules engine dasar: metrik (tx_today_total,
+    ppob_failed_24h, pending_supporters, idle_outlets_14d) dengan op
+    gte/lte + trigger churn_idle_days; hasil MATCH tercatat di audit.
+  - `feature_flags_for_outlet(p_outlet_id)` — evaluasi SERVER-SIDE:
+    enabled + rollout_pct (hash deterministik outlet_id) + outlet_types +
+    segments membership.
+- Flutter (staged rollout diterapkan ke app):
+  - `module_registry.dart`: `loadFlagsForOutlet(outletId)` via RPC dengan
+    fallback select langsung + rollout hash lokal saat offline; cache TTL
+    5 menit per outlet; `effectiveModules(outletType, flags:)`.
+  - `module_provider.dart`: `outletFlagsProvider` (family per outlet);
+    `activeModulesProvider` memakai flags per outlet (fallback default).
+  - `flutter analyze` penuh: 21 issues = baseline lama (0 baru).
+- kasirgo-admin:
+  - Route guard RBAC (`RoleGuard` per route) + sidebar difilter per role
+    (superadmin semua; finance=revenue/intelligence; support=users/backup;
+    ops=users/control-plane); footer sidebar menampilkan role.
+  - ControlPlane tab baru: **Pengumuman** (CRUD + aktif/nonaktif),
+    **Monitoring** (KPI kesehatan + tombol "Jalankan Rules" + hasil match),
+    **Admin & RBAC** (tambah/update admin by email, ubah role, aktif/nonaktif).
+- npm run build BERSIH (tsc + vite).
+- QA live PENDING (setelah SQL dijalankan): login superadmin -> semua menu;
+  buat admin role=finance -> login -> menu terbatas + route lain ditolak;
+  ubah feature_flags rollout_pct=50 -> app dua outlet berbeda hasil beda
+  (deterministik); aktifkan announcement -> muncul di app sesuai audiens.
+
+## QA Manual Phase 11 (setelah menjalankan bagian 2-4 SQL)
+1. Jalankan `docs/migrations/2026-10-01-kasirgo-11.sql` penuh di SQL Editor
+   (idempotent — bagian 1 aman dijalankan ulang).
+2. Login superadmin di /kasirgo/admin/ -> Dashboard 12 engine, Users, Audit,
+   Intelligence, Backup, Control Plane (11 tab).
+3. UserDetail -> Impersonate -> modal snapshot + entri audit "impersonate_view".
+4. Backup: buat quick backup -> unduh JSON -> restore (konfirmasi).
+5. Override & Riwayat: simpan override outlet -> preview efektif
+   source=outlet -> rollback versi.
+6. Admin & RBAC: tambah admin role lain -> login akun itu -> menu + route
+   sesuai role.
+7. Flutter: ubah feature_flags (enabled/rollout_pct/outlet_types) -> buka app
+   (modul ikut dalam <= 5 menit TTL) TANPA rebuild.
+
+## BERIKUTNYA: Phase 12 — Polish + Security Audit + Release
+- Security audit: RLS review semua tabel, secret scan, rate limit Edge
+  Functions, proguard, permission manifest.
+- Polish: empty state, error state, onboarding, panduan in-app final.
+- Release: APK release split-per-abi <10MB, deploy gh-pages app + admin,
+  tag rilis, catatan rilis.

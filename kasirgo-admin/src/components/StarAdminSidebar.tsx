@@ -17,9 +17,19 @@ interface StarAdminSidebarProps {
   isOpen: boolean;
   onClose: () => void;
   onLogout: () => void;
+  role?: string;
 }
 
-export function StarAdminSidebar({ isOpen, onClose, onLogout }: StarAdminSidebarProps) {
+// ST11-4 RBAC: nav per role (superadmin melihat semua).
+const ROLE_NAV: Record<string, string[]> = {
+  superadmin: ['*'],
+  finance: ['/owner', '/superadmin', '/revenue', '/intelligence', '/audit'],
+  support: ['/owner', '/superadmin', '/users', '/outlets', '/backup', '/intelligence', '/audit'],
+  ops: ['/owner', '/superadmin', '/users', '/outlets', '/control-plane', '/intelligence', '/audit'],
+};
+
+export function StarAdminSidebar({ isOpen, onClose, onLogout, role = 'superadmin' }: StarAdminSidebarProps) {
+  const allowed = ROLE_NAV[role] ?? ROLE_NAV.superadmin;
   const navigation = [
     { name: 'Dashboard Owner (Warung)', href: '/owner', icon: Store },
     { name: 'Superadmin Dashboard', href: '/superadmin', icon: LayoutDashboard },
@@ -31,7 +41,7 @@ export function StarAdminSidebar({ isOpen, onClose, onLogout }: StarAdminSidebar
     { name: 'Backup & Restore', href: '/backup', icon: CloudBackup },
     { name: 'Jejak Audit', href: '/audit', icon: ScrollText },
     { name: 'Control Plane', href: '/control-plane', icon: Settings },
-  ];
+  ].filter((item) => allowed.includes('*') || allowed.includes(item.href));
 
   return (
     <>
@@ -114,8 +124,8 @@ export function StarAdminSidebar({ isOpen, onClose, onLogout }: StarAdminSidebar
                 SA
               </div>
               <div className="flex-1 min-w-0">
-                <h3 className="text-xs font-bold text-slate-900 truncate">Super Admin</h3>
-                <p className="text-[10px] text-slate-500 truncate">admin@kasirgo.com</p>
+                <h3 className="text-xs font-bold text-slate-900 truncate">Admin</h3>
+                <p className="text-[10px] text-slate-500 truncate">{role}</p>
               </div>
             </div>
           </div>

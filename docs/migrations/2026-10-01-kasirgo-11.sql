@@ -1028,3 +1028,328 @@ $$;
 GRANT EXECUTE ON FUNCTION public.platform_segment_delete(uuid) TO authenticated;
 
 -- ============================================================================
+
+-- ---------------------------------------------------------------------------
+-- 4. ST11-4: RBAC admin, announcements, monitoring, rules engine dasar,
+--    feature flags staged rollout (evaluasi server-side per outlet).
+-- ---------------------------------------------------------------------------
+
+-- 4.1 RBAC: kelola admin_users (superadmin/finance/support/ops).
+CREATE OR REPLACE FUNCTION public.platform_admin_list()
+RETURNS jsonb
+LANGUAGE sql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+  SELECT jsonb_build_object(
+    'rows', COALESCE((
+      SELECT jsonb_agg(to_jsonb(x) ORDER BY x.created_at DESC)
+      FROM (SELECT a.id, a.user_id, a.role, a.is_active, a.created_at,
+                   COALESCE(u.email, '(tanpa email)') AS email
+            FROM public.admin_users a
+            LEFT JOIN auth.users u ON u.id = a.user_id) x), '[]'::jsonb)
+  );
+$$;
+GRANT EXECUTE ON FUNCTION public.platform_admin_list() TO authenticated;
+
+CREATE OR REPLACE FUNCTION public.platform_admin_upsert(
+  p_email text, p_role text DEFAULT 'support')
+RETURNS uuid
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+DECLARE
+  v_ok boolean;
+  v_role text := CASE WHEN p_role IN ('superadmin','finance','support','ops')
+                      THEN p_role ELSE 'support' END;
+  v_user uuid;
+  v_id uuid;
+BEGIN
+  SELECT public.platform_is_admin() INTO v_ok;
+  IF NOT v_ok THEN RAISE EXCEPTION 'forbidden'; END IF;
+
+  SELECT id INTO v_user FROM auth.users WHERE lower(email) = lower(p_email);
+  IF v_user IS NULL THEN RAISE EXCEPTION 'user_not_found'; END IF;
+
+  SELECT id INTO v_id FROM public.admin_users WHERE user_id = v_user;
+  IF v_id IS NULL THEN
+    INSERT INTO public.admin_users (user_id, role, is_active)
+    VALUES (v_user, v_role, true)
+    RETURNING id INTO v_id;
+  ELSE
+    UPDATE public.admin_users SET role = v_role, is_active = true
+    WHERE id = v_id;
+  END IF;
+
+  PERFORM public.log_admin_action('admin.upsert', p_email,
+    jsonb_build_object('role', v_role));
+  RETURN v_id;
+END;
+$$;
+GRANT EXECUTE ON FUNCTION public.platform_admin_upsert(text, text) TO authenticated;
+
+CREATE OR REPLACE FUNCTION public.platform_admin_set_active(
+  p_user_id uuid, p_active boolean)
+RETURNS void
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+DECLARE
+  v_ok boolean;
+BEGIN
+  SELECT public.platform_is_admin() INTO v_ok;
+  IF NOT v_ok THEN RAISE EXCEPTION 'forbidden'; END IF;
+  UPDATE public.admin_users SET is_active = p_active WHERE user_id = p_user_id;
+  PERFORM public.log_admin_action('admin.set_active', p_user_id::text,
+    jsonb_build_object('active', p_active));
+END;
+$$;
+GRANT EXECUTE ON FUNCTION public.platform_admin_set_active(uuid, boolean) TO authenticated;
+
+-- 4.2 Announcements (pengumuman in-app per audiens).
+CREATE OR REPLACE FUNCTION public.platform_announcement_list()
+RETURNS jsonb
+LANGUAGE sql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+  SELECT jsonb_build_object(
+    'rows', COALESCE((
+      SELECT jsonb_agg(to_jsonb(x) ORDER BY x.created_at DESC)
+      FROM (SELECT * FROM public.announcements) x), '[]'::jsonb)
+  );
+$$;
+GRANT EXECUTE ON FUNCTION public.platform_announcement_list() TO authenticated;
+
+CREATE OR REPLACE FUNCTION public.platform_announcement_upsert(
+  p_id uuid DEFAULT NULL, p_title text, p_body text DEFAULT '',
+  p_audience text DEFAULT 'all', p_starts_at timestamptz DEFAULT NOW(),
+  p_ends_at timestamptz DEFAULT NULL, p_is_active boolean DEFAULT true)
+RETURNS uuid
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+DECLARE
+  v_ok boolean;
+  v_id uuid;
+BEGIN
+  SELECT public.platform_is_admin() INTO v_ok;
+  IF NOT v_ok THEN RAISE EXCEPTION 'forbidden'; END IF;
+
+  IF p_id IS NOT NULL THEN
+    UPDATE public.announcements
+    SET title = p_title, body = p_body, audience = p_audience,
+        starts_at = p_starts_at, ends_at = p_ends_at, is_active = p_is_active
+    WHERE id = p_id
+    RETURNING id INTO v_id;
+  END IF;
+  IF v_id IS NULL THEN
+    INSERT INTO public.announcements (title, body, audience, starts_at, ends_at, is_active)
+    VALUES (p_title, p_body, p_audience, p_starts_at, p_ends_at, p_is_active)
+    RETURNING id INTO v_id;
+  END IF;
+
+  PERFORM public.log_admin_action('announcement.save', p_title,
+    jsonb_build_object('id', v_id, 'audience', p_audience));
+  RETURN v_id;
+END;
+$$;
+GRANT EXECUTE ON FUNCTION public.platform_announcement_upsert(uuid, text, text, text, timestamptz, timestamptz, boolean) TO authenticated;
+
+CREATE OR REPLACE FUNCTION public.platform_announcement_delete(p_id uuid)
+RETURNS void
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+DECLARE
+  v_ok boolean;
+BEGIN
+  SELECT public.platform_is_admin() INTO v_ok;
+  IF NOT v_ok THEN RAISE EXCEPTION 'forbidden'; END IF;
+  DELETE FROM public.announcements WHERE id = p_id;
+  PERFORM public.log_admin_action('announcement.delete', p_id::text, '{}');
+END;
+$$;
+GRANT EXECUTE ON FUNCTION public.platform_announcement_delete(uuid) TO authenticated;
+
+-- 4.3 Monitoring: kesehatan platform (agregat, tanpa PII).
+CREATE OR REPLACE FUNCTION public.platform_monitoring()
+RETURNS jsonb
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+DECLARE
+  v_ok boolean;
+BEGIN
+  SELECT public.platform_is_admin() INTO v_ok;
+  IF NOT v_ok THEN RAISE EXCEPTION 'forbidden'; END IF;
+
+  RETURN jsonb_build_object(
+    'outlets_total', (SELECT count(*) FROM public.outlets),
+    'outlets_active_30d', (SELECT count(DISTINCT outlet_id) FROM public.transactions
+                           WHERE created_at >= NOW() - interval '30 days'),
+    'pending_supporters', (SELECT count(*) FROM public.supporters
+                           WHERE status IN ('pending','pending_verification')),
+    'ppob_failed_24h', (SELECT count(*) FROM public.ppob_transactions
+                        WHERE status = 'failed'
+                          AND created_at >= NOW() - interval '24 hours'),
+    'ppob_pending_24h', (SELECT count(*) FROM public.ppob_transactions
+                         WHERE status = 'pending'
+                           AND created_at >= NOW() - interval '24 hours'),
+    'tx_sync_stuck', (SELECT count(*) FROM public.transactions
+                      WHERE COALESCE(sync_status, 'synced') <> 'synced'
+                        AND created_at < NOW() - interval '1 hour'),
+    'backup_schedules_due', (
+      SELECT count(*) FROM public.backup_schedules s
+      WHERE s.enabled
+        AND (s.last_run_at IS NULL
+             OR (s.cadence = 'daily'  AND s.last_run_at < date_trunc('day', NOW()))
+             OR (s.cadence = 'weekly' AND s.last_run_at < NOW() - interval '7 days'))),
+    'automation_rules_active', (SELECT count(*) FROM public.automation_rules WHERE enabled),
+    'feature_flags_enabled', (SELECT count(*) FROM public.feature_flags WHERE enabled),
+    'recent_errors', COALESCE((
+      SELECT jsonb_agg(to_jsonb(x) ORDER BY x.created_at DESC)
+      FROM (SELECT a.action, a.target, a.created_at
+            FROM public.audit_logs a
+            WHERE a.action LIKE '%fail%' OR a.action LIKE '%error%'
+            ORDER BY a.created_at DESC LIMIT 5) x), '[]'::jsonb)
+  );
+END;
+$$;
+GRANT EXECUTE ON FUNCTION public.platform_monitoring() TO authenticated;
+
+-- 4.4 Rules engine dasar: evaluasi automation_rules aktif atas metrik
+--     sederhana; hasil tercatat di audit + dikembalikan ke UI.
+--     condition: {metric, op(gte/lte), threshold} atau trigger bernama.
+CREATE OR REPLACE FUNCTION public.platform_rules_run()
+RETURNS jsonb
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+DECLARE
+  v_ok boolean;
+  v_metric numeric;
+  v_results jsonb := '[]'::jsonb;
+  r RECORD;
+  v_matched boolean;
+  v_detail text;
+BEGIN
+  SELECT public.platform_is_admin() INTO v_ok;
+  IF NOT v_ok THEN RAISE EXCEPTION 'forbidden'; END IF;
+
+  FOR r IN SELECT * FROM public.automation_rules WHERE enabled LOOP
+    v_matched := FALSE;
+    v_detail := NULL;
+    BEGIN
+      IF r.condition ? 'metric' THEN
+        v_metric := CASE r.condition->>'metric'
+          WHEN 'tx_today_total' THEN
+            (SELECT count(*) FROM public.transactions
+             WHERE created_at >= date_trunc('day', NOW()))
+          WHEN 'ppob_failed_24h' THEN
+            (SELECT count(*) FROM public.ppob_transactions
+             WHERE status = 'failed' AND created_at >= NOW() - interval '24 hours')
+          WHEN 'pending_supporters' THEN
+            (SELECT count(*) FROM public.supporters
+             WHERE status IN ('pending','pending_verification'))
+          WHEN 'idle_outlets_14d' THEN
+            (SELECT count(*) FROM (
+               SELECT o.id FROM public.outlets o
+               JOIN public.transactions t ON t.outlet_id = o.id
+               GROUP BY o.id
+               HAVING max(t.created_at) < NOW() - interval '14 days') s)
+          ELSE NULL END;
+
+        IF v_metric IS NOT NULL THEN
+          IF COALESCE(r.condition->>'op', 'gte') = 'lte' THEN
+            v_matched := v_metric <= (r.condition->>'threshold')::numeric;
+          ELSE
+            v_matched := v_metric >= (r.condition->>'threshold')::numeric;
+          END IF;
+          v_detail := format('%s = %s (target %s %s)',
+            r.condition->>'metric', v_metric,
+            r.condition->>'op', r.condition->>'threshold');
+        END IF;
+      ELSIF r.trigger = 'churn_idle_days' THEN
+        -- Matched bila ada outlet idle melebihi batas.
+        v_matched := EXISTS (
+          SELECT 1 FROM public.outlets o
+          JOIN public.transactions t ON t.outlet_id = o.id
+          GROUP BY o.id
+          HAVING max(t.created_at) < NOW()
+                 - make_interval(days => COALESCE((r.condition->>'days')::int, 14)));
+        v_detail := 'outlet idle > ' || COALESCE(r.condition->>'days', '14') || ' hari';
+      END IF;
+
+      IF v_matched THEN
+        PERFORM public.log_admin_action('rule.matched', COALESCE(r.name, r.trigger),
+          jsonb_build_object('detail', v_detail, 'action', r.action));
+      END IF;
+
+      v_results := v_results || jsonb_build_object(
+        'rule', COALESCE(r.name, r.trigger), 'trigger', r.trigger,
+        'matched', v_matched, 'detail', v_detail);
+    EXCEPTION WHEN OTHERS THEN
+      v_results := v_results || jsonb_build_object(
+        'rule', COALESCE(r.name, r.trigger), 'trigger', r.trigger,
+        'matched', FALSE, 'detail', 'error: ' || SQLERRM);
+    END;
+  END LOOP;
+
+  RETURN jsonb_build_object('ran_at', NOW(), 'results', v_results);
+END;
+$$;
+GRANT EXECUTE ON FUNCTION public.platform_rules_run() TO authenticated;
+
+-- 4.5 Feature flags efektif per outlet (server-side evaluasi:
+--     enabled + rollout_pct (hash outlet_id) + outlet_types + segments).
+CREATE OR REPLACE FUNCTION public.feature_flags_for_outlet(p_outlet_id uuid)
+RETURNS jsonb
+LANGUAGE plpgsql
+STABLE
+SECURITY DEFINER
+SET search_path = public
+AS $$
+DECLARE
+  v_type text;
+  v_out jsonb := '{}'::jsonb;
+  f RECORD;
+  v_on boolean;
+BEGIN
+  SELECT lower(o.outlet_type) INTO v_type FROM public.outlets o WHERE o.id = p_outlet_id;
+
+  FOR f IN SELECT * FROM public.feature_flags LOOP
+    v_on := f.enabled;
+    -- Rollout bertahap deterministik per outlet.
+    IF v_on AND COALESCE(f.rollout_pct, 100) < 100 THEN
+      v_on := (mod(abs(hashtext(p_outlet_id::text)), 100) < COALESCE(f.rollout_pct, 100));
+    END IF;
+    -- Filter outlet_types (kosong = semua tipe).
+    IF v_on AND jsonb_array_length(COALESCE(f.outlet_types, '[]'::jsonb)) > 0 THEN
+      v_on := v_type IS NOT NULL AND (
+        SELECT bool_or(lower(elem) = v_type)
+        FROM jsonb_array_elements_text(f.outlet_types) elem);
+    END IF;
+    -- Filter segments (kosong = semua; kalau ada, outlet harus anggota >=1).
+    IF v_on AND jsonb_array_length(COALESCE(f.segments, '[]'::jsonb)) > 0 THEN
+      v_on := EXISTS (
+        SELECT 1 FROM public.outlet_segments os
+        WHERE os.outlet_id = p_outlet_id
+          AND os.segment_id::text IN (
+            SELECT jsonb_array_elements_text(f.segments)));
+    END IF;
+    v_out := v_out || jsonb_build_object(f.key, v_on);
+  END LOOP;
+
+  RETURN v_out;
+END;
+$$;
+GRANT EXECUTE ON FUNCTION public.feature_flags_for_outlet(uuid) TO authenticated;
+
+-- ============================================================================

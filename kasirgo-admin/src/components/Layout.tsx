@@ -5,9 +5,10 @@ import { StarAdminSidebar } from './StarAdminSidebar'
 
 interface LayoutProps {
   onLogout: () => void
+  role?: string
 }
 
-export const Layout: React.FC<LayoutProps> = ({ onLogout }) => {
+export const Layout: React.FC<LayoutProps> = ({ onLogout, role = 'superadmin' }) => {
   const [sidebarOpen, setSidebarOpen] = useState(false)
   const location = useLocation()
 
@@ -60,10 +61,11 @@ export const Layout: React.FC<LayoutProps> = ({ onLogout }) => {
       </header>
 
       {/* Sidebar with Centennial Theme */}
-      <StarAdminSidebar 
-        isOpen={sidebarOpen} 
+      <StarAdminSidebar
+        isOpen={sidebarOpen}
         onClose={() => setSidebarOpen(false)}
         onLogout={onLogout}
+        role={role}
       />
 
       {/* Main Content Area - White clean container */}
