@@ -97,32 +97,15 @@ export async function loadConfig(key: ConfigKey): Promise<Record<string, any> | 
 }
 
 export async function saveConfig(key: ConfigKey, value: Record<string, any>) {
-  const current = await supabase
-    .from('platform_configs')
-    .select('id,version')
-    .eq('key', key)
-    .eq('scope', 'global')
-    .eq('scope_ref', 'all')
-    .maybeSingle()
-
-  if (current.data?.id) {
-    const nextVersion = (current.data.version ?? 1) + 1
-    const { error } = await supabase
-      .from('platform_configs')
-      .update({ value, version: nextVersion, updated_at: new Date().toISOString() })
-      .eq('id', current.data.id)
-    if (error) throw error
-  } else {
-    const { error } = await supabase.from('platform_configs').insert({
-      key,
-      scope: 'global',
-      scope_ref: 'all',
-      value,
-      version: 1,
-    })
-    if (error) throw error
-  }
-  await logAction('config.update', `platform_configs:${key}`, { key })
+  // ST11-3: simpan via RPC agar version+1, updated_by, riwayat, dan audit
+  // konsisten (tabel ditulis SECURITY DEFINER, bukan langsung dari client).
+  const { error } = await supabase.rpc('platform_config_save', {
+    p_key: key,
+    p_scope: 'global',
+    p_scope_ref: 'all',
+    p_value: value,
+  })
+  if (error) throw error
 }
 
 // ---------------------------------------------------------------------------

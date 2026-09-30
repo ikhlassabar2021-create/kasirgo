@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import {
   Megaphone,
   BookOpen,
@@ -18,6 +18,7 @@ import {
   EyeOff,
   SlidersHorizontal,
   Lock,
+  Layers,
 } from 'lucide-react';
 import {
   loadConfig,
@@ -48,6 +49,8 @@ import type {
   AuditLog,
   PendingSupporter,
 } from '../lib/controlPlane';
+import { supabase } from '../config/supabase';
+import { rp as supabaseRpc, UsersListResult } from '../lib/adminApi';
 
 type TabId =
   | 'ads'
@@ -59,6 +62,7 @@ type TabId =
   | 'flags'
   | 'automation'
   | 'integrations'
+  | 'override'
   | 'audit';
 
 const TABS: { id: TabId; name: string; icon: any }[] = [
@@ -71,6 +75,7 @@ const TABS: { id: TabId; name: string; icon: any }[] = [
   { id: 'flags', name: 'Feature Flags', icon: Flag },
   { id: 'automation', name: 'Otomatisasi', icon: Zap },
   { id: 'integrations', name: 'Integrasi & Secret', icon: Plug },
+  { id: 'override', name: 'Override & Riwayat', icon: Layers },
   { id: 'audit', name: 'Audit Log', icon: ScrollText },
 ];
 
@@ -779,6 +784,230 @@ function AuditTab() {
 }
 
 // ===========================================================================
+// ST11-3: Override Global->Segment->Outlet + riwayat versi + rollback
+// ===========================================================================
+const CONFIG_KEYS: { key: ConfigKey; label: string }[] = [
+  { key: 'ads', label: 'Iklan' },
+  { key: 'guide', label: 'Panduan' },
+  { key: 'report', label: 'Laporan' },
+  { key: 'kyc', label: 'KYC' },
+  { key: 'quota', label: 'Kuota & Limit' },
+  { key: 'flags', label: 'Feature Flags' },
+  { key: 'billing', label: 'Billing' },
+];
+
+function OverrideTab() {
+  const [cfgKey, setCfgKey] = useState<ConfigKey>('ads');
+  const [scope, setScope] = useState<'global' | 'segment' | 'outlet'>('global');
+  const [scopeRef, setScopeRef] = useState('all');
+  const [segments, setSegments] = useState<{ id: string; name: string }[]>([]);
+  const [outlets, setOutlets] = useState<{ outlet_id: string; outlet_name: string }[]>([]);
+  const [text, setText] = useState('{}');
+  const [loading, setLoading] = useState(false);
+  const [saveLoading, setSaveLoading] = useState(false);
+  const [versions, setVersions] = useState<any[]>([]);
+  const [effective, setEffective] = useState<any>(null);
+  const [previewOutlet, setPreviewOutlet] = useState('');
+  const { msg, show } = useToast();
+
+  useEffect(() => {
+    (async () => {
+      try {
+        const [seg, users] = await Promise.all([
+          supabaseRpc<any>('platform_segment_list'),
+          supabaseRpc<UsersListResult>('platform_users_list', { p_limit: 100, p_offset: 0 }),
+        ]);
+        setSegments((seg?.rows ?? []).map((r: any) => ({ id: r.id, name: r.name })));
+        setOutlets((users?.rows ?? [])
+          .filter((u) => u.outlet_id)
+          .map((u) => ({ outlet_id: u.outlet_id as string, outlet_name: u.outlet_name ?? u.email })));
+      } catch { /* daftar opsional */ }
+    })();
+  }, []);
+
+  const loadCurrent = useCallback(async () => {
+    setLoading(true);
+    setEffective(null);
+    try {
+      if (scope === 'global') {
+        const v = await loadConfig(cfgKey);
+        setText(JSON.stringify(v ?? {}, null, 2));
+      } else {
+        const { data } = await supabase
+          .from('platform_configs')
+          .select('value,version')
+          .eq('key', cfgKey)
+          .eq('scope', scope)
+          .eq('scope_ref', scopeRef)
+          .order('version', { ascending: false })
+          .limit(1)
+          .maybeSingle();
+        setText(JSON.stringify(data?.value ?? {}, null, 2));
+      }
+      const hist = await supabaseRpc<any>('platform_config_versions', {
+        p_key: cfgKey, p_scope: scope, p_scope_ref: scopeRef, p_limit: 20,
+      });
+      setVersions(hist?.rows ?? []);
+    } catch (e: any) {
+      show('err', e.message ?? 'Gagal memuat config');
+    } finally {
+      setLoading(false);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [cfgKey, scope, scopeRef]);
+
+  useEffect(() => { loadCurrent(); }, [loadCurrent]);
+
+  const save = async () => {
+    let parsed: any;
+    try { parsed = JSON.parse(text); }
+    catch { show('err', 'JSON tidak valid.'); return; }
+    setSaveLoading(true);
+    try {
+      await supabaseRpc('platform_config_save', {
+        p_key: cfgKey, p_scope: scope, p_scope_ref: scopeRef, p_value: parsed,
+      });
+      show('ok', `Config disimpan (${scope}).`);
+      await loadCurrent();
+    } catch (e: any) {
+      show('err', e.message ?? 'Gagal menyimpan');
+    } finally {
+      setSaveLoading(false);
+    }
+  };
+
+  const rollback = async (version: number) => {
+    if (!window.confirm(`Rollback config ke versi ${version}? Nilai lama disimpan sebagai versi baru.`)) return;
+    try {
+      await supabaseRpc('platform_config_rollback', {
+        p_key: cfgKey, p_scope: scope, p_scope_ref: scopeRef, p_version: version,
+      });
+      show('ok', `Rollback ke versi ${version} berhasil.`);
+      await loadCurrent();
+    } catch (e: any) {
+      show('err', e.message ?? 'Rollback gagal');
+    }
+  };
+
+  const preview = async () => {
+    if (!previewOutlet) return;
+    try {
+      setEffective(await supabaseRpc<any>('platform_config_effective', {
+        p_key: cfgKey, p_outlet_id: previewOutlet,
+      }));
+    } catch (e: any) {
+      show('err', e.message ?? 'Gagal memuat nilai efektif');
+    }
+  };
+
+  return (
+    <Card title="Override & Riwayat Versi" subtitle="Urutan resolusi: Outlet > Segment > Global. Setiap simpan tercatat di riwayat dan audit.">
+      <div className="max-w-[860px] space-y-4">
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+          <div>
+            <label className={labelCls}>Config</label>
+            <select className={inputCls} value={cfgKey} onChange={(e) => { setCfgKey(e.target.value as ConfigKey); setScopeRef('all'); }}>
+              {CONFIG_KEYS.map((c) => <option key={c.key} value={c.key}>{c.label}</option>)}
+            </select>
+          </div>
+          <div>
+            <label className={labelCls}>Scope</label>
+            <select className={inputCls} value={scope} onChange={(e) => { const s = e.target.value as any; setScope(s); setScopeRef(s === 'global' ? 'all' : ''); }}>
+              <option value="global">Global (semua outlet)</option>
+              <option value="segment">Segment</option>
+              <option value="outlet">Outlet</option>
+            </select>
+          </div>
+          {scope !== 'global' && (
+            <div>
+              <label className={labelCls}>{scope === 'segment' ? 'Segment' : 'Outlet'}</label>
+              <select className={inputCls} value={scopeRef} onChange={(e) => setScopeRef(e.target.value)}>
+                <option value="">Pilih...</option>
+                {scope === 'segment' && segments.map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}
+                {scope === 'outlet' && outlets.map((o) => <option key={o.outlet_id} value={o.outlet_id}>{o.outlet_name}</option>)}
+              </select>
+            </div>
+          )}
+        </div>
+
+        <div>
+          <div className="flex items-center justify-between">
+            <label className={labelCls}>Nilai (JSON)</label>
+            <button onClick={loadCurrent} className="flex items-center gap-1 text-[11px] font-bold text-sky-600 hover:text-sky-700">
+              <RefreshCw className={`w-3.5 h-3.5 ${loading ? 'animate-spin' : ''}`} /> Muat ulang
+            </button>
+          </div>
+          <textarea
+            className={`${inputCls} font-mono text-[11px] min-h-[180px]`}
+            value={text}
+            onChange={(e) => setText(e.target.value)}
+            spellCheck={false}
+          />
+        </div>
+
+        <div className="flex flex-wrap gap-2">
+          <SaveButton loading={saveLoading} onClick={save} label={scope === 'global' ? 'Simpan Global' : `Simpan Override ${scope === 'segment' ? 'Segment' : 'Outlet'}`} />
+        </div>
+
+        {/* Preview efektif */}
+        <div className="pt-3 border-t border-slate-100">
+          <label className={labelCls}>Preview Nilai Efektif (pilih outlet)</label>
+          <div className="flex gap-2 mt-1">
+            <select className={inputCls} value={previewOutlet} onChange={(e) => setPreviewOutlet(e.target.value)}>
+              <option value="">Pilih outlet...</option>
+              {outlets.map((o) => <option key={o.outlet_id} value={o.outlet_id}>{o.outlet_name}</option>)}
+            </select>
+            <button onClick={preview} disabled={!previewOutlet}
+              className="border border-sky-200 bg-sky-50 text-sky-700 px-4 py-2 rounded-xl text-xs font-semibold hover:bg-sky-100 disabled:opacity-50">
+              Lihat
+            </button>
+          </div>
+          {effective && (
+            <div className="mt-2 bg-slate-50 rounded-xl p-3 text-xs">
+              <p className="font-bold text-slate-700 mb-1">
+                Sumber: <span className="text-sky-600 uppercase">{String(effective.source)}</span>
+                {effective.version ? <> &bull; versi {String(effective.version)}</> : null}
+              </p>
+              <pre className="text-[10px] font-mono text-slate-600 whitespace-pre-wrap max-h-40 overflow-auto">
+                {effective.value ? JSON.stringify(effective.value, null, 2) : '(tidak ada nilai)'}
+              </pre>
+            </div>
+          )}
+        </div>
+
+        {/* Riwayat */}
+        <div className="pt-3 border-t border-slate-100">
+          <label className={labelCls}>Riwayat Versi</label>
+          {versions.length === 0 ? (
+            <p className="text-[11px] text-slate-400 mt-1">Belum ada riwayat untuk scope ini.</p>
+          ) : (
+            <div className="mt-1 bg-white border border-slate-200/80 rounded-xl divide-y divide-slate-50 max-h-56 overflow-y-auto">
+              {versions.map((h) => (
+                <div key={h.version} className="flex items-center justify-between px-3 py-2 gap-2">
+                  <div className="min-w-0">
+                    <p className="text-xs font-bold text-slate-700">
+                      v{h.version} &bull; {new Date(h.created_at).toLocaleString('id-ID', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' })}
+                    </p>
+                    <p className="text-[10px] text-slate-400 truncate">{h.changed_by_email}{h.note ? ` — ${h.note}` : ''}</p>
+                  </div>
+                  <button
+                    onClick={() => rollback(h.version)}
+                    className="shrink-0 border border-amber-200 bg-amber-50 text-amber-700 px-3 py-1.5 rounded-lg text-[10px] font-bold hover:bg-amber-100"
+                  >
+                    Rollback
+                  </button>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      </div>
+      <Toast msg={msg} />
+    </Card>
+  );
+}
+
+// ===========================================================================
 export function ControlPlanePage() {
   const [activeId, setActiveId] = useState<TabId>('ads');
   const [warning] = useState<string | null>(null);
@@ -855,6 +1084,7 @@ export function ControlPlanePage() {
           {activeId === 'flags' && <FlagsTab />}
           {activeId === 'automation' && <AutomationTab />}
           {activeId === 'integrations' && <IntegrationsTab />}
+          {activeId === 'override' && <OverrideTab />}
           {activeId === 'audit' && <AuditTab />}
         </div>
       </div>

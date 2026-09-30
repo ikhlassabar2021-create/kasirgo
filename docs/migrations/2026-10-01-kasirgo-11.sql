@@ -753,3 +753,278 @@ $$;
 GRANT EXECUTE ON FUNCTION public.platform_intelligence() TO authenticated;
 
 -- ============================================================================
+
+-- ---------------------------------------------------------------------------
+-- 3. ST11-3: Control Plane lengkap — inheritance Global->Segment->Outlet,
+--    versioning + riwayat + rollback, updated_by otomatis via RPC.
+-- ---------------------------------------------------------------------------
+
+-- 3.1 Riwayat config (setiap simpan = 1 baris; rollback = salin nilai lama
+--     sebagai versi baru).
+CREATE TABLE IF NOT EXISTS public.platform_config_history (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  config_key TEXT NOT NULL,
+  scope TEXT NOT NULL DEFAULT 'global',
+  scope_ref TEXT NOT NULL DEFAULT 'all',
+  version INT NOT NULL,
+  value JSONB NOT NULL DEFAULT '{}',
+  changed_by UUID,
+  note TEXT,
+  created_at TIMESTAMPTZ DEFAULT NOW()
+);
+ALTER TABLE public.platform_config_history ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "Admin all platform_config_history" ON public.platform_config_history;
+CREATE POLICY "Admin all platform_config_history" ON public.platform_config_history
+  FOR ALL USING (public.platform_is_admin()) WITH CHECK (public.platform_is_admin());
+CREATE INDEX IF NOT EXISTS idx_cfg_hist_key ON public.platform_config_history(config_key, scope, scope_ref, version DESC);
+
+-- 3.2 Simpan config (semua scope) + catat riwayat + audit. Menggantikan
+--     update langsung dari client agar updated_by & version konsisten.
+CREATE OR REPLACE FUNCTION public.platform_config_save(
+  p_key text, p_scope text DEFAULT 'global',
+  p_scope_ref text DEFAULT 'all', p_value jsonb DEFAULT '{}'::jsonb,
+  p_note text DEFAULT NULL)
+RETURNS int
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+DECLARE
+  v_ok boolean;
+  v_scope text := CASE WHEN p_scope IN ('global','segment','outlet') THEN p_scope ELSE 'global' END;
+  v_ref text := COALESCE(NULLIF(p_scope_ref, ''), 'all');
+  v_version int;
+BEGIN
+  SELECT public.platform_is_admin() INTO v_ok;
+  IF NOT v_ok THEN RAISE EXCEPTION 'forbidden'; END IF;
+  IF v_scope = 'global' THEN v_ref := 'all'; END IF;
+
+  INSERT INTO public.platform_configs (key, scope, scope_ref, value, version, effective_from, updated_by, updated_at)
+  VALUES (p_key, v_scope, v_ref, p_value, 1, NOW(), auth.uid(), NOW())
+  ON CONFLICT (key, scope, scope_ref) DO UPDATE
+    SET value = EXCLUDED.value,
+        version = public.platform_configs.version + 1,
+        effective_from = NOW(),
+        updated_by = EXCLUDED.updated_by,
+        updated_at = NOW()
+  RETURNING version INTO v_version;
+
+  INSERT INTO public.platform_config_history (config_key, scope, scope_ref, version, value, changed_by, note)
+  VALUES (p_key, v_scope, v_ref, v_version, p_value, auth.uid(), p_note);
+
+  PERFORM public.log_admin_action('config.save', p_key,
+    jsonb_build_object('scope', v_scope, 'scope_ref', v_ref, 'version', v_version));
+
+  RETURN v_version;
+END;
+$$;
+GRANT EXECUTE ON FUNCTION public.platform_config_save(text, text, text, jsonb, text) TO authenticated;
+
+-- 3.3 Resolusi efektif utk satu outlet: outlet > segment > global.
+CREATE OR REPLACE FUNCTION public.platform_config_effective(
+  p_key text, p_outlet_id uuid DEFAULT NULL)
+RETURNS jsonb
+LANGUAGE plpgsql
+STABLE
+SECURITY DEFINER
+SET search_path = public
+AS $$
+DECLARE
+  v_ok boolean;
+  v_rec RECORD;
+BEGIN
+  SELECT public.platform_is_admin() INTO v_ok;
+  IF NOT v_ok THEN RAISE EXCEPTION 'forbidden'; END IF;
+
+  -- 1) Override outlet
+  IF p_outlet_id IS NOT NULL THEN
+    SELECT value, version, scope INTO v_rec FROM public.platform_configs
+    WHERE key = p_key AND scope = 'outlet' AND scope_ref = p_outlet_id::text
+    ORDER BY version DESC LIMIT 1;
+    IF v_rec.value IS NOT NULL THEN
+      RETURN jsonb_build_object('value', v_rec.value, 'source', 'outlet',
+                                'scope_ref', p_outlet_id::text, 'version', v_rec.version);
+    END IF;
+  END IF;
+
+  -- 2) Override segment terbaru dari outlet
+  IF p_outlet_id IS NOT NULL THEN
+    SELECT c.value, c.version, c.scope_ref INTO v_rec
+    FROM public.platform_configs c
+    JOIN public.outlet_segments os ON os.segment_id::text = c.scope_ref
+    WHERE c.key = p_key AND c.scope = 'segment' AND os.outlet_id = p_outlet_id
+    ORDER BY c.updated_at DESC LIMIT 1;
+    IF v_rec.value IS NOT NULL THEN
+      RETURN jsonb_build_object('value', v_rec.value, 'source', 'segment',
+                                'scope_ref', v_rec.scope_ref, 'version', v_rec.version);
+    END IF;
+  END IF;
+
+  -- 3) Global
+  SELECT value, version INTO v_rec FROM public.platform_configs
+  WHERE key = p_key AND scope = 'global' AND scope_ref = 'all'
+  ORDER BY version DESC LIMIT 1;
+  IF v_rec.value IS NOT NULL THEN
+    RETURN jsonb_build_object('value', v_rec.value, 'source', 'global',
+                              'scope_ref', 'all', 'version', v_rec.version);
+  END IF;
+
+  RETURN jsonb_build_object('value', NULL, 'source', 'none', 'scope_ref', NULL, 'version', NULL);
+END;
+$$;
+GRANT EXECUTE ON FUNCTION public.platform_config_effective(text, uuid) TO authenticated;
+
+-- 3.4 Daftar versi (riwayat) sebuah config.
+CREATE OR REPLACE FUNCTION public.platform_config_versions(
+  p_key text, p_scope text DEFAULT 'global', p_scope_ref text DEFAULT 'all',
+  p_limit int DEFAULT 20)
+RETURNS jsonb
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+DECLARE
+  v_ok boolean;
+  v_ref text := COALESCE(NULLIF(p_scope_ref, ''), 'all');
+BEGIN
+  SELECT public.platform_is_admin() INTO v_ok;
+  IF NOT v_ok THEN RAISE EXCEPTION 'forbidden'; END IF;
+  IF p_scope = 'global' THEN v_ref := 'all'; END IF;
+
+  RETURN jsonb_build_object(
+    'rows', COALESCE((
+      SELECT jsonb_agg(to_jsonb(x) ORDER BY x.version DESC)
+      FROM (SELECT h.version, h.value, h.note, h.created_at,
+                   COALESCE(u.email, '(sistem)') AS changed_by_email
+            FROM public.platform_config_history h
+            LEFT JOIN auth.users u ON u.id = h.changed_by
+            WHERE h.config_key = p_key AND h.scope = p_scope AND h.scope_ref = v_ref
+            ORDER BY h.version DESC LIMIT GREATEST(LEAST(p_limit, 50), 1)) x), '[]'::jsonb)
+  );
+END;
+$$;
+GRANT EXECUTE ON FUNCTION public.platform_config_versions(text, text, text, int) TO authenticated;
+
+-- 3.5 Rollback ke versi tertentu (disimpan ulang sebagai versi baru).
+CREATE OR REPLACE FUNCTION public.platform_config_rollback(
+  p_key text, p_scope text DEFAULT 'global', p_scope_ref text DEFAULT 'all',
+  p_version int)
+RETURNS int
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+DECLARE
+  v_ok boolean;
+  v_value jsonb;
+  v_ref text := COALESCE(NULLIF(p_scope_ref, ''), 'all');
+  v_new_version int;
+BEGIN
+  SELECT public.platform_is_admin() INTO v_ok;
+  IF NOT v_ok THEN RAISE EXCEPTION 'forbidden'; END IF;
+  IF p_scope = 'global' THEN v_ref := 'all'; END IF;
+
+  SELECT value INTO v_value FROM public.platform_config_history
+  WHERE config_key = p_key AND scope = p_scope AND scope_ref = v_ref AND version = p_version;
+  IF v_value IS NULL THEN RAISE EXCEPTION 'version_not_found'; END IF;
+
+  v_new_version := public.platform_config_save(p_key, p_scope, v_ref, v_value,
+    format('rollback ke versi %s', p_version));
+
+  RETURN v_new_version;
+END;
+$$;
+GRANT EXECUTE ON FUNCTION public.platform_config_rollback(text, text, text, int) TO authenticated;
+
+-- 3.6 Segments CRUD (dipakai scope picker + rollout ST11-4).
+CREATE OR REPLACE FUNCTION public.platform_segment_list()
+RETURNS jsonb
+LANGUAGE sql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+  SELECT jsonb_build_object(
+    'rows', COALESCE((
+      SELECT jsonb_agg(to_jsonb(x) ORDER BY x.name)
+      FROM (SELECT s.id, s.name, s.rules, s.created_at,
+                   (SELECT count(*) FROM public.outlet_segments os WHERE os.segment_id = s.id) AS outlet_count
+            FROM public.segments s) x), '[]'::jsonb)
+  );
+$$;
+GRANT EXECUTE ON FUNCTION public.platform_segment_list() TO authenticated;
+
+CREATE OR REPLACE FUNCTION public.platform_segment_upsert(
+  p_id uuid DEFAULT NULL, p_name text, p_rules jsonb DEFAULT '{}'::jsonb)
+RETURNS uuid
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+DECLARE
+  v_ok boolean;
+  v_id uuid;
+BEGIN
+  SELECT public.platform_is_admin() INTO v_ok;
+  IF NOT v_ok THEN RAISE EXCEPTION 'forbidden'; END IF;
+
+  IF p_id IS NOT NULL THEN
+    UPDATE public.segments SET name = p_name, rules = p_rules WHERE id = p_id
+      RETURNING id INTO v_id;
+  END IF;
+  IF v_id IS NULL THEN
+    INSERT INTO public.segments (name, rules) VALUES (p_name, p_rules)
+      ON CONFLICT (name) DO UPDATE SET rules = EXCLUDED.rules
+      RETURNING id INTO v_id;
+  END IF;
+
+  PERFORM public.log_admin_action('segment.save', p_name, jsonb_build_object('id', v_id));
+  RETURN v_id;
+END;
+$$;
+GRANT EXECUTE ON FUNCTION public.platform_segment_upsert(uuid, text, jsonb) TO authenticated;
+
+CREATE OR REPLACE FUNCTION public.platform_segment_set_outlets(
+  p_segment_id uuid, p_outlet_ids uuid[])
+RETURNS int
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+DECLARE
+  v_ok boolean;
+  v_count int := 0;
+BEGIN
+  SELECT public.platform_is_admin() INTO v_ok;
+  IF NOT v_ok THEN RAISE EXCEPTION 'forbidden'; END IF;
+
+  DELETE FROM public.outlet_segments WHERE segment_id = p_segment_id;
+  INSERT INTO public.outlet_segments (outlet_id, segment_id)
+  SELECT unnest(p_outlet_ids), p_segment_id
+  ON CONFLICT DO NOTHING;
+  GET DIAGNOSTICS v_count = ROW_COUNT;
+
+  PERFORM public.log_admin_action('segment.set_outlets', p_segment_id::text,
+    jsonb_build_object('count', v_count));
+  RETURN v_count;
+END;
+$$;
+GRANT EXECUTE ON FUNCTION public.platform_segment_set_outlets(uuid, uuid[]) TO authenticated;
+
+CREATE OR REPLACE FUNCTION public.platform_segment_delete(p_id uuid)
+RETURNS void
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+DECLARE
+  v_ok boolean;
+BEGIN
+  SELECT public.platform_is_admin() INTO v_ok;
+  IF NOT v_ok THEN RAISE EXCEPTION 'forbidden'; END IF;
+  DELETE FROM public.segments WHERE id = p_id;
+  PERFORM public.log_admin_action('segment.delete', p_id::text, '{}');
+END;
+$$;
+GRANT EXECUTE ON FUNCTION public.platform_segment_delete(uuid) TO authenticated;
+
+-- ============================================================================

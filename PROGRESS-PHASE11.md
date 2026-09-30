@@ -82,3 +82,28 @@ SECURITY DEFINER ber-flag admin (admin_users aktif); secret TIDAK dibaca client.
 - QA live PENDING (setelah SQL dijalankan): panggil tiap RPC sebagai
   superadmin; verifikasi audit muncul di /audit; buat backup -> unduh ->
   restore di outlet test.
+
+### ST11-3 — Control Plane: Inheritance Global->Segment->Outlet + Versi & Rollback (2026-09-30)
+- DB (bagian 3 kasirgo-11.sql) — **BELUM DIJALANKAN ke live** (sama dgn ST11-2):
+  - Tabel `platform_config_history` (config_key, scope, scope_ref, version,
+    value, changed_by, note) + RLS admin + index.
+  - RPC:
+    - `platform_config_save(p_key, p_scope, p_scope_ref, p_value, p_note)` —
+      upsert platform_configs dengan version+1 + updated_by + 1 baris
+      riwayat + audit (menggantikan update langsung client).
+    - `platform_config_effective(p_key, p_outlet_id)` — resolusi
+      Outlet > Segment > Global (segment terbaru menang bila >1).
+    - `platform_config_versions(...)` + `platform_config_rollback(...)`
+      (rollback = simpan nilai lama sebagai versi baru, ter-audit).
+    - `platform_segment_list/upsert/delete/set_outlets` — CRUD segment
+      (basis rollout ST11-4).
+- kasirgo-admin:
+  - `controlPlane.ts`: `saveConfig()` kini via RPC platform_config_save
+    (semua tab config otomatis dapat version+1, updated_by, riwayat, audit).
+  - `ControlPlane.tsx`: tab baru **"Override & Riwayat"** — pilih config
+    (ads/guide/report/kyc/quota/flags/billing) + scope (global/segment/
+    outlet) + editor JSON + preview nilai efektif per outlet (menampilkan
+    sumber outlet/segment/global) + riwayat versi dgn tombol Rollback.
+- npm run build BERSIH.
+- QA live PENDING (setelah SQL dijalankan): simpan override outlet ->
+  platform_config_effective mengembalikan source=outlet; rollback versi.
