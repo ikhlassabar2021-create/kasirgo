@@ -146,3 +146,121 @@ export const fmtBytes = (b: number): string => {
   if (b >= 1024) return `${(b / 1024).toFixed(0)} KB`
   return `${b} B`
 }
+
+// ---------------------------------------------------------------------------
+// Phase 13: Outlet Terdaftar, Fitur Utama, Laporan Utama
+// ---------------------------------------------------------------------------
+
+// Modul (fitur) yang bisa di-toggle superadmin per outlet -> key `module_<name>`.
+export const MODULE_LABELS: { key: string; label: string }[] = [
+  { key: 'module_pos', label: 'Kasir (POS)' },
+  { key: 'module_inventory', label: 'Inventori / Stok' },
+  { key: 'module_debt', label: 'Kasbon / Piutang' },
+  { key: 'module_variants', label: 'Varian Produk' },
+  { key: 'module_wholesalePrice', label: 'Harga Grosir' },
+  { key: 'module_splitBill', label: 'Pisah Tagihan' },
+  { key: 'module_dailyDigest', label: 'AI Digest Harian' },
+  { key: 'module_ppob', label: 'PPOB (Pulsa/Token)' },
+  { key: 'module_restockB2B', label: 'Kulakan B2B' },
+  { key: 'module_tableManagement', label: 'QR Meja' },
+  { key: 'module_kitchenDisplay', label: 'KDS (Dapur)' },
+]
+
+export type OutletRow = {
+  outlet_id: string
+  outlet_name: string | null
+  outlet_type: string | null
+  address: string | null
+  phone: string | null
+  created_at: string
+  user_id: string
+  owner_name: string
+  email: string
+  kyc_status: string
+  auto_verified: boolean | null
+  reject_reason: string | null
+  verified_at: string | null
+  is_supporter: boolean
+  on_trial: boolean
+  trial_ends_at: string | null
+  supp_status: string
+  staff_count: number
+  tx_count: number
+  omzet_total: number
+}
+
+export type OutletsListResult = { total: number; rows: OutletRow[] }
+
+export type OutletStaffRow = {
+  user_id: string
+  role: string
+  created_at: string
+  email: string
+}
+
+export type OutletReportResult = {
+  outlet_id: string
+  start: string
+  end: string
+  pos: { omzet: number; count: number }
+  ppob: { omzet: number; untung: number; count: number }
+  pg: { untung: number; count: number }
+  b2b: { komisi: number; count: number }
+  insurance: { komisi: number; count: number }
+  fintech: { pengajuan: number; count: number }
+  omzet_total: number
+  untung_total: number
+  count_total: number
+}
+
+export type MainReportResult = {
+  period_days: number
+  plans: { trial: number; free: number; pendukung: number }
+  pendukung: { revenue_period: number; mrr: number; active: number }
+  ppob: { omzet: number; untung: number; count: number }
+  pg: { untung: number; count: number }
+}
+
+export const platformOutletsList = (
+  params: { p_search?: string | null; p_kyc?: string; p_plan?: string; p_limit?: number; p_offset?: number },
+) => rp<OutletsListResult>('platform_outlets_list', {
+  p_search: params.p_search ?? null,
+  p_kyc: params.p_kyc ?? 'verified',
+  p_plan: params.p_plan ?? 'all',
+  p_limit: params.p_limit ?? 25,
+  p_offset: params.p_offset ?? 0,
+})
+
+export const platformSetVerification = (outletId: string, status: string, reason?: string | null) =>
+  rp<void>('platform_outlet_set_verification', {
+    p_outlet_id: outletId, p_status: status, p_reason: reason ?? null,
+  })
+
+export const platformSetPlan = (outletId: string, plan: string) =>
+  rp<void>('platform_outlet_set_plan', { p_outlet_id: outletId, p_plan: plan })
+
+export const platformOutletFeatures = (outletId: string) =>
+  rp<{ effective: Record<string, boolean>; overrides: Record<string, boolean> }>(
+    'platform_outlet_features', { p_outlet_id: outletId })
+
+export const platformOutletSetFeature = (outletId: string, key: string, enabled: boolean) =>
+  rp<void>('platform_outlet_set_feature', {
+    p_outlet_id: outletId, p_key: key, p_enabled: enabled,
+  })
+
+export const platformOutletStaff = (outletId: string) =>
+  rp<{ rows: OutletStaffRow[] }>('platform_outlet_staff', { p_outlet_id: outletId })
+
+export const platformOutletRemoveStaff = (outletId: string, userId: string) =>
+  rp<void>('platform_outlet_remove_staff', { p_outlet_id: outletId, p_user_id: userId })
+
+export const platformOutletDeleteAccount = (outletId: string) =>
+  rp<void>('platform_outlet_delete_account', { p_outlet_id: outletId })
+
+export const platformOutletReport = (outletId: string, start: string, end: string) =>
+  rp<OutletReportResult>('platform_outlet_report', {
+    p_outlet_id: outletId, p_start: start, p_end: end,
+  })
+
+export const platformMainReport = (days = 30) =>
+  rp<MainReportResult>('platform_main_report', { p_days: days })

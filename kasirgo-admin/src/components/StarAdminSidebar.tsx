@@ -1,14 +1,11 @@
 import { NavLink } from 'react-router-dom';
 import {
   LayoutDashboard,
-  Users,
-  Store,
   BarChart3,
+  Store,
   Settings,
   CreditCard,
-  CloudBackup,
-  ScrollText,
-  BrainCircuit,
+  SlidersHorizontal,
   X,
   LogOut
 } from 'lucide-react';
@@ -20,26 +17,21 @@ interface StarAdminSidebarProps {
   role?: string;
 }
 
-// ST11-4 RBAC: nav per role (superadmin melihat semua).
+// RBAC: nav per role (superadmin melihat semua).
 const ROLE_NAV: Record<string, string[]> = {
   superadmin: ['*'],
-  finance: ['/owner', '/superadmin', '/revenue', '/intelligence', '/audit'],
-  support: ['/owner', '/superadmin', '/users', '/outlets', '/backup', '/intelligence', '/audit'],
-  ops: ['/owner', '/superadmin', '/users', '/outlets', '/control-plane', '/intelligence', '/audit'],
+  finance: ['/superadmin', '/outlets', '/control-plane'],
+  support: ['/superadmin', '/outlets', '/control-plane'],
+  ops: ['/superadmin', '/outlets', '/features', '/control-plane'],
 };
 
 export function StarAdminSidebar({ isOpen, onClose, onLogout, role = 'superadmin' }: StarAdminSidebarProps) {
   const allowed = ROLE_NAV[role] ?? ROLE_NAV.superadmin;
   const navigation = [
-    { name: 'Dashboard Owner (Warung)', href: '/owner', icon: Store },
-    { name: 'Superadmin Dashboard', href: '/superadmin', icon: LayoutDashboard },
-    { name: 'Users & Staff', href: '/users', icon: Users },
-    { name: 'Outlets Terdaftar', href: '/outlets', icon: Store },
-    { name: 'Revenue & TX', href: '/revenue', icon: BarChart3 },
-    { name: 'Intelijen Platform', href: '/intelligence', icon: BrainCircuit },
+    { name: 'Laporan Utama', href: '/superadmin', icon: BarChart3 },
+    { name: 'Outlet Terdaftar', href: '/outlets', icon: Store },
+    { name: 'Fitur Utama', href: '/features', icon: SlidersHorizontal },
     { name: 'Affiliates', href: '/affiliates', icon: CreditCard },
-    { name: 'Backup & Restore', href: '/backup', icon: CloudBackup },
-    { name: 'Jejak Audit', href: '/audit', icon: ScrollText },
     { name: 'Control Plane', href: '/control-plane', icon: Settings },
   ].filter((item) => allowed.includes('*') || allowed.includes(item.href));
 

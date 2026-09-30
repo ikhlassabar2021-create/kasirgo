@@ -15,18 +15,13 @@ export const Layout: React.FC<LayoutProps> = ({ onLogout, role = 'superadmin' })
   // Title header for mobile bar
   const getPageTitle = () => {
     switch (location.pathname) {
-      case '/owner': return 'Dashboard Owner';
-      case '/users': return 'Kelola Pengguna';
-      case '/outlets': return 'Daftar Outlet';
-      case '/revenue': return 'Pendapatan & Transaksi';
+      case '/superadmin': return 'Laporan Utama';
+      case '/outlets': return 'Outlet Terdaftar';
+      case '/features': return 'Fitur Utama';
       case '/affiliates': return 'Afiliasi & Referral';
-      case '/backup': return 'Backup & Pulihkan';
-      case '/audit': return 'Jejak Audit';
-      case '/intelligence': return 'Intelijen Platform';
       case '/control-plane': return 'Control Plane';
-      case '/settings': return 'Control Plane';
       default:
-        if (location.pathname.startsWith('/users/')) return 'Detail Pengguna';
+        if (location.pathname.startsWith('/outlets/')) return 'Detail Outlet';
         return 'KasirGo Superadmin';
     }
   }

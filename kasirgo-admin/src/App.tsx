@@ -3,24 +3,20 @@ import { HashRouter, Routes, Route, Navigate, useLocation } from 'react-router-d
 import { supabase } from './config/supabase'
 import { Layout } from './components/Layout'
 import { Login } from './pages/Login'
-import { Dashboard } from './pages/Dashboard'
-import { UsersPage } from './pages/Users'
-import { UserDetailPage } from './pages/UserDetail'
+import { MainReportPage } from './pages/MainReport'
+import { OutletsPage } from './pages/Outlets'
+import { OutletDetailPage } from './pages/OutletDetail'
+import { FeaturesPage } from './pages/Features'
 import { ControlPlanePage } from './pages/ControlPlane'
 import { AffiliatesPage } from './pages/Affiliates'
-import { RevenuePage } from './pages/Revenue'
-import { BackupPage } from './pages/Backup'
-import { AuditPage } from './pages/Audit'
-import { IntelligencePage } from './pages/Intelligence'
-import { OwnerDashboard } from './pages/OwnerDashboard'
 import { checkAdminRole } from './lib/adminApi'
 
-// ST11-4 RBAC: halaman per role (superadmin = semua).
+// RBAC: halaman per role (superadmin = semua).
 const ROLE_ROUTES: Record<string, string[]> = {
   superadmin: ['*'],
-  finance: ['/superadmin', '/revenue', '/intelligence', '/audit', '/owner'],
-  support: ['/superadmin', '/users', '/outlets', '/backup', '/intelligence', '/audit', '/owner'],
-  ops: ['/superadmin', '/users', '/outlets', '/control-plane', '/settings', '/intelligence', '/audit', '/owner'],
+  finance: ['/superadmin', '/outlets', '/control-plane'],
+  support: ['/superadmin', '/outlets', '/control-plane'],
+  ops: ['/superadmin', '/outlets', '/features', '/control-plane'],
 }
 
 const routeAllowed = (path: string, role: string): boolean => {
@@ -122,20 +118,23 @@ export default function App() {
 
         {/* Protected Dashboard Area */}
         <Route path="/" element={session ? <Layout onLogout={handleLogout} role={role ?? 'superadmin'} /> : <Navigate to="/login" replace />}>
-          <Route index element={<Navigate to="/owner" replace />} />
-          <Route path="owner" element={guard(<OwnerDashboard />)} />
-          <Route path="superadmin" element={guard(<Dashboard />)} />
-          <Route path="users" element={guard(<UsersPage />)} />
-          <Route path="users/:id" element={guard(<UserDetailPage />)} />
-          <Route path="outlets" element={guard(<UsersPage />)} />
-          <Route path="transactions" element={guard(<RevenuePage />)} />
-          <Route path="revenue" element={guard(<RevenuePage />)} />
+          <Route index element={<Navigate to="/superadmin" replace />} />
+          <Route path="superadmin" element={guard(<MainReportPage />)} />
+          <Route path="outlets" element={guard(<OutletsPage />)} />
+          <Route path="outlets/:id" element={guard(<OutletDetailPage />)} />
+          <Route path="features" element={guard(<FeaturesPage />)} />
           <Route path="affiliates" element={guard(<AffiliatesPage />)} />
-          <Route path="backup" element={guard(<BackupPage />)} />
-          <Route path="audit" element={guard(<AuditPage />)} />
-          <Route path="intelligence" element={guard(<IntelligencePage />)} />
-          <Route path="settings" element={guard(<ControlPlanePage />)} />
           <Route path="control-plane" element={guard(<ControlPlanePage />)} />
+          {/* Tautan lama diarahkan ke halaman baru. */}
+          <Route path="owner" element={<Navigate to="/superadmin" replace />} />
+          <Route path="users" element={<Navigate to="/outlets" replace />} />
+          <Route path="users/:id" element={<Navigate to="/outlets" replace />} />
+          <Route path="revenue" element={<Navigate to="/superadmin" replace />} />
+          <Route path="transactions" element={<Navigate to="/superadmin" replace />} />
+          <Route path="backup" element={<Navigate to="/outlets" replace />} />
+          <Route path="audit" element={<Navigate to="/superadmin" replace />} />
+          <Route path="intelligence" element={<Navigate to="/superadmin" replace />} />
+          <Route path="settings" element={<Navigate to="/control-plane" replace />} />
         </Route>
 
         <Route path="*" element={<Navigate to={session ? "/" : "/login"} replace />} />
