@@ -906,9 +906,11 @@ $$;
 GRANT EXECUTE ON FUNCTION public.platform_config_versions(text, text, text, int) TO authenticated;
 
 -- 3.5 Rollback ke versi tertentu (disimpan ulang sebagai versi baru).
+--     Catatan: p_version wajib, jadi ditaruh sebelum parameter ber-default
+--     (aturan PG: parameter setelah yang ber-default harus punya default).
 CREATE OR REPLACE FUNCTION public.platform_config_rollback(
-  p_key text, p_scope text DEFAULT 'global', p_scope_ref text DEFAULT 'all',
-  p_version int)
+  p_key text, p_version int,
+  p_scope text DEFAULT 'global', p_scope_ref text DEFAULT 'all')
 RETURNS int
 LANGUAGE plpgsql
 SECURITY DEFINER
@@ -934,7 +936,7 @@ BEGIN
   RETURN v_new_version;
 END;
 $$;
-GRANT EXECUTE ON FUNCTION public.platform_config_rollback(text, text, text, int) TO authenticated;
+GRANT EXECUTE ON FUNCTION public.platform_config_rollback(text, int, text, text) TO authenticated;
 
 -- 3.6 Segments CRUD (dipakai scope picker + rollout ST11-4).
 CREATE OR REPLACE FUNCTION public.platform_segment_list()
@@ -954,7 +956,7 @@ $$;
 GRANT EXECUTE ON FUNCTION public.platform_segment_list() TO authenticated;
 
 CREATE OR REPLACE FUNCTION public.platform_segment_upsert(
-  p_id uuid DEFAULT NULL, p_name text, p_rules jsonb DEFAULT '{}'::jsonb)
+  p_name text, p_id uuid DEFAULT NULL, p_rules jsonb DEFAULT '{}'::jsonb)
 RETURNS uuid
 LANGUAGE plpgsql
 SECURITY DEFINER
@@ -981,7 +983,7 @@ BEGIN
   RETURN v_id;
 END;
 $$;
-GRANT EXECUTE ON FUNCTION public.platform_segment_upsert(uuid, text, jsonb) TO authenticated;
+GRANT EXECUTE ON FUNCTION public.platform_segment_upsert(text, uuid, jsonb) TO authenticated;
 
 CREATE OR REPLACE FUNCTION public.platform_segment_set_outlets(
   p_segment_id uuid, p_outlet_ids uuid[])
@@ -1124,9 +1126,9 @@ $$;
 GRANT EXECUTE ON FUNCTION public.platform_announcement_list() TO authenticated;
 
 CREATE OR REPLACE FUNCTION public.platform_announcement_upsert(
-  p_id uuid DEFAULT NULL, p_title text, p_body text DEFAULT '',
-  p_audience text DEFAULT 'all', p_starts_at timestamptz DEFAULT NOW(),
-  p_ends_at timestamptz DEFAULT NULL, p_is_active boolean DEFAULT true)
+  p_title text, p_body text DEFAULT '', p_audience text DEFAULT 'all',
+  p_starts_at timestamptz DEFAULT NOW(), p_ends_at timestamptz DEFAULT NULL,
+  p_is_active boolean DEFAULT true, p_id uuid DEFAULT NULL)
 RETURNS uuid
 LANGUAGE plpgsql
 SECURITY DEFINER
@@ -1157,7 +1159,7 @@ BEGIN
   RETURN v_id;
 END;
 $$;
-GRANT EXECUTE ON FUNCTION public.platform_announcement_upsert(uuid, text, text, text, timestamptz, timestamptz, boolean) TO authenticated;
+GRANT EXECUTE ON FUNCTION public.platform_announcement_upsert(text, text, text, timestamptz, timestamptz, boolean, uuid) TO authenticated;
 
 CREATE OR REPLACE FUNCTION public.platform_announcement_delete(p_id uuid)
 RETURNS void
