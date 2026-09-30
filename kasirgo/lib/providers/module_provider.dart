@@ -1,6 +1,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../services/module_registry.dart';
 import '../services/ppob_service.dart';
+import '../services/fintech_service.dart';
 import 'outlet_provider.dart';
 
 enum BusinessModule {
@@ -149,5 +150,11 @@ final isModuleEnabledProvider =
 /// (platform_configs 'ppob'.enabled) aktif. Cache offline-safe di service.
 final ppobEnabledProvider = FutureProvider<bool>((ref) async {
   final cfg = await PpobService().loadConfig();
+  return cfg.enabled;
+});
+
+/// Modal Usaha (fintech lead) aktif via config superadmin.
+final fintechEnabledProvider = FutureProvider<bool>((ref) async {
+  final cfg = await FintechService().loadConfig();
   return cfg.enabled;
 });
