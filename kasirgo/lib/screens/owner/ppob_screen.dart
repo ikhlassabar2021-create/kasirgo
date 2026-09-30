@@ -24,6 +24,9 @@ class _PpobScreenState extends ConsumerState<PpobScreen> {
   List<PpobTransaction> _history = [];
   double _saldo = 0;
   bool _cfgEnabled = true;
+  String _reportPeriod = 'today';
+  PpobReport _report =
+      const PpobReport(sales: 0, cost: 0, profit: 0, count: 0);
 
   @override
   void initState() {
@@ -39,9 +42,12 @@ class _PpobScreenState extends ConsumerState<PpobScreen> {
     final outletId = ref.read(currentUserProvider)?.outletId ?? '';
     List<PpobTransaction> history = [];
     double saldo = 0;
+    PpobReport report =
+        const PpobReport(sales: 0, cost: 0, profit: 0, count: 0);
     if (outletId.isNotEmpty) {
       history = await _ppob.getHistory(outletId, limit: 30);
       saldo = await _ppob.getSaldo(outletId);
+      report = await _ppob.getSummary(outletId, _rangeStart(), DateTime.now());
     }
     if (!mounted) return;
     setState(() {
@@ -50,8 +56,20 @@ class _PpobScreenState extends ConsumerState<PpobScreen> {
       _products = products;
       _history = history;
       _saldo = saldo;
+      _report = report;
       _loading = false;
     });
+  }
+
+  /// Awal periode laporan PPOB sesuai pilihan owner.
+  DateTime _rangeStart() {
+    final now = DateTime.now();
+    final today = DateTime(now.year, now.month, now.day);
+    return switch (_reportPeriod) {
+      'week' => today.subtract(const Duration(days: 6)),
+      'month' => DateTime(now.year, now.month, 1),
+      _ => today,
+    };
   }
 
   bool get _showMargin {
@@ -599,6 +617,7 @@ class _PpobScreenState extends ConsumerState<PpobScreen> {
                 padding: const EdgeInsets.all(16),
                 children: [
                   _buildSaldoCard(),
+                  if (_showMargin) _buildReportCard(),
                   if (!_cfgEnabled) ...[
                     _buildDisabledCard(),
                   ] else ...[
@@ -784,6 +803,109 @@ class _PpobScreenState extends ConsumerState<PpobScreen> {
           ],
         ],
       ),
+    );
+  }
+
+  /// Kartu laporan PPOB: omset, untung, jumlah, rata-rata per periode.
+  Widget _buildReportCard() {
+    const periods = {
+      'today': 'Hari Ini',
+      'week': '7 Hari',
+      'month': 'Bulan Ini',
+    };
+    return Container(
+      margin: const EdgeInsets.only(bottom: 14),
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: AppTheme.surfaceColor,
+        borderRadius: BorderRadius.circular(AppTheme.radiusLarge),
+        border: Border.all(color: AppTheme.borderColor),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              const Icon(Icons.insights_rounded,
+                  size: 18, color: AppTheme.primaryColor),
+              const SizedBox(width: 6),
+              Text('LAPORAN PPOB',
+                  style: GoogleFonts.inter(
+                      fontSize: 10.5,
+                      fontWeight: FontWeight.w800,
+                      letterSpacing: 0.5,
+                      color: AppTheme.textSecondary)),
+              const Spacer(),
+              DropdownButtonHideUnderline(
+                child: DropdownButton<String>(
+                  value: _reportPeriod,
+                  isDense: true,
+                  style: GoogleFonts.inter(
+                      fontSize: 12,
+                      fontWeight: FontWeight.w700,
+                      color: AppTheme.primaryColor),
+                  items: periods.entries
+                      .map((e) => DropdownMenuItem(
+                            value: e.key,
+                            child: Text(e.value),
+                          ))
+                      .toList(),
+                  onChanged: (v) {
+                    if (v == null) return;
+                    setState(() => _reportPeriod = v);
+                    _load();
+                  },
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 10),
+          Row(
+            children: [
+              Expanded(
+                child: _reportStat('Omzet', _report.sales,
+                    AppTheme.primaryColor),
+              ),
+              Expanded(
+                child: _reportStat(
+                    'Untung', _report.profit, AppTheme.successColor),
+              ),
+            ],
+          ),
+          const SizedBox(height: 10),
+          Row(
+            children: [
+              Expanded(
+                child: _reportStat('Transaksi', _report.count.toDouble(),
+                    AppTheme.accentColor,
+                    isCount: true),
+              ),
+              Expanded(
+                child: _reportStat(
+                    'Rata-rata', _report.avg, AppTheme.secondaryColor),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _reportStat(String label, double value, Color color,
+      {bool isCount = false}) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(label,
+            style: GoogleFonts.inter(
+                fontSize: 11, color: AppTheme.textSecondary)),
+        const SizedBox(height: 2),
+        Text(isCount ? value.toStringAsFixed(0) : Formatters.currency(value),
+            style: GoogleFonts.inter(
+                fontSize: 15,
+                fontWeight: FontWeight.w800,
+                color: color)),
+      ],
     );
   }
 

@@ -490,7 +490,7 @@ class PpobService {
   }
 
   /// Rekap periode (untuk laporan margin PPOB). Hanya status success.
-  Future<Map<String, double>> getSummary(
+  Future<PpobReport> getSummary(
       String outletId, DateTime start, DateTime end) async {
     try {
       final res = await _client
@@ -501,6 +501,7 @@ class PpobService {
           .gte('created_at', start.toIso8601String())
           .lte('created_at', end.toIso8601String());
       double sales = 0, cost = 0, profit = 0;
+      var count = 0;
       for (final row in (res as List)) {
         double d(dynamic v) => v is num
             ? v.toDouble()
@@ -508,11 +509,30 @@ class PpobService {
         sales += d(row['amount']);
         cost += d(row['cost_amount']);
         profit += d(row['profit']);
+        count++;
       }
-      return {'sales': sales, 'cost': cost, 'profit': profit};
+      return PpobReport(
+          sales: sales, cost: cost, profit: profit, count: count);
     } catch (e) {
       debugPrint('PpobService.getSummary error: $e');
-      return {'sales': 0, 'cost': 0, 'profit': 0};
+      return const PpobReport(sales: 0, cost: 0, profit: 0, count: 0);
     }
   }
+}
+
+/// Rekap PPOB satu periode: omset, modal, untung, jumlah transaksi.
+class PpobReport {
+  final double sales;
+  final double cost;
+  final double profit;
+  final int count;
+
+  const PpobReport({
+    required this.sales,
+    required this.cost,
+    required this.profit,
+    required this.count,
+  });
+
+  double get avg => count == 0 ? 0 : sales / count;
 }

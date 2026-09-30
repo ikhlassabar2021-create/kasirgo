@@ -36,7 +36,8 @@ class _ReportScreenState extends ConsumerState<ReportScreen> with SingleTickerPr
   bool _isLoading = true;
   List<Transaction> _transactions = [];
   Map<String, Product> _productMap = {};
-  Map<String, double> _ppobSummary = {'sales': 0, 'cost': 0, 'profit': 0};
+  PpobReport _ppobSummary =
+      const PpobReport(sales: 0, cost: 0, profit: 0, count: 0);
   Map<String, double> _restockSummary = {'total': 0, 'commission': 0};
 
   @override
@@ -630,7 +631,7 @@ class _ReportScreenState extends ConsumerState<ReportScreen> with SingleTickerPr
               ],
             ),
             const SizedBox(height: 24),
-            if (_ppobSummary['sales']! > 0) ...[
+            if (_ppobSummary.sales > 0) ...[
               Text(
                 'PPOB (Pulsa, Token, Tagihan)',
                 style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
@@ -640,8 +641,8 @@ class _ReportScreenState extends ConsumerState<ReportScreen> with SingleTickerPr
                 children: [
                   Expanded(
                     child: _ReportCard(
-                      title: 'Penjualan PPOB',
-                      value: Formatters.currency(_ppobSummary['sales'] ?? 0),
+                      title: 'Omzet PPOB',
+                      value: Formatters.currency(_ppobSummary.sales),
                       icon: Icons.phone_android_rounded,
                       color: AppTheme.secondaryColor,
                     ),
@@ -649,10 +650,32 @@ class _ReportScreenState extends ConsumerState<ReportScreen> with SingleTickerPr
                   const SizedBox(width: 12),
                   Expanded(
                     child: _ReportCard(
-                      title: 'Laba PPOB',
-                      value: Formatters.currency(_ppobSummary['profit'] ?? 0),
+                      title: 'Untung PPOB',
+                      value: Formatters.currency(_ppobSummary.profit),
                       icon: Icons.phone_android_rounded,
                       color: AppTheme.successColor,
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 12),
+              Row(
+                children: [
+                  Expanded(
+                    child: _ReportCard(
+                      title: 'Jumlah Transaksi',
+                      value: _ppobSummary.count.toString(),
+                      icon: Icons.receipt_long,
+                      color: AppTheme.accentColor,
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: _ReportCard(
+                      title: 'Rata-rata',
+                      value: Formatters.currency(_ppobSummary.avg),
+                      icon: Icons.analytics,
+                      color: AppTheme.secondaryColor,
                     ),
                   ),
                 ],
@@ -660,7 +683,7 @@ class _ReportScreenState extends ConsumerState<ReportScreen> with SingleTickerPr
               Padding(
                 padding: const EdgeInsets.only(top: 6),
                 child: Text(
-                  'Modal PPOB: ${Formatters.currency(_ppobSummary['cost'] ?? 0)} - laba = jual - modal, hanya transaksi sukses.',
+                  'Modal PPOB: ${Formatters.currency(_ppobSummary.cost)} - untung = jual - modal, hanya transaksi sukses.',
                   style: TextStyle(fontSize: 11, color: AppTheme.textSecondary),
                 ),
               ),
