@@ -445,15 +445,6 @@ class _PosScreenState extends ConsumerState<PosScreen> {
         return;
       }
 
-      // Pengurangan bahan resep (BOM) - best effort, tidak memblokir.
-      for (final item in _cart) {
-        final qty = item.quantity.toDouble();
-        if (qty > 0 && item.productId.isNotEmpty) {
-          SupabaseService()
-              .deductRecipeIngredients(outletId, item.productId, qty, created.id);
-        }
-      }
-
       // Catat pembayaran (split bill / tunggal) + tip - best effort.
       final shiftId = _openShift?.isOpen == true ? _openShift!.id : null;
       if (result.payments.isNotEmpty) {

@@ -74,7 +74,7 @@ class _CashierHomeScreenState extends ConsumerState<CashierHomeScreen> {
           actions: [
             TextButton(
               onPressed: () => Navigator.pop(ctx),
-              child: const Text('Batal'),
+              child: const Icon(Icons.close_rounded, size: 20),
             ),
             ElevatedButton(
               onPressed: () async {
@@ -144,7 +144,7 @@ class _CashierHomeScreenState extends ConsumerState<CashierHomeScreen> {
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx),
-            child: const Text('Batal'),
+            child: const Icon(Icons.close_rounded, size: 20),
           ),
           ElevatedButton(
             style: ElevatedButton.styleFrom(backgroundColor: AppTheme.errorColor),
@@ -207,7 +207,7 @@ class _CashierHomeScreenState extends ConsumerState<CashierHomeScreen> {
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx),
-            child: const Text('Batal'),
+            child: const Icon(Icons.close_rounded, size: 20),
           ),
           ElevatedButton(
             onPressed: () async {

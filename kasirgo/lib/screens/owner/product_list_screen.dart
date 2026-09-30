@@ -189,7 +189,7 @@ class _ProductListScreenState extends ConsumerState<ProductListScreen> {
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx),
-            child: const Text('Batal'),
+            child: const Icon(Icons.close_rounded, size: 20),
           ),
           ElevatedButton(
             style: ElevatedButton.styleFrom(backgroundColor: AppTheme.primaryColor),
@@ -220,7 +220,7 @@ class _ProductListScreenState extends ConsumerState<ProductListScreen> {
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx, false),
-            child: const Text('Batal'),
+            child: const Icon(Icons.close_rounded, size: 20),
           ),
           ElevatedButton(
             style: ElevatedButton.styleFrom(backgroundColor: AppTheme.errorColor),

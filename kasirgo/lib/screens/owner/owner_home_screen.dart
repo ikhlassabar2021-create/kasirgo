@@ -26,10 +26,7 @@ import 'qr_table_screen.dart';
 import 'online_catalog_screen.dart';
 import 'health_score_screen.dart';
 import '../../screens/owner/fintech_screen.dart';
-import '../../screens/owner/hyperlocal_screen.dart';
-import '../../screens/owner/insurance_screen.dart';
 import '../modules/kitchen_display_screen.dart';
-import 'recipe_screen.dart';
 import 'shift_screen.dart';
 import '../modules/ppob_screen.dart';
 import '../modules/restock_screen.dart';
@@ -918,31 +915,13 @@ class _OwnerHomeScreenState extends ConsumerState<OwnerHomeScreen> {
       );
     }
 
-    if (ref.watch(hyperlocalEnabledProvider).valueOrNull ?? true) {
-      quickActionItems.add(
-        _ModuleCard(
-          icon: Icons.travel_explore_rounded,
-          title: 'Tren Wilayah',
-          subtitle: 'Insight anonim',
-          color: AppTheme.secondaryColor,
-          onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const HyperlocalScreen())),
-        ),
-      );
-    }
 
-    if (ref.watch(insuranceEnabledProvider).valueOrNull ?? true) {
-      quickActionItems.add(
-        _ModuleCard(
-          icon: Icons.health_and_safety_rounded,
-          title: 'Asuransi Mikro',
-          subtitle: 'Lindungi toko',
-          color: AppTheme.warningColor,
-          onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const InsuranceScreen())),
-        ),
-      );
-    }
+    // KDS hanya untuk usaha makanan/minuman (cafe/warteg/restoran).
+    final outletType =
+        ModuleConfig.normalizeType(ref.watch(outletTypeProvider(outletId)));
+    final kdsAllowed = outletType == 'cafe' || outletType == 'warteg';
 
-    if (modules.contains(BusinessModule.kitchenDisplay)) {
+    if (kdsAllowed && modules.contains(BusinessModule.kitchenDisplay)) {
       quickActionItems.add(
         _ModuleCard(
           icon: Icons.kitchen_rounded,
@@ -966,17 +945,6 @@ class _OwnerHomeScreenState extends ConsumerState<OwnerHomeScreen> {
       );
     }
 
-    if (modules.contains(BusinessModule.recipeIngredients)) {
-      quickActionItems.add(
-        _ModuleCard(
-          icon: Icons.soup_kitchen_rounded,
-          title: 'Resep & HPP',
-          subtitle: 'BOM & harga saran',
-          color: AppTheme.primaryColor,
-          onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const RecipeScreen())),
-        ),
-      );
-    }
 
     quickActionItems.add(
       _ModuleCard(
@@ -1341,8 +1309,7 @@ class _OutletTypeSetupBannerState
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx),
-            child: const Text('Batal',
-                style: TextStyle(color: AppTheme.textSecondary)),
+            child: const Icon(Icons.close_rounded, size: 20),
           ),
         ],
       ),

@@ -243,8 +243,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
         actions: [
           TextButton(
             onPressed: () => Navigator.of(ctx).pop(false),
-            child: const Text('Batal',
-                style: TextStyle(color: AppTheme.textSecondary)),
+            child: const Icon(Icons.close_rounded, size: 20),
           ),
           ElevatedButton(
             style: ElevatedButton.styleFrom(
@@ -756,7 +755,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx),
-            child: const Text('Batal'),
+            child: const Icon(Icons.close_rounded, size: 20),
           ),
         ],
       ),
@@ -969,7 +968,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
             actions: [
               TextButton(
                 onPressed: () => Navigator.pop(ctx),
-                child: const Text('Batal', style: TextStyle(color: AppTheme.textSecondary)),
+                child: const Icon(Icons.close_rounded, size: 20),
               ),
               ElevatedButton.icon(
                 style: ElevatedButton.styleFrom(
@@ -1048,7 +1047,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx),
-            child: const Text('Batal'),
+            child: const Icon(Icons.close_rounded, size: 20),
           ),
           ElevatedButton(
             onPressed: () async {
@@ -1116,7 +1115,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx),
-            child: const Text('Batal'),
+            child: const Icon(Icons.close_rounded, size: 20),
           ),
           ElevatedButton(
             onPressed: () async {

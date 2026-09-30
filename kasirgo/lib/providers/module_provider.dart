@@ -23,13 +23,11 @@ enum BusinessModule {
 
 class ModuleConfig {
   static const Map<String, Set<BusinessModule>> _outletModules = {
-    // Kelontong / Warung: semua fitur KECUALI QR Meja dine-in (tableManagement).
+    // Kelontong / Warung: semua fitur KECUALI QR Meja & KDS (bukan usaha makan).
     'kelontong': {
       BusinessModule.pos,
       BusinessModule.inventory,
       BusinessModule.debt,
-      BusinessModule.kitchenDisplay,
-      BusinessModule.recipeIngredients,
       BusinessModule.variants,
       BusinessModule.ppob,
       BusinessModule.restockB2B,
@@ -37,28 +35,26 @@ class ModuleConfig {
       BusinessModule.splitBill,
       BusinessModule.dailyDigest,
     },
-    // Warteg / Warung makan: semua fitur KECUALI PPOB.
+    // Warteg / Warung makan: semua fitur KECUALI PPOB (usaha makan -> KDS on).
     'warteg': {
       BusinessModule.pos,
       BusinessModule.inventory,
       BusinessModule.debt,
       BusinessModule.tableManagement,
       BusinessModule.kitchenDisplay,
-      BusinessModule.recipeIngredients,
       BusinessModule.variants,
       BusinessModule.restockB2B,
       BusinessModule.wholesalePrice,
       BusinessModule.splitBill,
       BusinessModule.dailyDigest,
     },
-    // Cafe / Restoran / Kedai Kopi: semua fitur KECUALI PPOB.
+    // Cafe / Restoran / Kedai Kopi: semua fitur KECUALI PPOB (KDS on).
     'cafe': {
       BusinessModule.pos,
       BusinessModule.inventory,
       BusinessModule.debt,
       BusinessModule.tableManagement,
       BusinessModule.kitchenDisplay,
-      BusinessModule.recipeIngredients,
       BusinessModule.variants,
       BusinessModule.restockB2B,
       BusinessModule.wholesalePrice,
@@ -70,7 +66,6 @@ class ModuleConfig {
       BusinessModule.pos,
       BusinessModule.inventory,
       BusinessModule.debt,
-      BusinessModule.recipeIngredients,
       BusinessModule.variants,
       BusinessModule.ppob,
       BusinessModule.restockB2B,
@@ -78,13 +73,11 @@ class ModuleConfig {
       BusinessModule.splitBill,
       BusinessModule.dailyDigest,
     },
-    // Gerobak: semua fitur KECUALI PPOB & QR Meja dine-in (tableManagement).
+    // Gerobak: semua fitur KECUALI PPOB & QR Meja (bukan usaha makan -> KDS off).
     'gerobak': {
       BusinessModule.pos,
       BusinessModule.inventory,
       BusinessModule.debt,
-      BusinessModule.kitchenDisplay,
-      BusinessModule.recipeIngredients,
       BusinessModule.variants,
       BusinessModule.restockB2B,
       BusinessModule.wholesalePrice,

@@ -111,7 +111,7 @@ class _CustomerListScreenState extends ConsumerState<CustomerListScreen> {
               actions: [
                 TextButton(
                   onPressed: isSubmitting ? null : () => Navigator.pop(dialogCtx),
-                  child: const Text('Batal', style: TextStyle(color: AppTheme.textSecondary)),
+                  child: const Icon(Icons.close_rounded, size: 20),
                 ),
                 ElevatedButton(
                   style: ElevatedButton.styleFrom(

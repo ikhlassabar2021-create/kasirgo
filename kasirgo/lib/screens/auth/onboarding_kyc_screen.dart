@@ -10,7 +10,9 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../../config/app_theme.dart';
 import '../../providers/auth_provider.dart';
+import '../../services/kyc_ml.dart';
 import '../../services/kyc_verification_service.dart';
+import '../../utils/kyc_checks.dart';
 import '../../widgets/common/centennial_background.dart';
 
 /// Wizard KYC wajib (6 field) — foto disimpan LOKAL di HP.
@@ -49,6 +51,14 @@ class _OnboardingKycScreenState extends ConsumerState<OnboardingKycScreen> {
   bool _loading = false;
   bool _prefilling = true;
   int _step = 0;
+
+  // Hasil pembacaan KTP (OCR on-device) + validasi.
+  bool _scanning = false;
+  String? _ktpName; // nama terbaca dari KTP
+  bool _ktpHasFace = false; // foto KTP memuat wajah (orang asli)
+  bool _selfieHasFace = false; // selfie memuat wajah
+  bool _ktpChecked = false;
+  bool _selfieChecked = false;
 
   String? _outletId;
   KycStatus _status = KycStatus.unsubmitted;
@@ -130,6 +140,10 @@ class _OnboardingKycScreenState extends ConsumerState<OnboardingKycScreen> {
     }
 
     if (mounted) setState(() => _prefilling = false);
+
+    // Validasi ulang foto dari draf (isi NIK/nama + cek wajah).
+    if (_ktpImage != null) await _scanKtp(_ktpImage!);
+    if (_selfieImage != null) await _checkSelfie(_selfieImage!);
   }
 
   Future<Uint8List?> _readPreviewBytes(XFile? file) async {
@@ -189,13 +203,75 @@ class _OnboardingKycScreenState extends ConsumerState<OnboardingKycScreen> {
         if (isKtp) {
           _ktpImage = image;
           _ktpBytes = bytes;
+          _ktpChecked = false;
+          _ktpHasFace = false;
+          _ktpName = null;
         } else {
           _selfieImage = image;
           _selfieBytes = bytes;
+          _selfieChecked = false;
+          _selfieHasFace = false;
         }
       });
+      // OCR/validasi on-device (gratis). Di web: stub -> input manual.
+      if (isKtp) {
+        await _scanKtp(image);
+      } else {
+        await _checkSelfie(image);
+      }
     } catch (e) {
       _snack('Gagal memuat gambar: $e', AppTheme.errorColor);
+    }
+  }
+
+  /// Baca NIK + nama dari foto KTP (ML Kit OCR) & pastikan KTP memuat wajah.
+  Future<void> _scanKtp(XFile image) async {
+    setState(() => _scanning = true);
+    try {
+      final result = await ocrKtp(image.path);
+      final faces = await countFaces(image.path);
+
+      if (!mounted) return;
+      setState(() {
+        _scanning = false;
+        _ktpChecked = true;
+        _ktpName = result.name;
+        // -1 = mesin tak mendukung (web); true/false hanya bila terdeteksi.
+        _ktpHasFace = faces < 0 ? true : faces > 0;
+
+        if ((result.nik ?? '').isNotEmpty) {
+          _nik.text = result.nik!;
+        }
+        if (_fullName.text.trim().isEmpty &&
+            (result.name ?? '').isNotEmpty) {
+          _fullName.text = result.name!;
+        }
+      });
+
+      if ((result.nik ?? '').isEmpty && kycMlAvailable) {
+        _snack('NIK tidak terbaca otomatis. Isi manual di kolom NIK.',
+            AppTheme.warningColor);
+      }
+      if (!_ktpHasFace) {
+        _snack('Wajah tidak terdeteksi pada foto KTP. Pakai foto KTP asli.',
+            AppTheme.errorColor);
+      }
+    } catch (_) {
+      if (mounted) setState(() => _scanning = false);
+    }
+  }
+
+  /// Validasi selfie: harus memuat wajah (orang asli).
+  Future<void> _checkSelfie(XFile image) async {
+    final faces = await countFaces(image.path);
+    if (!mounted) return;
+    setState(() {
+      _selfieChecked = true;
+      _selfieHasFace = faces < 0 ? true : faces > 0;
+    });
+    if (!_selfieHasFace) {
+      _snack('Wajah tidak terdeteksi pada selfie. Ambil selfie dengan jelas.',
+          AppTheme.errorColor);
     }
   }
 
@@ -224,8 +300,51 @@ class _OnboardingKycScreenState extends ConsumerState<OnboardingKycScreen> {
     _snack('Draf tersimpan di perangkat.', AppTheme.primaryColor);
   }
 
+  /// Gate langkah dokumen: KTP + selfie wajib, wajah terdeteksi, NIK valid.
+  bool _documentsValid({bool silent = false}) {
+    if (_ktpImage == null || _selfieImage == null) {
+      if (!silent) {
+        _snack('Foto KTP dan selfie memegang KTP wajib diambil.',
+            AppTheme.warningColor);
+      }
+      return false;
+    }
+    if (!_ktpChecked || !_selfieChecked) {
+      if (!silent) {
+        _snack('Tunggu proses pemeriksaan foto selesai.', AppTheme.warningColor);
+      }
+      return false;
+    }
+    if (!_ktpHasFace || !_selfieHasFace) {
+      if (!silent) {
+        _snack('Wajah tidak terdeteksi. Gunakan foto KTP & selfie yang jelas.',
+            AppTheme.errorColor);
+      }
+      return false;
+    }
+    if (!isValidNikFormat(_nik.text)) {
+      if (!silent) {
+        _snack('NIK harus 16 digit yang valid.', AppTheme.errorColor);
+      }
+      return false;
+    }
+    if (!namesMatch(_fullName.text, _ktpName)) {
+      if (!silent) {
+        _snack(
+            'Nama pada KTP tidak cocok dengan nama pemilik. Periksa kembali.',
+            AppTheme.errorColor);
+      }
+      return false;
+    }
+    return true;
+  }
+
   void _next() {
-    if (_step == 0 && !(_formKeys[0].currentState?.validate() ?? false)) return;
+    if (_step == 0) {
+      if (!_documentsValid()) return;
+    } else if (_step == 1) {
+      if (!(_formKeys[0].currentState?.validate() ?? false)) return;
+    }
     if (_step < 2) setState(() => _step++);
   }
 
@@ -234,9 +353,12 @@ class _OnboardingKycScreenState extends ConsumerState<OnboardingKycScreen> {
   }
 
   Future<void> _submit() async {
-    if (!(_formKeys[1].currentState?.validate() ?? false)) return;
-    if (_ktpImage == null || _selfieImage == null) {
-      _snack('Foto KTP dan selfie memegang KTP wajib diambil.', AppTheme.warningColor);
+    if (!(_formKeys[0].currentState?.validate() ?? false)) {
+      setState(() => _step = 1);
+      return;
+    }
+    if (!_documentsValid()) {
+      setState(() => _step = 0);
       return;
     }
     if (!_consent) {
@@ -314,7 +436,7 @@ class _OnboardingKycScreenState extends ConsumerState<OnboardingKycScreen> {
                   if (_status == KycStatus.pendingReview) _buildPendingBanner(),
                   IndexedStack(
                     index: _step,
-                    children: [_stepBusiness(), _stepDocuments(), _stepReview()],
+                    children: [_stepDocuments(), _stepBusiness(), _stepReview()],
                   ),
                 ],
               ),
@@ -368,7 +490,7 @@ class _OnboardingKycScreenState extends ConsumerState<OnboardingKycScreen> {
   }
 
   Widget _buildStepper() {
-    const labels = ['Data Usaha', 'Dokumen', 'Tinjau'];
+    const labels = ['Dokumen', 'Data Usaha', 'Tinjau'];
     return Padding(
       padding: const EdgeInsets.fromLTRB(20, 12, 20, 4),
       child: Row(
@@ -524,10 +646,20 @@ class _OnboardingKycScreenState extends ConsumerState<OnboardingKycScreen> {
         children: [
           _photoPicker(
             title: 'Foto KTP',
-            subtitle: 'Pastikan jelas, tidak glare, semua sudut terlihat',
+            subtitle: _scanning
+                ? 'Membaca KTP...'
+                : 'Ambil foto KTP asli — NIK akan terisi otomatis',
             image: _ktpImage,
             bytes: _ktpBytes,
-            onTap: () => _pickImage(true),
+            onTap: _scanning ? null : () => _pickImage(true),
+          ),
+          if (_ktpChecked) _scanStatus(
+            ok: _ktpHasFace,
+            label: _ktpHasFace
+                ? (_ktpName == null || _ktpName!.isEmpty
+                    ? 'KTP terbaca'
+                    : 'KTP terbaca: ${_ktpName!}')
+                : 'Wajah tidak terdeteksi — pakai KTP asli',
           ),
           const SizedBox(height: 16),
           _photoPicker(
@@ -537,16 +669,45 @@ class _OnboardingKycScreenState extends ConsumerState<OnboardingKycScreen> {
             bytes: _selfieBytes,
             onTap: () => _pickImage(false),
           ),
+          if (_selfieChecked) _scanStatus(
+            ok: _selfieHasFace,
+            label: _selfieHasFace
+                ? 'Wajah selfie terdeteksi'
+                : 'Wajah tidak terdeteksi — ambil ulang',
+          ),
           const SizedBox(height: 16),
           _field(
             controller: _nik,
-            label: 'NIK (opsional, untuk cegah duplikat)',
+            label: 'NIK (16 digit, dari KTP)',
             icon: Icons.credit_card_outlined,
-            hint: '16 digit — hanya disimpan sebagai hash',
+            hint: 'Terisi otomatis dari foto KTP',
             keyboard: TextInputType.number,
-            optional: true,
+            validator: (v) => isValidNikFormat(v)
+                ? null
+                : 'NIK harus 16 digit yang valid',
           ),
           _tipCard(),
+        ],
+      ),
+    );
+  }
+
+  Widget _scanStatus({required bool ok, required String label}) {
+    final color = ok ? AppTheme.successColor : AppTheme.errorColor;
+    return Padding(
+      padding: const EdgeInsets.only(top: 8),
+      child: Row(
+        children: [
+          Icon(ok ? Icons.check_circle_rounded : Icons.error_rounded,
+              size: 16, color: color),
+          const SizedBox(width: 6),
+          Expanded(
+            child: Text(label,
+                style: TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w600,
+                    color: color)),
+          ),
         ],
       ),
     );
@@ -568,6 +729,7 @@ class _OnboardingKycScreenState extends ConsumerState<OnboardingKycScreen> {
             child: Column(
               children: [
                 _reviewRow('Nama', _fullName.text),
+                _reviewRow('NIK', _nik.text),
                 _reviewRow('No. HP', _phone.text),
                 _reviewRow('Email', _email.text),
                 _reviewRow('Nama Toko', _storeName.text),
@@ -620,7 +782,7 @@ class _OnboardingKycScreenState extends ConsumerState<OnboardingKycScreen> {
     required String subtitle,
     required XFile? image,
     required Uint8List? bytes,
-    required VoidCallback onTap,
+    required VoidCallback? onTap,
   }) {
     return GestureDetector(
       onTap: onTap,

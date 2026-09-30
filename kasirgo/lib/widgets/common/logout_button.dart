@@ -27,7 +27,7 @@ class LogoutButton extends ConsumerWidget {
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx, false),
-            child: const Text('Batal'),
+            child: const Icon(Icons.close_rounded, size: 20),
           ),
           ElevatedButton(
             style: ElevatedButton.styleFrom(

@@ -164,7 +164,7 @@ class _SocialCommerceScreenState extends ConsumerState<SocialCommerceScreen> {
             actions: [
               TextButton(
                 onPressed: () => Navigator.pop(ctx),
-                child: const Text('Batal', style: TextStyle(color: AppTheme.textSecondary)),
+                child: const Icon(Icons.close_rounded, size: 20),
               ),
               ElevatedButton(
                 style: ElevatedButton.styleFrom(

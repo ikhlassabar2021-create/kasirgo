@@ -141,8 +141,7 @@ class _FintechScreenState extends ConsumerState<FintechScreen> {
           actions: [
             TextButton(
                 onPressed: () => Navigator.pop(ctx, false),
-                child: Text('Batal',
-                    style: GoogleFonts.inter(color: AppTheme.textSecondary))),
+                child: const Icon(Icons.close_rounded, size: 20)),
             TextButton(
                 onPressed: () => Navigator.pop(ctx, true),
                 child: Text('Ajukan',

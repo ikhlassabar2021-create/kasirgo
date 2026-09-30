@@ -143,7 +143,7 @@ class _DebtScreenState extends ConsumerState<DebtScreen> {
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx),
-            child: const Text('Batal'),
+            child: const Icon(Icons.close_rounded, size: 20),
           ),
           ElevatedButton(
             style: ElevatedButton.styleFrom(backgroundColor: AppTheme.primaryColor),
