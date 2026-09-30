@@ -42,3 +42,43 @@ SECURITY DEFINER ber-flag admin (admin_users aktif); secret TIDAK dibaca client.
     platform_user_detail (outlet, KYC badge, status pembayaran/ad-free,
     5 stat, transaksi terakhir, rekap lead).
 - npm run build BERSIH (tsc -b + vite, hanya warning chunk size).
+
+### ST11-2 — Impersonate Read-Only + Audit + Backup/Restore + Intelijen Platform (2026-09-30)
+- DB (bagian 2 kasirgo-11.sql) — **BELUM DIJALANKAN ke live** (access token
+  tidak tersedia di sesi ini; jalankan seluruh file via SQL Editor, idempotent):
+  - Tabel: `backup_runs` (snapshot JSONB + kind full/quick + RLS admin),
+    `backup_schedules` (per outlet, cadence daily/weekly, RLS admin).
+  - RPC (semua SECURITY DEFINER + cek platform_is_admin + jejak audit via
+    `log_admin_action()` yang sudah ada):
+    - `platform_impersonate_view(p_user_id)` — snapshot read-only outlet
+      (ringkasan hari/30 hari, 7 hari terakhir, produk terlaris, 10 TX
+      terakhir, staf) + audit `impersonate_view`.
+    - `platform_audit_list(p_limit, p_offset)` — baca audit_logs + email aktor.
+    - `platform_backup_create(p_outlet_id, p_kind)` — full = master data +
+      transaksi 90 hari + items; quick = master data saja.
+    - `platform_backup_list()` — tanpa payload; `platform_backup_get(p_id)`
+      — payload utk unduh (audit `backup_download`).
+    - `platform_backup_restore(p_id)` — ISI HANYA baris hilang (ON CONFLICT
+      DO NOTHING): produk/varian/pelanggan; transaksi TIDAK dipulihkan agar
+      keuangan tidak dobel; kolom sesuai docs/kasirgo-schema.sql
+      (products TANPA sku/is_active; customers pakai `phone_wa`).
+    - `platform_backup_schedule_set(...)` + `platform_backup_run_due()` —
+      backup terjadwal tanpa cron (dipicu client saat halaman dibuka).
+    - `platform_intelligence()` — KPI platform, tren harian 30d, outlet
+      aktif per minggu, churn risk (>=3 TX lalu idle >14 hari), anomali
+      z-score > 2.5; agregat tanpa data pribadi.
+- kasirgo-admin:
+  - `Backup.tsx` REWRITE: pilih outlet + tipe (cepat/penuh), riwayat
+    snapshot real, unduh JSON, pulihkan (konfirmasi), jadwal per outlet,
+    auto `run_due` saat halaman dibuka.
+  - `UserDetail.tsx`: tombol **Impersonate (Read-Only)** -> modal snapshot
+    (KPI, 7 hari, produk terlaris, TX terakhir, staf).
+  - `Audit.tsx` BARU (route /audit): jejak audit terpaginasi + badge warna
+    per aksi.
+  - `Intelligence.tsx` BARU (route /intelligence): KPI, LineChart transaksi
+    harian, churn risk, anomali, retensi mingguan (recharts).
+  - Sidebar + judul halaman + routing diperbarui.
+- npm run build BERSIH.
+- QA live PENDING (setelah SQL dijalankan): panggil tiap RPC sebagai
+  superadmin; verifikasi audit muncul di /audit; buat backup -> unduh ->
+  restore di outlet test.

@@ -89,3 +89,60 @@ export const checkAdminRole = async (): Promise<{
   if (!data) return null
   return { isAdmin: true, role: data.role ?? 'superadmin' }
 }
+
+// ---------------------------------------------------------------------------
+// ST11-2: audit, backup, impersonate, intelligence
+// ---------------------------------------------------------------------------
+
+export type AuditRow = {
+  id: string
+  actor_id: string | null
+  actor_role: string | null
+  action: string
+  target: string | null
+  meta: Record<string, unknown>
+  created_at: string
+  actor_email: string
+}
+
+export type AuditListResult = { total: number; rows: AuditRow[] }
+
+export type BackupRunRow = {
+  id: string
+  outlet_id: string
+  outlet_name: string | null
+  kind: 'full' | 'quick'
+  status: string
+  row_count: number
+  size_bytes: number
+  created_at: string
+}
+
+export type BackupListResult = { rows: BackupRunRow[] }
+
+export type ImpersonateResult = {
+  outlet: { id: string; name: string; outlet_type?: string; type?: string; address?: string; phone?: string; created_at?: string } | null
+  entitlements: Record<string, unknown> | null
+  summary: {
+    product_count: number; customer_count: number; staff_count: number
+    tx_today: number; omzet_today: number; omzet_30d: number
+  }
+  last7d: { day: string; tx: number; omzet: number }[]
+  top_products: { product_name: string; qty: number; omzet: number }[]
+  recent_transactions: { id: string; final_amount: number; payment_method: string; order_status: string; created_at: string }[]
+  staff: { email: string | null; role: string; is_active: boolean }[]
+}
+
+export type IntelligenceResult = {
+  kpis: { total_outlets: number; active_30d: number; new_30d: number; avg_tx_per_outlet_30d: number }
+  trend: { day: string; tx: number; omzet: number }[]
+  weekly_active: { week: string; outlets: number; tx: number }[]
+  churn_risk: { outlet_id: string; outlet_name: string; last_tx_at: string; tx_total: number }[]
+  anomaly: { day: string; tx: number; z: number }[]
+}
+
+export const fmtBytes = (b: number): string => {
+  if (b >= 1_048_576) return `${(b / 1_048_576).toFixed(1)} MB`
+  if (b >= 1024) return `${(b / 1024).toFixed(0)} KB`
+  return `${b} B`
+}

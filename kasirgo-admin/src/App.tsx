@@ -10,6 +10,8 @@ import { ControlPlanePage } from './pages/ControlPlane'
 import { AffiliatesPage } from './pages/Affiliates'
 import { RevenuePage } from './pages/Revenue'
 import { BackupPage } from './pages/Backup'
+import { AuditPage } from './pages/Audit'
+import { IntelligencePage } from './pages/Intelligence'
 import { OwnerDashboard } from './pages/OwnerDashboard'
 
 export default function App() {
@@ -84,6 +86,8 @@ export default function App() {
           <Route path="revenue" element={<RevenuePage />} />
           <Route path="affiliates" element={<AffiliatesPage />} />
           <Route path="backup" element={<BackupPage />} />
+          <Route path="audit" element={<AuditPage />} />
+          <Route path="intelligence" element={<IntelligencePage />} />
           <Route path="settings" element={<ControlPlanePage />} />
           <Route path="control-plane" element={<ControlPlanePage />} />
         </Route>

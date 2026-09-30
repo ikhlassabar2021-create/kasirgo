@@ -1,12 +1,14 @@
 import { NavLink } from 'react-router-dom';
-import { 
-  LayoutDashboard, 
-  Users, 
-  Store, 
-  BarChart3, 
+import {
+  LayoutDashboard,
+  Users,
+  Store,
+  BarChart3,
   Settings,
   CreditCard,
   CloudBackup,
+  ScrollText,
+  BrainCircuit,
   X,
   LogOut
 } from 'lucide-react';
@@ -24,8 +26,10 @@ export function StarAdminSidebar({ isOpen, onClose, onLogout }: StarAdminSidebar
     { name: 'Users & Staff', href: '/users', icon: Users },
     { name: 'Outlets Terdaftar', href: '/outlets', icon: Store },
     { name: 'Revenue & TX', href: '/revenue', icon: BarChart3 },
+    { name: 'Intelijen Platform', href: '/intelligence', icon: BrainCircuit },
     { name: 'Affiliates', href: '/affiliates', icon: CreditCard },
     { name: 'Backup & Restore', href: '/backup', icon: CloudBackup },
+    { name: 'Jejak Audit', href: '/audit', icon: ScrollText },
     { name: 'Control Plane', href: '/control-plane', icon: Settings },
   ];
 

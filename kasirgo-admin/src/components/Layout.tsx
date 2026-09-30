@@ -20,6 +20,8 @@ export const Layout: React.FC<LayoutProps> = ({ onLogout }) => {
       case '/revenue': return 'Pendapatan & Transaksi';
       case '/affiliates': return 'Afiliasi & Referral';
       case '/backup': return 'Backup & Pulihkan';
+      case '/audit': return 'Jejak Audit';
+      case '/intelligence': return 'Intelijen Platform';
       case '/control-plane': return 'Control Plane';
       case '/settings': return 'Control Plane';
       default:
