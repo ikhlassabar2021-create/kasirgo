@@ -142,9 +142,9 @@ Status: SELESAI. Project Supabase sudah dibuat dan schema terpasang serta diuji.
 - [x] Phase 7.7: Control Plane + KYC Auto-Verify + Izin Produk/Staf + Owner Affiliate
 - [x] Phase 7.8: Monetisasi & Program Pendukung (1 harga Rp50k/bln) + Iklan Pelanggan + Laporan ke Bos + KYC Wajib + Panduan + Skala Superadmin  (SELESAI)
 - [x] Phase 8: Modul outlet_type (BOM/Resep, KDS/QR Meja, Variant, Shift/Tip)  (SELESAI)
-- [ ] Phase 9: PPOB + Closed-loop + Embedded B2B Restock
-- [ ] Phase 10: Fintech Lead + Hyperlocal Data + Micro-insurance
-- [ ] Phase 11: Superadmin Web (12 revenue engine, RBAC, rules engine, monitoring)
+- [x] Phase 9: PPOB + Closed-loop + Embedded B2B Restock  (SELESAI)
+- [x] Phase 10: Fintech Lead + Hyperlocal Data + Micro-insurance  (SELESAI)
+- [x] Phase 11: Superadmin Web (12 revenue engine, RBAC, rules engine, monitoring)  (SELESAI)
 - [ ] Phase 12: Polish + Security Audit + Release
 
 Catatan: Phase 7.6 adalah redesign visual menyeluruh (semua dashboard + fitur Produk/Pelanggan/
