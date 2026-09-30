@@ -23,11 +23,12 @@ INSERT INTO public.platform_integrations (key, label, is_active, public_config, 
   ('ppob',            'PPOB',            false, '{}', '{}')
 ON CONFLICT (key) DO NOTHING;
 
--- Pastikan RLS policy client-read tetap hanya baris aktif (secret tetap aman
--- karena view publik tidak menyertakan kolom secret_config).
+-- PENTING: jangan buat policy SELECT untuk client di platform_integrations.
+-- Phase 12 (2026-10-02-kasirgo-12-security.sql) sengaja menghapus policy ini
+-- karena membocorkan secret_config ke klien. Akses klien hanya lewat view
+-- platform_integrations_public (kolom aman, tanpa secret_config).
 DROP POLICY IF EXISTS "Client read active integrations" ON public.platform_integrations;
-CREATE POLICY "Client read active integrations" ON public.platform_integrations
-  FOR SELECT USING (is_active = true);
+DROP POLICY IF EXISTS "Client read active integrations public view" ON public.platform_integrations;
 
 -- ----------------------------------------------------------------------------
 -- 2. platform_configs 'ppob': tambah field non-secret

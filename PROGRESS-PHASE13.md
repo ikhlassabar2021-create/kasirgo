@@ -62,6 +62,18 @@ iklan lama, siapkan field embed B2B/Modal Usaha). Idempotent.
 - `flutter test`: 7 gagal = baseline pra-ada (POS/Phase5), tidak terkait.
   `test/ad_service_test.dart`: 5/5 PASS.
 
-## Migrasi yang harus dijalankan user (belum live)
-- `2026-10-01-kasirgo-11.sql` (ulang bila belum), `2026-10-02-kasirgo-12-security.sql`,
-  `2026-10-03-kasirgo-13-admin.sql`, `2026-10-04-kasirgo-13-control-plane.sql`.
+## Migrasi (SUDAH DITERAPKAN ke Supabase produksi)
+- `2026-10-01-kasirgo-11.sql` — sudah ada (dikonfirmasi).
+- `2026-10-02-kasirgo-12-security.sql` — sudah ada (dikonfirmasi; `ppob` tanpa `api_key`).
+- `2026-10-03-kasirgo-13-admin.sql` — DITERAPKAN. `outlet_module_overrides` + 11 RPC
+  `platform_*`/`feature_flags_for_outlet`. Diuji end-to-end via PostgREST sebagai
+  superadmin (main_report, outlets_list, features, staff, report, set_feature).
+- `2026-10-04-kasirgo-13-control-plane.sql` — DITERAPKAN. Integrasi kanonik
+  `payment_gateway` + `ppob`; field PPOB baru; `creatives` iklan; field embed
+  B2B/Modal Usaha.
+
+Catatan keamanan: migrasi 2026-10-04 versi awal tidak sengaja membuat ulang policy
+`Client read active integrations` yang sudah dihapus Phase 12 (bocor `secret_config`).
+Sudah diperbaiki: policy DIBUANG dari file & DB. Verifikasi: sebagai `anon`,
+`select from platform_integrations` = 0 baris; akses klien hanya lewat view
+`platform_integrations_public` (tanpa `secret_config`).
