@@ -45,6 +45,18 @@ akun di bawah ini pada form login.
 |-------|------|---------|
 | `superadmin@kasirgo.com` | https://ikhlassabar2021-create.github.io/kasirgo/admin/ | `admin_users`: role superadmin, aktif |
 
+## Akun Afiliasi (portal web affiliate)
+
+| Email | Password | Link portal |
+|-------|----------|-------------|
+| `ikhlassabar2021+affiliate@gmail.com` | `sabar2021` | https://ikhlassabar2021-create.github.io/kasirgo/admin/#/affiliate |
+
+Catatan: akun ini sudah ditautkan ke baris `affiliates` (kode `DEMOAFIL2026`,
+komisi 10%, bank BCA) dan punya 2 komisi contoh (Rp50.000 status `paid` +
+Rp25.000 status `pending`). Di superadmin -> Affiliates, nama "Agen Afiliasi Demo"
+bisa dipakai untuk uji Edit/Hapus/Jalankan Payout. Untuk membuat afiliasi baru,
+isi kolom `user_id` dengan UUID user portal.
+
 ## Akun Pelanggan (tanpa akun, scan QR meja)
 
 Pelanggan TIDAK perlu akun. Cara masuk:
