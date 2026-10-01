@@ -158,6 +158,20 @@ Status: SELESAI. Project Supabase sudah dibuat dan schema terpasang serta diuji.
   ST13-2: Control Plane Iklan (banner lokal) + Payment Gateway + PPOB +
   B2B Kulakan + Modal Usaha + migrasi
   2026-10-04-kasirgo-13-control-plane.sql. Detail: PROGRESS-PHASE13.md)
+- [x] Phase 13C: QR Meja food-only + Laporan kasir + backup bulanan + hapus UI
+  asuransi + pendaftaran afiliasi mandiri. Migrasi
+  `2026-10-06-kasirgo-13c-fixes.sql`.
+- [x] Payment Gateway RCB (Raga Cipta Bersama)
+  (tabel `payment_orders` + RLS + RPC `get_pg_client_config`/`confirm_pg_order`,
+   `create_supporter_checkout` return `supporter_id`; PaymentService RCB
+   sandbox-direct + fallback Edge Function; QRIS dinamis di POS
+   (`checkout_dialog`) & Program Pendukung (`supporter_screen`) dengan polling
+   status otomatis; Control Plane field provider/mode/base_url/callback;
+   Edge Functions `rcb_create_charge`, `rcb_webhook` (SHA256), `rcb_check_status`.
+   Migrasi `2026-10-07-kasirgo-rcb-pg.sql` + `-2.sql`. SUDAH deploy web+admin.
+   CATATAN: mode `sandbox_direct` menaruh API key sandbox di klien =
+   HANYA untuk tes; wajib pindah ke Edge Function (mode `live_server`) sebelum
+   produksi. Edge Functions BELUM di-deploy (butuh SUPABASE_ACCESS_TOKEN).)
 
 Catatan: Phase 7.6 adalah redesign visual menyeluruh (semua dashboard + fitur Produk/Pelanggan/
 Karyawan/Laporan/Pengaturan) tanpa mengubah fitur/logic. Spec: workflow Bagian 1.6 & 7C.
