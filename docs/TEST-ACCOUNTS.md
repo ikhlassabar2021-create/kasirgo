@@ -57,6 +57,27 @@ Rp25.000 status `pending`). Di superadmin -> Affiliates, nama "Agen Afiliasi Dem
 bisa dipakai untuk uji Edit/Hapus/Jalankan Payout. Untuk membuat afiliasi baru,
 isi kolom `user_id` dengan UUID user portal.
 
+### Pendaftaran Afiliasi Mandiri (Phase 13C)
+
+Pendaftar bisa mendaftar sendiri dari Portal Afiliasi (tombol "Daftar sekarang"
+di halaman masuk). Alur:
+
+1. Isi nama, email, kata sandi (min. 6), No. HP (opsional), dan kode afiliasi
+   pengenal (opsional) -> klik **Daftar**.
+2. Trigger `handle_new_user` membuat baris `affiliates` otomatis (kode referral
+   unik `KGD...`) dan **tidak** membuat outlet/user_roles.
+3. Mode default = **Otomatis** (`platform_configs('affiliate').require_approval=false`):
+   pendaftar langsung berstatus `active` dan bisa mereferensikan seketika.
+4. Bila superadmin mengubah mode ke **Persetujuan manual** (Control Plane ->
+   Afiliasi), pendaftar berstatus `pending` sampai disetujui. Di superadmin ->
+   Affiliates tersedia tombol **Setujui** (pending -> active) / **Tangguhkan**.
+5. Kode afiliasi pengenal yang diisi akan tercatat di `affiliate_referrals`
+   (status `pending`) untuk afiliasi pemilik kode tersebut.
+
+Catatan uji: konfirmasi email harus OFF agar pendaftar langsung dapat sesi;
+bila ON, pendaftar menerima email konfirmasi lalu masuk lewat halaman masuk.
+
+
 ## Akun Pelanggan (tanpa akun, scan QR meja)
 
 Pelanggan TIDAK perlu akun. Cara masuk:
