@@ -92,24 +92,78 @@ class ModuleConfig {
     'warung madura': 'kelontong',
     'kelontong': 'kelontong',
     'minimarket': 'kelontong',
+    'sembako': 'kelontong',
+    'toko kelontong': 'kelontong',
     'retail': 'retail',
     'toko baju': 'retail',
+    'butik': 'retail',
     'apotek': 'retail',
+    'toko': 'retail',
     'cafe': 'cafe',
+    'kafe': 'cafe',
+    'coffee shop': 'cafe',
     'kedai kopi': 'cafe',
+    'kedai': 'cafe',
     'restoran': 'cafe',
+    'resto': 'cafe',
+    'restaurant': 'cafe',
+    'bakery': 'cafe',
+    'toko kue': 'cafe',
+    'food court': 'cafe',
+    'cafe & resto': 'cafe',
     'warteg': 'warteg',
     'warung makan': 'warteg',
+    'rumah makan': 'warteg',
+    'depot': 'warteg',
+    'catering': 'warteg',
     'gerobak': 'gerobak',
     'gerobak keliling': 'gerobak',
+    'food truck': 'gerobak',
     'lainnya': 'kelontong',
   };
+
+  /// Kata kunci cadangan bila label tidak persis cocok (mis. "Kafe & Resto",
+  /// "Warung Kopi", "Cafe Nusantara"). Usaha makan/minuman diprioritaskan agar
+  /// modul KDS & QR Meja tetap aktif (default ada).
+  static const List<(String, String)> _containsRules = [
+    ('warteg', 'warteg'),
+    ('rumah makan', 'warteg'),
+    ('warung makan', 'warteg'),
+    ('caffe', 'cafe'),
+    ('cafe', 'cafe'),
+    ('kafe', 'cafe'),
+    ('coffee', 'cafe'),
+    ('resto', 'cafe'),
+    ('restaurant', 'cafe'),
+    ('restoran', 'cafe'),
+    ('kedai', 'cafe'),
+    ('bakery', 'cafe'),
+    ('kopi', 'cafe'),
+    ('makanan', 'warteg'),
+    ('minuman', 'cafe'),
+    ('gerobak', 'gerobak'),
+    ('keliling', 'gerobak'),
+    ('sembako', 'kelontong'),
+    ('kelontong', 'kelontong'),
+    ('minimarket', 'kelontong'),
+    ('madura', 'kelontong'),
+    ('apotek', 'retail'),
+    ('baju', 'retail'),
+    ('butik', 'retail'),
+    ('retail', 'retail'),
+  ];
 
   /// Normalisasi tipe usaha bebas -> kunci modul yang dikenal.
   static String normalizeType(String outletType) {
     final key = outletType.trim().toLowerCase();
     if (_outletModules.containsKey(key)) return key;
-    return _typeAliases[key] ?? 'kelontong';
+    final direct = _typeAliases[key];
+    if (direct != null) return direct;
+    // Cadangan: cocokkan kata kunci (mis. "Kafe & Resto" -> cafe).
+    for (final rule in _containsRules) {
+      if (key.contains(rule.$1)) return rule.$2;
+    }
+    return 'kelontong';
   }
 
   static Set<BusinessModule> getModules(String outletType) {

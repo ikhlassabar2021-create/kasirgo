@@ -6,6 +6,7 @@ import '../../models/ppob.dart';
 import '../../providers/auth_provider.dart';
 import '../../services/ppob_service.dart';
 import '../../utils/formatters.dart';
+import '../../widgets/common/app_close_button.dart';
 
 class PpobScreen extends ConsumerStatefulWidget {
   const PpobScreen({super.key});
@@ -98,11 +99,18 @@ class _PpobScreenState extends ConsumerState<PpobScreen> {
         backgroundColor: AppTheme.surfaceColor,
         shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(AppTheme.radiusLarge)),
-        title: Text('Setor QRIS ke Saldo',
-            style: GoogleFonts.inter(
-                fontSize: 16,
-                fontWeight: FontWeight.w800,
-                color: AppTheme.textPrimary)),
+        title: Row(
+          children: [
+            Expanded(
+              child: Text('Setor QRIS ke Saldo',
+                  style: GoogleFonts.inter(
+                      fontSize: 16,
+                      fontWeight: FontWeight.w800,
+                      color: AppTheme.textPrimary)),
+            ),
+            AppCloseButton(onTap: () => Navigator.pop(ctx, false)),
+          ],
+        ),
         content: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
@@ -136,9 +144,6 @@ class _PpobScreenState extends ConsumerState<PpobScreen> {
           ],
         ),
         actions: [
-          TextButton(
-              onPressed: () => Navigator.pop(ctx, false),
-              child: const Icon(Icons.close_rounded, size: 20)),
           TextButton(
               onPressed: () => Navigator.pop(ctx, true),
               child: Text('Setor',
@@ -993,13 +998,28 @@ class _PpobScreenState extends ConsumerState<PpobScreen> {
                 color: AppTheme.textPrimary)),
         subtitle: Padding(
           padding: const EdgeInsets.only(top: 2),
-          child: Text(
-            '${tx.customerRef} - ${_fmtTime(tx.createdAt)}'
-            '${tx.providerRef != null ? ' - ${tx.providerRef}' : ''}',
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-            style: GoogleFonts.inter(
-                fontSize: 11, color: AppTheme.textSecondary),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                '${tx.customerRef} - ${_fmtTime(tx.createdAt)}'
+                '${tx.providerRef != null ? ' - ${tx.providerRef}' : ''}',
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: GoogleFonts.inter(
+                    fontSize: 11, color: AppTheme.textSecondary),
+              ),
+              const SizedBox(height: 2),
+              Text(
+                'Modal ${Formatters.currency(tx.costAmount)} - Laba ${Formatters.currency(tx.profit)}',
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: GoogleFonts.inter(
+                    fontSize: 10.5,
+                    fontWeight: FontWeight.w600,
+                    color: ok ? AppTheme.successColor : AppTheme.textSecondary),
+              ),
+            ],
           ),
         ),
         trailing: Row(

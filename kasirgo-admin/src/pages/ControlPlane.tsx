@@ -1,4 +1,5 @@
 import { useEffect, useState, useCallback } from 'react';
+import type { ReactNode } from 'react';
 import {
   Megaphone,
   BookOpen,
@@ -62,6 +63,7 @@ type TabId =
   | 'ppob'
   | 'b2b'
   | 'modal_usaha'
+  | 'system'
   | 'report'
   | 'kyc'
   | 'quota'
@@ -80,6 +82,7 @@ const TABS: { id: TabId; name: string; icon: any }[] = [
   { id: 'ppob', name: 'PPOB', icon: Wallet },
   { id: 'b2b', name: 'B2B Kulakan', icon: Truck },
   { id: 'modal_usaha', name: 'Modal Usaha', icon: Store },
+  { id: 'system', name: 'Integrasi Sistem', icon: SlidersHorizontal },
   { id: 'report', name: 'Laporan', icon: ScrollText },
   { id: 'kyc', name: 'KYC', icon: ShieldCheck },
   { id: 'quota', name: 'Kuota & Limit', icon: Users },
@@ -1047,7 +1050,7 @@ function B2bTab() {
 }
 
 function ModalUsahaTab() {
-  const [v, setV] = useState<any>({ enabled: true, partner_name: '', apply_url: '', wa_number: '', target_url: '', html_code: '', script_code: '' });
+  const [v, setV] = useState<any>({ enabled: true, partner_name: '', apply_url: '', wa_number: '', target_url: '', html_code: '', script_code: '', commission_percent: 2, commission_flat: 0 });
   const [loading, setLoading] = useState(false);
   const { msg, show } = useToast();
   useEffect(() => {
@@ -1055,7 +1058,7 @@ function ModalUsahaTab() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
   return (
-    <Card title="Modal Usaha" subtitle="Mitra pembiayaan: link pengajuan, WA, dan embed (kode HTML/script).">
+    <Card title="Modal Usaha" subtitle="Mitra pembiayaan: link pengajuan, WA, embed, dan komisi platform.">
       <div className="max-w-[760px] space-y-3.5">
         <label className="flex items-center gap-2 text-xs font-semibold text-slate-600">
           <input type="checkbox" checked={v.enabled !== false} onChange={(e) => setV({ ...v, enabled: e.target.checked })} /> Aktifkan Modal Usaha
@@ -1069,6 +1072,20 @@ function ModalUsahaTab() {
             <label className={labelCls}>Nomor WA (fallback)</label>
             <input className={inputCls} value={v.wa_number ?? ''} onChange={(e) => setV({ ...v, wa_number: e.target.value })} placeholder="628123..." />
           </div>
+        </div>
+        <div className="rounded-xl border border-slate-200 bg-slate-50/60 p-3.5 space-y-3">
+          <p className="text-[11px] font-bold text-slate-500 uppercase tracking-wide">Komisi Platform</p>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div>
+              <label className={labelCls}>Komisi (%)</label>
+              <input type="number" step="0.1" className={inputCls} value={v.commission_percent ?? 0} onChange={(e) => setV({ ...v, commission_percent: Number(e.target.value) })} />
+            </div>
+            <div>
+              <label className={labelCls}>Komisi Tetap (Rp)</label>
+              <input type="number" step="1000" className={inputCls} value={v.commission_flat ?? 0} onChange={(e) => setV({ ...v, commission_flat: Number(e.target.value) })} />
+            </div>
+          </div>
+          <p className="text-[10px] text-slate-400">Komisi = (plafon disetujui x %) + komisi tetap. Dicatat pada closing modal usaha.</p>
         </div>
         <div>
           <label className={labelCls}>URL Tujuan / Pengajuan</label>
@@ -1094,6 +1111,136 @@ function ModalUsahaTab() {
       </div>
       <Toast msg={msg} />
     </Card>
+  );
+}
+
+// Integrasi sistem: WA, Database, Backup/Restore + jadwal, Cloudflare, API key/URL.
+function SystemIntegrationTab() {
+  const [v, setV] = useState<any>({
+    wa_api_url: '', wa_api_key: '', wa_sender: '',
+    database_url: '', database_anon_key: '', database_service_key: '',
+    backup_enabled: true, backup_frequency: 'daily', backup_hour: 2, restore_enabled: true,
+    cloudflare_account_id: '', cloudflare_api_token: '', cloudflare_r2_bucket: '',
+    cloudflare_r2_public_url: '', cloudflare_zone_id: '', apikey_notes: '',
+  });
+  const [loading, setLoading] = useState(false);
+  const { msg, show } = useToast();
+  useEffect(() => {
+    loadConfig('system').then((d) => d && setV((prev: any) => ({ ...prev, ...d }))).catch(() => {});
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+  const upd = (patch: any) => setV((p: any) => ({ ...p, ...patch }));
+  return (
+    <Card
+      title="Integrasi Sistem"
+      subtitle="WA, Database, Backup/Restore + jadwal, Cloudflare (R2/storage), dan API key/URL. Tanpa menyentuh koding."
+    >
+      <div className="max-w-[860px] space-y-5">
+        <Section title="WhatsApp Business API">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div>
+              <label className={labelCls}>API URL</label>
+              <input className={inputCls} value={v.wa_api_url ?? ''} onChange={(e) => upd({ wa_api_url: e.target.value })} placeholder="https://graph.facebook.com/v20.0" />
+            </div>
+            <div>
+              <label className={labelCls}>Nomor Pengirim</label>
+              <input className={inputCls} value={v.wa_sender ?? ''} onChange={(e) => upd({ wa_sender: e.target.value })} placeholder="628..." />
+            </div>
+          </div>
+          <div className="mt-3">
+            <label className={labelCls}>API Key / Token (rahasia)</label>
+            <input type="password" className={inputCls} value={v.wa_api_key ?? ''} onChange={(e) => upd({ wa_api_key: e.target.value })} placeholder="disimpan lokal, tidak dikirim ke APK" />
+          </div>
+        </Section>
+
+        <Section title="Database">
+          <div className="space-y-3">
+            <div>
+              <label className={labelCls}>URL Database</label>
+              <input className={inputCls} value={v.database_url ?? ''} onChange={(e) => upd({ database_url: e.target.value })} placeholder="https://<project>.supabase.co" />
+            </div>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div>
+                <label className={labelCls}>Anon / Public Key</label>
+                <input className={inputCls} value={v.database_anon_key ?? ''} onChange={(e) => upd({ database_anon_key: e.target.value })} />
+              </div>
+              <div>
+                <label className={labelCls}>Service Role Key (rahasia)</label>
+                <input type="password" className={inputCls} value={v.database_service_key ?? ''} onChange={(e) => upd({ database_service_key: e.target.value })} />
+              </div>
+            </div>
+          </div>
+        </Section>
+
+        <Section title="Backup & Restore">
+          <label className="flex items-center gap-2 text-xs font-semibold text-slate-600">
+            <input type="checkbox" checked={v.backup_enabled !== false} onChange={(e) => upd({ backup_enabled: e.target.checked })} /> Aktifkan backup terjadwal
+          </label>
+          <label className="flex items-center gap-2 text-xs font-semibold text-slate-600 mt-2">
+            <input type="checkbox" checked={v.restore_enabled !== false} onChange={(e) => upd({ restore_enabled: e.target.checked })} /> Izinkan restore
+          </label>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mt-3">
+            <div>
+              <label className={labelCls}>Jadwal</label>
+              <select className={inputCls} value={v.backup_frequency ?? 'daily'} onChange={(e) => upd({ backup_frequency: e.target.value })}>
+                <option value="daily">Harian</option>
+                <option value="weekly">Mingguan</option>
+                <option value="monthly">Bulanan</option>
+              </select>
+            </div>
+            <div>
+              <label className={labelCls}>Jam Backup (0-23)</label>
+              <input type="number" min={0} max={23} className={inputCls} value={v.backup_hour ?? 2} onChange={(e) => upd({ backup_hour: Number(e.target.value) })} />
+            </div>
+          </div>
+        </Section>
+
+        <Section title="Cloudflare (Storage / R2)">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div>
+              <label className={labelCls}>Account ID</label>
+              <input className={inputCls} value={v.cloudflare_account_id ?? ''} onChange={(e) => upd({ cloudflare_account_id: e.target.value })} />
+            </div>
+            <div>
+              <label className={labelCls}>Zone ID</label>
+              <input className={inputCls} value={v.cloudflare_zone_id ?? ''} onChange={(e) => upd({ cloudflare_zone_id: e.target.value })} />
+            </div>
+            <div>
+              <label className={labelCls}>R2 Bucket</label>
+              <input className={inputCls} value={v.cloudflare_r2_bucket ?? ''} onChange={(e) => upd({ cloudflare_r2_bucket: e.target.value })} />
+            </div>
+            <div>
+              <label className={labelCls}>R2 Public URL</label>
+              <input className={inputCls} value={v.cloudflare_r2_public_url ?? ''} onChange={(e) => upd({ cloudflare_r2_public_url: e.target.value })} placeholder="https://cdn.domain.com" />
+            </div>
+          </div>
+          <div className="mt-3">
+            <label className={labelCls}>API Token (rahasia)</label>
+            <input type="password" className={inputCls} value={v.cloudflare_api_token ?? ''} onChange={(e) => upd({ cloudflare_api_token: e.target.value })} />
+          </div>
+        </Section>
+
+        <Section title="Catatan API Key / URL Lain">
+          <textarea className={`${inputCls} min-h-[80px]`} value={v.apikey_notes ?? ''} onChange={(e) => upd({ apikey_notes: e.target.value })} placeholder="Catatan konfigurasi tambahan..." />
+        </Section>
+
+        <SaveButton loading={loading} label="Simpan Integrasi Sistem" onClick={async () => {
+          setLoading(true);
+          try { await saveConfig('system', v); show('ok', 'Integrasi sistem disimpan.'); }
+          catch (e: any) { show('err', e.message); } finally { setLoading(false); }
+        }} />
+      </div>
+      <Toast msg={msg} />
+    </Card>
+  );
+}
+
+function Section({ title, children }: { title: string; children: ReactNode }) {
+  return (
+    <div className="rounded-xl border border-slate-200 bg-slate-50/50 p-4">
+      <p className="text-[11px] font-bold text-slate-500 uppercase tracking-wide mb-3">{title}</p>
+      {children}
+    </div>
   );
 }
 
@@ -1147,6 +1294,7 @@ const CONFIG_KEYS: { key: ConfigKey; label: string }[] = [
   { key: 'ppob', label: 'PPOB' },
   { key: 'b2b_restock', label: 'B2B Kulakan' },
   { key: 'fintech_partner', label: 'Modal Usaha' },
+  { key: 'system', label: 'Integrasi Sistem' },
 ];
 
 function OverrideTab() {
@@ -1760,6 +1908,7 @@ export function ControlPlanePage() {
           {activeId === 'ppob' && <PpobTab />}
           {activeId === 'b2b' && <B2bTab />}
           {activeId === 'modal_usaha' && <ModalUsahaTab />}
+          {activeId === 'system' && <SystemIntegrationTab />}
           {activeId === 'override' && <OverrideTab />}
           {activeId === 'announcements' && <AnnouncementsTab />}
           {activeId === 'monitoring' && <MonitoringTab />}

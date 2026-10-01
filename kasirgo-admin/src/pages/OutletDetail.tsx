@@ -9,6 +9,8 @@ import {
   platformOutletsList, platformSetVerification, platformSetPlan,
   platformOutletStaff, platformOutletRemoveStaff, platformOutletDeleteAccount,
   platformOutletReport, type OutletRow, type OutletStaffRow, type OutletReportResult,
+  platformOutletPpobTx, platformOutletPgTx, platformOutletB2bTx,
+  platformOutletInsuranceLeads, platformOutletFintechLeads, type HistoryRow,
 } from '../lib/adminApi';
 import { FeatureToggleList } from '../components/FeatureToggleList';
 
@@ -224,6 +226,14 @@ export function OutletDetailPage() {
         )}
       </Card>
 
+      {/* Riwayat transaksi lintas fitur */}
+      <Card
+        title="Riwayat Transaksi"
+        subtitle="Catatan per transaksi: PPOB, Payment Gateway, B2B, asuransi, modal usaha"
+      >
+        <HistoryPanel outletId={id} />
+      </Card>
+
       {/* Staf */}
       <Card title="Kelola Staf" subtitle="Akun admin & kasir pada outlet ini">
         {staff.length === 0 ? (
@@ -281,6 +291,106 @@ export function OutletDetailPage() {
           <Trash2 className="w-4 h-4" /> Hapus Akun & Outlet
         </button>
       </div>
+    </div>
+  );
+}
+
+function HistoryPanel({ outletId }: { outletId: string }) {
+  type TabKey = 'ppob' | 'pg' | 'b2b' | 'insurance' | 'fintech';
+  const TABS: { key: TabKey; label: string; loader: (id: string, n?: number) => Promise<{ rows: HistoryRow[] }> }[] = [
+    { key: 'ppob', label: 'PPOB', loader: platformOutletPpobTx },
+    { key: 'pg', label: 'Payment Gateway', loader: platformOutletPgTx },
+    { key: 'b2b', label: 'B2B Kulakan', loader: platformOutletB2bTx },
+    { key: 'insurance', label: 'Asuransi', loader: platformOutletInsuranceLeads },
+    { key: 'fintech', label: 'Modal Usaha', loader: platformOutletFintechLeads },
+  ];
+  const [tab, setTab] = useState<TabKey>('ppob');
+  const [rows, setRows] = useState<HistoryRow[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  const load = useCallback(async (t: TabKey) => {
+    setLoading(true);
+    try {
+      const def = TABS.find((x) => x.key === t)!;
+      const res = await def.loader(outletId, 100);
+      setRows(res.rows ?? []);
+    } catch {
+      setRows([]);
+    } finally {
+      setLoading(false);
+    }
+  }, [outletId]);
+
+  useEffect(() => { load(tab); }, [load, tab]);
+
+  const num = (v: unknown) => fmtRp(Number(v ?? 0));
+
+  return (
+    <div>
+      <div className="flex flex-wrap gap-1 bg-slate-100 rounded-xl p-1 mb-4">
+        {TABS.map((t) => (
+          <button
+            key={t.key}
+            onClick={() => setTab(t.key)}
+            className={`px-2.5 py-1.5 rounded-lg text-[11px] font-bold transition ${
+              tab === t.key ? 'bg-white text-sky-700 shadow-sm' : 'text-slate-500'
+            }`}
+          >
+            {t.label}
+          </button>
+        ))}
+      </div>
+      {loading ? (
+        <p className="text-xs text-slate-400 py-4 text-center">Memuat riwayat...</p>
+      ) : rows.length === 0 ? (
+        <p className="text-xs text-slate-400 py-4 text-center">Belum ada transaksi pada kategori ini.</p>
+      ) : (
+        <div className="overflow-x-auto">
+          <table className="w-full text-left text-xs">
+            <thead>
+              <tr className="text-[10px] uppercase text-slate-400 border-b border-slate-100">
+                <th className="py-2 pr-3 font-bold">Detail</th>
+                <th className="py-2 px-3 font-bold">Status</th>
+                <th className="py-2 px-3 font-bold text-right">Nilai</th>
+                <th className="py-2 pl-3 font-bold text-right">Tanggal</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-slate-50">
+              {rows.map((r, i) => {
+                const detail =
+                  (r.product_name as string) ||
+                  (r.distributor as string) ||
+                  (r.partner as string) ||
+                  (r.event as string) ||
+                  (r.ref as string) ||
+                  '-';
+                const sub =
+                  (r.customer_ref as string) ||
+                  (r.tracking_id as string) ||
+                  (r.product_type as string) ||
+                  (r.ref as string) || '';
+                const amount = r.commission ?? r.profit ?? r.amount ?? r.amount_requested;
+                const status = (r.status as string) || '-';
+                return (
+                  <tr key={(r.id as string) ?? i} className="hover:bg-slate-50/60">
+                    <td className="py-2 pr-3">
+                      <p className="font-semibold text-slate-800 truncate max-w-[220px]">{detail}</p>
+                      {sub && <p className="text-[10px] text-slate-400 truncate max-w-[220px]">{sub}</p>}
+                    </td>
+                    <td className="py-2 px-3">
+                      <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-slate-100 text-slate-600">
+                        {status}
+                      </span>
+                    </td>
+                    <td className="py-2 px-3 text-right font-bold text-slate-700">{num(amount)}</td>
+                    <td className="py-2 pl-3 text-right text-slate-400">{fmtDate(r.created_at as string)}</td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
+      )}
     </div>
   );
 }

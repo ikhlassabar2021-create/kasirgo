@@ -264,3 +264,119 @@ export const platformOutletReport = (outletId: string, start: string, end: strin
 
 export const platformMainReport = (days = 30) =>
   rp<MainReportResult>('platform_main_report', { p_days: days })
+
+// ---------------------------------------------------------------------------
+// Phase 13B: riwayat transaksi per outlet (5 sumber)
+// ---------------------------------------------------------------------------
+export type HistoryRow = Record<string, unknown>
+
+const hist = (fn: string, outletId: string, limit = 100) =>
+  rp<{ rows: HistoryRow[] }>(fn, { p_outlet_id: outletId, p_limit: limit })
+
+export const platformOutletPpobTx = (outletId: string, limit = 100) =>
+  hist('platform_outlet_ppob_transactions', outletId, limit)
+export const platformOutletPgTx = (outletId: string, limit = 100) =>
+  hist('platform_outlet_pg_transactions', outletId, limit)
+export const platformOutletB2bTx = (outletId: string, limit = 100) =>
+  hist('platform_outlet_b2b_transactions', outletId, limit)
+export const platformOutletInsuranceLeads = (outletId: string, limit = 100) =>
+  hist('platform_outlet_insurance_leads', outletId, limit)
+export const platformOutletFintechLeads = (outletId: string, limit = 100) =>
+  hist('platform_outlet_fintech_leads', outletId, limit)
+
+// ---------------------------------------------------------------------------
+// Phase 13B: Affiliate (superadmin) + portal
+// ---------------------------------------------------------------------------
+export type AffiliateRow = {
+  id: string
+  name: string
+  email: string | null
+  phone: string | null
+  user_id: string | null
+  referral_code: string
+  commission_percent: number
+  status: string
+  total_earned: number
+  bank_name: string | null
+  bank_account_name: string | null
+  bank_account_number: string | null
+  payout_frequency: string
+  payout_weekday: number | null
+  payout_day_of_month: number | null
+  payout_mode: string
+  min_payout: number
+  commission_total: number
+  unpaid_total: number
+  referral_count: number
+  created_at: string
+}
+
+export type AffiliatesListResult = { total: number; rows: AffiliateRow[] }
+
+export const platformAffiliatesList = (search?: string | null, limit = 100, offset = 0) =>
+  rp<AffiliatesListResult>('platform_affiliates_list', {
+    p_search: search ?? null, p_limit: limit, p_offset: offset,
+  })
+
+export const platformAffiliateUpsert = (payload: {
+  id?: string | null; name?: string; email?: string | null; phone?: string | null
+  user_id?: string | null; commission_percent?: number
+  referral_code?: string | null; status?: string
+}) =>
+  rp<{ id: string; referral_code: string }>('platform_affiliate_upsert', {
+    p_id: payload.id ?? null,
+    p_name: payload.name ?? null,
+    p_email: payload.email ?? null,
+    p_phone: payload.phone ?? null,
+    p_user_id: payload.user_id ?? null,
+    p_commission_percent: payload.commission_percent ?? 10,
+    p_referral_code: payload.referral_code ?? null,
+    p_status: payload.status ?? 'active',
+  })
+
+export const platformAffiliateDelete = (id: string) =>
+  rp<void>('platform_affiliate_delete', { p_id: id })
+
+export const platformAffiliateSetPayout = (payload: {
+  id: string; frequency?: string | null; weekday?: number | null
+  dayOfMonth?: number | null; mode?: string | null; minPayout?: number | null
+  bankName?: string | null; bankAccountName?: string | null; bankAccountNumber?: string | null
+}) =>
+  rp<void>('platform_affiliate_set_payout', {
+    p_id: payload.id,
+    p_frequency: payload.frequency ?? null,
+    p_weekday: payload.weekday ?? null,
+    p_day_of_month: payload.dayOfMonth ?? null,
+    p_mode: payload.mode ?? null,
+    p_min_payout: payload.minPayout ?? null,
+    p_bank_name: payload.bankName ?? null,
+    p_bank_account_name: payload.bankAccountName ?? null,
+    p_bank_account_number: payload.bankAccountNumber ?? null,
+  })
+
+export const platformAffiliatePayoutRun = (affiliateId?: string | null) =>
+  rp<{ paid_affiliates: number; total_amount: number }>('platform_affiliate_payout_run', {
+    p_affiliate_id: affiliateId ?? null,
+  })
+
+export type AffiliateMeResult = {
+  found: boolean
+  affiliate?: AffiliateRow
+  summary?: { commission_total: number; unpaid_total: number; paid_total: number; referral_count: number }
+  closings?: Record<string, unknown>[]
+  payouts?: Record<string, unknown>[]
+}
+
+export const affiliateMe = () => rp<AffiliateMeResult>('affiliate_me')
+
+export const affiliateUpdateProfile = (payload: {
+  name?: string | null; phone?: string | null; bankName?: string | null
+  bankAccountName?: string | null; bankAccountNumber?: string | null
+}) =>
+  rp<void>('affiliate_update_profile', {
+    p_name: payload.name ?? null,
+    p_phone: payload.phone ?? null,
+    p_bank_name: payload.bankName ?? null,
+    p_bank_account_name: payload.bankAccountName ?? null,
+    p_bank_account_number: payload.bankAccountNumber ?? null,
+  })

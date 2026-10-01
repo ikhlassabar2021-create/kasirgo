@@ -9,6 +9,7 @@ import { OutletDetailPage } from './pages/OutletDetail'
 import { FeaturesPage } from './pages/Features'
 import { ControlPlanePage } from './pages/ControlPlane'
 import { AffiliatesPage } from './pages/Affiliates'
+import { AffiliatePortalPage } from './pages/AffiliatePortal'
 import { checkAdminRole } from './lib/adminApi'
 
 // RBAC: halaman per role (superadmin = semua).
@@ -115,6 +116,10 @@ export default function App() {
     <HashRouter>
       <Routes>
         <Route path="/login" element={!session ? <Login /> : <Navigate to="/" replace />} />
+
+        {/* Portal web afiliasi (login mandiri via Supabase Auth). */}
+        <Route path="/affiliate" element={<AffiliatePortalPage />} />
+        <Route path="/affiliate-portal" element={<Navigate to="/affiliate" replace />} />
 
         {/* Protected Dashboard Area */}
         <Route path="/" element={session ? <Layout onLogout={handleLogout} role={role ?? 'superadmin'} /> : <Navigate to="/login" replace />}>

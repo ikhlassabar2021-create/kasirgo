@@ -12,6 +12,7 @@ import '../../providers/outlet_provider.dart';
 import '../../services/supabase_service.dart';
 import '../../utils/formatters.dart';
 import '../../widgets/common/app_drawer.dart';
+import '../../widgets/common/app_close_button.dart';
 import '../../widgets/common/glass_card.dart';
 import '../../widgets/common/logout_button.dart';
 import '../../widgets/common/responsive.dart';
@@ -50,9 +51,16 @@ class _CashierHomeScreenState extends ConsumerState<CashierHomeScreen> {
             borderRadius: BorderRadius.circular(16),
             side: const BorderSide(color: AppTheme.borderColor),
           ),
-          title: Text(
-            'Buka Shift Baru',
-            style: GoogleFonts.inter(fontWeight: FontWeight.w700, color: AppTheme.textPrimary),
+          title: Row(
+            children: [
+              Expanded(
+                child: Text(
+                  'Buka Shift Baru',
+                  style: GoogleFonts.inter(fontWeight: FontWeight.w700, color: AppTheme.textPrimary),
+                ),
+              ),
+              AppCloseButton(onTap: () => Navigator.pop(ctx)),
+            ],
           ),
           content: Column(
             mainAxisSize: MainAxisSize.min,
@@ -72,10 +80,6 @@ class _CashierHomeScreenState extends ConsumerState<CashierHomeScreen> {
             ],
           ),
           actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(ctx),
-              child: const Icon(Icons.close_rounded, size: 20),
-            ),
             ElevatedButton(
               onPressed: () async {
                 final openingCash = double.tryParse(cashController.text) ?? 0.0;
@@ -111,9 +115,16 @@ class _CashierHomeScreenState extends ConsumerState<CashierHomeScreen> {
           borderRadius: BorderRadius.circular(16),
           side: const BorderSide(color: AppTheme.borderColor),
         ),
-        title: Text(
-          'Tutup Shift Kasir',
-          style: GoogleFonts.inter(fontWeight: FontWeight.w700, color: AppTheme.textPrimary),
+        title: Row(
+          children: [
+            Expanded(
+              child: Text(
+                'Tutup Shift Kasir',
+                style: GoogleFonts.inter(fontWeight: FontWeight.w700, color: AppTheme.textPrimary),
+              ),
+            ),
+            AppCloseButton(onTap: () => Navigator.pop(ctx)),
+          ],
         ),
         content: Column(
           mainAxisSize: MainAxisSize.min,
@@ -142,10 +153,6 @@ class _CashierHomeScreenState extends ConsumerState<CashierHomeScreen> {
           ],
         ),
         actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx),
-            child: const Icon(Icons.close_rounded, size: 20),
-          ),
           ElevatedButton(
             style: ElevatedButton.styleFrom(backgroundColor: AppTheme.errorColor),
             onPressed: () async {
@@ -188,9 +195,16 @@ class _CashierHomeScreenState extends ConsumerState<CashierHomeScreen> {
           borderRadius: BorderRadius.circular(16),
           side: const BorderSide(color: AppTheme.borderColor),
         ),
-        title: Text(
-          'Catat Tip Tunai/Kolektif',
-          style: GoogleFonts.inter(fontWeight: FontWeight.w700, color: AppTheme.textPrimary),
+        title: Row(
+          children: [
+            Expanded(
+              child: Text(
+                'Catat Tip Tunai/Kolektif',
+                style: GoogleFonts.inter(fontWeight: FontWeight.w700, color: AppTheme.textPrimary),
+              ),
+            ),
+            AppCloseButton(onTap: () => Navigator.pop(ctx)),
+          ],
         ),
         content: TextField(
           controller: tipController,
@@ -205,10 +219,6 @@ class _CashierHomeScreenState extends ConsumerState<CashierHomeScreen> {
           ),
         ),
         actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx),
-            child: const Icon(Icons.close_rounded, size: 20),
-          ),
           ElevatedButton(
             onPressed: () async {
               final amount = double.tryParse(tipController.text) ?? 0.0;

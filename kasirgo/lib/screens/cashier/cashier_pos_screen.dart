@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:google_fonts/google_fonts.dart';
 import '../../widgets/common/centennial_background.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:supabase_flutter/supabase_flutter.dart' as sb;
@@ -55,21 +56,41 @@ class _CashierPosScreenState extends ConsumerState<CashierPosScreen> {
           callback: (payload) {
             final ch = payload.newRecord['channel']?.toString();
             if (ch != null && ch.isNotEmpty && ch != 'dine_in') return;
-            _refreshIncomingCount();
+            _refreshIncomingCount(announce: true);
           },
         )
         .subscribe();
   }
 
-  Future<void> _refreshIncomingCount() async {
+  Future<void> _refreshIncomingCount({bool announce = false}) async {
     final outletId = ref.read(currentUserProvider)?.outletId;
     if (outletId == null) return;
     final list = await SupabaseService().getDineInOrders(outletId, limit: 40);
     if (!mounted) return;
+    final next = list.where((t) => t.orderStatus != 'selesai').length;
+    final increased = next > _incomingCount;
     setState(() {
-      _incomingCount =
-          list.where((t) => t.orderStatus != 'selesai').length;
+      _incomingCount = next;
     });
+    if (increased && announce && mounted) {
+      final latest = list.firstWhere(
+        (t) => t.orderStatus != 'selesai',
+        orElse: () => list.first,
+      );
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Pesanan masuk: ${latest.notes ?? "Dine-in"}'),
+          backgroundColor: AppTheme.primaryColor,
+          behavior: SnackBarBehavior.floating,
+          duration: const Duration(seconds: 3),
+          action: SnackBarAction(
+            label: 'Lihat',
+            textColor: Colors.white,
+            onPressed: _openIncomingOrders,
+          ),
+        ),
+      );
+    }
   }
 
   void _openIncomingOrders() async {
@@ -333,6 +354,39 @@ class _CashierPosScreenState extends ConsumerState<CashierPosScreen> {
             children: [
               Column(
                 children: [
+                  if (_incomingCount > 0)
+                    InkWell(
+                      onTap: _openIncomingOrders,
+                      child: Container(
+                        margin: const EdgeInsets.fromLTRB(12, 8, 12, 0),
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 14, vertical: 12),
+                        decoration: BoxDecoration(
+                          color: AppTheme.errorColor.withValues(alpha: 0.10),
+                          borderRadius:
+                              BorderRadius.circular(AppTheme.radiusMedium),
+                          border: Border.all(color: AppTheme.errorColor),
+                        ),
+                        child: Row(
+                          children: [
+                            const Icon(Icons.notifications_active_rounded,
+                                color: AppTheme.errorColor, size: 20),
+                            const SizedBox(width: 10),
+                            Expanded(
+                              child: Text(
+                                '$_incomingCount pesanan pelanggan masuk - ketuk untuk lihat',
+                                style: GoogleFonts.inter(
+                                    fontSize: 12.5,
+                                    fontWeight: FontWeight.w700,
+                                    color: AppTheme.errorColor),
+                              ),
+                            ),
+                            const Icon(Icons.chevron_right_rounded,
+                                color: AppTheme.errorColor),
+                          ],
+                        ),
+                      ),
+                    ),
                   Padding(
                     padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                     child: TextField(
