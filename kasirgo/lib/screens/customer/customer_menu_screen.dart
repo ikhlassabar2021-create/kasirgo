@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:mobile_scanner/mobile_scanner.dart';
 import '../../config/app_theme.dart';
+import '../../providers/module_provider.dart';
 import '../../services/supabase_service.dart';
 import 'customer_order_screen.dart';
 
@@ -64,6 +65,19 @@ class _CustomerMenuScreenState extends ConsumerState<CustomerMenuScreen> {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
           content: Text('Outlet tidak ditemukan. Pastikan QR benar atau minta kode ke kasir.'),
+          backgroundColor: AppTheme.errorColor,
+        ),
+      );
+      return;
+    }
+
+    // QR Meja / self-order hanya untuk usaha makan-minum (cafe/warteg).
+    // Warung/kelontong/retail/gerobak tidak punya layanan meja.
+    if (!ModuleConfig.isFoodBusiness(outlet.type)) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text(
+              'Outlet ini tidak menyediakan pesan-antar meja. Silakan pesan langsung di kasir.'),
           backgroundColor: AppTheme.errorColor,
         ),
       );

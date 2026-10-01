@@ -63,6 +63,7 @@ type TabId =
   | 'ppob'
   | 'b2b'
   | 'modal_usaha'
+  | 'affiliate'
   | 'system'
   | 'report'
   | 'kyc'
@@ -82,6 +83,7 @@ const TABS: { id: TabId; name: string; icon: any }[] = [
   { id: 'ppob', name: 'PPOB', icon: Wallet },
   { id: 'b2b', name: 'B2B Kulakan', icon: Truck },
   { id: 'modal_usaha', name: 'Modal Usaha', icon: Store },
+  { id: 'affiliate', name: 'Afiliasi', icon: Users },
   { id: 'system', name: 'Integrasi Sistem', icon: SlidersHorizontal },
   { id: 'report', name: 'Laporan', icon: ScrollText },
   { id: 'kyc', name: 'KYC', icon: ShieldCheck },
@@ -1114,6 +1116,84 @@ function ModalUsahaTab() {
   );
 }
 
+// Afiliasi: pendaftaran mandiri (otomatis / persetujuan manual) + komisi default.
+function AffiliateTab() {
+  const [v, setV] = useState<any>({ require_approval: false, default_commission: 10 });
+  const [loading, setLoading] = useState(false);
+  const { msg, show } = useToast();
+  useEffect(() => {
+    loadConfig('affiliate').then((d) => d && setV((prev: any) => ({ ...prev, ...d }))).catch(() => {});
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+  return (
+    <Card
+      title="Program Afiliasi"
+      subtitle="Pendaftaran afiliasi mandiri dari Portal Afiliasi. Atur mode persetujuan & komisi default."
+    >
+      <div className="max-w-[760px] space-y-4">
+        <div className="rounded-xl border border-slate-200 bg-slate-50/60 p-4 space-y-3">
+          <p className="text-[11px] font-bold text-slate-500 uppercase tracking-wide">Mode Pendaftaran</p>
+          <label className="flex items-start gap-2.5 text-xs font-semibold text-slate-700">
+            <input
+              type="radio"
+              className="mt-0.5"
+              checked={v.require_approval === true}
+              onChange={() => setV({ ...v, require_approval: true })}
+            />
+            <span>
+              Persetujuan manual
+              <span className="block text-[10px] font-normal text-slate-400">
+                Pendaftar berstatus pending hingga superadmin menyetujui di halaman Afiliasi.
+              </span>
+            </span>
+          </label>
+          <label className="flex items-start gap-2.5 text-xs font-semibold text-slate-700">
+            <input
+              type="radio"
+              className="mt-0.5"
+              checked={v.require_approval !== true}
+              onChange={() => setV({ ...v, require_approval: false })}
+            />
+            <span>
+              Otomatis (default)
+              <span className="block text-[10px] font-normal text-slate-400">
+                Pendaftar langsung aktif dan bisa mereferensikan seketika.
+              </span>
+            </span>
+          </label>
+        </div>
+        <div>
+          <label className={labelCls}>Komisi Default (%)</label>
+          <input
+            type="number"
+            step="0.1"
+            className={inputCls}
+            value={v.default_commission ?? 10}
+            onChange={(e) => setV({ ...v, default_commission: Number(e.target.value) })}
+          />
+          <p className="text-[10px] text-slate-400 mt-1">Diberikan ke afiliasi baru saat mendaftar mandiri.</p>
+        </div>
+        <SaveButton
+          loading={loading}
+          label="Simpan Program Afiliasi"
+          onClick={async () => {
+            setLoading(true);
+            try {
+              await saveConfig('affiliate', v);
+              show('ok', 'Konfigurasi afiliasi disimpan.');
+            } catch (e: any) {
+              show('err', e.message);
+            } finally {
+              setLoading(false);
+            }
+          }}
+        />
+      </div>
+      <Toast msg={msg} />
+    </Card>
+  );
+}
+
 // Integrasi sistem: WA, Database, Backup/Restore + jadwal, Cloudflare, API key/URL.
 function SystemIntegrationTab() {
   const [v, setV] = useState<any>({
@@ -1908,6 +1988,7 @@ export function ControlPlanePage() {
           {activeId === 'ppob' && <PpobTab />}
           {activeId === 'b2b' && <B2bTab />}
           {activeId === 'modal_usaha' && <ModalUsahaTab />}
+          {activeId === 'affiliate' && <AffiliateTab />}
           {activeId === 'system' && <SystemIntegrationTab />}
           {activeId === 'override' && <OverrideTab />}
           {activeId === 'announcements' && <AnnouncementsTab />}

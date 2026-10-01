@@ -380,3 +380,26 @@ export const affiliateUpdateProfile = (payload: {
     p_bank_account_name: payload.bankAccountName ?? null,
     p_bank_account_number: payload.bankAccountNumber ?? null,
   })
+
+// Phase 13C: pendaftaran afiliasi mandiri + persetujuan superadmin.
+export type AffiliateRegisterResult = {
+  ok: boolean
+  id: string
+  referral_code: string
+  status: string
+  commission_percent: number
+}
+
+export const affiliateRegister = (payload: {
+  name?: string | null; phone?: string | null; referralCode?: string | null
+}) =>
+  rp<AffiliateRegisterResult>('affiliate_register', {
+    p_name: payload.name ?? null,
+    p_phone: payload.phone ?? null,
+    p_referral_code: payload.referralCode ?? null,
+  })
+
+export const platformAffiliateSetStatus = (id: string, status: string) =>
+  rp<{ ok: boolean; id: string; status: string; referral_code: string }>(
+    'platform_affiliate_set_status', { p_id: id, p_status: status },
+  )

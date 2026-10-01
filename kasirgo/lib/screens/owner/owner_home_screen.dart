@@ -916,10 +916,13 @@ class _OwnerHomeScreenState extends ConsumerState<OwnerHomeScreen> {
     }
 
 
-    // KDS hanya untuk usaha makanan/minuman (cafe/warteg/restoran).
+    // KDS & QR Meja hanya untuk usaha makanan/minuman (cafe/warteg/restoran).
+    // Warung/kelontong/retail/gerobak bukan usaha makan -> QR Meja & KDS off
+    // walau ada override module_tableManagement di DB.
     final outletType =
         ModuleConfig.normalizeType(ref.watch(outletTypeProvider(outletId)));
-    final kdsAllowed = outletType == 'cafe' || outletType == 'warteg';
+    final isFoodBusiness = outletType == 'cafe' || outletType == 'warteg';
+    final kdsAllowed = isFoodBusiness;
 
     if (kdsAllowed && modules.contains(BusinessModule.kitchenDisplay)) {
       quickActionItems.add(
@@ -968,7 +971,7 @@ class _OwnerHomeScreenState extends ConsumerState<OwnerHomeScreen> {
       ),
     );
 
-    if (modules.contains(BusinessModule.tableManagement)) {
+    if (isFoodBusiness && modules.contains(BusinessModule.tableManagement)) {
       quickActionItems.add(
         _ModuleCard(
           icon: Icons.qr_code_scanner_rounded,

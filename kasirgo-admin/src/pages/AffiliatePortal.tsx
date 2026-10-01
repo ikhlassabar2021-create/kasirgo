@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { supabase } from '../config/supabase';
-import { affiliateMe, affiliateUpdateProfile } from '../lib/adminApi';
+import { affiliateMe, affiliateUpdateProfile, affiliateRegister } from '../lib/adminApi';
 import type { AffiliateMeResult } from '../lib/adminApi';
 import { Wallet, LogOut, Loader2, Save, TrendingUp, DollarSign, Users, Banknote } from 'lucide-react';
 
@@ -10,13 +10,20 @@ const fmtRp = (v: number) =>
 const fmtDate = (v?: string) =>
   v ? new Date(v).toLocaleDateString('id-ID', { day: '2-digit', month: 'short', year: 'numeric' }) : '-';
 
+type AuthMode = 'login' | 'register';
+
 export function AffiliatePortalPage() {
   const [session, setSession] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [data, setData] = useState<AffiliateMeResult | null>(null);
+  const [mode, setMode] = useState<AuthMode>('login');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [regName, setRegName] = useState('');
+  const [regPhone, setRegPhone] = useState('');
+  const [regReferral, setRegReferral] = useState('');
   const [authErr, setAuthErr] = useState('');
+  const [authMsg, setAuthMsg] = useState('');
   const [signingIn, setSigningIn] = useState(false);
   const [saving, setSaving] = useState(false);
   const [toast, setToast] = useState('');
@@ -71,6 +78,51 @@ export function AffiliatePortalPage() {
     }
   };
 
+  const register = async () => {
+    setAuthErr('');
+    setAuthMsg('');
+    if (!email.trim() || password.length < 6) {
+      setAuthErr('Email wajib diisi dan kata sandi minimal 6 karakter.');
+      return;
+    }
+    setSigningIn(true);
+    try {
+      // signUp dengan metadata signup_kind=affiliate -> trigger handle_new_user
+      // membuat baris affiliates tanpa membuat outlet/user_roles.
+      const { data: su, error } = await supabase.auth.signUp({
+        email: email.trim(),
+        password,
+        options: {
+          data: {
+            signup_kind: 'affiliate',
+            full_name: regName.trim(),
+            phone: regPhone.trim(),
+          },
+        },
+      });
+      if (error) throw error;
+
+      // Bila langsung dapat sesi (konfirmasi email OFF), pastikan baris afiliasi
+      // terbentuk (idempotent) dan catat kode referral bila diisi.
+      if (su.session) {
+        try {
+          await affiliateRegister({
+            name: regName.trim() || null,
+            phone: regPhone.trim() || null,
+            referralCode: regReferral.trim() || null,
+          });
+        } catch { /* trigger sudah membuat baris; abaikan bila RPC gagal */ }
+      } else {
+        setAuthMsg('Pendaftaran berhasil. Cek email untuk konfirmasi, lalu masuk kembali.');
+        setMode('login');
+      }
+    } catch (e: any) {
+      setAuthErr(e.message ?? 'Gagal mendaftar.');
+    } finally {
+      setSigningIn(false);
+    }
+  };
+
   const save = async () => {
     setSaving(true);
     try {
@@ -112,30 +164,95 @@ export function AffiliatePortalPage() {
             </div>
           </div>
           <div className="space-y-3">
-            <input
-              type="email"
-              placeholder="Email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              className={inputCls}
-            />
-            <input
-              type="password"
-              placeholder="Kata sandi"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              onKeyDown={(e) => e.key === 'Enter' && signIn()}
-              className={inputCls}
-            />
-            {authErr && <p className="text-[11px] text-rose-600">{authErr}</p>}
-            <button
-              onClick={signIn}
-              disabled={signingIn}
-              className="w-full py-2.5 rounded-xl text-sm font-semibold bg-gradient-to-r from-cyan-500 to-sky-600 text-white shadow-md shadow-sky-500/25 disabled:opacity-60 flex items-center justify-center gap-2"
-            >
-              {signingIn && <Loader2 className="w-4 h-4 animate-spin" />}
-              Masuk
-            </button>
+            {authMsg && <p className="text-[11px] text-emerald-600">{authMsg}</p>}
+
+            {mode === 'login' ? (
+              <>
+                <input
+                  type="email"
+                  placeholder="Email"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  className={inputCls}
+                />
+                <input
+                  type="password"
+                  placeholder="Kata sandi"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  onKeyDown={(e) => e.key === 'Enter' && signIn()}
+                  className={inputCls}
+                />
+                {authErr && <p className="text-[11px] text-rose-600">{authErr}</p>}
+                <button
+                  onClick={signIn}
+                  disabled={signingIn}
+                  className="w-full py-2.5 rounded-xl text-sm font-semibold bg-gradient-to-r from-cyan-500 to-sky-600 text-white shadow-md shadow-sky-500/25 disabled:opacity-60 flex items-center justify-center gap-2"
+                >
+                  {signingIn && <Loader2 className="w-4 h-4 animate-spin" />}
+                  Masuk
+                </button>
+                <p className="text-[11px] text-slate-500 text-center pt-1">
+                  Belum punya akun afiliasi?{' '}
+                  <button onClick={() => { setMode('register'); setAuthErr(''); setAuthMsg(''); }} className="text-sky-700 font-semibold hover:underline">
+                    Daftar sekarang
+                  </button>
+                </p>
+              </>
+            ) : (
+              <>
+                <input
+                  type="text"
+                  placeholder="Nama lengkap"
+                  value={regName}
+                  onChange={(e) => setRegName(e.target.value)}
+                  className={inputCls}
+                />
+                <input
+                  type="email"
+                  placeholder="Email"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  className={inputCls}
+                />
+                <input
+                  type="password"
+                  placeholder="Kata sandi (min. 6 karakter)"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  className={inputCls}
+                />
+                <input
+                  type="tel"
+                  placeholder="No. HP / WA (opsional)"
+                  value={regPhone}
+                  onChange={(e) => setRegPhone(e.target.value)}
+                  className={inputCls}
+                />
+                <input
+                  type="text"
+                  placeholder="Kode afiliasi pengenal (opsional)"
+                  value={regReferral}
+                  onChange={(e) => setRegReferral(e.target.value)}
+                  className={inputCls}
+                />
+                {authErr && <p className="text-[11px] text-rose-600">{authErr}</p>}
+                <button
+                  onClick={register}
+                  disabled={signingIn}
+                  className="w-full py-2.5 rounded-xl text-sm font-semibold bg-gradient-to-r from-cyan-500 to-sky-600 text-white shadow-md shadow-sky-500/25 disabled:opacity-60 flex items-center justify-center gap-2"
+                >
+                  {signingIn && <Loader2 className="w-4 h-4 animate-spin" />}
+                  Daftar
+                </button>
+                <p className="text-[11px] text-slate-500 text-center pt-1">
+                  Sudah punya akun?{' '}
+                  <button onClick={() => { setMode('login'); setAuthErr(''); setAuthMsg(''); }} className="text-sky-700 font-semibold hover:underline">
+                    Masuk di sini
+                  </button>
+                </p>
+              </>
+            )}
           </div>
         </div>
       </div>
@@ -166,6 +283,14 @@ export function AffiliatePortalPage() {
         {!a && (
           <div className="bg-amber-50 border border-amber-200 text-amber-700 rounded-2xl p-4 text-xs">
             Akun ini belum terdaftar sebagai afiliasi. Hubungi superadmin KasirGo untuk dihubungkan.
+          </div>
+        )}
+
+        {a && a.status !== 'active' && (
+          <div className="bg-amber-50 border border-amber-200 text-amber-700 rounded-2xl p-4 text-xs">
+            {a.status === 'pending'
+              ? 'Pendaftaran Anda sedang menunggu persetujuan superadmin KasirGo. Anda akan dapat mulai mereferensikan setelah disetujui.'
+              : `Status akun afiliasi Anda: ${a.status}. Hubungi superadmin KasirGo untuk informasi lebih lanjut.`}
           </div>
         )}
 

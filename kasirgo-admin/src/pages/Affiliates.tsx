@@ -6,6 +6,7 @@ import {
   platformAffiliateDelete,
   platformAffiliateSetPayout,
   platformAffiliatePayoutRun,
+  platformAffiliateSetStatus,
 } from '../lib/adminApi';
 import type { AffiliateRow } from '../lib/adminApi';
 
@@ -61,9 +62,10 @@ export function AffiliatesPage() {
       acc.unpaid += Number(r.unpaid_total ?? 0);
       acc.referrals += Number(r.referral_count ?? 0);
       if (r.status === 'active') acc.active += 1;
+      if (r.status === 'pending') acc.pending += 1;
       return acc;
     },
-    { earned: 0, unpaid: 0, referrals: 0, active: 0 },
+    { earned: 0, unpaid: 0, referrals: 0, active: 0, pending: 0 },
   );
   const avgCommission = rows.length
     ? rows.reduce((s, r) => s + Number(r.commission_percent ?? 0), 0) / rows.length
@@ -99,6 +101,16 @@ export function AffiliatesPage() {
     try {
       await platformAffiliateDelete(a.id);
       flash('ok', 'Afiliasi dihapus.');
+      load(search);
+    } catch (e: any) {
+      flash('err', e.message);
+    }
+  };
+
+  const setStatus = async (a: AffiliateRow, status: string) => {
+    try {
+      await platformAffiliateSetStatus(a.id, status);
+      flash('ok', status === 'active' ? `Afiliasi "${a.name}" disetujui.` : `Status "${a.name}" diubah ke ${status}.`);
       load(search);
     } catch (e: any) {
       flash('err', e.message);
@@ -149,6 +161,7 @@ export function AffiliatesPage() {
         {[
           { label: 'Total Afiliasi', value: rows.length, icon: UserCheck, color: 'blue' },
           { label: 'Afiliasi Aktif', value: totals.active, icon: TrendingUp, color: 'green' },
+          { label: 'Menunggu Persetujuan', value: totals.pending, icon: Percent, color: 'orange' },
           { label: 'Komisi Terkumpul', value: fmtRp(totals.earned), icon: DollarSign, color: 'purple' },
           { label: 'Rata-rata Komisi', value: `${avgCommission.toFixed(1)}%`, icon: Percent, color: 'orange' },
         ].map((stat, index) => {
@@ -237,6 +250,24 @@ export function AffiliatesPage() {
                   </td>
                   <td className="px-4 sm:px-6 py-4 text-right">
                     <div className="flex items-center justify-end gap-1 sm:gap-2">
+                      {a.status === 'pending' && (
+                        <button
+                          onClick={() => setStatus(a, 'active')}
+                          className="px-2 py-1 rounded-lg bg-emerald-50 text-emerald-700 text-[10px] font-bold hover:bg-emerald-100"
+                          title="Setujui pendaftaran"
+                        >
+                          Setujui
+                        </button>
+                      )}
+                      {a.status === 'active' && (
+                        <button
+                          onClick={() => setStatus(a, 'suspended')}
+                          className="px-2 py-1 rounded-lg bg-amber-50 text-amber-700 text-[10px] font-bold hover:bg-amber-100"
+                          title="Tangguhkan"
+                        >
+                          Tangguhkan
+                        </button>
+                      )}
                       <button
                         onClick={() => { navigator.clipboard?.writeText(a.referral_code); flash('ok', `Kode ${a.referral_code} disalin.`); }}
                         className="p-1.5 sm:p-2 hover:bg-slate-100 rounded-lg transition-colors text-slate-600"

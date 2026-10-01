@@ -270,12 +270,15 @@ class _CashierHomeScreenState extends ConsumerState<CashierHomeScreen> {
       navItems: const [
         AppNavItem(icon: Icons.dashboard_rounded, label: 'Home Kasir'),
         AppNavItem(icon: Icons.point_of_sale_rounded, label: 'POS'),
+        AppNavItem(icon: Icons.insights_rounded, label: 'Laporan'),
       ],
       currentIndex: _bottomNavIndex,
       onIndexChanged: (index) {
         setState(() => _bottomNavIndex = index);
         if (index == 1) {
           context.push('/cashier/pos');
+        } else if (index == 2) {
+          context.push('/cashier/reports');
         }
       },
       headerTitle: 'Home Kasir',
@@ -322,6 +325,13 @@ class _CashierHomeScreenState extends ConsumerState<CashierHomeScreen> {
                     title: 'QRIS Manual',
                     subtitle: 'Statis / Dinamis',
                     onTap: () => context.push('/cashier/pos'),
+                  ),
+                  _QuickActionCard(
+                    icon: Icons.insights_rounded,
+                    color: AppTheme.accentColor,
+                    title: 'Laporan Penjualan',
+                    subtitle: 'Hari ini / shift aktif',
+                    onTap: () => context.push('/cashier/reports'),
                   ),
                   _QuickActionCard(
                     icon: Icons.volunteer_activism_rounded,

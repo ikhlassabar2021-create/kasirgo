@@ -1639,7 +1639,8 @@ class SupabaseService {
   }
 
   /// Cari outlet publik (id/nama) untuk pelanggan anonim via RPC.
-  Future<({String id, String name})?> findOutlet(String codeOrName) async {
+  Future<({String id, String name, String type})?> findOutlet(
+      String codeOrName) async {
     final code = codeOrName.trim();
     if (code.isEmpty) return null;
     try {
@@ -1650,7 +1651,11 @@ class SupabaseService {
         final row = Map<String, dynamic>.from(list.first as Map);
         final id = row['id']?.toString() ?? '';
         if (id.isNotEmpty) {
-          return (id: id, name: row['name']?.toString() ?? '');
+          return (
+            id: id,
+            name: row['name']?.toString() ?? '',
+            type: row['type']?.toString() ?? '',
+          );
         }
       }
     } catch (_) {}
@@ -1659,7 +1664,11 @@ class SupabaseService {
       final byId =
           await _client.from('outlets').select().eq('id', code).maybeSingle();
       if (byId != null) {
-        return (id: byId['id'].toString(), name: byId['name']?.toString() ?? '');
+        return (
+          id: byId['id'].toString(),
+          name: byId['name']?.toString() ?? '',
+          type: (byId['type'] ?? byId['outlet_type'])?.toString() ?? '',
+        );
       }
     } catch (_) {}
     return null;

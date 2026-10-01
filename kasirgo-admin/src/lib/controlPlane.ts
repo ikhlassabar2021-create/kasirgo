@@ -11,6 +11,7 @@ export type ConfigKey =
   | 'ppob'
   | 'b2b_restock'
   | 'fintech_partner'
+  | 'affiliate'
   | 'system'
 
 export interface PlatformConfig {

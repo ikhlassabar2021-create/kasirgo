@@ -17,6 +17,7 @@ import 'screens/owner/guide_screen.dart';
 import 'screens/admin/admin_home_screen.dart';
 import 'screens/cashier/cashier_home_screen.dart';
 import 'screens/cashier/cashier_pos_screen.dart';
+import 'screens/cashier/cashier_report_screen.dart';
 import 'screens/customer/customer_menu_screen.dart';
 import 'services/local_db_service.dart';
 import 'services/sync_service.dart';
@@ -95,6 +96,10 @@ final _router = GoRouter(
     GoRoute(
       path: '/cashier/pos',
       builder: (context, state) => const KycGate(child: CashierPosScreen()),
+    ),
+    GoRoute(
+      path: '/cashier/reports',
+      builder: (context, state) => const KycGate(child: CashierReportScreen()),
     ),
     GoRoute(
       path: '/customer',

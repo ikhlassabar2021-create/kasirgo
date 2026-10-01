@@ -143,7 +143,6 @@ export function UserDetailPage() {
             <Row label="Pembayaran" value={sub?.status === 'active' ? `Aktif (${fmtRp(sub.amount)})` : sub?.status === 'trial' ? 'Trial' : 'Gratis'} />
             <Row label="Ad-free" value={data.entitlements ? String((data.entitlements as { ad_free?: boolean }).ad_free ?? false) : 'false'} />
             <Row label="Lead fintech" value={String(data.leads?.fintech ?? 0)} />
-            <Row label="Lead asuransi" value={String(data.leads?.insurance ?? 0)} />
             <Row label="Restock B2B" value={String(data.leads?.restock ?? 0)} />
           </div>
         </div>

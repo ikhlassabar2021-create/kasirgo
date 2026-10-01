@@ -10,7 +10,7 @@ import {
   platformOutletStaff, platformOutletRemoveStaff, platformOutletDeleteAccount,
   platformOutletReport, type OutletRow, type OutletStaffRow, type OutletReportResult,
   platformOutletPpobTx, platformOutletPgTx, platformOutletB2bTx,
-  platformOutletInsuranceLeads, platformOutletFintechLeads, type HistoryRow,
+  platformOutletFintechLeads, type HistoryRow,
 } from '../lib/adminApi';
 import { FeatureToggleList } from '../components/FeatureToggleList';
 
@@ -185,7 +185,7 @@ export function OutletDetailPage() {
       {/* Laporan per outlet */}
       <Card
         title="Laporan Outlet"
-        subtitle="Omset & untung dari POS, PPOB, Payment Gateway, B2B, asuransi, modal usaha"
+        subtitle="Omset & untung dari POS, PPOB, Payment Gateway, B2B, modal usaha"
         action={
           <div className="flex gap-1 bg-slate-100 rounded-xl p-1">
             {([1, 7, 30, 90] as Period[]).map((p) => (
@@ -218,7 +218,6 @@ export function OutletDetailPage() {
               <Stat label="PPOB Untung" value={fmtRp(report.ppob.untung)} tone="text-emerald-600" />
               <Stat label="PG Untung" value={fmtRp(report.pg.untung)} tone="text-emerald-600" />
               <Stat label="B2B Komisi" value={fmtRp(report.b2b.komisi)} tone="text-emerald-600" />
-              <Stat label="Asuransi Komisi" value={fmtRp(report.insurance.komisi)} tone="text-amber-600" />
               <Stat label="Modal Usaha" value={fmtRp(report.fintech.pengajuan)} tone="text-indigo-600" />
               <Stat label="Total Transaksi" value={String(report.count_total)} tone="text-slate-500" />
             </div>
@@ -229,7 +228,7 @@ export function OutletDetailPage() {
       {/* Riwayat transaksi lintas fitur */}
       <Card
         title="Riwayat Transaksi"
-        subtitle="Catatan per transaksi: PPOB, Payment Gateway, B2B, asuransi, modal usaha"
+        subtitle="Catatan per transaksi: PPOB, Payment Gateway, B2B, modal usaha"
       >
         <HistoryPanel outletId={id} />
       </Card>
@@ -296,12 +295,11 @@ export function OutletDetailPage() {
 }
 
 function HistoryPanel({ outletId }: { outletId: string }) {
-  type TabKey = 'ppob' | 'pg' | 'b2b' | 'insurance' | 'fintech';
+  type TabKey = 'ppob' | 'pg' | 'b2b' | 'fintech';
   const TABS: { key: TabKey; label: string; loader: (id: string, n?: number) => Promise<{ rows: HistoryRow[] }> }[] = [
     { key: 'ppob', label: 'PPOB', loader: platformOutletPpobTx },
     { key: 'pg', label: 'Payment Gateway', loader: platformOutletPgTx },
     { key: 'b2b', label: 'B2B Kulakan', loader: platformOutletB2bTx },
-    { key: 'insurance', label: 'Asuransi', loader: platformOutletInsuranceLeads },
     { key: 'fintech', label: 'Modal Usaha', loader: platformOutletFintechLeads },
   ];
   const [tab, setTab] = useState<TabKey>('ppob');
@@ -395,6 +393,8 @@ function HistoryPanel({ outletId }: { outletId: string }) {
   );
 }
 
+const CADENCE_LABEL: Record<string, string> = { daily: 'Harian', weekly: 'Mingguan', monthly: 'Bulanan' };
+
 function BackupPanel({
   outletId, onFlash,
 }: { outletId: string; onFlash: (t: 'ok' | 'err', s: string) => void }) {
@@ -464,12 +464,23 @@ function BackupPanel({
         >
           <Download className="w-4 h-4" /> Backup Cepat
         </button>
+        <select
+          value={sched.cadence}
+          onChange={(e) => setSched((s) => ({ ...s, cadence: e.target.value }))}
+          disabled={busy || sched.enabled}
+          className="px-2.5 py-2 rounded-xl border border-slate-200 bg-white text-xs font-bold text-slate-600 disabled:opacity-50"
+        >
+          <option value="daily">Harian</option>
+          <option value="weekly">Mingguan</option>
+          <option value="monthly">Bulanan</option>
+        </select>
         <button
           disabled={busy}
           onClick={setSchedule}
           className="flex items-center gap-1.5 px-3 py-2 rounded-xl border border-slate-200 text-slate-600 hover:bg-slate-50 text-xs font-bold disabled:opacity-50"
         >
-          <Clock className="w-4 h-4" /> {sched.enabled ? 'Matikan Jadwal' : 'Jadwalkan Harian'}
+          <Clock className="w-4 h-4" />{' '}
+          {sched.enabled ? 'Matikan Jadwal' : `Jadwalkan ${CADENCE_LABEL[sched.cadence] ?? 'Harian'}`}
         </button>
       </div>
       {runs.length === 0 ? (

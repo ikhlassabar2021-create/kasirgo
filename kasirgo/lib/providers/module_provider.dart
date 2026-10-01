@@ -174,6 +174,13 @@ class ModuleConfig {
   static bool isEnabled(String outletType, BusinessModule module) {
     return getModules(outletType).contains(module);
   }
+
+  /// Usaha makanan/minuman (cafe/warteg/resto) yang butuh QR Meja & KDS.
+  /// Warung/kelontong/retail/gerobak adalah usaha non-makan.
+  static bool isFoodBusiness(String outletType) {
+    final t = normalizeType(outletType);
+    return t == 'cafe' || t == 'warteg';
+  }
 }
 
 /// Flag `module_*` dari feature_flags (dimuat sekali, offline fallback default).

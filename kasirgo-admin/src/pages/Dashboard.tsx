@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import {
-  BarChart3, Users, Store, Receipt, TrendingUp, AlertTriangle,
+  BarChart3, Users, Store, TrendingUp, AlertTriangle,
   HeartHandshake, RefreshCw,
 } from 'lucide-react';
 import {
@@ -17,7 +17,6 @@ type SupportersSummary = {
 };
 type PartnerSummary = {
   fintech: { leads_total: number; leads_apply: number; leads_approved: number; amount_requested: number };
-  insurance: { leads_total: number; leads_approved: number; commission: number; policies_active: number };
 };
 
 export function Dashboard() {
@@ -205,7 +204,7 @@ export function Dashboard() {
 
         <section className="bg-white rounded-2xl border border-slate-200/80 shadow-sm p-4 sm:p-5">
           <h2 className="text-sm font-bold text-slate-900 mb-1">Partner Leads</h2>
-          <p className="text-[11px] text-slate-500 mb-4">Modal usaha & asuransi mikro</p>
+          <p className="text-[11px] text-slate-500 mb-4">Modal usaha</p>
           <div className="space-y-2">
             <Link to="/users" className="flex items-center justify-between rounded-xl border border-slate-100 bg-slate-50/60 p-3 hover:bg-sky-50/60 transition">
               <div className="flex items-center gap-2.5">
@@ -218,18 +217,6 @@ export function Dashboard() {
                 </div>
               </div>
               <span className="text-xs font-extrabold text-indigo-700">{fmtRp(partners?.fintech?.amount_requested ?? 0)}</span>
-            </Link>
-            <Link to="/users" className="flex items-center justify-between rounded-xl border border-slate-100 bg-slate-50/60 p-3 hover:bg-sky-50/60 transition">
-              <div className="flex items-center gap-2.5">
-                <Receipt className="w-4 h-4 text-amber-600" />
-                <div>
-                  <p className="text-xs font-bold text-slate-800">Asuransi Mikro</p>
-                  <p className="text-[10px] text-slate-500">
-                    {partners?.insurance?.leads_total ?? 0} lead &bull; {partners?.insurance?.policies_active ?? 0} polis aktif
-                  </p>
-                </div>
-              </div>
-              <span className="text-xs font-extrabold text-amber-700">{fmtRp(partners?.insurance?.commission ?? 0)}</span>
             </Link>
           </div>
         </section>

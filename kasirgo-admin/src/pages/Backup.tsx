@@ -192,6 +192,7 @@ export function BackupPage() {
           >
             <option value="daily">Harian</option>
             <option value="weekly">Mingguan</option>
+            <option value="monthly">Bulanan</option>
           </select>
           <button
             onClick={() => selected && setSchedule(selected, true, schedules[selected]?.cadence ?? 'daily')}
