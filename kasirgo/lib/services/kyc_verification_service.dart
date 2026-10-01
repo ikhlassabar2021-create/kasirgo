@@ -187,7 +187,14 @@ class KycService {
           .eq('outlet_id', outletId)
           .maybeSingle();
       if (data == null) {
-        await _setCache(outletId, KycStatus.unsubmitted);
+        // RLS `outlet_kyc` hanya membuka baris penuh ke owner. Staf (admin/kasir)
+        // mendapat 0 baris walau outlet sudah verified. Ambil status lewat RPC
+        // khusus (tanpa PII) agar gate tidak salah memblokir.
+        final status = await _fetchStatusViaRpc(outletId);
+        await _setCache(outletId, status);
+        if (status == KycStatus.verified) {
+          return KycRecord(outletId: outletId, status: status);
+        }
         return null;
       }
       final record = KycRecord.fromMap(data);
@@ -200,6 +207,17 @@ class KycService {
       return record;
     } catch (_) {
       return null;
+    }
+  }
+
+  /// Status KYC via RPC aman (tanpa PII) untuk staf. Default unsubmitted.
+  Future<KycStatus> _fetchStatusViaRpc(String outletId) async {
+    try {
+      final res = await _supabase
+          .rpc('get_outlet_kyc_status', params: {'p_outlet': outletId});
+      return kycStatusFromDb(res as String?);
+    } catch (_) {
+      return KycStatus.unsubmitted;
     }
   }
 
