@@ -1,10 +1,12 @@
+import 'dart:async';
 import 'dart:ui';
 import 'dart:convert';
-import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:qr_flutter/qr_flutter.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:url_launcher/url_launcher.dart';
 import '../../config/app_theme.dart';
 import '../../models/transaction.dart';
 import '../../services/payment_service.dart';
@@ -75,6 +77,10 @@ class _CheckoutDialogState extends State<CheckoutDialog> {
   bool _isLoadingQris = false;
   QrisConfig _qrisConfig = const QrisConfig();
   final List<Map<String, dynamic>> _splitEntries = [];
+  String? _outletId;
+  PgPaymentOrder? _pgOrder;
+  String _pgStatus = 'PENDING';
+  Timer? _pollTimer;
 
   double get _tipAmount => double.tryParse(_tipController.text.replaceAll(RegExp(r'[^0-9]'), '')) ?? 0.0;
   double get _grandTotal => widget.totalAmount + _tipAmount;
@@ -106,6 +112,7 @@ class _CheckoutDialogState extends State<CheckoutDialog> {
       if (user == null) return;
       final outletId = await _findOutletId(user.id);
       if (outletId == null) return;
+      _outletId = outletId;
       final config = await QrisConfig.load(outletId: outletId);
       if (mounted) {
         setState(() => _qrisConfig = config);
@@ -136,6 +143,7 @@ class _CheckoutDialogState extends State<CheckoutDialog> {
 
   @override
   void dispose() {
+    _pollTimer?.cancel();
     _cashController.dispose();
     _qrisAmountController.dispose();
     _tipController.dispose();
@@ -297,7 +305,10 @@ class _CheckoutDialogState extends State<CheckoutDialog> {
                                       children: [
                                         Expanded(
                                           child: InkWell(
-                                            onTap: () => setState(() => _qrisMode = 'static'),
+                                            onTap: () => setState(() {
+                                              _qrisMode = 'static';
+                                              _resetPgOrder();
+                                            }),
                                             borderRadius: BorderRadius.circular(8),
                                             child: Container(
                                               padding: const EdgeInsets.symmetric(vertical: 10),
@@ -331,7 +342,10 @@ class _CheckoutDialogState extends State<CheckoutDialog> {
                                         const SizedBox(width: 8),
                                         Expanded(
                                           child: InkWell(
-                                            onTap: () => setState(() => _qrisMode = 'dynamic'),
+                                            onTap: () => setState(() {
+                                              _qrisMode = 'dynamic';
+                                              _resetPgOrder();
+                                            }),
                                             borderRadius: BorderRadius.circular(8),
                                             child: Container(
                                               padding: const EdgeInsets.symmetric(vertical: 10),
@@ -801,6 +815,9 @@ class _CheckoutDialogState extends State<CheckoutDialog> {
         controller: _qrisAmountController,
         keyboardType: TextInputType.number,
         inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+        onChanged: (_) {
+          if (_pgOrder != null) setState(_resetPgOrder);
+        },
         style: const TextStyle(color: AppTheme.textPrimary, fontSize: 14),
         decoration: const InputDecoration(
           labelText: 'Nominal Verifikasi QRIS',
@@ -882,63 +899,14 @@ class _CheckoutDialogState extends State<CheckoutDialog> {
       );
     }
 
+    if (_pgOrder != null) {
+      return _buildQrisPanel(_pgOrder!);
+    }
+
     return Column(
       children: [
         GestureDetector(
-           onTap: () async {
-             try {
-               setState(() => _isLoadingQris = true);
-               
-               await paymentService.createCharge(
-                 orderId: DateTime.now().millisecondsSinceEpoch.toString(),
-                 amount: amount,
-                 qrisType: 'dynamic',
-               );
-
-               if (mounted) {
-                Navigator.pop(context);
-                
-                showDialog(
-                  context: context,
-                  barrierDismissible: false,
-                  builder: (ctx) => AlertDialog(
-                    title: const Text('QRIS Dinamis'),
-                    content: Column(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        const Text('Scan QR berikut untuk pembayaran otomatis:\n(Pembayaran akan terupdate via webhook)'),
-                        const SizedBox(height: 16),
-                        ClipRRect(
-                          borderRadius: BorderRadius.circular(12),
-                          child: Image.asset(
-                            'assets/qrcode_placeholder.png',
-                            width: 200,
-                            height: 200,
-                            errorBuilder: (_, _, _) => const SizedBox(width: 200, height: 200, child: Icon(Icons.qr_code_2_rounded, size: 200)),
-                          ),
-                        ),
-                        const SizedBox(height: 8),
-                        Text('Total: Rp ${amount.toStringAsFixed(0)}', style: const TextStyle(fontWeight: FontWeight.bold)),
-                      ],
-                    ),
-                    actions: [
-                      TextButton(
-                        onPressed: () => Navigator.pop(ctx),
-                        child: const Text('Tutup'),
-                      ),
-                    ],
-                  ),
-                );
-              }
-            } catch (e) {
-              if (mounted) {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(content: Text('Gagal generate QRIS dinamis: $e'), backgroundColor: AppTheme.errorColor),
-                );
-                setState(() => _isLoadingQris = false);
-              }
-            }
-          },
+          onTap: _outletId == null ? null : () => _createDynamicQr(amount),
           child: Center(
             child: Container(
               padding: const EdgeInsets.all(16),
@@ -967,7 +935,151 @@ class _CheckoutDialogState extends State<CheckoutDialog> {
             const SizedBox(width: 6),
             Expanded(
               child: Text(
-                'Klik QR untuk generate, pembayaran ter-update otomatis via webhook Midtrans',
+                _outletId == null
+                    ? 'Menyiapkan data outlet...'
+                    : 'Klik QR untuk membuat QRIS dinamis. Pembayaran terverifikasi otomatis.',
+                style: const TextStyle(color: AppTheme.textSecondary, fontSize: 11),
+              ),
+            ),
+          ],
+        ),
+      ],
+    );
+  }
+
+  Future<void> _createDynamicQr(double amount) async {
+    setState(() {
+      _isLoadingQris = true;
+      _pgStatus = 'PENDING';
+    });
+    try {
+      final order = await PaymentService().createQris(
+        outletId: _outletId!,
+        amount: amount,
+        itemName: 'Penjualan KasirGo',
+        purpose: 'pos',
+      );
+      if (!mounted) return;
+      setState(() {
+        _pgOrder = order;
+        _pgStatus = order.status.toUpperCase();
+        _isLoadingQris = false;
+      });
+      _startPolling();
+    } catch (e) {
+      if (!mounted) return;
+      setState(() => _isLoadingQris = false);
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Gagal membuat QRIS: $e'), backgroundColor: AppTheme.errorColor),
+      );
+    }
+  }
+
+  void _startPolling() {
+    _pollTimer?.cancel();
+    _pollTimer = Timer.periodic(const Duration(seconds: 5), (timer) async {
+      final order = _pgOrder;
+      if (order == null || _pgStatus == 'PAID') {
+        timer.cancel();
+        return;
+      }
+      final status = await PaymentService().checkStatus(order.rcbOrderId);
+      if (!mounted) return;
+      if (status == 'PAID' || status == 'SUCCESS' || status == 'SETTLEMENT') {
+        timer.cancel();
+        await PaymentService().confirmPaid(order.rcbOrderId);
+        if (mounted) setState(() => _pgStatus = 'PAID');
+      } else if (status == 'EXPIRED' || status == 'FAILED') {
+        timer.cancel();
+        if (mounted) setState(() => _pgStatus = status);
+      }
+    });
+  }
+
+  void _resetPgOrder() {
+    _pollTimer?.cancel();
+    _pgOrder = null;
+    _pgStatus = 'PENDING';
+  }
+
+  Widget _buildQrisPanel(PgPaymentOrder order) {
+    final paid = _pgStatus == 'PAID';
+    return Column(
+      children: [
+        Container(
+          padding: const EdgeInsets.all(14),
+          decoration: BoxDecoration(
+            color: AppTheme.surfaceColor,
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(color: paid ? AppTheme.successColor : AppTheme.borderColor),
+          ),
+          child: Column(
+            children: [
+              if (paid)
+                Column(
+                  children: [
+                    Icon(Icons.check_circle_rounded, color: AppTheme.successColor, size: 64),
+                    const SizedBox(height: 8),
+                    const Text('Pembayaran Diterima',
+                        style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15)),
+                  ],
+                )
+              else ...[
+                if ((order.qrisString ?? '').isNotEmpty)
+                  QrImageView(
+                    data: order.qrisString!,
+                    version: QrVersions.auto,
+                    size: 200,
+                    backgroundColor: Colors.white,
+                    padding: const EdgeInsets.all(8),
+                  )
+                else if ((order.qrisUrl ?? '').isNotEmpty)
+                  Image.network(order.qrisUrl!,
+                      width: 200,
+                      height: 200,
+                      errorBuilder: (_, _, _) =>
+                          const Icon(Icons.qr_code_2_rounded, size: 200))
+                else
+                  const Icon(Icons.qr_code_2_rounded, size: 200),
+                const SizedBox(height: 8),
+                Text('Total: Rp ${order.totalAmount.toStringAsFixed(0)}',
+                    style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
+                const SizedBox(height: 4),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: const [
+                    SizedBox(width: 12, height: 12, child: CircularProgressIndicator(strokeWidth: 2)),
+                    SizedBox(width: 8),
+                    Text('Menunggu pembayaran...',
+                        style: TextStyle(color: AppTheme.textSecondary, fontSize: 11)),
+                  ],
+                ),
+              ],
+              if ((order.paymentUrl ?? '').isNotEmpty && !paid) ...[
+                const SizedBox(height: 12),
+                SizedBox(
+                  width: double.infinity,
+                  child: OutlinedButton.icon(
+                    onPressed: () => launchUrl(Uri.parse(order.paymentUrl!),
+                        mode: LaunchMode.externalApplication),
+                    icon: const Icon(Icons.open_in_new_rounded, size: 16),
+                    label: const Text('Buka Halaman Bayar'),
+                  ),
+                ),
+              ],
+            ],
+          ),
+        ),
+        const SizedBox(height: 10),
+        Row(
+          children: [
+            Icon(Icons.info_outline_rounded, color: AppTheme.accentColor, size: 16),
+            const SizedBox(width: 6),
+            Expanded(
+              child: Text(
+                paid
+                    ? 'Pembayaran terverifikasi otomatis. Lanjutkan dengan tombol Konfirmasi.'
+                    : 'Scan QR dengan aplikasi bank / e-wallet. Status diperbarui otomatis.',
                 style: const TextStyle(color: AppTheme.textSecondary, fontSize: 11),
               ),
             ),

@@ -4,6 +4,8 @@ import 'package:flutter/foundation.dart' show visibleForTesting;
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
+import 'payment_service.dart';
+
 /// Model entitlement outlet (Program Pendukung + trial + fitur per-key).
 class Entitlements {
   final String outletId;
@@ -63,6 +65,12 @@ class SupporterCheckoutResult {
   final double amount;
   final int periodDays;
   final String status; // pending | pending_verification | failed
+  final String? supporterId;
+  final String? rcbOrderId;
+  final String? qrisString;
+  final String? qrisUrl;
+  final String? paymentUrl;
+  final double totalAmount;
 
   const SupporterCheckoutResult({
     required this.orderId,
@@ -72,7 +80,18 @@ class SupporterCheckoutResult {
     this.amount = 0,
     this.periodDays = 30,
     this.status = 'pending',
+    this.supporterId,
+    this.rcbOrderId,
+    this.qrisString,
+    this.qrisUrl,
+    this.paymentUrl,
+    this.totalAmount = 0,
   });
+
+  /// Pembayaran QRIS dinamis (terverifikasi otomatis) tersedia.
+  bool get hasDynamicQr =>
+      (qrisString != null && qrisString!.isNotEmpty) ||
+      (qrisUrl != null && qrisUrl!.isNotEmpty);
 }
 
 /// Service Program Pendukung KasirGo:
@@ -408,13 +427,46 @@ class SupporterService {
         'p_amount': price,
       });
       final map = (res as Map).cast<String, dynamic>();
+      final supporterId = map['supporter_id']?.toString();
+      final amount = (map['amount'] as num?)?.toDouble() ?? price;
+      final periodDays = (map['period_days'] as num?)?.toInt() ?? 30;
+
+      // Coba buat QRIS dinamis (RCB) agar pembayaran terverifikasi otomatis.
+      try {
+        final pgOrder = await PaymentService().createQris(
+          outletId: outletId,
+          amount: amount,
+          itemName: 'Program Pendukung KasirGo',
+          externalId: orderId,
+          purpose: 'subscription',
+          supporterId: supporterId,
+        );
+        return SupporterCheckoutResult(
+          orderId: orderId,
+          success: true,
+          amount: amount,
+          periodDays: periodDays,
+          status: pgOrder.status.toLowerCase(),
+          charge: map,
+          supporterId: supporterId,
+          rcbOrderId: pgOrder.rcbOrderId,
+          qrisString: pgOrder.qrisString,
+          qrisUrl: pgOrder.qrisUrl,
+          paymentUrl: pgOrder.paymentUrl,
+          totalAmount: pgOrder.totalAmount,
+        );
+      } catch (_) {
+        // Fallback: QRIS statis/manual seperti sebelumnya.
+      }
+
       return SupporterCheckoutResult(
         orderId: (map['order_id'] ?? orderId).toString(),
         success: true,
-        amount: (map['amount'] as num?)?.toDouble() ?? price,
-        periodDays: (map['period_days'] as num?)?.toInt() ?? 30,
+        amount: amount,
+        periodDays: periodDays,
         status: (map['status'] ?? 'pending').toString(),
         charge: map,
+        supporterId: supporterId,
       );
     } catch (e) {
       return SupporterCheckoutResult(

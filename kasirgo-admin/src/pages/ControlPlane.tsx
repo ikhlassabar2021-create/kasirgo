@@ -582,6 +582,12 @@ function FinancialTab() {
   const [pgSecrets, setPgSecrets] = useState<Record<string, string>>({});
   const [pgExisting, setPgExisting] = useState<string[]>([]);
   const [pgActive, setPgActive] = useState(true);
+  const [pgMeta, setPgMeta] = useState({
+    provider: 'rcb',
+    mode: 'sandbox_direct',
+    base_url: 'https://api.ragaciptabersama.web.id/api',
+    callback_url: '',
+  });
   const [revealPg, setRevealPg] = useState(false);
   const [loadingPg, setLoadingPg] = useState(false);
   const { msg, show } = useToast();
@@ -602,6 +608,14 @@ function FinancialTab() {
       if (it) {
         setPgExisting(Object.keys(it.secret_config ?? {}));
         setPgActive(it.is_active);
+        const sc = (it.secret_config ?? {}) as Record<string, any>;
+        const pc = (it.public_config ?? {}) as Record<string, any>;
+        setPgMeta({
+          provider: sc.provider ?? pc.provider ?? 'rcb',
+          mode: sc.mode ?? 'sandbox_direct',
+          base_url: sc.base_url ?? pc.base_url ?? 'https://api.ragaciptabersama.web.id/api',
+          callback_url: sc.callback_url ?? '',
+        });
       }
     } catch { /* integrasi belum ada */ }
   };
@@ -613,16 +627,35 @@ function FinancialTab() {
     { key: 'client_key', label: 'Client Key' },
     { key: 'public_key', label: 'Public Key' },
     { key: 'merchant_id', label: 'Merchant ID' },
-    { key: 'callback_url', label: 'Callback / Webhook URL' },
     { key: 'sdk_script_url', label: 'Script / SDK Library URL' },
   ];
 
+  const PG_MODES: { value: string; label: string }[] = [
+    { value: 'sandbox_direct', label: 'Sandbox - Langsung dari aplikasi (tes)' },
+    { value: 'sandbox_server', label: 'Sandbox - via Edge Function' },
+    { value: 'live_server', label: 'Produksi - via Edge Function' },
+  ];
+
   const savePg = async () => {
-    if (Object.values(pgSecrets).every((x) => !x)) { show('err', 'Isi minimal satu field kredensial.'); return; }
+    const hasSecret = Object.values(pgSecrets).some((x) => x);
+    if (!hasSecret && !pgMeta.base_url) { show('err', 'Isi minimal satu field kredensial.'); return; }
     setLoadingPg(true);
     try {
-      await saveIntegrationSecrets('payment_gateway', 'Payment Gateway', pgSecrets, {}, pgActive);
-      show('ok', 'Kredensial Payment Gateway disimpan (aman, tidak pernah ke APK).');
+      const secret: Record<string, any> = {
+        provider: pgMeta.provider,
+        mode: pgMeta.mode,
+        base_url: pgMeta.base_url,
+        ...pgSecrets,
+      };
+      if (pgMeta.callback_url) secret.callback_url = pgMeta.callback_url;
+      await saveIntegrationSecrets(
+        'payment_gateway',
+        'Payment Gateway',
+        secret,
+        { provider: pgMeta.provider, base_url: pgMeta.base_url },
+        pgActive,
+      );
+      show('ok', 'Konfigurasi Payment Gateway disimpan (aman, tidak pernah ke APK).');
       setPgSecrets({});
       await reloadPg();
     } catch (e: any) { show('err', e.message); } finally { setLoadingPg(false); }
@@ -689,6 +722,35 @@ function FinancialTab() {
           </div>
           {pgExisting.length > 0 && (
             <p className="text-[11px] text-amber-600">Tersimpan: {pgExisting.join(', ')}. Isi hanya field yang ingin diubah.</p>
+          )}
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div>
+              <label className={labelCls}>Provider</label>
+              <select className={inputCls} value={pgMeta.provider} onChange={(e) => setPgMeta({ ...pgMeta, provider: e.target.value })}>
+                <option value="rcb">RCB Pay (Raga Cipta Bersama)</option>
+                <option value="midtrans">Midtrans</option>
+                <option value="other">Lainnya</option>
+              </select>
+            </div>
+            <div>
+              <label className={labelCls}>Mode</label>
+              <select className={inputCls} value={pgMeta.mode} onChange={(e) => setPgMeta({ ...pgMeta, mode: e.target.value })}>
+                {PG_MODES.map((m) => (
+                  <option key={m.value} value={m.value}>{m.label}</option>
+                ))}
+              </select>
+            </div>
+            <div className="sm:col-span-2">
+              <label className={labelCls}>Base URL API</label>
+              <input className={inputCls} value={pgMeta.base_url} onChange={(e) => setPgMeta({ ...pgMeta, base_url: e.target.value })} placeholder="https://api.ragaciptabersama.web.id/api" />
+            </div>
+            <div className="sm:col-span-2">
+              <label className={labelCls}>Callback / Webhook URL</label>
+              <input className={inputCls} value={pgMeta.callback_url} onChange={(e) => setPgMeta({ ...pgMeta, callback_url: e.target.value })} placeholder="https://<project>.supabase.co/functions/v1/rcb_webhook" />
+            </div>
+          </div>
+          {pgMeta.mode === 'sandbox_direct' && (
+            <p className="text-[11px] text-amber-600">Mode <b>sandbox langsung</b> menyimpan API key sandbox di aplikasi klien (hanya untuk uji coba). Ganti ke mode Edge Function sebelum produksi.</p>
           )}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             {PG_FIELDS.map((f) => (

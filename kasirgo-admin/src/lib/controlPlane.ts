@@ -205,14 +205,28 @@ export async function saveIntegrationSecrets(
   const nonEmpty = Object.fromEntries(
     Object.entries(secret).filter(([, v]) => v !== '' && v !== null && v !== undefined),
   )
+  // Gabung dengan secret yang sudah ada agar field lain (mis. api_key) tidak hilang.
+  const { data: existing } = await supabase
+    .from('platform_integrations')
+    .select('secret_config, public_config')
+    .eq('key', key)
+    .maybeSingle()
+  const mergedSecret = {
+    ...((existing?.secret_config as Record<string, any>) ?? {}),
+    ...nonEmpty,
+  }
+  const mergedPublic = {
+    ...((existing?.public_config as Record<string, any>) ?? {}),
+    ...publicConfig,
+  }
   const payload: Record<string, any> = {
     key,
     label,
-    public_config: publicConfig,
+    public_config: mergedPublic,
+    secret_config: mergedSecret,
     is_active: isActive,
     updated_at: new Date().toISOString(),
   }
-  if (Object.keys(nonEmpty).length > 0) payload.secret_config = nonEmpty
   const { error } = await supabase
     .from('platform_integrations')
     .upsert(payload, { onConflict: 'key' })
