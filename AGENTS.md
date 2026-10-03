@@ -261,3 +261,37 @@ Migrasi: docs/migrations/2026-10-01-kasirgo-8.sql. Detail: PROGRESS-PHASE8.md.
   semua fitur premium TERBUKA, gate Pendukung tidak muncul untuk akun ini.
   Test gate pakai outlet tanpa trial (mis. akun baru / trial lewat).
 - Deploy: main 8c1a947, gh-pages 3994701.
+
+## Sesi 2026-10-03 (3): AKAR MASALAH Karyawan + Iklan Tolak + Test Regresi Live (SELESAI)
+- KARYAWAN ROOT CAUSE SEBENARNYA (RLS visibility): policy SELECT user_roles
+  hanya `user_id = auth.uid()` -> owner TIDAK bisa membaca baris role staf
+  outletnya: getEmployees selalu [] (daftar kosong), createEmployee upsert
+  selalu 42501 (jalur UPDATE butuh USING = visibility), updateEmployeeRole
+  gagal diam-diam. FIX migrasi `docs/migrations/2026-10-03-kasirgo-staff-visibility.sql`:
+  - Fungsi `is_outlet_owner(uuid)` SECURITY DEFINER (bypass RLS).
+  - Policy SELECT baru: user_id = auth.uid() OR is_outlet_owner(outlet_id).
+  - WAJIB SECURITY DEFINER: policy SELECT outlets "Admin/Cashier can view own
+    outlet" merujuk user_roles -> subquery outlets langsung di policy
+    user_roles = infinite recursion 42P17 (sudah dialami + diperbaiki).
+  Verifikasi REST: owner SELECT user_roles 200 (7 baris), upsert
+  merge-duplicates 200. getEmployees/createEmployee/updateEmployeeRole kini jalan.
+- IKLAN TOMBOL "TOLAK": setelah decline, decide(consentGiven:false) selalu
+  needsConsent=true -> kartu consent muncul terus (tombol terlihat mati).
+  FIX AdService.decide(): baca consent tersimpan; 'declined' -> decision
+  kosong (slot hilang, TANPA prompt ulang); null -> needsConsent; accepted ->
+  lanjut tampil iklan. Tambah AdService.clearConsent().
+- TEST REGRESI LIVE BARU: test/live_owner_regression_test.dart (5 skenario,
+  SEMUA LULUS): (1) createStaffAccount EF + createEmployee -> OK,
+  (2) QR Meja read/add/delete OK, (3) akun tanpa-trial hasAccess=false,
+  (4) decide tanpa consent -> needsConsent, (5) setelah Tolak -> slot hilang
+  permanen. Pola: JANGAN TestWidgetsFlutterBinding (blokir network);
+  SharedPreferences.setMockInitialValues({}) cukup; SupabaseClient langsung.
+- AuthService & SupabaseService: constructor terima `client` opsional
+  (injectable utk test, default tetap Supabase.instance.client).
+- ai_pro/advanced_report/backup_cloud: TIDAK ada UI entry point (hanya copy
+  di daftar manfaat) -> tidak digate, sengaja.
+- CATATAN: file migrasi milik ROOT `docs/migrations/` (gitignore: *.sql hanya
+  un-ignore di docs/migrations/ root, BUKAN kasirgo/docs/migrations/).
+- Deploy: main 928fcbe, gh-pages 79ab697 (flutter_bootstrap.js live identik
+  dgn build lokal). QR Meja: backend memang benar sejak awal -> bila user
+  masih gagal = cache service worker, minta hard refresh.
