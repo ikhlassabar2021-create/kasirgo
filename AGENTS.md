@@ -171,7 +171,17 @@ Status: SELESAI. Project Supabase sudah dibuat dan schema terpasang serta diuji.
     Migrasi `2026-10-07-kasirgo-rcb-pg.sql` + `-2.sql`. SUDAH deploy web+admin.
     CATATAN: mode `sandbox_direct` menaruh API key sandbox di klien =
     HANYA untuk tes; wajib pindah ke Edge Function (mode `live_server`) sebelum
-    produksi. Edge Functions BELUM di-deploy (butuh SUPABASE_ACCESS_TOKEN).)
+    produksi. Edge Functions RCB SUDAH ter-deploy (rcb_create_charge /
+    rcb_check_status verify_jwt=true, rcb_webhook verify_jwt=false).)
+- [x] Edge Functions create_staff + onboard_merchant DIDELOY + Fix WA Katalog
+  (create_staff & onboard_merchant deployed via SUPABASE_ACCESS_TOKEN; smoke
+   test create_staff OK: user langsung confirmed + user_roles dibuat fungsi.
+   report_scheduler/stock_alert belum dideploy: butuh pg_cron + RESEND_API_KEY,
+   dipakai cron (client punya jadwal sendiri).
+   Migrasi `2026-10-09-kasirgo-wa-fallback.sql`: RPC `get_public_outlet_wa`
+   kini fallback outlet_kyc.phone -> outlets.phone. Akibatnya tombol "Pesan WA"
+   di katalog pelanggan langsung jalan (nomor KYC owner terpakai) tanpa setting
+   manual. Verifikasi anon REST OK: Toko Test -> 085778074355.)
 - [x] Alur Bayar Dine-in + Katalog/Meja DB + Pembersihan Fitur
   (PELANGGAN (QR meja & katalog web): pilihan bayar HANYA QRIS/Tunai,
   tombol "Kirim Pesanan" -> transaksi payment_status='unpaid' -> kasir
