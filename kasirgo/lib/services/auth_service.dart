@@ -6,7 +6,9 @@ import '../config/supabase_config.dart';
 import '../models/user.dart';
 
 class AuthService {
-  final SupabaseClient _client = Supabase.instance.client;
+  AuthService({SupabaseClient? client})
+      : _client = client ?? Supabase.instance.client;
+  final SupabaseClient _client;
   static const FlutterSecureStorage _storage = FlutterSecureStorage();
   static const String _deviceUuidKey = 'kasirgo_device_uuid';
 

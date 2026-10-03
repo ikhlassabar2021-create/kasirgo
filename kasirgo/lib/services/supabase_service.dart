@@ -15,7 +15,9 @@ import '../models/ppob.dart';
 import '../models/restock.dart';
 
 class SupabaseService {
-  final SupabaseClient _client = Supabase.instance.client;
+  SupabaseService({SupabaseClient? client})
+      : _client = client ?? Supabase.instance.client;
+  final SupabaseClient _client;
 
   Future<List<Product>> getProducts(String outletId) async {
     try {

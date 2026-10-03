@@ -143,6 +143,12 @@ class AdService {
     await prefs.setString(consentKey, accepted ? 'accepted' : 'declined');
   }
 
+  /// Hapus state consent (kembali ke "belum memutuskan").
+  Future<void> clearConsent() async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.remove(consentKey);
+  }
+
   // ---------------------------------------------------------------------------
   // Status bebas iklan outlet (pelanggan anonim -> RPC publik)
   // ---------------------------------------------------------------------------
@@ -220,7 +226,15 @@ class AdService {
     }
 
     if (consentRequired && !consentGiven) {
-      return const AdDecision(needsConsent: true);
+      final stored = await getConsent();
+      if (stored == null) {
+        return const AdDecision(needsConsent: true);
+      }
+      if (stored == false) {
+        // Sudah ditolak sebelumnya: slot hilang, TANPA kartu consent berulang.
+        return const AdDecision();
+      }
+      // stored == true -> lanjut tampilkan iklan.
     }
 
     final blocked = _blockedFrom(cfg);
