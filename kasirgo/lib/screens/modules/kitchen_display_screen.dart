@@ -52,45 +52,7 @@ class _KitchenDisplayScreenState extends ConsumerState<KitchenDisplayScreen> {
   String _selectedFilter = 'all'; // all, pending, cooking, ready
   bool _isLoading = false;
 
-  final List<KitchenOrder> _orders = [
-    KitchenOrder(
-      id: 'kds-1',
-      orderNumber: '#01',
-      tableNumber: 'Meja 3',
-      orderTime: DateTime.now().subtract(const Duration(minutes: 12)),
-      status: 'cooking',
-      notes: 'Sambal dipisah',
-      items: [
-        KitchenOrderItem(name: 'Nasi Goreng Spesial', quantity: 2, notes: 'Pedas sedang'),
-        KitchenOrderItem(name: 'Ayam Geprek Sambal Matah', quantity: 1),
-        KitchenOrderItem(name: 'Es Teh Manis', quantity: 3),
-      ],
-    ),
-    KitchenOrder(
-      id: 'kds-2',
-      orderNumber: '#02',
-      tableNumber: 'Meja 1',
-      orderTime: DateTime.now().subtract(const Duration(minutes: 5)),
-      status: 'pending',
-      items: [
-        KitchenOrderItem(name: 'Mie Godhog Jawa', quantity: 1),
-        KitchenOrderItem(name: 'Tahu Tempe Goreng', quantity: 1),
-        KitchenOrderItem(name: 'Kopi Tubruk Robusta', quantity: 1),
-      ],
-    ),
-    KitchenOrder(
-      id: 'kds-3',
-      orderNumber: '#03',
-      tableNumber: 'Meja 5',
-      orderTime: DateTime.now().subtract(const Duration(minutes: 20)),
-      status: 'ready',
-      notes: 'Bawa piring kecil 2',
-      items: [
-        KitchenOrderItem(name: 'Kwetiau Seafood Goreng', quantity: 2),
-        KitchenOrderItem(name: 'Jus Alpukat', quantity: 2),
-      ],
-    ),
-  ];
+  final List<KitchenOrder> _orders = [];
 
   sb.RealtimeChannel? _channel;
   Timer? _tickTimer;
@@ -151,9 +113,14 @@ class _KitchenDisplayScreenState extends ConsumerState<KitchenDisplayScreen> {
 
     setState(() => _isLoading = true);
     try {
-      final txs = await SupabaseService().getDineInOrders(user!.outletId!, limit: 30);
+      final txs = await SupabaseService()
+          .getDineInOrders(user!.outletId!, limit: 30);
       if (mounted) {
-        final realOrders = txs.map((t) {
+        // Hanya pesanan yang SUDAH dikonfirmasi bayar oleh kasir yang
+        // diteruskan ke dapur (payment_status != 'unpaid').
+        final realOrders = txs
+            .where((t) => t.paymentStatus != 'unpaid')
+            .map((t) {
           final notes = t.notes?.trim();
           return KitchenOrder(
             id: t.id,

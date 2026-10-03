@@ -242,6 +242,101 @@ class SupabaseService {
     }
   }
 
+  /// Kasir konfirmasi pembayaran pesanan dine-in -> 'paid' -> masuk KDS.
+  Future<bool> confirmDineInPayment(String transactionId) async {
+    try {
+      await _client.rpc('confirm_dinein_payment', params: {
+        'p_tx': transactionId,
+      });
+      return true;
+    } catch (e) {
+      debugPrint('confirmDineInPayment error: $e');
+      return false;
+    }
+  }
+
+  /// Katalog online publik: hanya produk yang owner publikasikan.
+  Future<List<Product>> getPublicCatalog(String outletId) async {
+    try {
+      final res = await _client
+          .rpc('get_public_catalog', params: {'p_outlet': outletId});
+      return (res as List)
+          .map((j) => Product.fromJson(Map<String, dynamic>.from(j as Map)))
+          .toList();
+    } catch (e) {
+      debugPrint('getPublicCatalog error: $e');
+      return [];
+    }
+  }
+
+  /// Owner publikasi/tarik produk dari katalog online (tersimpan di DB).
+  Future<bool> setProductPublished(String productId, bool published) async {
+    try {
+      await _client.from('products').update({
+        'is_published': published,
+        'updated_at': DateTime.now().toIso8601String(),
+      }).eq('id', productId);
+      return true;
+    } catch (e) {
+      debugPrint('setProductPublished error: $e');
+      return false;
+    }
+  }
+
+  // ---------------------------------------------------------------------------
+  // Daftar meja (QR Meja Dine-in) — tersimpan di tabel outlet_tables.
+  // ---------------------------------------------------------------------------
+
+  Future<List<String>> getOutletTables(String outletId) async {
+    try {
+      final res = await _client
+          .from('outlet_tables')
+          .select('name')
+          .eq('outlet_id', outletId)
+          .order('sort_order')
+          .order('created_at');
+      return (res as List)
+          .map((r) => (r as Map)['name']?.toString() ?? '')
+          .where((n) => n.isNotEmpty)
+          .toList();
+    } catch (e) {
+      debugPrint('getOutletTables error: $e');
+      return [];
+    }
+  }
+
+  Future<bool> addOutletTable(String outletId, String name) async {
+    final n = name.trim();
+    if (n.isEmpty) return false;
+    try {
+      final existing = await getOutletTables(outletId);
+      if (existing.any((e) => e.toLowerCase() == n.toLowerCase())) return false;
+      await _client.from('outlet_tables').insert({
+        'outlet_id': outletId,
+        'name': n,
+        'sort_order': existing.length,
+      });
+      return true;
+    } catch (e) {
+      debugPrint('addOutletTable error: $e');
+      return false;
+    }
+  }
+
+  Future<bool> deleteOutletTable(String outletId, String name) async {
+    try {
+      await _client
+          .from('outlet_tables')
+          .delete()
+          .eq('outlet_id', outletId)
+          .eq('name', name);
+      return true;
+    } catch (e) {
+      debugPrint('deleteOutletTable error: $e');
+      return false;
+    }
+  }
+
   Future<List<Transaction>> getCustomerTransactions(String customerId, {int limit = 50}) async {
     try {
       final response = await _client
@@ -1571,7 +1666,7 @@ class SupabaseService {
           .toList();
       if (orderItems.isEmpty) return null;
 
-      const allowed = {'cash', 'qris', 'bank_transfer'};
+      const allowed = {'cash', 'qris'};
       final method = allowed.contains(paymentMethod) ? paymentMethod : 'cash';
       final baseParams = {
         'p_outlet': outletId,
@@ -1669,6 +1764,24 @@ class SupabaseService {
           name: byId['name']?.toString() ?? '',
           type: (byId['type'] ?? byId['outlet_type'])?.toString() ?? '',
         );
+      }
+    } catch (_) {}
+    return null;
+  }
+
+  /// Nomor WhatsApp publik outlet (untuk pemesanan katalog online).
+  Future<String?> getPublicOutletWa(String outletId) async {
+    try {
+      final res = await _client
+          .rpc('get_public_outlet_wa', params: {'p_outlet': outletId});
+      if (res is List && res.isNotEmpty) {
+        final first = res.first;
+        if (first is Map) {
+          final v = first['wa_number']?.toString();
+          if (v != null && v.trim().isNotEmpty) return v.trim();
+        }
+      } else if (res is String && res.trim().isNotEmpty) {
+        return res.trim();
       }
     } catch (_) {}
     return null;

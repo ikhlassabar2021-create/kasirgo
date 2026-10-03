@@ -59,6 +59,47 @@ class _RestockScreenState extends ConsumerState<RestockScreen> {
     final outletId = user?.outletId ?? '';
     if (outletId.isEmpty || user == null) return;
 
+    if (!_cfg.isReady) {
+      if (!mounted) return;
+      showDialog<void>(
+        context: context,
+        builder: (ctx) => AlertDialog(
+          backgroundColor: AppTheme.surfaceColor,
+          shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(AppTheme.radiusLarge)),
+          title: Row(
+            children: [
+              const Icon(Icons.storefront_rounded,
+                  color: AppTheme.warningColor),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Text('Katalog Belum Tersedia',
+                    style: GoogleFonts.inter(
+                        fontSize: 16,
+                        fontWeight: FontWeight.w800,
+                        color: AppTheme.textPrimary)),
+              ),
+            ],
+          ),
+          content: Text(
+            'Katalog kulakan B2B belum dikonfigurasi oleh admin KasirGo. '
+            'Coba lagi nanti.',
+            style: GoogleFonts.inter(
+                fontSize: 12.5, color: AppTheme.textSecondary),
+          ),
+          actions: [
+            TextButton(
+                onPressed: () => Navigator.pop(ctx),
+                child: Text('Tutup',
+                    style: GoogleFonts.inter(
+                        color: AppTheme.primaryColor,
+                        fontWeight: FontWeight.w700))),
+          ],
+        ),
+      );
+      return;
+    }
+
     final trackingId = _b2b.buildTrackingId(outletId);
     final url = _b2b.buildCatalogUrl(_cfg.distributorUrl, outletId, trackingId);
 

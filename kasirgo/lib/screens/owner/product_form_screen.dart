@@ -11,11 +11,8 @@ import 'package:path_provider/path_provider.dart';
 import 'package:supabase_flutter/supabase_flutter.dart' as sb;
 import '../../config/app_theme.dart';
 import '../../models/product.dart';
-import '../../models/variant.dart';
 import '../../providers/auth_provider.dart';
-import '../../providers/outlet_provider.dart';
 import '../../services/supabase_service.dart';
-import '../../widgets/common/variant_editor.dart';
 import '../../utils/validators.dart';
 import 'product_list_screen.dart' show productsProvider;
 
@@ -41,14 +38,6 @@ class _ProductFormScreenState extends ConsumerState<ProductFormScreen> {
   DateTime? _expiredDate;
   String? _imageLocalPath;
   bool _isLoading = false;
-
-  // Varian produk (ST8-2, outlet retail).
-  bool _hasVariants = false;
-  bool _variantsLoading = false;
-
-  bool _isRetailOutlet = false;
-  List<ProductVariant> _variants = [];
-  final Set<String> _removedVariantIds = {};
 
   final _categories = [
     'Makanan',
@@ -104,42 +93,9 @@ class _ProductFormScreenState extends ConsumerState<ProductFormScreen> {
       _channelFeeControllers[ch] = TextEditingController(text: ch == 'offline' ? '0' : '');
     }
 
-    _hasVariants = p?.hasVariants ?? false;
-
-    for (final ch in _channels) {
-      _channelPriceControllers[ch] = TextEditingController();
-      _channelFeeControllers[ch] = TextEditingController(text: ch == 'offline' ? '0' : '');
-    }
-
     if (p != null && p.id.isNotEmpty) {
       _loadChannelPrices(p.id);
       _loadProductDiscount(p.id);
-      if (_hasVariants) _loadVariants(p.id);
-    }
-  }
-
-  @override
-  void didChangeDependencies() {
-    super.didChangeDependencies();
-    if (!_retailChecked) {
-      _retailChecked = true;
-      final outletId = ref.read(currentUserProvider)?.outletId ?? '';
-      if (outletId.isNotEmpty) {
-        _isRetailOutlet = ref.read(outletTypeProvider(outletId)) == 'retail';
-      }
-    }
-  }
-
-  bool _retailChecked = false;
-
-  Future<void> _loadVariants(String productId) async {
-    setState(() => _variantsLoading = true);
-    final list = await SupabaseService().getProductVariants(productId);
-    if (mounted) {
-      setState(() {
-        _variants = list;
-        _variantsLoading = false;
-      });
     }
   }
 
@@ -481,7 +437,7 @@ class _ProductFormScreenState extends ConsumerState<ProductFormScreen> {
       imageLocalPath: kIsWeb ? null : _imageLocalPath,
       thumbKey: widget.product?.thumbKey,
       isActive: true,
-      hasVariants: _hasVariants,
+      hasVariants: false,
     );
 
     final service = SupabaseService();
@@ -495,22 +451,6 @@ class _ProductFormScreenState extends ConsumerState<ProductFormScreen> {
     if (result != null && result.id.isNotEmpty) {
       await _saveChannelPrices(result.id);
       await _saveProductDiscount(result.id);
-      if (_hasVariants && _variants.isNotEmpty) {
-        final okVariants = await service.syncProductVariants(
-          outletId: outletId,
-          productId: result.id,
-          variants: _variants,
-          removeIds: _removedVariantIds.toList(),
-        );
-        if (!okVariants && mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('Varian gagal disimpan ke server'),
-              backgroundColor: AppTheme.errorColor,
-            ),
-          );
-        }
-      }
     }
 
     setState(() => _isLoading = false);
@@ -1138,42 +1078,6 @@ class _ProductFormScreenState extends ConsumerState<ProductFormScreen> {
                       onChanged: (v) => setState(() => _selectedCategory = v),
                     ),
                     const SizedBox(height: 12),
-                    if (_isRetailOutlet)
-                      SwitchListTile(
-                        value: _hasVariants,
-                        onChanged: (v) => setState(() => _hasVariants = v),
-                        contentPadding: EdgeInsets.zero,
-                        activeThumbColor: AppTheme.primaryColor,
-                        title: const Text('Produk punya varian',
-                            style: TextStyle(
-                                fontSize: 14, fontWeight: FontWeight.w600)),
-                        subtitle: const Text(
-                            'Mis. ukuran, level pedas, topping. Stok per varian.',
-                            style: TextStyle(fontSize: 12)),
-                      ),
-                    if (_hasVariants) ...[
-                      if (_variantsLoading)
-                        const Padding(
-                          padding: EdgeInsets.all(16),
-                          child: Center(
-                              child: CircularProgressIndicator(
-                                  color: AppTheme.primaryColor)),
-                        )
-                      else
-                        VariantEditor(
-                          variants: _variants,
-                          onChanged: (list) {
-                            for (final old in _variants) {
-                              if (!list.any((nv) => nv.id == old.id) &&
-                                  old.id.isNotEmpty) {
-                                _removedVariantIds.add(old.id);
-                              }
-                            }
-                            setState(() => _variants = list);
-                          },
-                        ),
-                      const SizedBox(height: 12),
-                    ],
                     Row(
                       children: [
                         Expanded(

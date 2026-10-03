@@ -52,6 +52,14 @@ class SupabaseConfig {
     return 'https://ikhlassabar2021-create.github.io/kasirgo/';
   }
 
+  /// Deep-link pesan mandiri per meja (QR Meja).
+  static String tableUrl(String outletId, String table) =>
+      '$appUrl#/customer?outlet=$outletId&table=${Uri.encodeComponent(table)}';
+
+  /// Deep-link katalog online publik (mode tanpa meja).
+  static String catalogUrl(String outletId) =>
+      '$appUrl#/catalog?outlet=$outletId';
+
   static Future<void> initialize() async {
     await Supabase.initialize(
       url: url,

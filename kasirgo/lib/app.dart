@@ -19,6 +19,7 @@ import 'screens/cashier/cashier_home_screen.dart';
 import 'screens/cashier/cashier_pos_screen.dart';
 import 'screens/cashier/cashier_report_screen.dart';
 import 'screens/customer/customer_menu_screen.dart';
+import 'screens/customer/customer_catalog_screen.dart';
 import 'services/local_db_service.dart';
 import 'services/sync_service.dart';
 import 'services/auth_service.dart';
@@ -106,6 +107,12 @@ final _router = GoRouter(
       builder: (context, state) => CustomerMenuScreen(
         initialOutletId: state.uri.queryParameters['outlet'] ?? '',
         initialTable: state.uri.queryParameters['table'] ?? '',
+      ),
+    ),
+    GoRoute(
+      path: '/catalog',
+      builder: (context, state) => CustomerCatalogScreen(
+        initialOutletId: state.uri.queryParameters['outlet'] ?? '',
       ),
     ),
   ],

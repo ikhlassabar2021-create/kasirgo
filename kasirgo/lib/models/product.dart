@@ -13,6 +13,7 @@ class Product {
   final String? thumbKey;
   final bool isActive;
   final bool hasVariants;
+  final bool isPublished;
   final DateTime? createdAt;
   final DateTime? updatedAt;
 
@@ -34,6 +35,7 @@ class Product {
     this.thumbKey,
     this.isActive = true,
     this.hasVariants = false,
+    this.isPublished = false,
     this.createdAt,
     this.updatedAt,
   }) : basePrice = basePrice ?? price ?? 0.0;
@@ -60,11 +62,9 @@ class Product {
           ? true
           : (json['is_active'] == true || json['is_active'] == 1),
       hasVariants: json['has_variants'] == true,
+      isPublished: json['is_published'] == true,
       createdAt: json['created_at'] != null
           ? DateTime.tryParse(json['created_at'].toString())
-          : null,
-      updatedAt: json['updated_at'] != null
-          ? DateTime.tryParse(json['updated_at'].toString())
           : null,
     );
   }
@@ -83,6 +83,7 @@ class Product {
       'image_local_path': imageLocalPath ?? '',
       'thumb_key': thumbKey,
       'has_variants': hasVariants,
+      'is_published': isPublished,
     };
     if (includeId && id.isNotEmpty) {
       data['id'] = id;
@@ -138,6 +139,7 @@ class Product {
       thumbKey: map['thumb_key']?.toString(),
       isActive: map['is_active'] == 1 || map['is_active'] == true,
       hasVariants: map['has_variants'] == 1 || map['has_variants'] == true,
+      isPublished: map['is_published'] == 1 || map['is_published'] == true,
       createdAt: map['created_at'] != null
           ? DateTime.tryParse(map['created_at'].toString())
           : null,
@@ -163,6 +165,7 @@ class Product {
     String? thumbKey,
     bool? isActive,
     bool? hasVariants,
+    bool? isPublished,
     DateTime? createdAt,
     DateTime? updatedAt,
   }) {
@@ -181,6 +184,7 @@ class Product {
       thumbKey: thumbKey ?? this.thumbKey,
       isActive: isActive ?? this.isActive,
       hasVariants: hasVariants ?? this.hasVariants,
+      isPublished: isPublished ?? this.isPublished,
       createdAt: createdAt ?? this.createdAt,
       updatedAt: updatedAt ?? this.updatedAt,
     );

@@ -111,10 +111,33 @@ class _IncomingOrdersScreenState extends ConsumerState<IncomingOrdersScreen> {
     await _load(silent: true);
   }
 
+  /// Kasir cek uang tunai / saldo QRIS masuk, lalu konfirmasi.
+  /// Setelah dikonfirmasi, pesanan diteruskan ke dapur (KDS).
+  Future<void> _confirmPayment(Transaction tx) async {
+    final ok = await _service.confirmDineInPayment(tx.id);
+    if (!mounted) return;
+    if (!ok) {
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+        content: Text('Gagal konfirmasi pembayaran'),
+        backgroundColor: AppTheme.errorColor,
+      ));
+      return;
+    }
+    ScaffoldMessenger.of(context)
+      ..hideCurrentSnackBar()
+      ..showSnackBar(const SnackBar(
+        content: Text('Pembayaran dikonfirmasi. Pesanan masuk dapur.'),
+        backgroundColor: AppTheme.successColor,
+      ));
+    await _load(silent: true);
+  }
+
   List<Transaction> get _filtered {
     switch (_filter) {
       case 'baru':
         return _orders.where((o) => o.orderStatus == 'baru').toList();
+      case 'unpaid':
+        return _orders.where((o) => o.paymentStatus == 'unpaid').toList();
       case 'selesai':
         return _orders.where((o) => o.orderStatus == 'selesai').toList();
       case 'aktif':
@@ -126,6 +149,22 @@ class _IncomingOrdersScreenState extends ConsumerState<IncomingOrdersScreen> {
 
   int get _activeCount =>
       _orders.where((o) => o.orderStatus != 'selesai').length;
+
+  int get _unpaidCount =>
+      _orders.where((o) => o.paymentStatus == 'unpaid').length;
+
+  int _countFor(String filter) {
+    switch (filter) {
+      case 'aktif':
+        return _activeCount;
+      case 'unpaid':
+        return _unpaidCount;
+      case 'selesai':
+        return _orders.where((o) => o.orderStatus == 'selesai').length;
+      default:
+        return _orders.length;
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -176,15 +215,17 @@ class _IncomingOrdersScreenState extends ConsumerState<IncomingOrdersScreen> {
             child: ListView(
               scrollDirection: Axis.horizontal,
               padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-              children: [
-                _chip('Aktif', 'aktif'),
-                const SizedBox(width: 8),
-                _chip('Baru', 'baru'),
-                const SizedBox(width: 8),
-                _chip('Selesai', 'selesai'),
-                const SizedBox(width: 8),
-                _chip('Semua', 'semua'),
-              ],
+                children: [
+                  _chip('Aktif', 'aktif'),
+                  const SizedBox(width: 8),
+                  _chip('Menunggu Bayar', 'unpaid'),
+                  const SizedBox(width: 8),
+                  _chip('Baru', 'baru'),
+                  const SizedBox(width: 8),
+                  _chip('Selesai', 'selesai'),
+                  const SizedBox(width: 8),
+                  _chip('Semua', 'semua'),
+                ],
             ),
           ),
           Expanded(
@@ -225,16 +266,25 @@ class _IncomingOrdersScreenState extends ConsumerState<IncomingOrdersScreen> {
 
   Widget _chip(String label, String value) {
     final sel = _filter == value;
+    final count = _countFor(value);
     return ChoiceChip(
-      label: Text(label),
+      label: Text(count > 0 ? '$label ($count)' : label),
       selected: sel,
       showCheckmark: false,
       selectedColor: AppTheme.primaryColor,
       backgroundColor: AppTheme.surfaceColor,
       side: BorderSide(
-          color: sel ? AppTheme.primaryColor : AppTheme.borderColor),
+          color: sel
+              ? AppTheme.primaryColor
+              : value == 'unpaid' && count > 0
+                  ? AppTheme.warningColor
+                  : AppTheme.borderColor),
       labelStyle: TextStyle(
-        color: sel ? Colors.white : AppTheme.textSecondary,
+        color: sel
+            ? Colors.white
+            : value == 'unpaid' && count > 0
+                ? AppTheme.warningColor
+                : AppTheme.textSecondary,
         fontSize: 12,
         fontWeight: sel ? FontWeight.bold : FontWeight.w500,
       ),
@@ -306,16 +356,19 @@ class _IncomingOrdersScreenState extends ConsumerState<IncomingOrdersScreen> {
     final table = (tx.notes?.trim().isNotEmpty ?? false) ? tx.notes! : 'Dine-In';
     final color = _statusColor(tx.orderStatus);
     final isSelesai = tx.orderStatus == 'selesai';
+    final isUnpaid = tx.paymentStatus == 'unpaid';
 
     return Container(
       decoration: BoxDecoration(
         color: AppTheme.surfaceColor,
         borderRadius: BorderRadius.circular(16),
         border: Border.all(
-          color: tx.orderStatus == 'baru'
-              ? AppTheme.errorColor.withValues(alpha: 0.45)
-              : AppTheme.borderColor,
-          width: tx.orderStatus == 'baru' ? 1.6 : 1,
+          color: isUnpaid
+              ? AppTheme.warningColor.withValues(alpha: 0.6)
+              : tx.orderStatus == 'baru'
+                  ? AppTheme.errorColor.withValues(alpha: 0.45)
+                  : AppTheme.borderColor,
+          width: isUnpaid || tx.orderStatus == 'baru' ? 1.6 : 1,
         ),
       ),
       padding: const EdgeInsets.all(14),
@@ -353,6 +406,26 @@ class _IncomingOrdersScreenState extends ConsumerState<IncomingOrdersScreen> {
                       color: color, fontWeight: FontWeight.w800, fontSize: 10.5),
                 ),
               ),
+              if (isUnpaid) ...[
+                const SizedBox(width: 8),
+                Container(
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 9, vertical: 5),
+                  decoration: BoxDecoration(
+                    color: AppTheme.warningColor.withValues(alpha: 0.15),
+                    borderRadius: BorderRadius.circular(9),
+                    border: Border.all(
+                        color: AppTheme.warningColor.withValues(alpha: 0.5)),
+                  ),
+                  child: Text(
+                    'MENUNGGU BAYAR',
+                    style: GoogleFonts.inter(
+                        color: AppTheme.warningColor,
+                        fontWeight: FontWeight.w800,
+                        fontSize: 10.5),
+                  ),
+                ),
+              ],
               const Spacer(),
               Text(_timeAgo(tx.createdAt),
                   style: GoogleFonts.inter(
@@ -390,12 +463,20 @@ class _IncomingOrdersScreenState extends ConsumerState<IncomingOrdersScreen> {
               Icon(_methodIcon(tx.paymentMethod),
                   size: 16, color: AppTheme.successColor),
               const SizedBox(width: 6),
-              Text(
-                '${_methodLabel(tx.paymentMethod)} - dikonfirmasi pelanggan',
-                style: GoogleFonts.inter(
-                    color: AppTheme.textSecondary, fontSize: 11),
+              Expanded(
+                child: Text(
+                  isUnpaid
+                      ? '${_methodLabel(tx.paymentMethod)} - ${tx.paymentMethod == 'qris' ? 'cek saldo QRIS masuk' : 'terima uang tunai'}'
+                      : '${_methodLabel(tx.paymentMethod)} - dikonfirmasi pelanggan',
+                  style: GoogleFonts.inter(
+                      color: isUnpaid
+                          ? AppTheme.warningColor
+                          : AppTheme.textSecondary,
+                      fontSize: 11,
+                      fontWeight:
+                          isUnpaid ? FontWeight.w700 : FontWeight.w400),
+                ),
               ),
-              const Spacer(),
               Text(
                 Formatters.currency(tx.finalAmount),
                 style: GoogleFonts.inter(
@@ -406,7 +487,17 @@ class _IncomingOrdersScreenState extends ConsumerState<IncomingOrdersScreen> {
               ),
             ],
           ),
-          if (!isSelesai) ...[
+          if (isUnpaid) ...[
+            const SizedBox(height: 12),
+            Row(
+              children: [
+                Expanded(
+                  child: _actionBtn('Konfirmasi Bayar', AppTheme.successColor,
+                      () => _confirmPayment(tx)),
+                ),
+              ],
+            ),
+          ] else if (!isSelesai) ...[
             const SizedBox(height: 12),
             Row(
               children: [

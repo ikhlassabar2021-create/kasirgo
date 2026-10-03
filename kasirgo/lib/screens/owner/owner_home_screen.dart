@@ -19,7 +19,6 @@ import '../../widgets/common/app_drawer.dart';
 import '../../widgets/common/glass_card.dart';
 import '../../widgets/common/centennial_background.dart';
 import '../../widgets/common/supporter_gate.dart';
-import 'debt_screen.dart';
 import 'social_commerce_screen.dart';
 import 'whatsapp_broadcast_screen.dart';
 import 'qr_table_screen.dart';
@@ -865,18 +864,6 @@ class _OwnerHomeScreenState extends ConsumerState<OwnerHomeScreen> {
 
     final quickActionItems = <Widget>[];
 
-    if (modules.contains(BusinessModule.debt)) {
-      quickActionItems.add(
-        _ModuleCard(
-          icon: Icons.menu_book_rounded,
-          title: 'Buku Kasbon',
-          subtitle: 'Catat piutang',
-          color: AppTheme.warningColor,
-          onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const DebtScreen())),
-        ),
-      );
-    }
-
     final ppobEnabled = ref.watch(ppobEnabledProvider).valueOrNull ?? true;
 
     if (modules.contains(BusinessModule.ppob) && ppobEnabled) {
@@ -936,17 +923,15 @@ class _OwnerHomeScreenState extends ConsumerState<OwnerHomeScreen> {
       );
     }
 
-    if (modules.contains(BusinessModule.splitBill)) {
-      quickActionItems.add(
-        _ModuleCard(
-          icon: Icons.point_of_sale_rounded,
-          title: 'Shift Kasir',
-          subtitle: 'Setoran & selisih',
-          color: AppTheme.secondaryColor,
-          onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const ShiftScreen())),
-        ),
-      );
-    }
+    quickActionItems.add(
+      _ModuleCard(
+        icon: Icons.point_of_sale_rounded,
+        title: 'Shift Kasir',
+        subtitle: 'Setoran & selisih',
+        color: AppTheme.secondaryColor,
+        onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const ShiftScreen())),
+      ),
+    );
 
 
     quickActionItems.add(

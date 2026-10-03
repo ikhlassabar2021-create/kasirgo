@@ -9,15 +9,13 @@ import 'outlet_provider.dart';
 enum BusinessModule {
   pos,
   inventory,
-  debt, // Kasbon
   tableManagement, // QR Meja & Meja dine-in
   kitchenDisplay, // KDS
   recipeIngredients, // Resep & bahan baku
-  variants, // Varian produk (level pedas, topping, ukuran)
   ppob, // Pulsa, token PLN, e-wallet
   restockB2B, // Kulakan B2B supplier
   wholesalePrice, // Harga grosir berjenjang
-  splitBill, // Pisah tagihan
+  shifts, // Shift kasir & setoran
   dailyDigest, // AI digest
 }
 
@@ -27,61 +25,51 @@ class ModuleConfig {
     'kelontong': {
       BusinessModule.pos,
       BusinessModule.inventory,
-      BusinessModule.debt,
-      BusinessModule.variants,
       BusinessModule.ppob,
       BusinessModule.restockB2B,
       BusinessModule.wholesalePrice,
-      BusinessModule.splitBill,
+      BusinessModule.shifts,
       BusinessModule.dailyDigest,
     },
     // Warteg / Warung makan: semua fitur KECUALI PPOB (usaha makan -> KDS on).
     'warteg': {
       BusinessModule.pos,
       BusinessModule.inventory,
-      BusinessModule.debt,
       BusinessModule.tableManagement,
       BusinessModule.kitchenDisplay,
-      BusinessModule.variants,
       BusinessModule.restockB2B,
       BusinessModule.wholesalePrice,
-      BusinessModule.splitBill,
+      BusinessModule.shifts,
       BusinessModule.dailyDigest,
     },
     // Cafe / Restoran / Kedai Kopi: semua fitur KECUALI PPOB (KDS on).
     'cafe': {
       BusinessModule.pos,
       BusinessModule.inventory,
-      BusinessModule.debt,
       BusinessModule.tableManagement,
       BusinessModule.kitchenDisplay,
-      BusinessModule.variants,
       BusinessModule.restockB2B,
       BusinessModule.wholesalePrice,
-      BusinessModule.splitBill,
+      BusinessModule.shifts,
       BusinessModule.dailyDigest,
     },
     // Retail / Toko: semua fitur KECUALI tableManagement & kitchenDisplay.
     'retail': {
       BusinessModule.pos,
       BusinessModule.inventory,
-      BusinessModule.debt,
-      BusinessModule.variants,
       BusinessModule.ppob,
       BusinessModule.restockB2B,
       BusinessModule.wholesalePrice,
-      BusinessModule.splitBill,
+      BusinessModule.shifts,
       BusinessModule.dailyDigest,
     },
     // Gerobak: semua fitur KECUALI PPOB & QR Meja (bukan usaha makan -> KDS off).
     'gerobak': {
       BusinessModule.pos,
       BusinessModule.inventory,
-      BusinessModule.debt,
-      BusinessModule.variants,
       BusinessModule.restockB2B,
       BusinessModule.wholesalePrice,
-      BusinessModule.splitBill,
+      BusinessModule.shifts,
       BusinessModule.dailyDigest,
     },
   };

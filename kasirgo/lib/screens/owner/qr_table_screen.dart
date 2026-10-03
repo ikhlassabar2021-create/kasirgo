@@ -1,10 +1,12 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:barcode/barcode.dart' as bc;
 import 'package:google_fonts/google_fonts.dart';
 import '../../config/app_theme.dart';
 import '../../config/supabase_config.dart';
 import '../../providers/auth_provider.dart';
+import '../../services/supabase_service.dart';
 
 class QrTableScreen extends ConsumerStatefulWidget {
   const QrTableScreen({super.key});
@@ -14,8 +16,17 @@ class QrTableScreen extends ConsumerStatefulWidget {
 }
 
 class _QrTableScreenState extends ConsumerState<QrTableScreen> {
-  final List<String> _tables = ['Meja 01', 'Meja 02', 'Meja 03', 'Meja 04', 'Meja 05'];
+  final _service = SupabaseService();
+  List<String> _tables = [];
+  bool _isLoading = true;
+  bool _isAdding = false;
   final _newTableController = TextEditingController();
+
+  @override
+  void initState() {
+    super.initState();
+    _loadTables();
+  }
 
   @override
   void dispose() {
@@ -23,18 +34,110 @@ class _QrTableScreenState extends ConsumerState<QrTableScreen> {
     super.dispose();
   }
 
-  void _addTable() {
-    if (_newTableController.text.trim().isEmpty) return;
+  Future<void> _loadTables() async {
+    final outletId = ref.read(currentUserProvider)?.outletId;
+    if (outletId == null || outletId.isEmpty) {
+      if (mounted) setState(() => _isLoading = false);
+      return;
+    }
+    final tables = await _service.getOutletTables(outletId);
+    if (!mounted) return;
     setState(() {
-      _tables.add(_newTableController.text.trim());
-      _newTableController.clear();
+      _tables = tables;
+      _isLoading = false;
     });
+  }
+
+  Future<void> _addTable() async {
+    final outletId = ref.read(currentUserProvider)?.outletId ?? '';
+    final name = _newTableController.text.trim();
+    if (name.isEmpty || outletId.isEmpty) return;
+    setState(() => _isAdding = true);
+    final ok = await _service.addOutletTable(outletId, name);
+    if (!mounted) return;
+    if (!ok) {
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+        content: Text('Gagal menambah meja (mungkin nama sudah dipakai)'),
+        backgroundColor: AppTheme.errorColor,
+      ));
+      return;
+    }
+    _newTableController.clear();
+    await _loadTablesSafe();
+  }
+
+  Future<void> _loadTablesSafe() async {
+    final outletId = ref.read(currentUserProvider)?.outletId;
+    if (outletId == null || outletId.isEmpty) return;
+    final tables = await _service.getOutletTables(outletId);
+    if (!mounted) return;
+    setState(() => _tables = tables);
+  }
+
+  Future<void> _removeTable(String name) async {
+    final outletId = ref.read(currentUserProvider)?.outletId ?? '';
+    if (outletId.isEmpty) return;
+    final ok = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: AppTheme.surfaceColor,
+        shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(AppTheme.radiusLarge)),
+        title: Text('Hapus $name?',
+            style: GoogleFonts.inter(
+                fontWeight: FontWeight.w700,
+                fontSize: 15,
+                color: AppTheme.textPrimary)),
+        content: Text(
+          'QR meja ini tidak bisa dipakai lagi. Riwayat pesanan lama tetap tersimpan.',
+          style: GoogleFonts.inter(
+              fontSize: 12.5, color: AppTheme.textSecondary, height: 1.4),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: Text('Batal',
+                style: GoogleFonts.inter(color: AppTheme.textSecondary)),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            child: Text('Hapus',
+                style: GoogleFonts.inter(
+                    color: AppTheme.errorColor,
+                    fontWeight: FontWeight.w700)),
+          ),
+        ],
+      ),
+    );
+    if (ok != true) return;
+    setState(() => _tables.remove(name));
+    final removed = await _service.deleteOutletTable(outletId, name);
+    if (!removed && mounted) {
+      await _loadTablesSafe();
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+        content: Text('Gagal menghapus meja'),
+        backgroundColor: AppTheme.errorColor,
+      ));
+    }
   }
 
   String _buildQrData(String table) {
     final outletId = ref.read(currentUserProvider)?.outletId ?? '';
-    final tableParam = Uri.encodeComponent(table);
-    return '${SupabaseConfig.appUrl}#/customer?outlet=$outletId&table=$tableParam';
+    return SupabaseConfig.tableUrl(outletId, table);
+  }
+
+  void _copyLink(BuildContext context, String table) {
+    final data = _buildQrData(table);
+    Clipboard.setData(ClipboardData(text: data));
+    ScaffoldMessenger.of(context)
+      ..hideCurrentSnackBar()
+      ..showSnackBar(
+        SnackBar(
+          content: Text('Link pesanan $table disalin! Bagikan via WhatsApp.'),
+          backgroundColor: AppTheme.successColor,
+        ),
+      );
   }
 
   void _showQrModal(String table) {
@@ -88,6 +191,16 @@ class _QrTableScreenState extends ConsumerState<QrTableScreen> {
           TextButton(
             onPressed: () => Navigator.pop(ctx),
             child: Text('Tutup', style: GoogleFonts.inter(color: AppTheme.textSecondary)),
+          ),
+          OutlinedButton.icon(
+            style: OutlinedButton.styleFrom(
+              foregroundColor: AppTheme.primaryColor,
+              side: const BorderSide(color: AppTheme.borderColor),
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppTheme.radiusMedium)),
+            ),
+            icon: const Icon(Icons.link_rounded, size: 16),
+            label: const Text('Salin Link'),
+            onPressed: () => _copyLink(ctx, table),
           ),
           OutlinedButton.icon(
             style: OutlinedButton.styleFrom(
@@ -203,8 +316,15 @@ class _QrTableScreenState extends ConsumerState<QrTableScreen> {
                       elevation: 0,
                       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppTheme.radiusMedium)),
                     ),
-                    onPressed: _addTable,
-                    icon: const Icon(Icons.add_rounded, size: 18),
+                    onPressed: _isAdding ? null : _addTable,
+                    icon: _isAdding
+                        ? const SizedBox(
+                            width: 16,
+                            height: 16,
+                            child: CircularProgressIndicator(
+                                strokeWidth: 2, color: Colors.white),
+                          )
+                        : const Icon(Icons.add_rounded, size: 18),
                     label: Text('Tambah', style: GoogleFonts.inter(fontWeight: FontWeight.w700, fontSize: 13)),
                   ),
                 ),
@@ -216,22 +336,49 @@ class _QrTableScreenState extends ConsumerState<QrTableScreen> {
               style: GoogleFonts.inter(fontWeight: FontWeight.w700, fontSize: 15, color: AppTheme.textPrimary),
             ),
             const SizedBox(height: 12),
-            GridView.builder(
-              shrinkWrap: true,
-              physics: const NeverScrollableScrollPhysics(),
-              gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                crossAxisCount: 2,
-                childAspectRatio: 1.15,
-                crossAxisSpacing: 12,
-                mainAxisSpacing: 12,
-              ),
-              itemCount: _tables.length,
-              itemBuilder: (context, index) {
-                final table = _tables[index];
+            if (_isLoading)
+              const Padding(
+                padding: EdgeInsets.all(32),
+                child: Center(
+                    child: CircularProgressIndicator(
+                        color: AppTheme.primaryColor)),
+              )
+            else if (_tables.isEmpty)
+              Padding(
+                padding: const EdgeInsets.symmetric(vertical: 28),
+                child: Center(
+                  child: Column(
+                    children: [
+                      const Icon(Icons.table_restaurant_outlined,
+                          size: 40, color: AppTheme.textSecondary),
+                      const SizedBox(height: 10),
+                      Text(
+                        'Belum ada meja. Tambahkan meja pertama di atas.',
+                        style: GoogleFonts.inter(
+                            fontSize: 12.5, color: AppTheme.textSecondary),
+                      ),
+                    ],
+                  ),
+                ),
+              )
+            else
+              GridView.builder(
+                shrinkWrap: true,
+                physics: const NeverScrollableScrollPhysics(),
+                gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                  crossAxisCount: 2,
+                  childAspectRatio: 1.15,
+                  crossAxisSpacing: 12,
+                  mainAxisSpacing: 12,
+                ),
+                itemCount: _tables.length,
+                itemBuilder: (context, index) {
+                  final table = _tables[index];
 
-                return InkWell(
-                  onTap: () => _showQrModal(table),
-                  borderRadius: BorderRadius.circular(AppTheme.radiusLarge),
+                  return InkWell(
+                    onTap: () => _showQrModal(table),
+                    onLongPress: () => _removeTable(table),
+                    borderRadius: BorderRadius.circular(AppTheme.radiusLarge),
                   child: Container(
                     padding: const EdgeInsets.all(16),
                     decoration: BoxDecoration(
@@ -246,32 +393,49 @@ class _QrTableScreenState extends ConsumerState<QrTableScreen> {
                         ),
                       ],
                     ),
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
+                    child: Stack(
                       children: [
-                        Container(
-                          width: 48,
-                          height: 48,
-                          decoration: BoxDecoration(
-                            color: AppTheme.backgroundColor,
-                            borderRadius: BorderRadius.circular(AppTheme.radiusMedium),
-                            border: Border.all(color: AppTheme.borderColor),
-                          ),
-                          child: const Icon(Icons.table_restaurant_outlined, size: 24, color: AppTheme.primaryColor),
-                        ),
-                        const SizedBox(height: 10),
-                        Text(
-                          table,
-                          style: GoogleFonts.inter(fontWeight: FontWeight.w700, fontSize: 15, color: AppTheme.textPrimary),
-                        ),
-                        const SizedBox(height: 6),
-                        Row(
+                        Column(
                           mainAxisAlignment: MainAxisAlignment.center,
                           children: [
-                            const Icon(Icons.qr_code_2_outlined, size: 14, color: AppTheme.primaryColor),
-                            const SizedBox(width: 4),
-                            Text('Lihat QR', style: GoogleFonts.inter(fontSize: 12, color: AppTheme.primaryColor, fontWeight: FontWeight.w600)),
+                            Container(
+                              width: 48,
+                              height: 48,
+                              decoration: BoxDecoration(
+                                color: AppTheme.backgroundColor,
+                                borderRadius: BorderRadius.circular(AppTheme.radiusMedium),
+                                border: Border.all(color: AppTheme.borderColor),
+                              ),
+                              child: const Icon(Icons.table_restaurant_outlined, size: 24, color: AppTheme.primaryColor),
+                            ),
+                            const SizedBox(height: 10),
+                            Text(
+                              table,
+                              style: GoogleFonts.inter(fontWeight: FontWeight.w700, fontSize: 15, color: AppTheme.textPrimary),
+                            ),
+                            const SizedBox(height: 6),
+                            Row(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                const Icon(Icons.qr_code_2_outlined, size: 14, color: AppTheme.primaryColor),
+                                const SizedBox(width: 4),
+                                Text('Lihat QR', style: GoogleFonts.inter(fontSize: 12, color: AppTheme.primaryColor, fontWeight: FontWeight.w600)),
+                              ],
+                            ),
                           ],
+                        ),
+                        Positioned(
+                          top: 0,
+                          right: 0,
+                          child: InkWell(
+                            onTap: () => _removeTable(table),
+                            borderRadius: BorderRadius.circular(20),
+                            child: const Padding(
+                              padding: EdgeInsets.all(4),
+                              child: Icon(Icons.delete_outline_rounded,
+                                  size: 18, color: AppTheme.errorColor),
+                            ),
+                          ),
                         ),
                       ],
                     ),

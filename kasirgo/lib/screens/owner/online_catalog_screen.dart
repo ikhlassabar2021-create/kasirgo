@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../config/app_theme.dart';
+import '../../config/supabase_config.dart';
 import '../../models/product.dart';
 import '../../providers/auth_provider.dart';
 import '../../services/supabase_service.dart';
@@ -39,13 +40,50 @@ class _OnlineCatalogScreenState extends ConsumerState<OnlineCatalogScreen> {
     setState(() {
       _products = data.where((p) => p.isActive).toList();
       for (final p in _products) {
-        if (p.thumbKey != null) {
+        if (p.isPublished) {
           _publishedIds.add(p.id);
-          _thumbOptIn.add(p.id);
+          if (p.thumbKey != null) _thumbOptIn.add(p.id);
         }
       }
       _isLoading = false;
     });
+  }
+
+  Future<void> _togglePublish(Product p, bool val) async {
+    setState(() {
+      if (val) {
+        _publishedIds.add(p.id);
+      } else {
+        _publishedIds.remove(p.id);
+        _thumbOptIn.remove(p.id);
+      }
+    });
+    final ok = await _service.setProductPublished(p.id, val);
+    if (!mounted) return;
+    if (!ok) {
+      setState(() {
+        if (val) {
+          _publishedIds.remove(p.id);
+        } else {
+          _publishedIds.add(p.id);
+        }
+      });
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+            content: Text('Gagal menyimpan status publikasi'),
+            backgroundColor: AppTheme.errorColor),
+      );
+    } else {
+      ScaffoldMessenger.of(context).hideCurrentSnackBar();
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+            content: Text(
+                val ? '${p.name} tampil di katalog online' : '${p.name} disembunyikan dari katalog'),
+            duration: const Duration(milliseconds: 900),
+            backgroundColor: AppTheme.successColor,
+            behavior: SnackBarBehavior.floating),
+      );
+    }
   }
 
   void _orderViaWhatsApp(Product product) {
@@ -62,7 +100,9 @@ class _OnlineCatalogScreenState extends ConsumerState<OnlineCatalogScreen> {
   @override
   Widget build(BuildContext context) {
     final user = ref.watch(currentUserProvider);
-    final catalogUrl = 'https://kasirgo.online/catalog/${user?.outletId ?? "toko"}';
+    final catalogUrl = user?.outletId != null
+        ? SupabaseConfig.catalogUrl(user!.outletId!)
+        : 'https://ikhlassabar2021-create.github.io/kasirgo/#/catalog';
 
     final categories = ['Semua', ...{..._products.map((p) => p.category ?? 'Umum')}];
     final filtered = _selectedCategory == 'Semua'
@@ -341,17 +381,7 @@ class _OnlineCatalogScreenState extends ConsumerState<OnlineCatalogScreen> {
                     value: isPublished,
                     activeThumbColor: Colors.white,
                     activeTrackColor: AppTheme.primaryColor,
-                    onChanged: (val) {
-                      setState(() {
-                        if (val) {
-                          _publishedIds.add(p.id);
-                          _thumbOptIn.add(p.id);
-                        } else {
-                          _publishedIds.remove(p.id);
-                          _thumbOptIn.remove(p.id);
-                        }
-                      });
-                    },
+                    onChanged: (val) => _togglePublish(p, val),
                   ),
                   Checkbox(
                     value: isOptIn,

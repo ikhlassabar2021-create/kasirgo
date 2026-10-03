@@ -187,6 +187,7 @@ class _PpobScreenState extends ConsumerState<PpobScreen> {
     if (outletId.isEmpty || user == null) return;
 
     final refController = TextEditingController();
+    final paymentMethodCtl = ValueNotifier<String>('cash');
     final category = product.category ?? 'pulsa';
     final hint = switch (category) {
       'pln' => 'ID Pelanggan PLN (10-12 digit)',
@@ -204,7 +205,6 @@ class _PpobScreenState extends ConsumerState<PpobScreen> {
       builder: (sheetCtx) => StatefulBuilder(
         builder: (sheetCtx, setSheetState) {
           final inquiry = _ppob.inquireSync(product, refController.text);
-          final paymentMethodCtl = ValueNotifier<String>('cash');
           return Padding(
             padding: EdgeInsets.only(
                 left: 16,
@@ -367,6 +367,7 @@ class _PpobScreenState extends ConsumerState<PpobScreen> {
         },
       ),
     );
+    paymentMethodCtl.dispose();
   }
 
   Widget _payOption(String value, String label, IconData icon, String current,

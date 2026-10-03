@@ -280,9 +280,7 @@ class _CustomerOrderScreenState extends State<CustomerOrderScreen> {
                       label: 'Metode pembayaran',
                       value: paymentMethod == 'cash'
                           ? 'Tunai di Kasir'
-                          : paymentMethod == 'qris'
-                              ? 'QRIS (di meja)'
-                              : 'Transfer (di meja)',
+                          : 'QRIS (konfirmasi kasir)',
                     ),
                     const Padding(
                       padding: EdgeInsets.symmetric(vertical: 10),
@@ -813,16 +811,12 @@ class _CustomerCheckoutDialogState extends State<CustomerCheckoutDialog> {
   Future<void> _loadPaymentInfo() async {
     final data = await _service.getPublicOutletPayment(widget.outletId);
     if (!mounted) return;
-    final hasTransfer = data != null &&
-        ((data['account_number']?.toString().trim().isNotEmpty ?? false) ||
-            (data['bank_wallet']?.toString().trim().isNotEmpty ?? false));
     final hasQris =
         data != null && (data['nmid']?.toString().trim().isNotEmpty ?? false);
     setState(() {
       _pay = data;
       _loadingPayment = false;
-      _paymentMethod =
-          hasTransfer ? 'bank_transfer' : (hasQris ? 'qris' : 'cash');
+      _paymentMethod = hasQris ? 'qris' : 'cash';
     });
   }
 
@@ -833,12 +827,8 @@ class _CustomerCheckoutDialogState extends State<CustomerCheckoutDialog> {
     return v.isNotEmpty ? v : 'Toko';
   }
 
-  bool get _hasTransfer =>
-      _str('account_number').isNotEmpty || _str('bank_wallet').isNotEmpty;
-
-  bool get _hasAnyPaymentInfo => _loadingPayment
-      ? false
-      : (_hasTransfer || _str('nmid').isNotEmpty);
+  bool get _hasAnyPaymentInfo =>
+      _loadingPayment ? false : _str('nmid').isNotEmpty;
 
   Future<void> _copy(String value, String label) async {
     await Clipboard.setData(ClipboardData(text: value));
@@ -953,16 +943,12 @@ class _CustomerCheckoutDialogState extends State<CustomerCheckoutDialog> {
                               ),
                             ),
                             const SizedBox(height: 10),
-                            _buildPaymentOption('bank_transfer',
-                                'Transfer Bank / E-Wallet', Icons.account_balance_rounded),
                             _buildPaymentOption(
                                 'qris', 'QRIS (scan di meja)', Icons.qr_code_2_rounded),
                             _buildPaymentOption('cash',
                                 'Tunai (bayar di kasir)', Icons.payments_rounded),
                             const SizedBox(height: 12),
-                            if (_paymentMethod == 'bank_transfer')
-                              _buildTransferInfo()
-                            else if (_paymentMethod == 'qris')
+                            if (_paymentMethod == 'qris')
                               _buildQrisInfo()
                             else
                               _buildCashInfo(),
@@ -983,16 +969,9 @@ class _CustomerCheckoutDialogState extends State<CustomerCheckoutDialog> {
                                   ? null
                                   : () => Navigator.of(context)
                                       .pop(CustomerCheckoutResult(_paymentMethod)),
-                              icon: Icon(
-                                _paymentMethod == 'cash'
-                                    ? Icons.send_rounded
-                                    : Icons.check_circle_rounded,
-                                size: 20,
-                              ),
+                              icon: const Icon(Icons.send_rounded, size: 20),
                               label: Text(
-                                _paymentMethod == 'cash'
-                                    ? 'Kirim Pesanan'
-                                    : 'Saya Sudah Bayar - Kirim Pesanan',
+                                'Kirim Pesanan',
                                 style: GoogleFonts.inter(
                                     fontWeight: FontWeight.w700, fontSize: 15),
                               ),
@@ -1007,75 +986,6 @@ class _CustomerCheckoutDialogState extends State<CustomerCheckoutDialog> {
             ),
           ),
         ),
-      ),
-    );
-  }
-
-  Widget _buildTransferInfo() {
-    final bank = _str('bank_wallet');
-    final acc = _str('account_number');
-    return Container(
-      padding: const EdgeInsets.all(14),
-      decoration: BoxDecoration(
-        color: AppTheme.backgroundColor,
-        borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: AppTheme.borderColor),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              const Icon(Icons.account_balance_rounded,
-                  color: AppTheme.primaryColor, size: 18),
-              const SizedBox(width: 8),
-              Text(
-                'Transfer tepat sesuai nominal',
-                style: GoogleFonts.inter(
-                    color: AppTheme.textPrimary,
-                    fontSize: 13,
-                    fontWeight: FontWeight.w700),
-              ),
-            ],
-          ),
-          const SizedBox(height: 10),
-          _infoRow('Bank / E-Wallet',
-              bank.isNotEmpty ? bank : 'Belum diatur owner', copyable: false),
-          const SizedBox(height: 6),
-          _infoRow('No. Rekening / HP',
-              acc.isNotEmpty ? acc : 'Belum diatur owner',
-              copyable: acc.isNotEmpty),
-          const SizedBox(height: 6),
-          if (_merchantName != 'Toko')
-            _infoRow('Atas Nama', _merchantName, copyable: false),
-          const Padding(
-            padding: EdgeInsets.symmetric(vertical: 10),
-            child: Divider(height: 1, color: AppTheme.borderColor),
-          ),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Text('Nominal transfer',
-                  style: GoogleFonts.inter(
-                      color: AppTheme.textSecondary, fontSize: 12)),
-              Text(
-                Formatters.currency(widget.total),
-                style: GoogleFonts.inter(
-                  color: AppTheme.primaryColor,
-                  fontSize: 17,
-                  fontWeight: FontWeight.w800,
-                  fontFeatures: const [FontFeature.tabularFigures()],
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 8),
-          Text(
-            'Setelah transfer, tekan tombol "Saya Sudah Bayar". Pesanan langsung masuk ke dapur.',
-            style: GoogleFonts.inter(
-                color: AppTheme.textSecondary, fontSize: 11.5, height: 1.35),
-          ),
-        ],
       ),
     );
   }
@@ -1136,7 +1046,8 @@ class _CustomerCheckoutDialogState extends State<CustomerCheckoutDialog> {
           ],
           const SizedBox(height: 8),
           Text(
-            'Setelah berhasil scan & bayar, tekan tombol "Saya Sudah Bayar".',
+            'Setelah scan & bayar, tunjukkan bukti ke kasir. Pesanan diproses '
+            'setelah kasir mengonfirmasi pembayaran.',
             style: GoogleFonts.inter(
                 color: AppTheme.textSecondary, fontSize: 11.5, height: 1.35),
           ),
@@ -1162,10 +1073,9 @@ class _CustomerCheckoutDialogState extends State<CustomerCheckoutDialog> {
           Expanded(
             child: Text(
               _hasAnyPaymentInfo
-                  ? 'Pesanan dikirim ke dapur, lalu bayar tunai di kasir saat pulang.'
-                  : 'Owner belum mengatur info transfer/QRIS. Anda dapat bayar langsung ke kasir.',
-              style: GoogleFonts.inter(
-                  color: AppTheme.textSecondary, fontSize: 11.5, height: 1.35),
+                  ? 'Pesanan dikirim ke kasir. Bayar tunai di kasir, lalu kasir '
+                      'mengonfirmasi agar pesanan diproses dapur.'
+                  : 'Pesanan dikirim ke kasir. Anda dapat bayar langsung ke kasir.',
             ),
           ),
         ],
