@@ -238,3 +238,26 @@ Migrasi: docs/migrations/2026-10-01-kasirgo-8.sql. Detail: PROGRESS-PHASE8.md.
   PNG tetap gratis. Manfaat baru: Laporan ke Bos + Bebas Iklan Pelanggan
   (SponsorAdSlot skip jika outlet aktif supporter aktif).
 - Deploy: main 023a7f8, gh-pages 7f0d426 (terverifikasi live).
+
+## Sesi 2026-10-03 (2): Bugfix Laporan Uji Owner (SELESAI)
+- MULTI-OUTLET GAGAL TAMBAH: root cause select menyertakan kolom `outlet_type`
+  yang TIDAK ADA di tabel outlets (hanya `type`) -> listOwnerOutlets &
+  addOwnerOutlet selalu error. Fixed (hapus outlet_type dari select).
+- IKLAN TAK PERNAH MUNCUL: sponsor_ad_slot cek `!d.showAds` SEBELUM
+  `needsConsent` -> kartu consent UU PDP tak pernah tampil. Fixed (urutan cek).
+- LAPORAN embedded (owner home): tombol PDF/Share/Excel kini tampil di mode
+  embedded (sebelumnya hanya di mode standalone). Daftar transaksi kini
+  menampilkan nama produk + jumlah (sebelumnya hanya kode #id).
+- GATE QRIS DINAMIS: snackbar diganti dialog Pendukung (showSupporterLockedDialog).
+- SETTINGS Pendukung: daftar manfaat kini = premiumFeatures (17 fitur, sama
+  dengan dashboard; termasuk Laporan Otomatis ke Bos, QRIS Dinamis, Bebas Iklan).
+- QR MEJA: error tambah meja jelas (addOutletTableDetailed) + fix _isAdding
+  stuck. Verifikasi REST: insert outlet_tables 201, delete 204 (RLS owner OK).
+- KARYAWAN: backend create_staff terverifikasi OK (admin + kitchen dibuat sukses
+  via EF). UI: error handling diperkuat. Kemungkinan gagal sebelumnya = constraint
+  user_roles_role_check (sudah difix sesi sebelumnya) atau build lama/cache.
+- TOMBOL STRUK POS: durasi snackbar 12 detik (mudah terlewat sebelumnya).
+- CATATAN PENTING: Toko Test & Warung Test masih TRIAL aktif (s.d. 14 Okt) ->
+  semua fitur premium TERBUKA, gate Pendukung tidak muncul untuk akun ini.
+  Test gate pakai outlet tanpa trial (mis. akun baru / trial lewat).
+- Deploy: main 8c1a947, gh-pages 3994701.
