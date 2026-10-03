@@ -42,7 +42,11 @@ class KitchenOrderItem {
 }
 
 class KitchenDisplayScreen extends ConsumerStatefulWidget {
-  const KitchenDisplayScreen({super.key});
+  const KitchenDisplayScreen({super.key, this.embedded = false});
+
+  /// true bila ditampilkan di dalam shell lain (mis. role koki) sehingga
+  /// Scaffold/AppBar sendiri tidak dirender.
+  final bool embedded;
 
   @override
   ConsumerState<KitchenDisplayScreen> createState() => _KitchenDisplayScreenState();
@@ -203,29 +207,7 @@ class _KitchenDisplayScreenState extends ConsumerState<KitchenDisplayScreen> {
       return o.status == _selectedFilter;
     }).toList();
 
-    return Scaffold(
-      backgroundColor: Colors.transparent,
-      extendBodyBehindAppBar: true,
-      appBar: AppBar(
-        backgroundColor: Colors.transparent,
-        elevation: 0,
-        scrolledUnderElevation: 0,
-        title: Text(
-          'Kitchen Display (KDS)',
-          style: GoogleFonts.inter(
-            fontSize: 18,
-            fontWeight: FontWeight.w800,
-            color: AppTheme.textPrimary,
-          ),
-        ),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.refresh_rounded, color: AppTheme.primaryColor),
-            onPressed: _loadRealTransactions,
-          ),
-        ],
-      ),
-      body: CentennialBackground(
+    final content = CentennialBackground(
         child: SafeArea(
           child: Column(
             children: [
@@ -480,10 +462,35 @@ class _KitchenDisplayScreenState extends ConsumerState<KitchenDisplayScreen> {
                             },
                           ),
               ),
-            ],
+             ],
+           ),
+         ),
+       );
+
+    if (widget.embedded) return content;
+    return Scaffold(
+      backgroundColor: Colors.transparent,
+      extendBodyBehindAppBar: true,
+      appBar: AppBar(
+        backgroundColor: Colors.transparent,
+        elevation: 0,
+        scrolledUnderElevation: 0,
+        title: Text(
+          'Kitchen Display (KDS)',
+          style: GoogleFonts.inter(
+            fontSize: 18,
+            fontWeight: FontWeight.w800,
+            color: AppTheme.textPrimary,
           ),
         ),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.refresh_rounded, color: AppTheme.primaryColor),
+            onPressed: _loadRealTransactions,
+          ),
+        ],
       ),
+      body: content,
     );
   }
 }

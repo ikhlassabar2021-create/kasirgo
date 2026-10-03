@@ -10,6 +10,7 @@ import 'package:url_launcher/url_launcher.dart';
 import '../../config/app_theme.dart';
 import '../../models/transaction.dart';
 import '../../services/payment_service.dart';
+import '../../services/supporter_service.dart';
 import '../../utils/qris_config.dart';
 import '../../utils/wa_helper.dart';
 import '../common/app_button.dart';
@@ -47,6 +48,7 @@ class CheckoutResult {
 class CheckoutDialog extends StatefulWidget {
   final List<TransactionItem> items;
   final double totalAmount;
+  final String? outletId;
   final Function({
     required String paymentMethod,
     String? notes,
@@ -58,6 +60,7 @@ class CheckoutDialog extends StatefulWidget {
     super.key,
     required this.items,
     required this.totalAmount,
+    this.outletId,
     this.onConfirm,
   });
 
@@ -91,7 +94,35 @@ class _CheckoutDialogState extends State<CheckoutDialog> {
     super.initState();
     _cashController.text = widget.totalAmount.toStringAsFixed(0);
     _qrisAmountController.text = widget.totalAmount.toStringAsFixed(0);
+    _outletId = widget.outletId;
     _loadQrisConfig();
+  }
+
+  /// Gate QRIS Dinamis: hanya peserta Program Pendukung (payment gateway
+  /// otomatis). QRIS Statis tetap gratis selamanya.
+  Future<void> _trySetQrisMode(String mode) async {
+    if (mode == 'dynamic') {
+      final outletId = widget.outletId ?? _outletId;
+      if (outletId != null && outletId.isNotEmpty) {
+        final ok = await SupporterService()
+            .hasFeature(outletId, 'payment_gateway');
+        if (!mounted) return;
+        if (!ok) {
+          ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+            content: Text(
+                'QRIS Dinamis (masuk otomatis, saldo langsung cair ke rekening) '
+                'adalah fitur Program Pendukung. QRIS Statis tetap gratis.'),
+            backgroundColor: AppTheme.warningColor,
+          ));
+          return;
+        }
+      }
+    }
+    if (!mounted) return;
+    setState(() {
+      _qrisMode = mode;
+      _resetPgOrder();
+    });
   }
 
   Future<void> _loadQrisConfig() async {
@@ -266,10 +297,7 @@ class _CheckoutDialogState extends State<CheckoutDialog> {
                                       children: [
                                         Expanded(
                                           child: InkWell(
-                                            onTap: () => setState(() {
-                                              _qrisMode = 'static';
-                                              _resetPgOrder();
-                                            }),
+                                            onTap: () => _trySetQrisMode('static'),
                                             borderRadius: BorderRadius.circular(8),
                                             child: Container(
                                               padding: const EdgeInsets.symmetric(vertical: 10),
@@ -303,10 +331,7 @@ class _CheckoutDialogState extends State<CheckoutDialog> {
                                         const SizedBox(width: 8),
                                         Expanded(
                                           child: InkWell(
-                                            onTap: () => setState(() {
-                                              _qrisMode = 'dynamic';
-                                              _resetPgOrder();
-                                            }),
+                                            onTap: () => _trySetQrisMode('dynamic'),
                                             borderRadius: BorderRadius.circular(8),
                                             child: Container(
                                               padding: const EdgeInsets.symmetric(vertical: 10),

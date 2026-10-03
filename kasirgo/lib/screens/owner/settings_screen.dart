@@ -11,11 +11,14 @@ import '../../services/auth_service.dart';
 import '../../services/settlement_service.dart';
 import '../../services/supporter_service.dart';
 import '../../services/supabase_service.dart';
+import '../../widgets/common/supporter_gate.dart';
 import '../../screens/auth/onboarding_kyc_screen.dart';
 import '../../utils/formatters.dart';
 import '../../utils/qris_config.dart';
 import 'report_schedule_screen.dart';
 import 'guide_screen.dart';
+import 'multi_outlet_screen.dart';
+import '../../utils/receipt_generator.dart';
 
 class SettingsScreen extends ConsumerStatefulWidget {
   const SettingsScreen({super.key});
@@ -296,6 +299,10 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                         _buildSupporterProgramCard(),
                         const SizedBox(height: 16),
                         _buildReportScheduleEntry(),
+                        const SizedBox(height: 16),
+                        _buildMultiOutletEntry(),
+                        const SizedBox(height: 16),
+                        _buildReceiptEntry(),
                         const SizedBox(height: 16),
                         _buildKYCStatusCard(),
                         const SizedBox(height: 16),
@@ -620,10 +627,252 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
         ),
         trailing:
             const Icon(Icons.chevron_right, color: AppTheme.textSecondary),
+        onTap: () async {
+          if (!await requireSupporterFeature(
+              context, ref, 'auto_bos_report')) {
+            return;
+          }
+          if (!mounted) return;
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+                builder: (_) => const ReportScheduleScreen()),
+          );
+        },
+      ),
+    );
+  }
+
+  /// Struk & Logo (logo kustom = Pendukung; tersimpan LOKAL di perangkat).
+  Widget _buildReceiptEntry() {
+    return Container(
+      decoration: BoxDecoration(
+        color: AppTheme.surfaceColor.withValues(alpha: 0.8),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: AppTheme.borderColor.withValues(alpha: 0.5)),
+      ),
+      child: ListTile(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        leading: Container(
+          padding: const EdgeInsets.all(10),
+          decoration: BoxDecoration(
+            color: AppTheme.warningColor.withValues(alpha: 0.1),
+            borderRadius: BorderRadius.circular(12),
+          ),
+          child: const Icon(Icons.receipt_rounded,
+              color: AppTheme.warningColor, size: 22),
+        ),
+        title: const Text(
+          'Struk & Logo Toko',
+          style: TextStyle(
+              fontSize: 15,
+              fontWeight: FontWeight.bold,
+              color: AppTheme.textPrimary),
+        ),
+        subtitle: const Text(
+          'Tagline struk + logo kustom di struk digital',
+          style: TextStyle(fontSize: 12, color: AppTheme.textSecondary),
+        ),
+        trailing: const Icon(Icons.chevron_right, color: AppTheme.textSecondary),
+        onTap: _showReceiptDialog,
+      ),
+    );
+  }
+
+  Future<void> _showReceiptDialog() async {
+    final existingLogo = await ReceiptGenerator.loadLogo();
+    final existingTagline = await ReceiptGenerator.loadTagline();
+    if (!mounted) return;
+
+    final taglineController = TextEditingController(text: existingTagline ?? '');
+    String logoBase64 = existingLogo ?? '';
+    bool isUploading = false;
+
+    Future<void> pickLogo(StateSetter setDialogState) async {
+      try {
+        setDialogState(() => isUploading = true);
+        final picked = await ImagePicker().pickImage(
+          source: ImageSource.gallery,
+          imageQuality: 85,
+          maxWidth: 512,
+        );
+        if (picked == null) {
+          setDialogState(() => isUploading = false);
+          return;
+        }
+        final bytes = await picked.readAsBytes();
+        setDialogState(() {
+          logoBase64 = base64Encode(bytes);
+          isUploading = false;
+        });
+      } catch (_) {
+        setDialogState(() => isUploading = false);
+      }
+    }
+
+    await showDialog(
+      context: context,
+      builder: (dialogContext) => StatefulBuilder(
+        builder: (context, setDialogState) {
+          return AlertDialog(
+            backgroundColor: AppTheme.surfaceColor,
+            title: const Text('Struk & Logo',
+                style: TextStyle(fontWeight: FontWeight.bold)),
+            content: SizedBox(
+              width: 420,
+              child: SingleChildScrollView(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text(
+                      'Logo kustom tampil di struk digital (PDF) dan tersimpan '
+                      'lokal di perangkat ini.',
+                      style: TextStyle(fontSize: 12, color: AppTheme.textSecondary),
+                    ),
+                    const SizedBox(height: 14),
+                    Center(
+                      child: logoBase64.isNotEmpty
+                          ? ClipRRect(
+                              borderRadius: BorderRadius.circular(12),
+                              child: Image.memory(
+                                base64Decode(logoBase64),
+                                width: 90,
+                                height: 90,
+                                fit: BoxFit.contain,
+                                errorBuilder: (_, _, _) =>
+                                    const Icon(Icons.image_outlined),
+                              ),
+                            )
+                          : Container(
+                              width: 90,
+                              height: 90,
+                              decoration: BoxDecoration(
+                                color: AppTheme.backgroundColor,
+                                borderRadius: BorderRadius.circular(12),
+                                border: Border.all(color: AppTheme.borderColor),
+                              ),
+                              child: const Icon(Icons.image_outlined,
+                                  color: AppTheme.textSecondary),
+                            ),
+                    ),
+                    const SizedBox(height: 14),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: OutlinedButton.icon(
+                            icon: isUploading
+                                ? const SizedBox(
+                                    width: 16,
+                                    height: 16,
+                                    child: CircularProgressIndicator(strokeWidth: 2),
+                                  )
+                                : const Icon(Icons.upload_rounded, size: 18),
+                            label: const Text('Pilih Logo'),
+                            onPressed: isUploading
+                                ? null
+                                : () async {
+                                    if (!await requireSupporterFeature(
+                                        context, ref, 'custom_receipt')) {
+                                      return;
+                                    }
+                                    await pickLogo(setDialogState);
+                                  },
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        if (logoBase64.isNotEmpty)
+                          TextButton(
+                            onPressed: () =>
+                                setDialogState(() => logoBase64 = ''),
+                            child: const Text('Hapus Logo',
+                                style: TextStyle(color: AppTheme.errorColor)),
+                          ),
+                      ],
+                    ),
+                    const SizedBox(height: 8),
+                    TextField(
+                      controller: taglineController,
+                      decoration: const InputDecoration(
+                        labelText: 'Tagline Struk (opsional)',
+                        hintText: 'Contoh: Terima kasih - Warung Berkah',
+                      ),
+                    ),
+                    const SizedBox(height: 10),
+                    const Text(
+                      'Struk dibagikan dari POS setelah transaksi (tombol STRUK). '
+                      'Logo tersimpan hanya di perangkat Anda.',
+                      style: TextStyle(fontSize: 11, color: AppTheme.textSecondary),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(dialogContext),
+                child: const Text('Tutup'),
+              ),
+              ElevatedButton(
+                onPressed: () async {
+                  try {
+                    await ReceiptGenerator.saveTagline(
+                        taglineController.text.trim());
+                    if (logoBase64.isEmpty) {
+                      await ReceiptGenerator.deleteLogo();
+                    } else {
+                      await ReceiptGenerator.saveLogo(logoBase64);
+                    }
+                  } catch (_) {}
+                  if (context.mounted && dialogContext.mounted) {
+                    Navigator.pop(dialogContext);
+                  }
+                },
+                child: const Text('Simpan'),
+              ),
+            ],
+          );
+        },
+      ),
+    );
+  }
+
+  /// Multi-Outlet (Program Pendukung): kelola cabang dalam 1 akun.
+  Widget _buildMultiOutletEntry() {
+    return Container(
+      decoration: BoxDecoration(
+        color: AppTheme.surfaceColor.withValues(alpha: 0.8),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: AppTheme.borderColor.withValues(alpha: 0.5)),
+      ),
+      child: ListTile(
+        shape:
+            RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        leading: Container(
+          padding: const EdgeInsets.all(10),
+          decoration: BoxDecoration(
+            color: AppTheme.accentColor.withValues(alpha: 0.1),
+            borderRadius: BorderRadius.circular(12),
+          ),
+          child: const Icon(Icons.store_rounded,
+              color: AppTheme.accentColor, size: 22),
+        ),
+        title: const Text(
+          'Multi Outlet (Cabang)',
+          style: TextStyle(
+              fontSize: 15,
+              fontWeight: FontWeight.bold,
+              color: AppTheme.textPrimary),
+        ),
+        subtitle: const Text(
+          'Kelola beberapa cabang toko, berpindah outlet aktif',
+          style: TextStyle(fontSize: 12, color: AppTheme.textSecondary),
+        ),
+        trailing:
+            const Icon(Icons.chevron_right, color: AppTheme.textSecondary),
         onTap: () => Navigator.push(
           context,
-          MaterialPageRoute(
-              builder: (_) => const ReportScheduleScreen()),
+          MaterialPageRoute(builder: (_) => const MultiOutletScreen()),
         ),
       ),
     );

@@ -160,11 +160,11 @@ class AuthService {
 
       final roles = (rolesResponse as List).cast<Map<String, dynamic>>();
       if (roles.isNotEmpty) {
-        // Prefer a staff role (admin/cashier); otherwise use owner row.
+        // Prefer a staff role (admin/cashier/kitchen); otherwise use owner row.
         Map<String, dynamic>? chosen;
         for (final r in roles) {
           final role = r['role']?.toString();
-          if (role == 'admin' || role == 'cashier') {
+          if (role == 'admin' || role == 'cashier' || role == 'kitchen') {
             chosen = r;
             break;
           }

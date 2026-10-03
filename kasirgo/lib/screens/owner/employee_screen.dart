@@ -6,6 +6,8 @@ import 'package:shared_preferences/shared_preferences.dart';
 import '../../config/app_theme.dart';
 import '../../models/employee.dart';
 import '../../providers/auth_provider.dart';
+import '../../providers/module_provider.dart';
+import '../../providers/outlet_provider.dart';
 import '../../services/supabase_service.dart';
 import '../../widgets/common/supporter_gate.dart';
 
@@ -193,6 +195,10 @@ class _EmployeeScreenState extends ConsumerState<EmployeeScreen> with SingleTick
     bool createLogin = false;
     String selectedRole = 'cashier';
     bool isSubmitting = false;
+    // Koki hanya relevan utk usaha makanan/minuman (cafe/warteg).
+    final userSnapshot = ref.read(currentUserProvider);
+    final isFoodBusiness = ModuleConfig.isFoodBusiness(
+        ref.read(outletTypeProvider(userSnapshot?.outletId ?? '')));
 
     showDialog(
       context: context,
@@ -311,10 +317,16 @@ class _EmployeeScreenState extends ConsumerState<EmployeeScreen> with SingleTick
                           prefixIcon: Icon(Icons.badge, color: AppTheme.textSecondary),
                         ),
                         dropdownColor: AppTheme.surfaceColor,
-                        items: const [
-                          DropdownMenuItem(value: 'cashier', child: Text('Kasir (POS & Transaksi)')),
-                          DropdownMenuItem(value: 'admin', child: Text('Admin (Produk & Laporan)')),
-                        ],
+                        items: isFoodBusiness
+                            ? const [
+                                DropdownMenuItem(value: 'cashier', child: Text('Kasir (POS & Transaksi)')),
+                                DropdownMenuItem(value: 'kitchen', child: Text('Koki (KDS Dapur Saja)')),
+                                DropdownMenuItem(value: 'admin', child: Text('Admin (Produk & Laporan)')),
+                              ]
+                            : const [
+                                DropdownMenuItem(value: 'cashier', child: Text('Kasir (POS & Transaksi)')),
+                                DropdownMenuItem(value: 'admin', child: Text('Admin (Produk & Laporan)')),
+                              ],
                         onChanged: (v) {
                           if (v != null) {
                             setDialogState(() => selectedRole = v);

@@ -18,6 +18,7 @@ import 'screens/admin/admin_home_screen.dart';
 import 'screens/cashier/cashier_home_screen.dart';
 import 'screens/cashier/cashier_pos_screen.dart';
 import 'screens/cashier/cashier_report_screen.dart';
+import 'screens/kitchen/kitchen_home_screen.dart';
 import 'screens/customer/customer_menu_screen.dart';
 import 'screens/customer/customer_catalog_screen.dart';
 import 'services/local_db_service.dart';
@@ -103,6 +104,10 @@ final _router = GoRouter(
       builder: (context, state) => const KycGate(child: CashierReportScreen()),
     ),
     GoRoute(
+      path: '/kitchen',
+      builder: (context, state) => const KycGate(child: KitchenHomeScreen()),
+    ),
+    GoRoute(
       path: '/customer',
       builder: (context, state) => CustomerMenuScreen(
         initialOutletId: state.uri.queryParameters['outlet'] ?? '',
@@ -143,6 +148,7 @@ class _KasirGoAppState extends ConsumerState<KasirGoApp> {
           final route = switch (user.role) {
             'admin' => '/admin',
             'cashier' => '/cashier',
+            'kitchen' => '/kitchen',
             _ => '/owner',
           };
           _router.go(route);
@@ -173,6 +179,7 @@ class _KasirGoAppState extends ConsumerState<KasirGoApp> {
     final route = switch (user.role) {
       'admin' => '/admin',
       'cashier' => '/cashier',
+      'kitchen' => '/kitchen',
       _ => '/owner',
     };
     _router.go(route);

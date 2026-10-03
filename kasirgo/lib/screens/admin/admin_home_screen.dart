@@ -3,10 +3,12 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../config/app_theme.dart';
 import '../../providers/auth_provider.dart';
+import '../../providers/module_provider.dart';
 import '../../providers/outlet_provider.dart';
 import '../../widgets/common/app_drawer.dart';
 import '../../widgets/common/logout_button.dart';
 import '../../widgets/common/responsive.dart';
+import '../modules/kitchen_display_screen.dart';
 import '../owner/product_list_screen.dart';
 import '../owner/report_screen.dart';
 
@@ -20,11 +22,6 @@ class AdminHomeScreen extends ConsumerStatefulWidget {
 class _AdminHomeScreenState extends ConsumerState<AdminHomeScreen> {
   int _currentIndex = 0;
 
-  static const _navItems = [
-    AppNavItem(icon: Icons.inventory_2_rounded, label: 'Produk'),
-    AppNavItem(icon: Icons.bar_chart_rounded, label: 'Laporan'),
-  ];
-
   @override
   Widget build(BuildContext context) {
     final user = ref.watch(currentUserProvider);
@@ -36,9 +33,21 @@ class _AdminHomeScreenState extends ConsumerState<AdminHomeScreen> {
     }
 
     final outletType = ref.watch(outletTypeProvider(user.outletId ?? ''));
+    // Admin usaha makanan ikut memantau proses dapur via KDS.
+    final isFood = ModuleConfig.isFoodBusiness(outletType);
+    final navItems = isFood
+        ? const [
+            AppNavItem(icon: Icons.inventory_2_rounded, label: 'Produk'),
+            AppNavItem(icon: Icons.restaurant_rounded, label: 'Dapur (KDS)'),
+            AppNavItem(icon: Icons.bar_chart_rounded, label: 'Laporan'),
+          ]
+        : const [
+            AppNavItem(icon: Icons.inventory_2_rounded, label: 'Produk'),
+            AppNavItem(icon: Icons.bar_chart_rounded, label: 'Laporan'),
+          ];
 
     return AppShell(
-      navItems: _navItems,
+      navItems: navItems,
       currentIndex: _currentIndex,
       onIndexChanged: (index) => setState(() => _currentIndex = index),
       headerTitle: 'Panel Admin',
@@ -49,10 +58,16 @@ class _AdminHomeScreenState extends ConsumerState<AdminHomeScreen> {
       mobileTitle: _RoleBadge(label: 'ADMIN • ${outletType.toUpperCase()}'),
       body: IndexedStack(
         index: _currentIndex,
-        children: const [
-          ProductListScreen(embedded: true),
-          ReportScreen(embedded: true),
-        ],
+        children: isFood
+            ? const [
+                ProductListScreen(embedded: true),
+                KitchenDisplayScreen(embedded: true),
+                ReportScreen(embedded: true),
+              ]
+            : const [
+                ProductListScreen(embedded: true),
+                ReportScreen(embedded: true),
+              ],
       ),
     );
   }

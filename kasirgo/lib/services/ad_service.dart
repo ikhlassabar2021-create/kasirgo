@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
@@ -52,6 +53,17 @@ class SponsorAd {
       return 'data:$mime;base64,$b64';
     }
     return null;
+  }
+
+  /// Gambar ter-dekode utk `Image.memory` (paling andal utk base64 di web).
+  Uint8List? get imageBytes {
+    final b64 = imageBase64;
+    if (b64 == null || b64.isEmpty || b64.startsWith('http')) return null;
+    try {
+      return base64Decode(b64);
+    } catch (_) {
+      return null;
+    }
   }
 
   factory SponsorAd.fromJson(Map<String, dynamic> json) {

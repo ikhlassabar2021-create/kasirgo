@@ -148,6 +148,9 @@ class SupporterService {
     'multi_outlet',
     'extra_staff',
     'custom_receipt',
+    'payment_gateway',
+    'auto_bos_report',
+    'ad_free',
   };
 
   static const Map<String, String> featureLabels = {
@@ -164,6 +167,9 @@ class SupporterService {
     'multi_outlet': 'Multi-Outlet',
     'extra_staff': 'Slot Staf Tambahan',
     'custom_receipt': 'Custom Struk / Logo',
+    'payment_gateway': 'QRIS Dinamis Otomatis (Payment Gateway)',
+    'auto_bos_report': 'Laporan Otomatis ke Bos',
+    'ad_free': 'Bebas Iklan',
   };
 
   // ---------------------------------------------------------------------------

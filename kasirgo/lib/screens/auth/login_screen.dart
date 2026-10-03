@@ -75,6 +75,9 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
           case 'cashier':
             context.go('/cashier');
             break;
+          case 'kitchen':
+            context.go('/kitchen');
+            break;
           default:
             context.go('/owner');
         }

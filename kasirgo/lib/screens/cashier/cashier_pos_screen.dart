@@ -10,6 +10,7 @@ import '../../models/tip.dart';
 import '../../providers/auth_provider.dart';
 import '../../services/offline_transaction_service.dart';
 import '../../services/supabase_service.dart';
+import '../../utils/receipt_generator.dart';
 import '../owner/product_list_screen.dart';
 import '../../widgets/pos/product_grid.dart';
 import '../../widgets/pos/cart_panel.dart';
@@ -188,10 +189,12 @@ class _CashierPosScreenState extends ConsumerState<CashierPosScreen> {
       builder: (ctx) => CheckoutDialog(
         items: List.from(_cart),
         totalAmount: _total,
+        outletId: ref.read(currentUserProvider)?.outletId,
       ),
     );
 
     if (result == null) return;
+    final cartSnapshot = List<TransactionItem>.from(_cart);
 
     setState(() => _isLoading = true);
 
@@ -263,6 +266,7 @@ class _CashierPosScreenState extends ConsumerState<CashierPosScreen> {
           _cart.clear();
         });
 
+        final outletName = ref.read(currentUserProvider)?.name ?? 'KasirGo';
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text(
@@ -271,6 +275,23 @@ class _CashierPosScreenState extends ConsumerState<CashierPosScreen> {
                   : 'Transaksi berhasil!',
             ),
             backgroundColor: AppTheme.successColor,
+            action: SnackBarAction(
+              label: 'STRUK',
+              textColor: Colors.white,
+              onPressed: () {
+                ReceiptGenerator.shareTransactionReceipt(
+                  outletId: outletId,
+                  storeName: outletName,
+                  items: cartSnapshot,
+                  txId: created.id,
+                  createdAt: DateTime.now(),
+                  paymentMethod: result.paymentMethod,
+                  totalAmount: cartSnapshot.fold<double>(
+                      0, (s, i) => s + i.price * i.quantity),
+                  finalAmount: result.amount,
+                );
+              },
+            ),
           ),
         );
       }

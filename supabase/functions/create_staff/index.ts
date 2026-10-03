@@ -56,8 +56,8 @@ Deno.serve(async (req: Request) => {
     if (password.length < 6) {
       return json({ error: "Password minimal 6 karakter." }, 400);
     }
-    if (role !== "admin" && role !== "cashier") {
-      return json({ error: "Role harus admin atau cashier." }, 400);
+    if (role !== "admin" && role !== "cashier" && role !== "kitchen") {
+      return json({ error: "Role harus admin, cashier, atau kitchen." }, 400);
     }
 
     const { data: callerRole } = await admin

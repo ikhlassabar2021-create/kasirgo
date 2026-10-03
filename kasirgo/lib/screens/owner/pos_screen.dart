@@ -9,6 +9,7 @@ import '../../models/transaction.dart';
 import '../../providers/auth_provider.dart';
 import '../../services/offline_transaction_service.dart';
 import '../../services/supabase_service.dart';
+import '../../utils/receipt_generator.dart';
 import '../../widgets/common/centennial_background.dart';
 import '../owner/product_list_screen.dart';
 import '../../widgets/pos/product_grid.dart';
@@ -250,10 +251,13 @@ class _PosScreenState extends ConsumerState<PosScreen> {
       builder: (ctx) => CheckoutDialog(
         items: List.from(_cart),
         totalAmount: _total,
+        outletId: ref.read(currentUserProvider)?.outletId,
       ),
     );
 
     if (result == null) return;
+    final cartSnapshot = List<TransactionItem>.from(_cart);
+    final cartDiscount = _discountAmount;
 
     setState(() => _isLoading = true);
 
@@ -350,6 +354,7 @@ class _PosScreenState extends ConsumerState<PosScreen> {
           _discountAmount = 0.0;
         });
 
+        final outletName = ref.read(currentUserProvider)?.name ?? 'KasirGo';
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text(
@@ -358,6 +363,24 @@ class _PosScreenState extends ConsumerState<PosScreen> {
                   : 'Transaksi sukses!',
             ),
             backgroundColor: AppTheme.successColor,
+            action: SnackBarAction(
+              label: 'STRUK',
+              textColor: Colors.white,
+              onPressed: () {
+                ReceiptGenerator.shareTransactionReceipt(
+                  outletId: outletId,
+                  storeName: outletName,
+                  items: cartSnapshot,
+                  txId: created.id,
+                  createdAt: DateTime.now(),
+                  paymentMethod: result.paymentMethod,
+                  totalAmount: cartSnapshot.fold<double>(
+                      0, (s, i) => s + i.price * i.quantity),
+                  finalAmount: result.amount,
+                  discountAmount: cartDiscount,
+                );
+              },
+            ),
           ),
         );
       }

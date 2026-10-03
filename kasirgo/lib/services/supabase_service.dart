@@ -1692,6 +1692,72 @@ class SupabaseService {
     }
   }
 
+  /// Daftar outlet milik owner aktif (multi-outlet — Pendukung).
+  /// RLS: hanya outlet milik sendiri yang terlihat.
+  Future<List<Map<String, dynamic>>> listOwnerOutlets() async {
+    try {
+      final res = await _client
+          .from('outlets')
+          .select('id, name, type, outlet_type, address, created_at')
+          .order('created_at');
+      return (res as List)
+          .map((j) => Map<String, dynamic>.from(j as Map))
+          .toList();
+    } catch (e) {
+      debugPrint('listOwnerOutlets error: $e');
+      return [];
+    }
+  }
+
+  /// Tambah outlet baru milik owner aktif (multi-outlet — Pendukung).
+  Future<Map<String, dynamic>?> addOwnerOutlet({
+    required String name,
+    required String type,
+    String? address,
+  }) async {
+    try {
+      final uid = _client.auth.currentUser?.id;
+      if (uid == null) return null;
+      final res = await _client.from('outlets').insert({
+        'owner_id': uid,
+        'name': name.trim(),
+        'type': type.trim(),
+        if (address != null && address.trim().isNotEmpty)
+          'address': address.trim(),
+      }).select('id, name, type, outlet_type').single();
+      // Pastikan owner punya baris user_roles utk outlet baru.
+      try {
+        await _client.from('user_roles').upsert({
+          'user_id': uid,
+          'outlet_id': (res as Map)['id'].toString(),
+          'role': 'owner',
+        }, onConflict: 'user_id,outlet_id');
+      } catch (_) {}
+      return Map<String, dynamic>.from(res as Map);
+    } catch (e) {
+      debugPrint('addOwnerOutlet error: $e');
+      return null;
+    }
+  }
+
+  /// Status pesanan dine-in utk pelanggan (anon) via polling per meja.
+  /// Mengembalikan pesanan hari ini untuk meja tersebut (terbaru dulu).
+  Future<List<Map<String, dynamic>>> getPublicOrderStatus(
+      String outletId, String tableNumber) async {
+    try {
+      final res = await _client.rpc('get_public_order_status', params: {
+        'p_outlet': outletId,
+        'p_table': tableNumber,
+      });
+      return (res as List)
+          .map((j) => Map<String, dynamic>.from(j as Map))
+          .toList();
+    } catch (e) {
+      debugPrint('getPublicOrderStatus error: $e');
+      return [];
+    }
+  }
+
   /// Info pembayaran outlet (QRIS/transfer) untuk pelanggan anonim via RPC.
   Future<Map<String, dynamic>?> getPublicOutletPayment(String outletId) async {
     try {

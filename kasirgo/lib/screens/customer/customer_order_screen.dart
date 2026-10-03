@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -38,12 +39,27 @@ class _CustomerOrderScreenState extends State<CustomerOrderScreen> {
   String _searchQuery = '';
   String? _error;
   bool _adConsent = false;
+  List<Map<String, dynamic>> _orderStatuses = [];
+  Timer? _statusTimer;
 
   @override
   void initState() {
     super.initState();
     _loadProducts();
     _loadAdConsent();
+    _refreshOrderStatus();
+    // Status pesanan diperbarui otomatis (kasir konfirmasi bayar / dapur
+    // memproses). Polling ringan tiap 8 detik, aman utk web & APK.
+    _statusTimer = Timer.periodic(
+        const Duration(seconds: 8), (_) => _refreshOrderStatus());
+  }
+
+  Future<void> _refreshOrderStatus() async {
+    if (widget.outletId.isEmpty) return;
+    final data = await _service.getPublicOrderStatus(
+        widget.outletId, widget.tableNumber);
+    if (!mounted || _orderStatuses.toString() == data.toString()) return;
+    setState(() => _orderStatuses = data);
   }
 
   Future<void> _loadAdConsent() async {
@@ -53,6 +69,7 @@ class _CustomerOrderScreenState extends State<CustomerOrderScreen> {
 
   @override
   void dispose() {
+    _statusTimer?.cancel();
     _searchController.dispose();
     super.dispose();
   }
@@ -211,6 +228,7 @@ class _CustomerOrderScreenState extends State<CustomerOrderScreen> {
 
     setState(() => _cart.clear());
     await _showSuccess(total, itemCount, txId, paymentMethod);
+    _refreshOrderStatus();
   }
 
   Future<void> _showSuccess(
@@ -403,35 +421,173 @@ class _CustomerOrderScreenState extends State<CustomerOrderScreen> {
 
     return LayoutBuilder(
       builder: (context, constraints) {
+        final banner = _buildOrderStatusBanner();
         final isWide = constraints.maxWidth >= 760;
         if (isWide) {
-          return Row(
+          return Column(
             children: [
+              banner,
               Expanded(
-                  flex: 65,
-                  child: _buildCatalog(constraints.maxWidth * 0.35)),
-              SizedBox(
-                width: constraints.maxWidth * 0.35,
-                child: _buildPersistentCart(),
+                child: Row(
+                  children: [
+                    Expanded(
+                        flex: 65,
+                        child: _buildCatalog(constraints.maxWidth * 0.35)),
+                    SizedBox(
+                      width: constraints.maxWidth * 0.35,
+                      child: _buildPersistentCart(),
+                    ),
+                  ],
+                ),
               ),
             ],
           );
         }
-        return Stack(
+        return Column(
           children: [
-            Positioned.fill(
-              child: _buildCatalog(constraints.maxWidth, bottomPadding: 240),
-            ),
-            if (_cart.isNotEmpty)
-              CartPanel(
-                items: _cart,
-                onCheckout: _openCheckout,
-                onRemoveItem: _removeItem,
-                onUpdateQty: _updateQty,
+            banner,
+            Expanded(
+              child: Stack(
+                children: [
+                  Positioned.fill(
+                    child:
+                        _buildCatalog(constraints.maxWidth, bottomPadding: 240),
+                  ),
+                  if (_cart.isNotEmpty)
+                    CartPanel(
+                      items: _cart,
+                      onCheckout: _openCheckout,
+                      onRemoveItem: _removeItem,
+                      onUpdateQty: _updateQty,
+                    ),
+                ],
               ),
+            ),
           ],
         );
       },
+    );
+  }
+
+  /// Banner status pesanan terakhir meja ini (polling otomatis).
+  Widget _buildOrderStatusBanner() {
+    if (_orderStatuses.isEmpty) return const SizedBox.shrink();
+
+    final unpaid = _orderStatuses
+        .where((o) => (o['payment_status'] ?? '') == 'unpaid')
+        .toList();
+    final active = _orderStatuses
+        .where((o) =>
+            o['payment_status'] != 'unpaid' &&
+            (o['order_status'] ?? 'baru') != 'selesai')
+        .toList();
+    final tx = unpaid.isNotEmpty
+        ? unpaid.first
+        : (active.isNotEmpty ? active.last : null);
+    if (tx == null) return const SizedBox.shrink();
+
+    final payStatus = tx['payment_status']?.toString() ?? 'unpaid';
+    final method = tx['payment_method']?.toString() ?? 'cash';
+    final kitchen = tx['order_status']?.toString() ?? 'baru';
+
+    String title;
+    String subtitle;
+    IconData icon;
+    Color color;
+    if (payStatus == 'unpaid') {
+      if (method == 'qris') {
+        title = 'Menunggu Konfirmasi QRIS';
+        subtitle =
+            'Pesanan sudah masuk ke kasir. Setelah pembayaran QRIS dikonfirmasi kasir, pesanan langsung diproses dapur.';
+        icon = Icons.qr_code_2_rounded;
+        color = AppTheme.warningColor;
+      } else {
+        title = 'Silakan Bayar di Kasir';
+        subtitle =
+            'Pesanan sudah masuk ke kasir. Setelah kasir menerima pembayaran tunai, pesanan langsung diproses dapur.';
+        icon = Icons.payments_rounded;
+        color = AppTheme.warningColor;
+      }
+    } else if (kitchen == 'baru') {
+      title = 'Pesanan Diterima';
+      subtitle = 'Kasir sudah konfirmasi. Pesanan masuk antrean dapur.';
+      icon = Icons.receipt_long_rounded;
+      color = AppTheme.primaryColor;
+    } else if (kitchen == 'diproses') {
+      title = 'Sedang Diproses';
+      subtitle = 'Koki sedang menyiapkan pesanan kamu.';
+      icon = Icons.soup_kitchen_rounded;
+      color = AppTheme.warningColor;
+    } else if (kitchen == 'siap') {
+      title = 'Pesanan Siap!';
+      subtitle = 'Selamat menikmati.';
+      icon = Icons.emoji_food_beverage_rounded;
+      color = AppTheme.successColor;
+    } else {
+      title = 'Pesanan Selesai';
+      subtitle = 'Terima kasih telah berkunjung.';
+      icon = Icons.check_circle_rounded;
+      color = AppTheme.successColor;
+    }
+
+    return Container(
+      margin: const EdgeInsets.fromLTRB(16, 12, 16, 0),
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+      decoration: BoxDecoration(
+        color: AppTheme.surfaceColor,
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: color.withValues(alpha: 0.35)),
+      ),
+      child: Row(
+        children: [
+          Container(
+            width: 38,
+            height: 44,
+            decoration: BoxDecoration(
+              color: color.withValues(alpha: 0.12),
+              borderRadius: BorderRadius.circular(10),
+            ),
+            child: Icon(icon, color: color, size: 22),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    Flexible(
+                      child: Text(
+                        title,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: GoogleFonts.inter(
+                          fontWeight: FontWeight.w800,
+                          fontSize: 13,
+                          color: AppTheme.textPrimary,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    SizedBox(
+                      width: 12,
+                      height: 12,
+                      child: CircularProgressIndicator(
+                          strokeWidth: 2, color: color),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 3),
+                Text(
+                  subtitle,
+                  style: const TextStyle(
+                      fontSize: 11.5, color: AppTheme.textSecondary),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
     );
   }
 

@@ -111,11 +111,11 @@ class _SponsorAdSlotState extends State<SponsorAdSlot> {
                     borderRadius: BorderRadius.circular(10),
                   ),
                   alignment: Alignment.center,
-                  child: (ad.imageSrc != null)
+                  child: (ad.imageBytes != null)
                       ? ClipRRect(
                           borderRadius: BorderRadius.circular(10),
-                          child: Image.network(
-                            ad.imageSrc!,
+                          child: Image.memory(
+                            ad.imageBytes!,
                             width: 46,
                             height: 46,
                             fit: BoxFit.cover,
@@ -125,8 +125,22 @@ class _SponsorAdSlotState extends State<SponsorAdSlot> {
                                 size: 22),
                           ),
                         )
-                      : const Icon(Icons.campaign_outlined,
-                          color: AppTheme.accentColor, size: 22),
+                      : (ad.imageSrc != null && ad.imageSrc!.startsWith('http'))
+                          ? ClipRRect(
+                              borderRadius: BorderRadius.circular(10),
+                              child: Image.network(
+                                ad.imageSrc!,
+                                width: 46,
+                                height: 46,
+                                fit: BoxFit.cover,
+                                errorBuilder: (_, _, _) => const Icon(
+                                    Icons.campaign_outlined,
+                                    color: AppTheme.accentColor,
+                                    size: 22),
+                              ),
+                            )
+                          : const Icon(Icons.campaign_outlined,
+                              color: AppTheme.accentColor, size: 22),
                 ),
                 const SizedBox(width: 12),
                 Expanded(
