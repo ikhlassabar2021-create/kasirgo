@@ -166,12 +166,32 @@ Status: SELESAI. Project Supabase sudah dibuat dan schema terpasang serta diuji.
    `create_supporter_checkout` return `supporter_id`; PaymentService RCB
    sandbox-direct + fallback Edge Function; QRIS dinamis di POS
    (`checkout_dialog`) & Program Pendukung (`supporter_screen`) dengan polling
-   status otomatis; Control Plane field provider/mode/base_url/callback;
-   Edge Functions `rcb_create_charge`, `rcb_webhook` (SHA256), `rcb_check_status`.
-   Migrasi `2026-10-07-kasirgo-rcb-pg.sql` + `-2.sql`. SUDAH deploy web+admin.
-   CATATAN: mode `sandbox_direct` menaruh API key sandbox di klien =
-   HANYA untuk tes; wajib pindah ke Edge Function (mode `live_server`) sebelum
-   produksi. Edge Functions BELUM di-deploy (butuh SUPABASE_ACCESS_TOKEN).)
+    status otomatis; Control Plane field provider/mode/base_url/callback;
+    Edge Functions `rcb_create_charge`, `rcb_webhook` (SHA256), `rcb_check_status`.
+    Migrasi `2026-10-07-kasirgo-rcb-pg.sql` + `-2.sql`. SUDAH deploy web+admin.
+    CATATAN: mode `sandbox_direct` menaruh API key sandbox di klien =
+    HANYA untuk tes; wajib pindah ke Edge Function (mode `live_server`) sebelum
+    produksi. Edge Functions BELUM di-deploy (butuh SUPABASE_ACCESS_TOKEN).)
+- [x] Alur Bayar Dine-in + Katalog/Meja DB + Pembersihan Fitur
+  (PELANGGAN (QR meja & katalog web): pilihan bayar HANYA QRIS/Tunai,
+  tombol "Kirim Pesanan" -> transaksi payment_status='unpaid' -> kasir
+  "Pesanan Masuk" (chip Menunggu Bayar + tombol KONFIRMASI BAYAR via RPC
+  `confirm_dinein_payment`) -> BARU lanjut ke KDS (filter paid). Transfer bank
+  dihapus di sisi pelanggan (POS kasir tetap ada). Migrasi
+  `2026-10-09-kasirgo-payment-flow-catalog.sql`: kolom transactions.payment_status,
+  products.is_published, tabel outlet_tables + RLS, RPC confirm_dinein_payment /
+  get_public_catalog, place_dine_in_order rewrite (cash/qris + unpaid).
+  HAPUS FITUR: split bill (UI checkout; struct SplitPayment dipertahankan),
+  varian (form/daftar/POS/module_registry; kolom has_variants dipertahankan),
+  Buku Kasbon (unwire home), PDF laporan (Excel tetap), transfer bank pelanggan.
+  FIX: PPOB payment method reset saat ketik (notifier di-hoist+dispose);
+  B2B guard config belum siap (dialog, bukan WebView kosong).
+  PERSIST DB: katalog toggle -> products.is_published (RPC get_public_catalog
+  utk anon); QR Meja -> tabel outlet_tables (CRUD owner, tidak lagi hardcoded).
+  Iklan sponsor juga di katalog pelanggan (SponsorAdSlot).
+  E2E terverifikasi via REST+psql: unpaid -> confirm owner -> paid; anon
+  get_public_catalog hanya produk is_published; outlet_tables insert/delete OK.
+  Deploy web gh-pages e40a4f7; main 06004a2.)
 
 Catatan: Phase 7.6 adalah redesign visual menyeluruh (semua dashboard + fitur Produk/Pelanggan/
 Karyawan/Laporan/Pengaturan) tanpa mengubah fitur/logic. Spec: workflow Bagian 1.6 & 7C.
