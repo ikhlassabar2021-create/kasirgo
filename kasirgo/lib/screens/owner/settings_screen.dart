@@ -500,11 +500,10 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                 fontSize: 13, color: AppTheme.textSecondary, height: 1.4),
           ),
           const SizedBox(height: 14),
-          _buildSupportBenefit('WA Marketing (broadcast & retensi)'),
-          _buildSupportBenefit('Katalog Online & QR Meja Dine-in'),
-          _buildSupportBenefit('Laporan Lanjutan + Export Excel/PDF'),
-          _buildSupportBenefit('AI Co-Pilot Pro & Health Score Pro'),
-          _buildSupportBenefit('Backup Cloud, Multi-Outlet & Slot Staf Tambahan'),
+          ...SupporterService.premiumFeatures.map(
+            (k) => _buildSupportBenefit(
+                SupporterService.featureLabels[k] ?? k),
+          ),
           const SizedBox(height: 16),
           Container(
             padding: const EdgeInsets.all(14),

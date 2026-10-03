@@ -53,11 +53,12 @@ class _QrTableScreenState extends ConsumerState<QrTableScreen> {
     final name = _newTableController.text.trim();
     if (name.isEmpty || outletId.isEmpty) return;
     setState(() => _isAdding = true);
-    final ok = await _service.addOutletTable(outletId, name);
+    final result = await _service.addOutletTableDetailed(outletId, name);
     if (!mounted) return;
-    if (!ok) {
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-        content: Text('Gagal menambah meja (mungkin nama sudah dipakai)'),
+    setState(() => _isAdding = false);
+    if (!result.ok) {
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+        content: Text(result.error ?? 'Gagal menambah meja'),
         backgroundColor: AppTheme.errorColor,
       ));
       return;

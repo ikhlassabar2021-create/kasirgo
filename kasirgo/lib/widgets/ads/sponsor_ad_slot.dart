@@ -77,13 +77,15 @@ class _SponsorAdSlotState extends State<SponsorAdSlot> {
   Widget build(BuildContext context) {
     final d = _decision;
     if (d == null) return const SizedBox.shrink();
-    if (d.adFree || !d.showAds) return const SizedBox.shrink();
+    if (d.adFree) return const SizedBox.shrink();
 
+    // Minta consent (UU PDP) lebih dulu. `decide()` mengembalikan showAds=false
+    // saat consent belum ada, jadi cek ini harus mendahului cek showAds.
     if (d.needsConsent) {
       return _consentCard();
     }
 
-    if (d.ads.isEmpty) return const SizedBox.shrink();
+    if (!d.showAds || d.ads.isEmpty) return const SizedBox.shrink();
     if (_index >= d.ads.length) _index = 0;
     final ad = d.ads[_index];
 

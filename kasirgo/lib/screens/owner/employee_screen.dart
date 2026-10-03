@@ -410,8 +410,13 @@ class _EmployeeScreenState extends ConsumerState<EmployeeScreen> with SingleTick
                             isActive: true,
                           );
 
-                          final resp = await _supabaseService.createEmployee(newEmployee);
-                          var saved = resp;
+                          dynamic saved;
+                          try {
+                            saved = await _supabaseService.createEmployee(newEmployee);
+                          } catch (e) {
+                            debugPrint('createEmployee error: $e');
+                            saved = null;
+                          }
                           if (saved == null) {
                             final local = await _loadLocalStaff(outletId);
                             final newLocal = newEmployee.copyWith(

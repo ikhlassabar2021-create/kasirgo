@@ -305,21 +305,36 @@ class SupabaseService {
     }
   }
 
-  Future<bool> addOutletTable(String outletId, String name) async {
+  Future<bool> addOutletTable(String outletId, String name) async =>
+      (await addOutletTableDetailed(outletId, name)).ok;
+
+  /// Sama seperti [addOutletTable], tetapi mengembalikan pesan error yang jelas.
+  Future<({bool ok, String? error})> addOutletTableDetailed(
+      String outletId, String name) async {
     final n = name.trim();
-    if (n.isEmpty) return false;
+    if (n.isEmpty) return (ok: false, error: 'Nama meja tidak boleh kosong');
     try {
       final existing = await getOutletTables(outletId);
-      if (existing.any((e) => e.toLowerCase() == n.toLowerCase())) return false;
+      if (existing.any((e) => e.toLowerCase() == n.toLowerCase())) {
+        return (ok: false, error: 'Nama meja "$n" sudah dipakai');
+      }
       await _client.from('outlet_tables').insert({
         'outlet_id': outletId,
         'name': n,
         'sort_order': existing.length,
       });
-      return true;
+      return (ok: true, error: null);
     } catch (e) {
       debugPrint('addOutletTable error: $e');
-      return false;
+      final msg = e.toString();
+      if (msg.contains('row-level security') ||
+          msg.contains('violates row-level')) {
+        return (
+          ok: false,
+          error: 'Tidak berhak menambah meja. Pastikan Anda owner outlet ini.'
+        );
+      }
+      return (ok: false, error: 'Gagal menambah meja: $msg');
     }
   }
 
@@ -1698,7 +1713,7 @@ class SupabaseService {
     try {
       final res = await _client
           .from('outlets')
-          .select('id, name, type, outlet_type, address, created_at')
+          .select('id, name, type, address, created_at')
           .order('created_at');
       return (res as List)
           .map((j) => Map<String, dynamic>.from(j as Map))
@@ -1724,7 +1739,7 @@ class SupabaseService {
         'type': type.trim(),
         if (address != null && address.trim().isNotEmpty)
           'address': address.trim(),
-      }).select('id, name, type, outlet_type').single();
+      }).select('id, name, type').single();
       // Pastikan owner punya baris user_roles utk outlet baru.
       try {
         await _client.from('user_roles').upsert({

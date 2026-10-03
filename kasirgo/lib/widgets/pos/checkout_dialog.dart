@@ -14,6 +14,7 @@ import '../../services/supporter_service.dart';
 import '../../utils/qris_config.dart';
 import '../../utils/wa_helper.dart';
 import '../common/app_button.dart';
+import '../common/supporter_gate.dart';
 
 class SplitPayment {
   final String method;
@@ -108,12 +109,7 @@ class _CheckoutDialogState extends State<CheckoutDialog> {
             .hasFeature(outletId, 'payment_gateway');
         if (!mounted) return;
         if (!ok) {
-          ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-            content: Text(
-                'QRIS Dinamis (masuk otomatis, saldo langsung cair ke rekening) '
-                'adalah fitur Program Pendukung. QRIS Statis tetap gratis.'),
-            backgroundColor: AppTheme.warningColor,
-          ));
+          await showSupporterLockedDialog(context, 'payment_gateway');
           return;
         }
       }

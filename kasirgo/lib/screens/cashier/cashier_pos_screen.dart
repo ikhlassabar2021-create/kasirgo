@@ -275,6 +275,7 @@ class _CashierPosScreenState extends ConsumerState<CashierPosScreen> {
                   : 'Transaksi berhasil!',
             ),
             backgroundColor: AppTheme.successColor,
+            duration: const Duration(seconds: 12),
             action: SnackBarAction(
               label: 'STRUK',
               textColor: Colors.white,

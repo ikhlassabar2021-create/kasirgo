@@ -176,6 +176,29 @@ class _ReportScreenState extends ConsumerState<ReportScreen> with SingleTickerPr
             constraints: const BoxConstraints(maxWidth: 1100),
             child: Column(
               children: [
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(8, 4, 8, 0),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.end,
+                    children: [
+                      IconButton(
+                        icon: const Icon(Icons.share),
+                        tooltip: 'Share Laporan',
+                        onPressed: _showShareDialog,
+                      ),
+                      IconButton(
+                        icon: const Icon(Icons.picture_as_pdf),
+                        tooltip: 'Laporan Bank (PDF)',
+                        onPressed: _exportBankReadyPdf,
+                      ),
+                      IconButton(
+                        icon: const Icon(Icons.table_view),
+                        tooltip: 'Export Excel',
+                        onPressed: _exportExcel,
+                      ),
+                    ],
+                  ),
+                ),
                 tabBar,
                 _buildPeriodFilterChips(),
                 Expanded(
@@ -918,6 +941,21 @@ class _ReportScreenState extends ConsumerState<ReportScreen> with SingleTickerPr
                             '#${tx.id.length > 8 ? tx.id.substring(0, 8) : tx.id}',
                             style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 13),
                           ),
+                          if (tx.items.isNotEmpty) ...[
+                            const SizedBox(height: 2),
+                            Text(
+                              tx.items
+                                  .map((i) =>
+                                      '${i.productName} x${i.quantity}')
+                                  .join(', '),
+                              maxLines: 2,
+                              overflow: TextOverflow.ellipsis,
+                              style: const TextStyle(
+                                  color: AppTheme.textPrimary,
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.w500),
+                            ),
+                          ],
                           const SizedBox(height: 2),
                           Text(
                             '${Formatters.date(tx.createdAt)} • ${tx.paymentMethod}',

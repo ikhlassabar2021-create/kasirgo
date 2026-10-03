@@ -363,6 +363,7 @@ class _PosScreenState extends ConsumerState<PosScreen> {
                   : 'Transaksi sukses!',
             ),
             backgroundColor: AppTheme.successColor,
+            duration: const Duration(seconds: 12),
             action: SnackBarAction(
               label: 'STRUK',
               textColor: Colors.white,
