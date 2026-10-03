@@ -6,3 +6,4 @@ node_modules/
 *.sql
 !docs/migrations/*.sql
 supabase/.temp/
+supabase/supabase/
