@@ -215,3 +215,26 @@ Phase 8 = Modul per outlet_type: module_registry (override feature_flags `module
 + trigger stok varian (stock_logs), recipes/BOM (HPP bahan, deduksi stok bahan saat penjualan),
 KDS dine-in (realtime, filter hari ini), shifts/tips/transaction_payments (shift kasir, split bill).
 Migrasi: docs/migrations/2026-10-01-kasirgo-8.sql. Detail: PROGRESS-PHASE8.md.
+
+## Sesi 2026-10-03: Role Koki + Status Pesanan + Multi-Outlet + Struk Logo (SELESAI)
+- ROLE KOKI (outlet_type cafe/warteg): dropdown Karyawan ada "Koki (KDS Dapur Saja)";
+  create_staff EF izinkan 'kitchen' (SUDAH redeploy + teruji); migrasi
+  `2026-10-09-kasirgo-koki-status.sql`: handle_new_user whitelist kitchen,
+  set_order_status izinkan kitchen, user_roles_role_check + kitchen (constraint
+  live dulu HANYA admin/cashier/owner = penyebab gagal create koki).
+  Koki login -> langsung KDS (screens/kitchen/kitchen_shell.dart, route /kitchen);
+  admin juga punya tab Dapur. Akun test: ikhlassabar2021+kokitest@gmail.com / sabar2021.
+- STATUS PESANAN REALTIME PELANGGAN: polling RPC `get_public_order_status`
+  (anon, by outlet+table, order terbaru hari ini) di customer_order_screen ->
+  banner: unpaid="Silakan Bayar di Kasir", diproses="Pesanan Sedang Diproses".
+  E2E REST lulus: place_dine_in_order(unpaid) -> confirm_dinein_payment(owner)
+  -> set_order_status(koki diproses) -> status paid+diproses.
+- PDF LAPORAN KEMBALI: report_screen tombol PDF + PDFExporter (revert ST13-1).
+- MULTI-OUTLET PENDUKUNG: settings toggle + owner/multi_outlet_screen.dart +
+  SupporterService.getManagedOutlets (transaksi via outlets.owner_id = uid).
+- STRUK CUSTOM LOGO: settings pilih gambar (LOKAL, base64 prefs) + tombol
+  Struk PDF di POS sukses (utils/receipt_generator.dart).
+- GATE QRIS DINAMIS: checkout QRIS butuh Program Pendukung; QRIS statis/statis
+  PNG tetap gratis. Manfaat baru: Laporan ke Bos + Bebas Iklan Pelanggan
+  (SponsorAdSlot skip jika outlet aktif supporter aktif).
+- Deploy: main 023a7f8, gh-pages 7f0d426 (terverifikasi live).
