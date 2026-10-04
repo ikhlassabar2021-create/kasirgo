@@ -295,3 +295,23 @@ Migrasi: docs/migrations/2026-10-01-kasirgo-8.sql. Detail: PROGRESS-PHASE8.md.
 - Deploy: main 928fcbe, gh-pages 79ab697 (flutter_bootstrap.js live identik
   dgn build lokal). QR Meja: backend memang benar sejak awal -> bila user
   masih gagal = cache service worker, minta hard refresh.
+
+## Sesi 2026-10-03 (4): Nama Karyawan + Password Virna (SELESAI)
+- NAMA KARYAWAN TIDAK TAMPIL: user_roles tidak punya kolom nama -> UI hanya
+  'Staf (ROLE)'. FIX migrasi `docs/migrations/2026-10-03-kasirgo-staff-display-name.sql`:
+  kolom `display_name` + backfill dari metadata auth.users (staff_name dari
+  EF create_staff; name/full_name dari signup owner) -> 19 baris terisi.
+- Wiring: EF create_staff upsert sertakan display_name (PENDING redeploy,
+  SUPABASE_ACCESS_TOKEN tidak tersedia di sesi ini - app sudah menulis
+  display_name sendiri via upsert RLS-fixed jadi tidak memblokir);
+  _ensureStaffRole param name -> display_name (upsert + insert fallback);
+  createEmployee simpan display_name; getEmployees/getEmployee baca
+  display_name (fallback 'Staf (ROLE)').
+- LOGIN STAF GAGAL (virna@gmail.com): akun confirmed + hash bcrypt ada ->
+  password-nya BUKAN sabar2021 (owner mengetik password lain saat buat
+  akun). FIX: reset via psql `crypt('sabar2021', gen_salt('bf'))` ->
+  login REST OK. Pelajaran: kalau owner lupa password staf, reset via psql.
+- QR MEJA "tambah meja belum ada": UI add form SELALU ada di kode saat ini;
+  Toko Test type=Cafe (bukan gate). Diagnosis: perangkat masih build lama
+  (sebelum Phase 13C, tabel hardcoded tanpa UI tambah) -> hard refresh.
+- Deploy: main 23b4d00, gh-pages f92b32b (live terverifikasi via hash).
