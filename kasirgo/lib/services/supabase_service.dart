@@ -593,11 +593,14 @@ class SupabaseService {
       return (response as List).map((json) {
         final role = json['role']?.toString() ?? 'cashier';
         final userId = json['user_id']?.toString() ?? '';
+        final displayName = json['display_name']?.toString();
         return Employee(
           id: (json['id'] ?? '').toString(),
           outletId: outletId,
           userId: userId,
-          name: 'Staf (${role.toUpperCase()})',
+          name: (displayName != null && displayName.isNotEmpty)
+              ? displayName
+              : 'Staf (${role.toUpperCase()})',
           role: role,
           isActive: true,
           createdAt: json['created_at'] != null
@@ -620,11 +623,14 @@ class SupabaseService {
 
       if (response == null) return null;
       final role = response['role']?.toString() ?? 'cashier';
+      final dn = response['display_name']?.toString();
       return Employee(
         id: response['id'].toString(),
         outletId: response['outlet_id']?.toString() ?? '',
         userId: response['user_id']?.toString() ?? '',
-        name: 'Staf (${role.toUpperCase()})',
+        name: (dn != null && dn.isNotEmpty)
+            ? dn
+            : 'Staf (${role.toUpperCase()})',
         role: role,
         isActive: true,
       );
@@ -643,6 +649,7 @@ class SupabaseService {
             'outlet_id': employee.outletId,
             'user_id': employee.userId,
             'role': employee.role,
+            'display_name': employee.name,
           }, onConflict: 'user_id,outlet_id')
           .select()
           .single();

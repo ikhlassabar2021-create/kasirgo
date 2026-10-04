@@ -384,7 +384,8 @@ class AuthService {
       final data = res.data;
       if (data is Map && data['user_id'] is String) {
         return await _ensureStaffRole(
-            data['user_id'] as String, outletId, role);
+            data['user_id'] as String, outletId, role,
+            name: name);
       }
       if (data is Map && data['error'] != null) {
         throw Exception(data['error'].toString());
@@ -430,7 +431,7 @@ class AuthService {
 
     final staffUserId = response.user?.id;
     if (staffUserId != null) {
-      return await _ensureStaffRole(staffUserId, outletId, role);
+      return await _ensureStaffRole(staffUserId, outletId, role, name: name);
     }
     return null;
   }
@@ -438,14 +439,19 @@ class AuthService {
   Future<String?> _ensureStaffRole(
     String userId,
     String outletId,
-    String role,
-  ) async {
+    String role, {
+    String? name,
+  }) async {
+    final displayName = (name != null && name.trim().isNotEmpty)
+        ? name.trim()
+        : null;
     try {
       await _client.from('user_roles').upsert(
         {
           'user_id': userId,
           'outlet_id': outletId,
           'role': role,
+          'display_name': ?displayName,
         },
         onConflict: 'user_id,outlet_id',
       );
@@ -461,6 +467,7 @@ class AuthService {
         'user_id': userId,
         'outlet_id': outletId,
         'role': role,
+        'display_name': ?displayName,
       });
     }
     return userId;

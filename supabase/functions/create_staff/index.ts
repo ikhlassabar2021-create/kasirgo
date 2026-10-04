@@ -107,7 +107,12 @@ Deno.serve(async (req: Request) => {
 
     // Trigger handle_new_user juga memasang role; upsert untuk memastikan.
     await admin.from("user_roles").upsert(
-      { user_id: staffId, outlet_id: outletId, role },
+      {
+        user_id: staffId,
+        outlet_id: outletId,
+        role,
+        ...(name ? { display_name: name } : {}),
+      },
       { onConflict: "user_id,outlet_id" },
     );
 
