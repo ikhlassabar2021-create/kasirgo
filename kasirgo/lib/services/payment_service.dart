@@ -216,6 +216,42 @@ class PaymentService {
   Future<void> confirmPaid(String providerOrderId, {String status = 'PAID'}) =>
       _provider().confirmPaid(providerOrderId, status: status);
 
+  /// Simpan kredensial Midtrans outlet. Server Key dikirim ke Edge Function
+  /// (disimpan terenkripsi di Vault) dan TIDAK pernah dikembalikan ke klien.
+  /// Kosongkan [serverKey] untuk mempertahankan key yang sudah ada.
+  Future<Map<String, dynamic>> savePaymentConfig({
+    required String outletId,
+    String merchantId = '',
+    String clientKey = '',
+    String serverKey = '',
+    bool isProduction = false,
+  }) async {
+    final data = await _invokeEf(_client, 'save_payment_config', {
+      'outlet_id': outletId,
+      'merchant_id': merchantId,
+      'client_key': clientKey,
+      'server_key': serverKey,
+      'is_production': isProduction,
+    });
+    if (data['success'] != true) {
+      throw Exception(
+          data['message']?.toString() ?? 'Gagal menyimpan konfigurasi Midtrans.');
+    }
+    return (data['config'] as Map?)?.cast<String, dynamic>() ?? const {};
+  }
+
+  /// Uji kredensial Midtrans tanpa efek samping (probe status).
+  Future<Map<String, dynamic>> testPaymentConnection(String outletId) async {
+    final data = await _invokeEf(_client, 'test_payment_connection', {
+      'outlet_id': outletId,
+    });
+    if (data['success'] != true) {
+      throw Exception(
+          data['message']?.toString() ?? 'Gagal menguji koneksi Midtrans.');
+    }
+    return data;
+  }
+
   /// Baca konfigurasi PG outlet (ter-mask, tanpa Server Key).
   Future<Map<String, dynamic>> loadProviderConfig(String outletId) async {
     try {

@@ -17,6 +17,7 @@ import '../../utils/formatters.dart';
 import '../../utils/qris_config.dart';
 import 'report_schedule_screen.dart';
 import 'guide_screen.dart';
+import 'midtrans_connect_screen.dart';
 import 'multi_outlet_screen.dart';
 import '../../utils/receipt_generator.dart';
 
@@ -941,6 +942,12 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
           _buildMenuRow(Icons.person_outline, 'Edit Profil', () {
             final currentUser = ref.read(currentUserProvider);
             _showEditProfileDialog(currentUser);
+          }),
+          _buildMenuRow(Icons.account_balance_rounded, 'Hubungkan Midtrans (QRIS Dinamis)', () {
+            Navigator.push(
+              context,
+              MaterialPageRoute(builder: (_) => const MidtransConnectScreen()),
+            );
           }),
           _buildMenuRow(Icons.qr_code_2_rounded, 'QRIS Toko (Manual / Statis)', () {
             _showQrisConfigDialog();
