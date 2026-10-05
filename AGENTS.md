@@ -343,3 +343,32 @@ Migrasi: docs/migrations/2026-10-01-kasirgo-8.sql. Detail: PROGRESS-PHASE8.md.
   widget test / render nyata. `flutter build web` di Flutter 3.47 sudah tanpa
   `--web-renderer` (CanvasKit).
 - Deploy: main 25ec5bb, gh-pages c130af4 (live md5 main.dart.js MATCH).
+
+## Sesi 2026-10-03 (6): Assertion ListTile Sidebar + Bersih Data Uji (SELESAI)
+- ASSERTION "ListTile background color or ink splashes may be invisible":
+  ditemukan via Playwright debug (assert hanya aktif di debug; release build
+  strip assert). Detail verbose diambil dengan menangkap console.log pertama
+  (dumpErrorToConsole hanya verbose saat `_errorCount == 0`).
+  AKAR: sidebar desktop owner (`owner_home_screen.dart` ~311) memakai
+  `Container(decoration: BoxDecoration(color: Colors.white, border: right))`
+  sebagai DecoratedBox berwarna, lalu `_buildDesktopNavItem` (~630) dan
+  `_buildDesktopActionItem` (~610) menaruh `ListTile` langsung di dalamnya
+  TANPA Material perantara -> `_debugCheckBackgroundIsHidden` (`list_tile.dart`
+  ~1147) memicu `_findIntermediateWidget` menemukan DecoratedBox berwarna.
+  FIX: bungkus kedua ListTile dengan `Material(type: MaterialType.transparency)`.
+  VERIFIKASI Playwright debug: klik nav Dashboard/Produk/Kasir/Laporan =
+  `ListTile assertions: 0`; layar Karyawan & Pengaturan juga 0.
+- HTTP 422 `anonymous_provider_disabled` dari `signInAnonymously()`
+  (`auth_service.dart` ~49) BUKAN bug: memang provider anon dimatikan di
+  Supabase project; sudah di-catch. Tidak perlu tindakan.
+- DATA UJI DIBERSIHKAN: 6 baris `user_roles` "Regresi Test" (sisa live test)
+  dihapus via REST DELETE (204). `test/live_owner_regression_test.dart` kini
+  membersihkan dirinya sendiri (delete user_roles by user_id / employee id
+  setelah skenario tambah karyawan) agar tidak menumpuk tiap dijalankan.
+- TEMUAN BELUM DIPERBAIKI (butuh akses service_role/DB, tidak tersedia):
+  `GET /rest/v1/outlet_staff_quota` -> 404 `PGRST205` (tabel
+  `outlet_staff_quota` TIDAK ADA di DB live, padahal `settings_screen.dart`
+  ~107 membacanya untuk kartu "Kuota Staff" dan workflow Bagian 3
+  mendefinisikannya). Query di dalam try/catch -> gagal senyap, kartu selalu
+  0/5. Perlu migrasi `CREATE TABLE outlet_staff_quota` + RLS + backfill.
+- Deploy: main <hash>, gh-pages <hash>.

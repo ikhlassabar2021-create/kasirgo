@@ -610,19 +610,22 @@ class _OwnerHomeScreenState extends ConsumerState<OwnerHomeScreen> {
   Widget _buildDesktopActionItem(IconData icon, String label, VoidCallback onTap) {
     return Container(
       margin: const EdgeInsets.only(bottom: 4),
-      child: ListTile(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-        dense: true,
-        leading: Icon(icon, size: 20, color: AppTheme.textSecondary),
-        title: Text(
-          label,
-          style: GoogleFonts.inter(
-            fontSize: 13,
-            fontWeight: FontWeight.w500,
-            color: AppTheme.textPrimary,
+      child: Material(
+        type: MaterialType.transparency,
+        child: ListTile(
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+          dense: true,
+          leading: Icon(icon, size: 20, color: AppTheme.textSecondary),
+          title: Text(
+            label,
+            style: GoogleFonts.inter(
+              fontSize: 13,
+              fontWeight: FontWeight.w500,
+              color: AppTheme.textPrimary,
+            ),
           ),
+          onTap: onTap,
         ),
-        onTap: onTap,
       ),
     );
   }
@@ -636,7 +639,9 @@ class _OwnerHomeScreenState extends ConsumerState<OwnerHomeScreen> {
         borderRadius: BorderRadius.circular(10),
         border: isSelected ? Border.all(color: AppTheme.primaryColor.withValues(alpha: 0.2)) : null,
       ),
-      child: ListTile(
+      child: Material(
+        type: MaterialType.transparency,
+        child: ListTile(
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
         dense: true,
         leading: Icon(
@@ -653,6 +658,7 @@ class _OwnerHomeScreenState extends ConsumerState<OwnerHomeScreen> {
           ),
         ),
         onTap: () => setState(() => _currentIndex = index),
+      ),
       ),
     );
   }

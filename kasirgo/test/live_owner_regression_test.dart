@@ -70,6 +70,17 @@ void main() {
     // Boleh null (fallback lokal di UI), tapi tidak boleh throw.
     // ignore: avoid_print
     print('employees insert -> ${emp == null ? "NULL (fallback lokal)" : "OK"}');
+
+    // Bersihkan jejak uji agar daftar staf tidak menumpuk tiap kali test jalan.
+    // (Akun auth hasil EF tidak bisa dihapus via anon key; minimal baris
+    // user_roles yang tampil di daftar staf ikut dibersihkan.)
+    try {
+      if (emp != null && emp.id.isNotEmpty) {
+        await svc.deleteEmployee(emp.id);
+      } else if (userId != null) {
+        await client.from('user_roles').delete().eq('user_id', userId);
+      }
+    } catch (_) {}
     await client.auth.signOut();
   });
 
