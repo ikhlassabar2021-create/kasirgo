@@ -365,16 +365,36 @@ Migrasi: docs/migrations/2026-10-01-kasirgo-8.sql. Detail: PROGRESS-PHASE8.md.
   dihapus via REST DELETE (204). `test/live_owner_regression_test.dart` kini
   membersihkan dirinya sendiri (delete user_roles by user_id / employee id
   setelah skenario tambah karyawan) agar tidak menumpuk tiap dijalankan.
-- TEMUAN BELUM DIPERBAIKI (butuh akses service_role/DB, tidak tersedia):
-  `GET /rest/v1/outlet_staff_quota` -> 404 `PGRST205` (tabel
-  `outlet_staff_quota` TIDAK ADA di DB live, padahal `settings_screen.dart`
-  ~107 membacanya untuk kartu "Kuota Staff" dan workflow Bagian 3
-  mendefinisikannya). Query di dalam try/catch -> gagal senyap, kartu selalu
-  0/5. Migrasi SUDAH DISIAPKAN: `docs/migrations/2026-10-10-kasirgo-staff-quota.sql`
-  (tabel spec max_admin/max_cashier/extra_from_supporter + kolom kompat-app
-  max_staff/current_staff_count, trigger refresh dari user_roles, backfill
-  semua outlet, RLS owner-read + superadmin-full). BELUM DIAPPLY ke DB live:
-  tidak ada kredensial psql/service_role di sesi ini (psql butuh password;
-  `~/.pgpass` kosong; env PGPASSWORD/DATABASE_URL/SUPABASE_ACCESS_TOKEN tidak ada).
+- TEMUAN: `GET /rest/v1/outlet_staff_quota` -> 404 `PGRST205` (tabel tidak
+  ada di DB live). Ditindaklanjuti di Sesi (7).
 - Deploy: main 295a15d, gh-pages 0fd1f35 (live md5 main.dart.js MATCH
   eae0b83289debbeece0f8cdf5ec20497; smoke test live: login + nav 0 error).
+
+## Sesi 2026-10-03 (7): Fix 404 outlet_staff_quota + Clamp Progress (SELESAI)
+- ROOT CAUSE 404: tabel `outlet_staff_quota` (spesifikasi workflow Bagian 3
+  ~617) tidak pernah dibuat di DB live, padahal `settings_screen.dart` ~107
+  membacanya (kartu "Kuota Staff"); query di dalam try/catch -> gagal senyap.
+- MIGRASI DIBUAT + DITERAPKAN ke DB live:
+  `docs/migrations/2026-10-10-kasirgo-staff-quota.sql`.
+  Isi: tabel spec (max_admin/max_cashier/extra_from_supporter) + kolom
+  kompat-app (max_staff/current_staff_count) agar build ter-deploy langsung
+  jalan; fungsi `refresh_staff_quota()` + trigger `trg_staff_quota_from_roles`
+  (AFTER INSERT/UPDATE/DELETE user_roles, SECURITY DEFINER, dibungkus EXCEPTION
+  agar tak memblokir signup); trigger `trg_staff_quota_before_write` (hitung
+  max_staff + updated_at); backfill 7 outlet; RLS owner-read
+  (`is_outlet_owner`) + superadmin-full. Idempoten (`IF NOT EXISTS`).
+  Apply via psql session pooler
+  `host=aws-0-ap-southeast-1.pooler.supabase.com port=5432
+   user=postgres.lmvjecdvfzsmrowwwpck` (password DB dari owner) -> COMMIT OK,
+  7 baris ter-backfill (mis. Toko Test 229c94d7... = current 7).
+  Verifikasi REST owner: `outlet_staff_quota` 200 (bukan 404 lagi).
+- BUG IKUTAN DIPERBAIKI: `_buildStaffQuotaCard` menghitung
+  `percentage = current/max`; data asli (7 staff / max 2) -> `3.5` ->
+  `LinearProgressIndicator` assert `value<=1` (di debug). FIX:
+  `.clamp(0.0, 1.0)` + guard `max>0` (`settings_screen.dart` ~1529).
+- CATATAN BELUM: `extra_from_supporter` masih default false (belum di-wire
+  otomatis dari status `supporters`) -> outlet supporter dgn staf >2 tampil
+  "PENUH/Upgrade Plan". Butuh keputusan jumlah slot ekstra (belum
+  dispesifikasi). Gate tambah staf sendiri tetap client-side
+  (`requireSupporterFeature('extra_staff')`).
+- Deploy: main 06d9e2e, gh-pages 11d0efe (rebuild release dgn clamp fix).
