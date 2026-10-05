@@ -315,3 +315,31 @@ Migrasi: docs/migrations/2026-10-01-kasirgo-8.sql. Detail: PROGRESS-PHASE8.md.
   Toko Test type=Cafe (bukan gate). Diagnosis: perangkat masih build lama
   (sebelum Phase 13C, tabel hardcoded tanpa UI tambah) -> hard refresh.
 - Deploy: main 23b4d00, gh-pages f92b32b (live terverifikasi via hash).
+
+## Sesi 2026-10-03 (5): Root Cause CRASH QR Meja + Hero Tag (SELESAI)
+- QR MEJA CRASH (bukan cuma "form tak muncul"): dibuktikan via Playwright
+  headless + semantics tree -> `QrTableScreen` gagal render dengan
+  `BoxConstraints forces an infinite width`. PENYEBAB: theme tombol global
+  `AppTheme.lightTheme.elevatedButtonTheme` memakai
+  `minimumSize: const Size(double.infinity, 44)` (`config/app_theme.dart`
+  ~106). `ElevatedButton.icon` "Tambah" di dalam `Row` (`qr_table_screen.dart`
+  ~317) mewarisi lebar infinite -> `RenderConstrainedBox`/`RenderPhysicalShape`
+  gagal layout -> layar tak tampil.
+  FIX (di level tombol, TIDAK ubah theme global agar tombol lain aman):
+  tambah `minimumSize: const Size(0, AppTheme.touchTargetLarge)` +
+  `padding: EdgeInsets.symmetric(horizontal: 16)`.
+- ERROR "multiple heroes share the same tag": dashboard owner memakai satu
+  `IndexedStack` berisi `ProductListScreen(embedded)` + `ReportScreen(embedded)`,
+  keduanya `FloatingActionButton.extended` default hero tag sama. FIX: heroTag
+  unik di FAB ProductList/Report/Employee/Customer/MultiOutlet.
+- `QrTableScreen` service injectable (`{this.service}`) untuk widget test.
+- TEST BARU `test/qr_table_layout_test.dart` (fake AuthService, tanpa klien
+  Supabase nyata): LULUS dgn fix, GAGAL tanpa fix (infinite width). Jalankan
+  `/opt/flutter/bin/flutter test test/qr_table_layout_test.dart -r expanded`.
+- VERIFIKASI LIVE release build via Playwright (login owner -> QR Meja ->
+  tambah meja): layar render, "Daftar Meja (1)", `ERRORS after opening QR (0)`
+  (hero error hilang). Data meja QA dibersihkan via REST DELETE (RLS owner).
+- PELAJARAN: `flutter analyze` TIDAK menangkap bug layout runtime; perlu
+  widget test / render nyata. `flutter build web` di Flutter 3.47 sudah tanpa
+  `--web-renderer` (CanvasKit).
+- Deploy: main 25ec5bb, gh-pages <akan diisi>.
