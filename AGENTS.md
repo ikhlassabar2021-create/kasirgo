@@ -425,4 +425,4 @@ Migrasi: docs/migrations/2026-10-01-kasirgo-8.sql. Detail: PROGRESS-PHASE8.md.
   aktif = TAK TERBATAS. Helper baru `SupabaseService.getStaffQuota()`.
 - Verifikasi: `flutter analyze` 0 error (hanya info pre-existing);
   bundle `main.dart.js` memuat string "Tanpa batas" + "extra_from_supporter".
-- Deploy: main <PENDING>, gh-pages <PENDING>.
+- Deploy: main 565c71a, gh-pages ade5ab0.
