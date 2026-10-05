@@ -371,4 +371,5 @@ Migrasi: docs/migrations/2026-10-01-kasirgo-8.sql. Detail: PROGRESS-PHASE8.md.
   ~107 membacanya untuk kartu "Kuota Staff" dan workflow Bagian 3
   mendefinisikannya). Query di dalam try/catch -> gagal senyap, kartu selalu
   0/5. Perlu migrasi `CREATE TABLE outlet_staff_quota` + RLS + backfill.
-- Deploy: main <hash>, gh-pages <hash>.
+- Deploy: main 295a15d, gh-pages 0fd1f35 (live md5 main.dart.js MATCH
+  eae0b83289debbeece0f8cdf5ec20497; smoke test live: login + nav 0 error).
