@@ -37,6 +37,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
   Map<String, dynamic>? _kycData;
   int? _staffQuotaCurrent;
   int? _staffQuotaMax;
+  bool _staffQuotaExtra = false;
   String? _kycStatus;
   Map<String, dynamic>? _financialConfig;
 
@@ -112,6 +113,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
         if (quotaRes != null) {
           _staffQuotaMax = quotaRes['max_staff'] as int? ?? 5;
           _staffQuotaCurrent = quotaRes['current_staff_count'] as int? ?? 0;
+          _staffQuotaExtra = quotaRes['extra_from_supporter'] == true;
         }
 
         // Load financial config
@@ -1530,6 +1532,8 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     final percentage = quotaMax > 0
         ? (quotaCurrent / quotaMax).clamp(0.0, 1.0)
         : 0.0;
+    // Pendukung / trial aktif -> slot staf TAK TERBATAS.
+    final isUnlimited = _staffQuotaExtra || (_entitlements?.hasAccess ?? false);
 
     return Container(
       padding: const EdgeInsets.all(20),
@@ -1559,14 +1563,18 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      '$quotaCurrent staff aktif dari $quotaMax maksimal',
+                      isUnlimited
+                          ? '$quotaCurrent staff aktif - Tanpa batas'
+                          : '$quotaCurrent staff aktif dari $quotaMax maksimal',
                       style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 15),
                     ),
                     const SizedBox(height: 4),
                     Text(
-                      quotaRemaining > 0 
-                          ? '$quotaRemaining slot tersedia' 
-                          : 'Quota penuh - Upgrade untuk tambah slot',
+                      isUnlimited
+                          ? 'Slot staf tak terbatas selama Program Pendukung / trial aktif'
+                          : (quotaRemaining > 0
+                              ? '$quotaRemaining slot tersedia'
+                              : 'Quota penuh - Upgrade untuk tambah slot'),
                       style: TextStyle(color: AppTheme.textSecondary, fontSize: 12),
                     ),
                   ],
@@ -1575,17 +1583,21 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                 decoration: BoxDecoration(
-                  color: quotaRemaining > 0 
+                  color: (isUnlimited || quotaRemaining > 0)
                       ? AppTheme.successColor.withValues(alpha: 0.2)
                       : AppTheme.warningColor.withValues(alpha: 0.2),
                   borderRadius: BorderRadius.circular(20),
                 ),
                 child: Text(
-                  quotaRemaining <= 0 ? 'PENUH' : 'OPEN',
+                  isUnlimited
+                      ? 'BEBAS'
+                      : (quotaRemaining <= 0 ? 'PENUH' : 'OPEN'),
                   style: TextStyle(
                     fontSize: 11,
                     fontWeight: FontWeight.bold,
-                    color: quotaRemaining <= 0 ? AppTheme.warningColor : AppTheme.successColor,
+                    color: (isUnlimited || quotaRemaining > 0)
+                        ? AppTheme.successColor
+                        : AppTheme.warningColor,
                   ),
                 ),
               ),
@@ -1593,15 +1605,17 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
           ),
           const SizedBox(height: 12),
           LinearProgressIndicator(
-            value: percentage,
+            value: isUnlimited ? 1.0 : percentage,
             minHeight: 8,
             backgroundColor: AppTheme.surfaceMutedColor,
             valueColor: AlwaysStoppedAnimation<Color>(
-              quotaRemaining > 0 ? AppTheme.primaryColor : AppTheme.warningColor,
+              (isUnlimited || quotaRemaining > 0)
+                  ? AppTheme.successColor
+                  : AppTheme.warningColor,
             ),
           ),
           const SizedBox(height: 8),
-          if (quotaRemaining <= 0) ...[
+          if (!isUnlimited && quotaRemaining <= 0) ...[
             SizedBox(
               width: double.infinity,
               height: 42,

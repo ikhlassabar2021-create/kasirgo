@@ -703,6 +703,20 @@ class SupabaseService {
     }
   }
 
+  /// Kuota staf outlet (baris `outlet_staff_quota`, dijaga trigger DB).
+  /// `extra_from_supporter` true = slot staf TAK TERBATAS (Pendukung/trial).
+  Future<Map<String, dynamic>?> getStaffQuota(String outletId) async {
+    try {
+      return await _client
+          .from('outlet_staff_quota')
+          .select('max_staff, current_staff_count, extra_from_supporter')
+          .eq('outlet_id', outletId)
+          .maybeSingle();
+    } catch (e) {
+      return null;
+    }
+  }
+
   Future<List<Map<String, dynamic>>> getAttendanceLogs(String outletId) async {
     try {
       final response = await _client

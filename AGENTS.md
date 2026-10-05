@@ -398,3 +398,31 @@ Migrasi: docs/migrations/2026-10-01-kasirgo-8.sql. Detail: PROGRESS-PHASE8.md.
   dispesifikasi). Gate tambah staf sendiri tetap client-side
   (`requireSupporterFeature('extra_staff')`).
 - Deploy: main 06d9e2e, gh-pages 11d0efe (rebuild release dgn clamp fix).
+
+## Sesi 2026-10-05: Auto-wire Slot Staf Pendukung = TAK TERBATAS (SELESAI)
+- ROOT CAUSE: `outlet_staff_quota.extra_from_supporter` selalu default false
+  -> outlet yang sedang trial/pendukung tetap dihitung max_staff = 2 -> kartu
+  "Kuota Staff" tampil "PENUH/Upgrade Plan" padahal gate `extra_staff`
+  (client, `entitlements.hasAccess`) SUDAH membuka fitur. Keputusan produk:
+  selama Pendukung/trial aktif, slot staf = TAK TERBATAS.
+- MIGRASI BARU + DITERAPKAN ke DB live:
+  `docs/migrations/2026-10-11-kasirgo-staff-quota-supporter.sql`.
+  `refresh_staff_quota()` kini menghitung ulang `extra_from_supporter`
+  LANGSUNG dari tabel `supporters` (status active/trial, end_date > now())
+  + `entitlements` (is_supporter / trial_ends_at > now()) -> otomatis
+  REVOKE saat trial/langganan berakhir. `max_staff` = 999999 saat extra.
+  Trigger baru `trg_staff_quota_from_supporter` pada `supporters` DAN
+  `entitlements` agar kartu ikut ter-refresh saat status berubah.
+  Apply via psql -> COMMIT OK. Verifikasi: Toko Test (trial s.d. 14 Okt)
+  & Warung Test (trial s.d. 13 Okt) => extra=true, max_staff=999999;
+  Gerobak Test (trial expired) => false, max_staff=2.
+- APP (rebuild): `settings_screen.dart` baca `extra_from_supporter`;
+  kartu Kuota Staff tampil "N staff aktif - Tanpa batas" + badge BEBAS
+  (bukan PENUH) & tombol Upgrade disembunyikan bila Pendukung/trial aktif.
+  `employee_screen.dart` `_handleAddEmployee`: kuota GRATIS 2 staf pertama
+  (1 Admin + 1 Kasir) tidak lagi diblok gate; staf ke-3+ butuh Pendukung
+  (via `requireSupporterFeature('extra_staff')`), dan saat Pendukung/trial
+  aktif = TAK TERBATAS. Helper baru `SupabaseService.getStaffQuota()`.
+- Verifikasi: `flutter analyze` 0 error (hanya info pre-existing);
+  bundle `main.dart.js` memuat string "Tanpa batas" + "extra_from_supporter".
+- Deploy: main <PENDING>, gh-pages <PENDING>.

@@ -181,6 +181,22 @@ class _EmployeeScreenState extends ConsumerState<EmployeeScreen> with SingleTick
   }
 
   Future<void> _handleAddEmployee() async {
+    // Kuota gratis: 2 staf pertama (1 Admin + 1 Kasir). Slot tambahan
+    // memerlukan Program Pendukung; selama Pendukung/trial aktif slot
+    // staf TAK TERBATAS (extra_from_supporter = true).
+    final outletId = ref.read(currentUserProvider)?.outletId;
+    if (outletId != null && outletId.isNotEmpty) {
+      final quota = await _supabaseService.getStaffQuota(outletId);
+      if (quota != null) {
+        final current = (quota['current_staff_count'] as int?) ?? 0;
+        final extra = quota['extra_from_supporter'] == true;
+        if (extra || current < 2) {
+          if (mounted) _showAddEmployeeDialog();
+          return;
+        }
+      }
+    }
+    if (!mounted) return;
     if (!await requireSupporterFeature(context, ref, 'extra_staff')) return;
     if (mounted) _showAddEmployeeDialog();
   }
