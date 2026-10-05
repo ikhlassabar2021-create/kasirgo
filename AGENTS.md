@@ -173,6 +173,18 @@ Status: SELESAI. Project Supabase sudah dibuat dan schema terpasang serta diuji.
     HANYA untuk tes; wajib pindah ke Edge Function (mode `live_server`) sebelum
     produksi. Edge Functions RCB SUDAH ter-deploy (rcb_create_charge /
     rcb_check_status verify_jwt=true, rcb_webhook verify_jwt=false).)
+- [x] Phase 13A: Payment Gateway Midtrans (QRIS dinamis, zero-custody)
+  (tabel `outlet_pg_configs` server key di Supabase Vault (`server_key_secret_id`
+  uuid, bukan teks; column-grant: authenticated tak bisa baca); RPC
+  `get_outlet_payment_config` ter-mask; RPC `vault_put_secret`/`vault_read_secret`
+  (service_role); `transactions.provider_ref`/`paid_at`; `payment_orders.provider_order_id`.
+  4 EF ter-deploy: `save_payment_config`, `test_payment_connection`,
+  `create_payment` (Midtrans Core API `/v2/charge` qris), `midtrans_webhook`
+  (SHA512, verify_jwt=false). Migrasi `2026-10-12-kasirgo-13a-midtrans-schema.sql`
+  + `-2.sql`. E2E: webhook -> PAID + idempotent + tandai transaksi paid LULUS.
+  BLOCKER EKSTERNAL: channel QRIS akun Midtrans production belum aktif
+  (`402 Payment channel is not activated`) -> charge nyata belum hasilkan qr_string.
+  App belum di-retrofit (payment_service.dart masih RCB) -> Phase 13B.)
 - [x] Edge Functions create_staff + onboard_merchant DIDELOY + Fix WA Katalog
   (create_staff & onboard_merchant deployed via SUPABASE_ACCESS_TOKEN; smoke
    test create_staff OK: user langsung confirmed + user_roles dibuat fungsi.
@@ -427,7 +439,7 @@ Migrasi: docs/migrations/2026-10-01-kasirgo-8.sql. Detail: PROGRESS-PHASE8.md.
   bundle `main.dart.js` memuat string "Tanpa batas" + "extra_from_supporter".
 - Deploy: main 565c71a, gh-pages ade5ab0.
 
-## Sesi 2026-10-05 (2): Phase 13A - QRIS Dinamis Midtrans (zero-custody) [KODE SELESAI, DEPLOY PENDING]
+## Sesi 2026-10-05 (2): Phase 13A - QRIS Dinamis Midtrans (zero-custody) [SELESAI]
 - Tujuan: QRIS dinamis otomatis LUNAS via webhook Midtrans; Server Key TIDAK PERNAH
   menyentuh APK/klien (zero-custody). Hanya di Edge Function + Supabase Vault.
 - ST13A-1 `daac450` migrasi `2026-10-12-kasirgo-13a-midtrans-schema.sql` (DITERAPKAN):
@@ -450,9 +462,31 @@ Migrasi: docs/migrations/2026-10-01-kasirgo-8.sql. Detail: PROGRESS-PHASE8.md.
 - Kredensial outlet Toko Test (`229c94d7-...`) DISIMPAN ke Vault via psql (server key
   terenkripsi; md5 terverifikasi). CATATAN: kunci yang diberikan user = **PRODUCTION**
   (sandbox 401, production auth valid) -> `is_production=true`. Jangan commit kunci.
-- BLOCKER: `SUPABASE_ACCESS_TOKEN` belum tersedia di env + Supabase CLI tidak terpasang
-  -> 4 EF BELUM ter-deploy. Perlu token untuk `supabase functions deploy`.
-- Verifikasi yang sudah lulus: Vault put/read roundtrip; column-grant secret tidak
-  terbaca authenticated; probe auth Midtrans production (HTTP 200 "Transaction doesn't
-  exist" = kredensial valid). Belum: create_payment -> qr_string & webhook -> PAID (butuh
-  EF deploy). Docs workflow Bagian 8 (PHASE 13A) + AGENTS diperbarui.
+- DEPLOY SELESAI (Personal Access Token `sbp_...`): Supabase CLI v2.119.0 terpasang;
+  4 EF ter-deploy ke project lmvjecdvfzsmrowwwpck (`midtrans_webhook` `--no-verify-jwt`,
+  sisanya verify_jwt=true). Verifikasi E2E via REST + EF:
+  - `test_payment_connection` -> `{valid:true, http_status:200, is_production:true}`
+    ("Kredensial valid").
+  - `save_payment_config` (tanpa server_key) -> config ter-mask `has_server_key:true`,
+    status `verified`; `server_key_secret_id` TIDAK pernah dikembalikan.
+  - `midtrans_webhook`: signature salah -> 401 "Invalid signature"; signature benar
+    (SHA512) -> PAID; panggil ulang -> `idempotent:true`. Menandai
+    `transactions.payment_status='paid'` + `paid_at` + `provider_ref` (terverifikasi
+    REST: transaksi uji jadi paid).
+  - `create_payment`: verifikasi JWT anggota outlet + ambil server key dari Vault OK.
+- BUG DITEMUKAN & DIPERBAIKI `0458dbd` (ST13A-4): Midtrans Core API membalas HTTP 200
+  walau gagal (mis. `status_code:"402"` "Payment channel is not activated") -> EF lama
+  mengembalikan qr_string kosong seolah sukses. Kini validasi `status_code` 2xx ->
+  balas 502 + pesan asli. TER-DEPLOY + terverifikasi (kini balas 502 status_code 402).
+- BLOCKER EKSTERNAL (bukan kode): akun Midtrans production Toko Test belum mengaktifkan
+  channel QRIS (`402 Payment channel is not activated`) -> charge QRIS nyata belum bisa
+  menghasilkan `qr_string`. Aksi user: aktifkan QRIS di dashboard Midtrans. Sisa alur
+  (webhook -> PAID, idempotent, tandai transaksi) SUDAH terbukti lulus.
+- Kredensial outlet Toko Test (`229c94d7-...`) tersimpan di Vault (server key terenkripsi;
+  md5 terverifikasi). CATATAN: kunci yang diberikan user = **PRODUCTION**
+  (sandbox 401, production auth valid) -> `is_production=true`. Jangan commit kunci.
+  SARAN: rotate Server Key karena sudah melewati chat.
+- Data uji (2 payment_orders + 1 transaksi `KGO-13A-*`) dibuat untuk verifikasi;
+  belum dibersihkan (menunggu izin hapus).
+- Docs workflow Bagian 8 (PHASE 13A) + AGENTS diperbarui. App belum di-retrofit ke
+  Midtrans (payment_service.dart masih RCB) -> masuk Phase 13B.
