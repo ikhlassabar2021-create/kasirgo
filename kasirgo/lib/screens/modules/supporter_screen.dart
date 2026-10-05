@@ -520,7 +520,7 @@ class _SupporterScreenState extends ConsumerState<SupporterScreen> {
       );
 }
 
-/// Sheet QRIS dinamis (RCB) dengan polling status pembayaran otomatis.
+/// Sheet QRIS dinamis (Midtrans) dengan polling status pembayaran otomatis.
 class _DynamicQrisSheet extends StatefulWidget {
   final SupporterCheckoutResult result;
   const _DynamicQrisSheet({required this.result});
@@ -549,14 +549,14 @@ class _DynamicQrisSheetState extends State<_DynamicQrisSheet> {
   }
 
   void _start() {
-    final rcb = widget.result.rcbOrderId;
-    if (rcb == null) return;
+    final orderId = widget.result.providerOrderId;
+    if (orderId == null) return;
     _timer = Timer.periodic(const Duration(seconds: 5), (timer) async {
-      final status = await PaymentService().checkStatus(rcb);
+      final status = await PaymentService().checkStatus(orderId);
       if (!mounted) return;
       if (status == 'PAID' || status == 'SUCCESS' || status == 'SETTLEMENT') {
         timer.cancel();
-        await PaymentService().confirmPaid(rcb);
+        await PaymentService().confirmPaid(orderId);
         if (mounted) setState(() => _status = 'PAID');
       } else if (status == 'EXPIRED' || status == 'FAILED') {
         timer.cancel();
@@ -599,7 +599,7 @@ class _DynamicQrisSheetState extends State<_DynamicQrisSheet> {
                     fontWeight: FontWeight.w800,
                     color: AppTheme.textPrimary)),
             const SizedBox(height: 4),
-            Text('Order: ${widget.result.rcbOrderId ?? widget.result.orderId}',
+            Text('Order: ${widget.result.providerOrderId ?? widget.result.orderId}',
                 textAlign: TextAlign.center,
                 style: GoogleFonts.inter(
                     fontSize: 11, color: AppTheme.textSecondary)),

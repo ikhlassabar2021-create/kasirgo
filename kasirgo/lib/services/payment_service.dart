@@ -1,14 +1,13 @@
 import 'dart:async';
 import 'dart:convert';
 
-import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 /// Order pembayaran QRIS (disimpan di tabel `payment_orders`).
 class PgPaymentOrder {
   final String? dbId;
-  final String rcbOrderId;
+  final String providerOrderId;
   final String? externalId;
   final double amount;
   final double totalAmount;
@@ -21,7 +20,7 @@ class PgPaymentOrder {
   final DateTime? expiredAt;
 
   const PgPaymentOrder({
-    required this.rcbOrderId,
+    required this.providerOrderId,
     this.dbId,
     this.externalId,
     required this.amount,
@@ -41,17 +40,22 @@ class PgPaymentOrder {
     final data = (json['data'] is Map)
         ? Map<String, dynamic>.from(json['data'] as Map)
         : json;
-    final orderId = (data['order_id'] ?? data['rcb_order_id'] ?? json['order_id'] ?? '').toString();
-    final expired = data['expired_time'] ?? data['expired_at'];
+    final orderId = (data['order_id'] ??
+            data['provider_order_id'] ??
+            json['order_id'] ??
+            json['provider_ref'] ??
+            '')
+        .toString();
+    final expired = data['expiry_time'] ?? data['expired_time'] ?? data['expired_at'];
     return PgPaymentOrder(
       dbId: dbId,
-      rcbOrderId: orderId,
-      externalId: (data['external_id'] ?? '').toString(),
-      amount: _toDouble(data['amount']),
-      totalAmount: _toDouble(data['total_amount'] ?? data['amount']),
+      providerOrderId: orderId,
+      externalId: (data['external_id'] ?? orderId).toString(),
+      amount: _toDouble(data['amount'] ?? data['gross_amount']),
+      totalAmount: _toDouble(data['total_amount'] ?? data['gross_amount'] ?? data['amount']),
       kodeUnik: (data['kode_unik'] as num?)?.toInt(),
       status: (data['status'] ?? json['status'] ?? 'PENDING').toString(),
-      paymentUrl: data['payment_url']?.toString(),
+      paymentUrl: (data['payment_url'] ?? data['redirect_url'])?.toString(),
       qrisUrl: (data['qris_url'] ?? data['qris_image_url'] ?? data['qr_url'])?.toString(),
       qrisString: (data['qris_string'] ?? data['qr_code'])?.toString(),
       paymentType: data['payment_type']?.toString(),
@@ -69,47 +73,118 @@ class PgPaymentOrder {
   }
 }
 
-/// Payment Gateway (RCB Pay).
+/// Parameter pembuatan tagihan QRIS dinamis.
+class PgCreateQrisRequest {
+  final String outletId;
+  final double amount;
+  final String itemName;
+  final String externalId;
+  final String purpose;
+  final String? supporterId;
+  final String? transactionId;
+  final String? callbackUrl;
+
+  const PgCreateQrisRequest({
+    required this.outletId,
+    required this.amount,
+    required this.itemName,
+    required this.externalId,
+    required this.purpose,
+    this.supporterId,
+    this.transactionId,
+    this.callbackUrl,
+  });
+}
+
+/// Kontrak provider payment gateway (zero-custody: kredensial hanya di server).
 ///
-/// Mode `sandbox_direct`: aplikasi memanggil RCB langsung memakai API key
-/// sandbox (dari `get_pg_client_config`). HANYA untuk testing.
-/// Mode lain (produksi): panggilan dialihkan ke Edge Function `rcb_create_charge`.
-class PaymentService {
-  final SupabaseClient _client = Supabase.instance.client;
+/// Implementasi saat ini: [MidtransProvider]. Menambah provider lain cukup
+/// dengan mengimplementasikan antarmuka ini tanpa mengubah UI pemanggil.
+abstract class PgProviderClient {
+  String get providerId;
 
-  static const String _cacheKey = 'pg_client_config_v1';
-  Map<String, dynamic>? _cfg;
+  Future<PgPaymentOrder> createQris(PgCreateQrisRequest request);
 
-  Future<Map<String, dynamic>> loadConfig({bool force = false}) async {
-    if (_cfg != null && !force) return _cfg!;
-    try {
-      final res = await _client.rpc('get_pg_client_config');
-      if (res is Map) {
-        final map = res.cast<String, dynamic>();
-        _cfg = map;
-        final prefs = await SharedPreferences.getInstance();
-        await prefs.setString(_cacheKey, jsonEncode(map));
-        return map;
-      }
-    } catch (_) {
-      // offline / gagal: pakai cache
+  /// Status order huruf besar (PENDING/PAID/EXPIRED/FAILED).
+  Future<String> checkStatus(String providerOrderId);
+
+  /// Tandai order lunas. Untuk provider berbasis webhook (Midtrans) ini
+  /// best-effort: sumber kebenaran adalah webhook server.
+  Future<void> confirmPaid(String providerOrderId, {String status = 'PAID'});
+}
+
+/// Provider Midtrans (QRIS dinamis, zero-custody).
+///
+/// Aplikasi TIDAK PERNAH menyimpan/melihat Server Key. Pembuatan charge
+/// dialihkan ke Edge Function `create_payment`; status dibaca dari tabel
+/// `payment_orders` yang diperbarui oleh webhook `midtrans_webhook`.
+class MidtransProvider implements PgProviderClient {
+  MidtransProvider(this._client);
+
+  final SupabaseClient _client;
+
+  @override
+  String get providerId => 'midtrans';
+
+  @override
+  Future<PgPaymentOrder> createQris(PgCreateQrisRequest request) async {
+    final data = await _invokeEf(_client, 'create_payment', {
+      'outlet_id': request.outletId,
+      'amount': request.amount.round(),
+      'item_name': request.itemName,
+      'external_id': request.externalId,
+      'purpose': request.purpose,
+      'supporter_id': ?request.supporterId,
+      'transaction_id': ?request.transactionId,
+      'callback_url': ?request.callbackUrl,
+    });
+    if (data['success'] != true) {
+      throw Exception(data['message']?.toString() ?? 'Gagal membuat QRIS.');
     }
-    try {
-      final prefs = await SharedPreferences.getInstance();
-      final raw = prefs.getString(_cacheKey);
-      if (raw != null && raw.isNotEmpty) {
-        _cfg = (jsonDecode(raw) as Map).cast<String, dynamic>();
-        return _cfg!;
-      }
-    } catch (_) {}
-    return _cfg = const {};
+    return PgPaymentOrder.fromApi(data);
   }
 
-  bool get isDirectSandbox =>
-      (_cfg?['mode']?.toString() == 'sandbox_direct') &&
-      ((_cfg?['api_key']?.toString() ?? '').isNotEmpty);
+  @override
+  Future<String> checkStatus(String providerOrderId) async {
+    try {
+      final row = await _client
+          .from('payment_orders')
+          .select('status')
+          .or('provider_order_id.eq.$providerOrderId,external_id.eq.$providerOrderId')
+          .order('created_at', ascending: false)
+          .limit(1)
+          .maybeSingle();
+      if (row != null && row['status'] != null) {
+        return row['status'].toString().toUpperCase();
+      }
+    } catch (_) {
+      // offline / gagal: biarkan status PENDING.
+    }
+    return 'PENDING';
+  }
 
-  /// Buat tagihan QRIS. Mengembalikan order + data QR untuk ditampilkan.
+  @override
+  Future<void> confirmPaid(String providerOrderId, {String status = 'PAID'}) async {
+    // Midtrans memverifikasi via webhook (SHA512) dan langsung menandai
+    // payment_orders + transaksi + aktivasi langganan. Tidak ada aksi klien.
+    return;
+  }
+}
+
+/// Facade Payment Gateway. Memilih provider aktif (saat ini Midtrans) dan
+/// menyediakan helper config non-secret untuk UI.
+class PaymentService {
+  PaymentService({SupabaseClient? client})
+      : _client = client ?? Supabase.instance.client;
+
+  final SupabaseClient _client;
+
+  static const String _cacheKey = 'financial_config_v1';
+  Map<String, dynamic>? _finCache;
+
+  PgProviderClient _provider() => MidtransProvider(_client);
+
+  /// Buat tagihan QRIS dinamis. Mengembalikan order + data QR.
   Future<PgPaymentOrder> createQris({
     required String outletId,
     required double amount,
@@ -119,29 +194,9 @@ class PaymentService {
     String? supporterId,
     String? transactionId,
     String? callbackUrl,
-  }) async {
-    final cfg = await loadConfig(force: true);
-    if (cfg['enabled'] != true) {
-      throw Exception('Payment gateway belum aktif di Control Plane.');
-    }
-
-    final mode = cfg['mode']?.toString() ?? '';
+  }) {
     final external = externalId ?? 'KGO-${DateTime.now().millisecondsSinceEpoch}';
-
-    if (mode == 'sandbox_direct' && (cfg['api_key']?.toString() ?? '').isNotEmpty) {
-      return _createDirect(
-        cfg: cfg,
-        outletId: outletId,
-        amount: amount,
-        itemName: itemName,
-        externalId: external,
-        purpose: purpose,
-        supporterId: supporterId,
-        transactionId: transactionId,
-        callbackUrl: callbackUrl,
-      );
-    }
-    return _createViaEdge(
+    return _provider().createQris(PgCreateQrisRequest(
       outletId: outletId,
       amount: amount,
       itemName: itemName,
@@ -150,178 +205,68 @@ class PaymentService {
       supporterId: supporterId,
       transactionId: transactionId,
       callbackUrl: callbackUrl,
-    );
-  }
-
-  Future<PgPaymentOrder> _createDirect({
-    required Map<String, dynamic> cfg,
-    required String outletId,
-    required double amount,
-    required String itemName,
-    required String externalId,
-    required String purpose,
-    String? supporterId,
-    String? transactionId,
-    String? callbackUrl,
-  }) async {
-    final baseUrl = cfg['base_url']?.toString() ?? '';
-    final apiKey = cfg['api_key']?.toString() ?? '';
-    final uri = Uri.parse('$baseUrl/gateway/create');
-
-    final body = <String, dynamic>{
-      'amount': amount.round(),
-      'item_name': itemName.length > 50 ? itemName.substring(0, 50) : itemName,
-      'external_id': externalId,
-    };
-    if (callbackUrl != null && callbackUrl.isNotEmpty) {
-      body['callback_url'] = callbackUrl;
-    }
-
-    final resp = await http
-        .post(uri,
-            headers: {'Content-Type': 'application/json', 'x-api-key': apiKey},
-            body: jsonEncode(body))
-        .timeout(const Duration(seconds: 35));
-
-    if (resp.statusCode < 200 || resp.statusCode >= 300) {
-      throw Exception('Gagal membuat QRIS (${resp.statusCode}): ${resp.body}');
-    }
-    final json = (jsonDecode(resp.body) as Map).cast<String, dynamic>();
-    if (json['success'] != true) {
-      throw Exception(json['message']?.toString() ?? 'Gagal membuat QRIS.');
-    }
-
-    final order = PgPaymentOrder.fromApi(json);
-    final dbId = await _persistOrder(
-      outletId: outletId,
-      order: order,
-      purpose: purpose,
-      supporterId: supporterId,
-      transactionId: transactionId,
-      raw: json,
-    );
-    return PgPaymentOrder(
-      dbId: dbId,
-      rcbOrderId: order.rcbOrderId,
-      externalId: order.externalId,
-      amount: order.amount,
-      totalAmount: order.totalAmount,
-      kodeUnik: order.kodeUnik,
-      status: order.status,
-      paymentUrl: order.paymentUrl,
-      qrisUrl: order.qrisUrl,
-      qrisString: order.qrisString,
-      paymentType: order.paymentType,
-      expiredAt: order.expiredAt,
-    );
-  }
-
-  Future<PgPaymentOrder> _createViaEdge({
-    required String outletId,
-    required double amount,
-    required String itemName,
-    required String externalId,
-    required String purpose,
-    String? supporterId,
-    String? transactionId,
-    String? callbackUrl,
-  }) async {
-    final res = await _client.functions.invoke('rcb_create_charge', body: {
-      'outlet_id': outletId,
-      'amount': amount.round(),
-      'item_name': itemName,
-      'external_id': externalId,
-      'purpose': purpose,
-      'supporter_id': ?supporterId,
-      'transaction_id': ?transactionId,
-      'callback_url': ?callbackUrl,
-    });
-    final data = (res.data is Map) ? (res.data as Map).cast<String, dynamic>() : <String, dynamic>{};
-    if (data['success'] != true) {
-      throw Exception(data['message']?.toString() ?? 'Gagal membuat QRIS.');
-    }
-    return PgPaymentOrder.fromApi(data);
-  }
-
-  Future<String?> _persistOrder({
-    required String outletId,
-    required PgPaymentOrder order,
-    required String purpose,
-    String? supporterId,
-    String? transactionId,
-    required Map<String, dynamic> raw,
-  }) async {
-    try {
-      final row = await _client
-          .from('payment_orders')
-          .insert({
-            'outlet_id': outletId,
-            'created_by': _client.auth.currentUser?.id,
-            'purpose': purpose,
-            'provider': 'rcb',
-            'rcb_order_id': order.rcbOrderId,
-            'external_id': order.externalId,
-            'amount': order.amount,
-            'total_amount': order.totalAmount,
-            'kode_unik': order.kodeUnik,
-            'status': order.status.toUpperCase(),
-            'payment_url': order.paymentUrl,
-            'qris_url': order.qrisUrl,
-            'qris_string': order.qrisString,
-            'payment_type': order.paymentType,
-            'transaction_id': transactionId,
-            'supporter_id': supporterId,
-            'expired_at': order.expiredAt?.toIso8601String(),
-            'raw': raw,
-          })
-          .select('id')
-          .maybeSingle();
-      return row?['id']?.toString();
-    } catch (_) {
-      return null;
-    }
+    ));
   }
 
   /// Cek status order (polling). Mengembalikan status huruf besar.
-  Future<String> checkStatus(String rcbOrderId) async {
-    final cfg = await loadConfig();
-    final mode = cfg['mode']?.toString() ?? '';
-    if (mode == 'sandbox_direct' && (cfg['api_key']?.toString() ?? '').isNotEmpty) {
-      final baseUrl = cfg['base_url']?.toString() ?? '';
-      final apiKey = cfg['api_key']?.toString() ?? '';
-      try {
-        final resp = await http.get(
-          Uri.parse('$baseUrl/payment-status/$rcbOrderId'),
-          headers: {'x-api-key': apiKey},
-        ).timeout(const Duration(seconds: 20));
-        final json = (jsonDecode(resp.body) as Map).cast<String, dynamic>();
-        final data = (json['data'] is Map) ? (json['data'] as Map) : json;
-        return (data['status'] ?? json['status'] ?? 'PENDING').toString().toUpperCase();
-      } catch (_) {
-        return 'PENDING';
-      }
-    }
+  Future<String> checkStatus(String providerOrderId) =>
+      _provider().checkStatus(providerOrderId);
+
+  /// Tandai order PAID (best-effort; webhook adalah sumber kebenaran).
+  Future<void> confirmPaid(String providerOrderId, {String status = 'PAID'}) =>
+      _provider().confirmPaid(providerOrderId, status: status);
+
+  /// Baca konfigurasi PG outlet (ter-mask, tanpa Server Key).
+  Future<Map<String, dynamic>> loadProviderConfig(String outletId) async {
     try {
-      final res = await _client.functions.invoke('rcb_check_status', body: {
-        'order_id': rcbOrderId,
-      });
-      final data = (res.data is Map) ? (res.data as Map) : const {};
-      return (data['status'] ?? 'PENDING').toString().toUpperCase();
-    } catch (_) {
-      return 'PENDING';
-    }
+      final res = await _client.rpc('get_outlet_payment_config',
+          params: {'p_outlet': outletId});
+      if (res is Map) return res.cast<String, dynamic>();
+    } catch (_) {}
+    return const {
+      'provider': 'midtrans',
+      'configured': false,
+      'has_server_key': false,
+      'is_production': false,
+      'status': 'pending',
+    };
   }
 
-  /// Tandai order PAID (hasil polling) + aktivasi langganan bila perlu.
-  Future<void> confirmPaid(String rcbOrderId, {String status = 'PAID'}) async {
+  /// Batas & ambang biaya QRIS dari Control Plane (fallback aman bila offline).
+  Future<Map<String, dynamic>> getFinancialConfig() async {
+    if (_finCache != null) return _finCache!;
     try {
-      await _client.rpc('confirm_pg_order', params: {
-        'p_rcb_order_id': rcbOrderId,
-        'p_status': status,
-      });
+      final res = await _client.rpc('get_financial_config');
+      if (res is Map) {
+        final m = res.cast<String, dynamic>();
+        final cfg = <String, dynamic>{
+          'min_payment': (m['min_qris_amount'] as num?)?.toDouble() ?? 1000.0,
+          'max_payment': (m['max_qris_amount'] as num?)?.toDouble() ?? 10000000.0,
+          'free_threshold':
+              (m['qris_free_threshold'] as num?)?.toDouble() ?? 100000.0,
+        };
+        _finCache = cfg;
+        try {
+          final prefs = await SharedPreferences.getInstance();
+          await prefs.setString(_cacheKey, jsonEncode(cfg));
+        } catch (_) {}
+        return cfg;
+      }
     } catch (_) {
-      // best-effort: status tetap tersimpan di sisi RCB.
+      // offline / gagal: pakai cache.
     }
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final raw = prefs.getString(_cacheKey);
+      if (raw != null && raw.isNotEmpty) {
+        return _finCache = (jsonDecode(raw) as Map).cast<String, dynamic>();
+      }
+    } catch (_) {}
+    return _finCache = const {
+      'min_payment': 1000.0,
+      'max_payment': 10000000.0,
+      'free_threshold': 100000.0,
+    };
   }
 
   // ---------------------------------------------------------------------------
@@ -348,7 +293,7 @@ class PaymentService {
         'status': 'success',
         'mode': 'dynamic',
         'order': order,
-        'order_id': order.rcbOrderId,
+        'order_id': order.providerOrderId,
         'payment_url': order.paymentUrl,
         'qris_url': order.qrisUrl,
         'qris_string': order.qrisString,
@@ -359,11 +304,34 @@ class PaymentService {
     }
   }
 
-  Map<String, dynamic> getFinancialConfig() {
-    return {
-      'min_payment': 1000.0,
-      'max_payment': 1000000.0,
-      'free_threshold': 50000.0,
-    };
+}
+
+/// Panggil Edge Function & kembalikan body JSON. Melempar pesan asli server
+/// bila function mengembalikan status non-2xx.
+Future<Map<String, dynamic>> _invokeEf(
+    SupabaseClient client, String name, Map<String, dynamic> body) async {
+  try {
+    final res = await client.functions.invoke(name, body: body);
+    if (res.data is Map) return (res.data as Map).cast<String, dynamic>();
+    return <String, dynamic>{};
+  } on FunctionException catch (e) {
+    throw Exception(_efMessage(e.details) ?? 'Gagal menghubungi server ($name).');
   }
+}
+
+String? _efMessage(dynamic details) {
+  if (details == null) return null;
+  if (details is Map) {
+    final msg = details['message'] ?? details['error'];
+    if (msg != null) return msg.toString();
+  }
+  final s = details.toString();
+  if (s.isEmpty) return null;
+  try {
+    final decoded = jsonDecode(s);
+    if (decoded is Map && decoded['message'] != null) {
+      return decoded['message'].toString();
+    }
+  } catch (_) {}
+  return s;
 }

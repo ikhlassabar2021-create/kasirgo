@@ -66,7 +66,7 @@ class SupporterCheckoutResult {
   final int periodDays;
   final String status; // pending | pending_verification | failed
   final String? supporterId;
-  final String? rcbOrderId;
+  final String? providerOrderId;
   final String? qrisString;
   final String? qrisUrl;
   final String? paymentUrl;
@@ -81,7 +81,7 @@ class SupporterCheckoutResult {
     this.periodDays = 30,
     this.status = 'pending',
     this.supporterId,
-    this.rcbOrderId,
+    this.providerOrderId,
     this.qrisString,
     this.qrisUrl,
     this.paymentUrl,
@@ -437,7 +437,7 @@ class SupporterService {
       final amount = (map['amount'] as num?)?.toDouble() ?? price;
       final periodDays = (map['period_days'] as num?)?.toInt() ?? 30;
 
-      // Coba buat QRIS dinamis (RCB) agar pembayaran terverifikasi otomatis.
+      // Coba buat QRIS dinamis (Midtrans) agar pembayaran terverifikasi otomatis.
       try {
         final pgOrder = await PaymentService().createQris(
           outletId: outletId,
@@ -455,7 +455,7 @@ class SupporterService {
           status: pgOrder.status.toLowerCase(),
           charge: map,
           supporterId: supporterId,
-          rcbOrderId: pgOrder.rcbOrderId,
+          providerOrderId: pgOrder.providerOrderId,
           qrisString: pgOrder.qrisString,
           qrisUrl: pgOrder.qrisUrl,
           paymentUrl: pgOrder.paymentUrl,

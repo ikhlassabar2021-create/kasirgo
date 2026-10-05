@@ -84,6 +84,11 @@ class _CheckoutDialogState extends State<CheckoutDialog> {
   PgPaymentOrder? _pgOrder;
   String _pgStatus = 'PENDING';
   Timer? _pollTimer;
+  Map<String, dynamic> _finCfg = const {
+    'min_payment': 1000.0,
+    'max_payment': 10000000.0,
+    'free_threshold': 100000.0,
+  };
 
   double get _tipAmount => double.tryParse(_tipController.text.replaceAll(RegExp(r'[^0-9]'), '')) ?? 0.0;
   double get _grandTotal => widget.totalAmount + _tipAmount;
@@ -97,6 +102,13 @@ class _CheckoutDialogState extends State<CheckoutDialog> {
     _qrisAmountController.text = widget.totalAmount.toStringAsFixed(0);
     _outletId = widget.outletId;
     _loadQrisConfig();
+    _loadFinancialConfig();
+  }
+
+  Future<void> _loadFinancialConfig() async {
+    final cfg = await PaymentService().getFinancialConfig();
+    if (!mounted) return;
+    setState(() => _finCfg = cfg);
   }
 
   /// Gate QRIS Dinamis: hanya peserta Program Pendukung (payment gateway
@@ -733,43 +745,19 @@ class _CheckoutDialogState extends State<CheckoutDialog> {
       );
     }
 
-    final paymentService = PaymentService();
-    final config = paymentService.getFinancialConfig();
+    final minPayment = (_finCfg['min_payment'] as num?)?.toDouble() ?? 1000.0;
+    final maxPayment = (_finCfg['max_payment'] as num?)?.toDouble() ?? 10000000.0;
     final amount = double.tryParse(_qrisAmountController.text.replaceAll(RegExp(r'[^0-9.]'), '')) ?? widget.totalAmount;
-    
-    if (amount < config['min_payment'] || amount > config['max_payment']) {
+
+    if (amount < minPayment || amount > maxPayment) {
       return Center(
         child: Padding(
           padding: const EdgeInsets.all(16),
           child: Text(
-            'Nominal harus antara Rp ${config['min_payment'].toStringAsFixed(0)} - Rp ${config['max_payment'].toStringAsFixed(0)}',
+            'Nominal harus antara Rp ${minPayment.toStringAsFixed(0)} - Rp ${maxPayment.toStringAsFixed(0)}',
             textAlign: TextAlign.center,
             style: TextStyle(color: AppTheme.errorColor, fontSize: 12),
           ),
-        ),
-      );
-    }
-
-    if (amount >= config['free_threshold']) {
-      // Auto-pay untuk free payment threshold
-      return Container(
-        padding: const EdgeInsets.all(16),
-        decoration: BoxDecoration(
-          color: AppTheme.successColor.withValues(alpha: 0.15),
-          borderRadius: BorderRadius.circular(12),
-          border: Border.all(color: AppTheme.successColor.withValues(alpha: 0.4)),
-        ),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(Icons.check_circle_rounded, color: AppTheme.successColor, size: 32),
-            const SizedBox(height: 8),
-            const Text(
-              'Pembayaran Gratis!',
-              style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
-            ),
-            Text('Ambil alih dari tombol Konfirmasi', style: TextStyle(color: AppTheme.textSecondary, fontSize: 11)),
-          ],
         ),
       );
     }
@@ -858,11 +846,11 @@ class _CheckoutDialogState extends State<CheckoutDialog> {
         timer.cancel();
         return;
       }
-      final status = await PaymentService().checkStatus(order.rcbOrderId);
+      final status = await PaymentService().checkStatus(order.providerOrderId);
       if (!mounted) return;
       if (status == 'PAID' || status == 'SUCCESS' || status == 'SETTLEMENT') {
         timer.cancel();
-        await PaymentService().confirmPaid(order.rcbOrderId);
+        await PaymentService().confirmPaid(order.providerOrderId);
         if (mounted) setState(() => _pgStatus = 'PAID');
       } else if (status == 'EXPIRED' || status == 'FAILED') {
         timer.cancel();
