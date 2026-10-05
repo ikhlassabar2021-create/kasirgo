@@ -95,11 +95,15 @@ Deno.serve(async (req: Request) => {
     });
     const mt = await resp.json().catch(() => ({}));
 
-    if (!resp.ok) {
+    // Midtrans Core API mengembalikan HTTP 200 walau terjadi error bisnis;
+    // status sebenarnya ada di `status_code` (2xx = sukses, mis. "201").
+    const mtStatus = String(mt?.status_code ?? "");
+    if (!resp.ok || mtStatus.charAt(0) !== "2") {
       return json(
         {
           success: false,
           message: mt?.status_message ?? `Midtrans error ${resp.status}`,
+          status_code: mtStatus || null,
           http_status: resp.status,
         },
         502,
