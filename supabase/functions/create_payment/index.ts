@@ -67,6 +67,10 @@ Deno.serve(async (req: Request) => {
       return json({ success: false, message: "Payment gateway outlet belum dikonfigurasi." }, 400);
     }
 
+    if (String(cfg.status ?? "") === "disabled") {
+      return json({ success: false, message: "Payment gateway outlet dinonaktifkan oleh admin." }, 403);
+    }
+
     const { data: serverKey, error: vaultErr } = await admin.rpc("vault_read_secret", {
       p_secret_id: cfg.server_key_secret_id,
     });

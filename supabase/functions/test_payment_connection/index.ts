@@ -35,9 +35,15 @@ Deno.serve(async (req: Request) => {
 
     const admin = createClient(supabaseUrl, serviceKey);
 
+    // Owner outlet boleh mengetes miliknya sendiri; superadmin boleh semua outlet.
     const { data: outlet } = await admin
       .from("outlets").select("id").eq("id", outletId).eq("owner_id", userId).maybeSingle();
-    if (!outlet) return json({ success: false, message: "Forbidden" }, 403);
+    let allowed = !!outlet;
+    if (!allowed) {
+      const { data: isAdmin } = await userClient.rpc("is_platform_admin");
+      allowed = !!isAdmin;
+    }
+    if (!allowed) return json({ success: false, message: "Forbidden" }, 403);
 
     const { data: cfg } = await admin
       .from("outlet_pg_configs")

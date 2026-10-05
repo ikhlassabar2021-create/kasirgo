@@ -376,6 +376,40 @@ export async function setSupporterStatus(id: string, approve: boolean) {
   return data
 }
 
+// ---------------------------------------------------------------------------
+// Payment Gateway per-outlet (Midtrans, zero-custody)
+// ---------------------------------------------------------------------------
+export interface OutletPgConfig {
+  outlet_id: string
+  outlet_name: string
+  outlet_type?: string | null
+  owner_email?: string | null
+  provider: string
+  merchant_id?: string | null
+  client_key?: string | null
+  has_server_key: boolean
+  is_production: boolean
+  status: string
+  last_tested_at?: string | null
+  last_test_result?: string | null
+  updated_at?: string | null
+}
+
+export async function listOutletPgConfigs(): Promise<OutletPgConfig[]> {
+  const { data, error } = await supabase.rpc('admin_list_outlet_pg_configs')
+  if (error) throw error
+  return (data ?? []) as OutletPgConfig[]
+}
+
+export async function setOutletPgStatus(outletId: string, status: string) {
+  const { data, error } = await supabase.rpc('admin_set_outlet_pg_status', {
+    p_outlet: outletId,
+    p_status: status,
+  })
+  if (error) throw error
+  return data
+}
+
 async function logAdminAction(action: string, target: string, meta: Record<string, any>) {
   try {
     await supabase.rpc('log_admin_action', {

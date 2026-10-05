@@ -1449,6 +1449,24 @@ menggantikan RCB. Server Key tetap hanya di server/Vault.
   (`402 Payment channel is not activated`) -> charge nyata belum menghasilkan
   `qr_string`. Alur webhook -> PAID sudah terbukti lulus (Phase 13A).
 
+### PHASE 13C - Superadmin kelola Payment Gateway + uji sandbox + go-live  [DALAM PROSES]
+Tujuan: superadmin mengelola status Payment Gateway tiap outlet dari Control Plane
+(tanpa melihat Server Key), lalu uji sandbox end-to-end, go-live, dan audit keamanan.
+- ST13C-1 (SELESAI): migrasi `docs/migrations/2026-10-13-kasirgo-13c-superadmin-pg.sql`:
+  - `admin_list_outlet_pg_configs()` -> JSONB daftar outlet + status PG ter-mask
+    (provider, merchant_id, client_key, has_server_key, is_production, status,
+    last_tested_at, last_test_result). SECURITY DEFINER + cek `is_platform_admin()`;
+    tidak pernah mengembalikan `server_key_secret_id`.
+  - `admin_set_outlet_pg_status(p_outlet, p_status)` -> `verified|disabled|pending`,
+    menulis `log_admin_action('outlet_pg.set_status', ...)`.
+  - UI superadmin tab "Payment Gateway" (`ControlPlane.tsx`): tabel "Status Payment
+    Gateway per Outlet" (badge Aktif/Nonaktif/Menunggu/Belum diatur, mode
+    Produksi/Sandbox, hasil tes terakhir, tombol Tes + Aktifkan/Nonaktifkan).
+    Helper `src/lib/controlPlane.ts`: `listOutletPgConfigs`/`setOutletPgStatus`.
+  - EF `test_payment_connection` kini juga mengizinkan superadmin (selain owner);
+    EF `create_payment` menolak outlet ber-status `disabled` (403).
+- ST13C-2 (uji E2E sandbox) & ST13C-3 (go-live + audit keamanan) menyusul.
+
 ### DELTA TERBARU (2026-09-29) - Pesanan Dine-in QR Meja (Pelanggan -> Kasir/Dapur)
 Bukan phase baru; menyempurnakan alur QR Meja pelanggan yang sudah live.
 - Pelanggan: katalog + keranjang gaya POS (`CartContent`), checkout **bayar di meja**

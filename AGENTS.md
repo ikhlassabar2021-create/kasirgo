@@ -197,6 +197,19 @@ Status: SELESAI. Project Supabase sudah dibuat dan schema terpasang serta diuji.
   hanya dikirim ke server (Vault) = zero-custody. Gating QRIS dinamis via
   `hasFeature('payment_gateway')`; QRIS statis tetap gratis. Commit: ST13B-1 `3b6765a`,
   ST13B-3 `6cddb0a`. BLOCKER sama: channel QRIS production belum aktif.)
+- [~] Phase 13C: Superadmin kelola Payment Gateway + uji sandbox + go-live + audit
+  (ST13C-1 SELESAI: migrasi `2026-10-13-kasirgo-13c-superadmin-pg.sql` ->
+  RPC `admin_list_outlet_pg_configs` (daftar outlet + status PG ter-mask, cek
+  `is_platform_admin`, tanpa server key) + `admin_set_outlet_pg_status(outlet,status)`
+  (verified|disabled|pending, tulis `log_admin_action`). Tab "Payment Gateway"
+  superadmin (`ControlPlane.tsx` `FinancialTab`) kini punya tabel "Status Payment
+  Gateway per Outlet" (badge Aktif/Nonaktif/Menunggu/Belum diatur, mode Produksi/
+  Sandbox, hasil tes terakhir, tombol Tes + Aktifkan/Nonaktifkan). Helper
+  `controlPlane.ts` `listOutletPgConfigs`/`setOutletPgStatus` + type `OutletPgConfig`.
+  EF `test_payment_connection` izinkan superadmin (selain owner). EF `create_payment`
+  tolak `status='disabled'`. Verifikasi REST: superadmin list 7 outlet, toggle
+  verified<->disabled + audit tercatat, non-admin 403; EF superadmin valid + non-owner
+  403; create_payment saat disabled diblok. Deploy EF 2 fungsi. ST13C-2 & ST13C-3 menyusul.)
 - [x] Edge Functions create_staff + onboard_merchant DIDELOY + Fix WA Katalog
   (create_staff & onboard_merchant deployed via SUPABASE_ACCESS_TOKEN; smoke
    test create_staff OK: user langsung confirmed + user_roles dibuat fungsi.
@@ -537,3 +550,32 @@ Migrasi: docs/migrations/2026-10-01-kasirgo-8.sql. Detail: PROGRESS-PHASE8.md.
 - CATATAN: Server Key yang diberikan user = PRODUCTION; disarankan rotate karena
   sudah melewati chat. Data uji 13A (`payment_orders` + transaksi `KGO-13A-*`) masih
   ada (menunggu izin hapus).
+
+## Sesi 2026-10-05 (4): Phase 13C ST13C-1 - Superadmin kelola Payment Gateway [SELESAI]
+- Tujuan: superadmin dapat melihat status Payment Gateway (Midtrans) tiap outlet dan
+  mengaktifkan/menonaktifkannya dari Control Plane, tanpa pernah melihat Server Key.
+- MIGRASI `docs/migrations/2026-10-13-kasirgo-13c-superadmin-pg.sql` (DITERAPKAN):
+  - `admin_list_outlet_pg_configs()` -> JSONB daftar outlet + status PG ter-mask
+    (provider, merchant_id, client_key, has_server_key, is_production, status,
+    last_tested_at, last_test_result). Cek `is_platform_admin()`, `forbidden` bila bukan.
+  - `admin_set_outlet_pg_status(p_outlet, p_status)` -> verified|disabled|pending,
+    tulis jejak `log_admin_action('outlet_pg.set_status', ...)`.
+  - Keduanya SECURITY DEFINER, `GRANT EXECUTE` authenticated. TIDAK mengembalikan
+    `server_key_secret_id`.
+- UI superadmin (`kasirgo-admin/src/pages/ControlPlane.tsx` tab "Payment Gateway"):
+  tabel "Status Payment Gateway per Outlet" (badge Aktif/Nonaktif/Menunggu/Belum
+  diatur, mode Produksi/Sandbox, hasil tes terakhir, tombol Tes + Aktifkan/
+  Nonaktifkan). Helper baru di `src/lib/controlPlane.ts`: `listOutletPgConfigs`,
+  `setOutletPgStatus`, type `OutletPgConfig`. Default provider/mode diubah ke
+  midtrans/live_server + placeholder callback `midtrans_webhook`.
+- EF `test_payment_connection` diperluas: selain owner, superadmin
+  (`is_platform_admin`) boleh mengetes outlet mana pun. EF `create_payment` kini
+  menolak `status='disabled'` (403) agar tombol Nonaktifkan superadmin efektif.
+- Verifikasi REST (superadmin@kasirgo.com): list 7 outlet; toggle Toko Test
+  verified -> disabled -> verified; 2 baris audit `outlet_pg.set_status` tercatat;
+  owner non-admin -> `forbidden`. EF: superadmin probe Toko Test `valid:true
+  HTTP 200`; non-owner/non-admin `Forbidden`; create_payment saat disabled ->
+  `"Payment gateway outlet dinonaktifkan oleh admin."`.
+- Deploy: EF `test_payment_connection` + `create_payment` (verify_jwt=true) via CLI;
+  admin build `tsc -b && vite build` sukses; `dist` disalin ke gh-pages `/admin/`.
+- Berikutnya: ST13C-2 (uji E2E sandbox) & ST13C-3 (go-live + audit keamanan).

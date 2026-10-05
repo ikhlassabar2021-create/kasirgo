@@ -44,6 +44,8 @@ import {
   setSupporterStatus,
   getIntegration,
   saveIntegrationSecrets,
+  listOutletPgConfigs,
+  setOutletPgStatus,
 } from '../lib/controlPlane';
 import type {
   ConfigKey,
@@ -52,6 +54,7 @@ import type {
   AutomationRule,
   AuditLog,
   PendingSupporter,
+  OutletPgConfig,
 } from '../lib/controlPlane';
 import { supabase } from '../config/supabase';
 import { rp as supabaseRpc, UsersListResult } from '../lib/adminApi';
@@ -583,23 +586,42 @@ function FinancialTab() {
   const [pgExisting, setPgExisting] = useState<string[]>([]);
   const [pgActive, setPgActive] = useState(true);
   const [pgMeta, setPgMeta] = useState({
-    provider: 'rcb',
-    mode: 'sandbox_direct',
-    base_url: 'https://api.ragaciptabersama.web.id/api',
+    provider: 'midtrans',
+    mode: 'live_server',
+    base_url: 'https://api.midtrans.com',
     callback_url: '',
   });
   const [revealPg, setRevealPg] = useState(false);
   const [loadingPg, setLoadingPg] = useState(false);
+  const [outlets, setOutlets] = useState<OutletPgConfig[]>([]);
+  const [loadingOutlets, setLoadingOutlets] = useState(false);
+  const [busyOutlet, setBusyOutlet] = useState<string | null>(null);
   const { msg, show } = useToast();
   useEffect(() => {
     loadFinancialConfig().then(setV).catch(() => {});
     reloadPend();
     reloadPg();
+    reloadOutlets();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const reloadPend = async () => {
     try { setPend(await listPendingSupporters()); } catch { /* ignore */ }
+  };
+
+  const reloadOutlets = async () => {
+    setLoadingOutlets(true);
+    try { setOutlets(await listOutletPgConfigs()); } catch { /* ignore */ } finally { setLoadingOutlets(false); }
+  };
+
+  const toggleOutletPg = async (o: OutletPgConfig) => {
+    const next = o.status === 'disabled' ? 'verified' : 'disabled';
+    setBusyOutlet(o.outlet_id);
+    try {
+      await setOutletPgStatus(o.outlet_id, next);
+      show('ok', next === 'disabled' ? `Payment Gateway ${o.outlet_name} dinonaktifkan.` : `Payment Gateway ${o.outlet_name} diaktifkan.`);
+      await reloadOutlets();
+    } catch (e: any) { show('err', e.message); } finally { setBusyOutlet(null); }
   };
 
   const reloadPg = async () => {
@@ -611,9 +633,9 @@ function FinancialTab() {
         const sc = (it.secret_config ?? {}) as Record<string, any>;
         const pc = (it.public_config ?? {}) as Record<string, any>;
         setPgMeta({
-          provider: sc.provider ?? pc.provider ?? 'rcb',
-          mode: sc.mode ?? 'sandbox_direct',
-          base_url: sc.base_url ?? pc.base_url ?? 'https://api.ragaciptabersama.web.id/api',
+          provider: sc.provider ?? pc.provider ?? 'midtrans',
+          mode: sc.mode ?? 'live_server',
+          base_url: sc.base_url ?? pc.base_url ?? 'https://api.midtrans.com',
           callback_url: sc.callback_url ?? '',
         });
       }
@@ -727,8 +749,8 @@ function FinancialTab() {
             <div>
               <label className={labelCls}>Provider</label>
               <select className={inputCls} value={pgMeta.provider} onChange={(e) => setPgMeta({ ...pgMeta, provider: e.target.value })}>
-                <option value="rcb">RCB Pay (Raga Cipta Bersama)</option>
                 <option value="midtrans">Midtrans</option>
+                <option value="rcb">RCB Pay (Raga Cipta Bersama)</option>
                 <option value="other">Lainnya</option>
               </select>
             </div>
@@ -742,11 +764,11 @@ function FinancialTab() {
             </div>
             <div className="sm:col-span-2">
               <label className={labelCls}>Base URL API</label>
-              <input className={inputCls} value={pgMeta.base_url} onChange={(e) => setPgMeta({ ...pgMeta, base_url: e.target.value })} placeholder="https://api.ragaciptabersama.web.id/api" />
+              <input className={inputCls} value={pgMeta.base_url} onChange={(e) => setPgMeta({ ...pgMeta, base_url: e.target.value })} placeholder="https://api.midtrans.com" />
             </div>
             <div className="sm:col-span-2">
               <label className={labelCls}>Callback / Webhook URL</label>
-              <input className={inputCls} value={pgMeta.callback_url} onChange={(e) => setPgMeta({ ...pgMeta, callback_url: e.target.value })} placeholder="https://<project>.supabase.co/functions/v1/rcb_webhook" />
+              <input className={inputCls} value={pgMeta.callback_url} onChange={(e) => setPgMeta({ ...pgMeta, callback_url: e.target.value })} placeholder="https://<project>.supabase.co/functions/v1/midtrans_webhook" />
             </div>
           </div>
           {pgMeta.mode === 'sandbox_direct' && (
@@ -774,6 +796,98 @@ function FinancialTab() {
           </div>
           <SaveButton loading={loadingPg} label="Simpan Kredensial" onClick={savePg} />
         </div>
+      </div>
+      <div className="max-w-[960px] mt-8">
+        <div className="flex items-center justify-between mb-3">
+          <div>
+            <h3 className="font-semibold text-slate-900 text-sm">Status Payment Gateway per Outlet</h3>
+            <p className="text-[11px] text-slate-500">Kredensial Midtrans diisi owner lewat wizard di aplikasi (Server Key tersimpan di Vault, zero-custody). Superadmin mengelola aktif/nonaktif & tes koneksi.</p>
+          </div>
+          <button onClick={reloadOutlets} className="p-2 rounded-lg hover:bg-slate-100" title="Muat ulang"><RefreshCw size={16} /></button>
+        </div>
+        {loadingOutlets && outlets.length === 0 ? (
+          <p className="text-sm text-slate-400">Memuat data outlet...</p>
+        ) : outlets.length === 0 ? (
+          <p className="text-sm text-slate-400">Belum ada data outlet.</p>
+        ) : (
+          <div className="overflow-x-auto rounded-xl border border-slate-200">
+            <table className="w-full text-xs">
+              <thead className="bg-slate-50 text-slate-500">
+                <tr>
+                  <th className="text-left px-3 py-2 font-semibold">Outlet</th>
+                  <th className="text-left px-3 py-2 font-semibold">Pemilik</th>
+                  <th className="text-left px-3 py-2 font-semibold">Provider</th>
+                  <th className="text-left px-3 py-2 font-semibold">Mode</th>
+                  <th className="text-left px-3 py-2 font-semibold">Status</th>
+                  <th className="text-left px-3 py-2 font-semibold">Tes Terakhir</th>
+                  <th className="text-right px-3 py-2 font-semibold">Aksi</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-100">
+                {outlets.map((o) => {
+                  const configured = o.has_server_key;
+                  const badge =
+                    o.status === 'verified' ? 'bg-emerald-50 text-emerald-600'
+                    : o.status === 'disabled' ? 'bg-rose-50 text-rose-600'
+                    : o.status === 'pending' ? 'bg-amber-50 text-amber-600'
+                    : 'bg-slate-100 text-slate-500';
+                  const label =
+                    o.status === 'verified' ? 'Aktif'
+                    : o.status === 'disabled' ? 'Nonaktif'
+                    : o.status === 'pending' ? 'Menunggu'
+                    : 'Belum diatur';
+                  return (
+                    <tr key={o.outlet_id} className="hover:bg-slate-50/60">
+                      <td className="px-3 py-2.5">
+                        <p className="font-semibold text-slate-800">{o.outlet_name}</p>
+                        <p className="text-[10px] text-slate-400 capitalize">{o.outlet_type ?? '-'}</p>
+                      </td>
+                      <td className="px-3 py-2.5 text-slate-500">{o.owner_email ?? '-'}</td>
+                      <td className="px-3 py-2.5 text-slate-600">{configured ? (o.provider ?? 'midtrans') : '-'}</td>
+                      <td className="px-3 py-2.5 text-slate-600">{configured ? (o.is_production ? 'Produksi' : 'Sandbox') : '-'}</td>
+                      <td className="px-3 py-2.5">
+                        <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold ${badge}`}>{label}</span>
+                      </td>
+                      <td className="px-3 py-2.5 text-slate-500 max-w-[200px] truncate" title={o.last_test_result ?? ''}>
+                        {o.last_test_result ?? '-'}
+                      </td>
+                      <td className="px-3 py-2.5 text-right">
+                        {configured ? (
+                          <div className="inline-flex gap-2">
+                            <button
+                              onClick={async () => {
+                                setBusyOutlet(o.outlet_id);
+                                try {
+                                  const { data, error } = await supabase.functions.invoke('test_payment_connection', { body: { outlet_id: o.outlet_id } });
+                                  if (error) throw new Error(error.message);
+                                  show(data?.valid ? 'ok' : 'err', data?.message ?? 'Selesai.');
+                                  await reloadOutlets();
+                                } catch (e: any) { show('err', e.message); } finally { setBusyOutlet(null); }
+                              }}
+                              disabled={busyOutlet === o.outlet_id}
+                              className="px-2.5 py-1 rounded-lg border border-slate-200 text-slate-600 hover:bg-slate-50 disabled:opacity-50"
+                            >
+                              Tes
+                            </button>
+                            <button
+                              onClick={() => toggleOutletPg(o)}
+                              disabled={busyOutlet === o.outlet_id}
+                              className={`px-2.5 py-1 rounded-lg text-white disabled:opacity-50 ${o.status === 'disabled' ? 'bg-emerald-500 hover:bg-emerald-600' : 'bg-rose-500 hover:bg-rose-600'}`}
+                            >
+                              {o.status === 'disabled' ? 'Aktifkan' : 'Nonaktifkan'}
+                            </button>
+                          </div>
+                        ) : (
+                          <span className="text-[10px] text-slate-400">Belum ada kredensial</span>
+                        )}
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        )}
       </div>
       <div className="max-w-[760px] mt-8">
         <div className="flex items-center justify-between mb-3">
