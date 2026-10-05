@@ -370,6 +370,11 @@ Migrasi: docs/migrations/2026-10-01-kasirgo-8.sql. Detail: PROGRESS-PHASE8.md.
   `outlet_staff_quota` TIDAK ADA di DB live, padahal `settings_screen.dart`
   ~107 membacanya untuk kartu "Kuota Staff" dan workflow Bagian 3
   mendefinisikannya). Query di dalam try/catch -> gagal senyap, kartu selalu
-  0/5. Perlu migrasi `CREATE TABLE outlet_staff_quota` + RLS + backfill.
+  0/5. Migrasi SUDAH DISIAPKAN: `docs/migrations/2026-10-10-kasirgo-staff-quota.sql`
+  (tabel spec max_admin/max_cashier/extra_from_supporter + kolom kompat-app
+  max_staff/current_staff_count, trigger refresh dari user_roles, backfill
+  semua outlet, RLS owner-read + superadmin-full). BELUM DIAPPLY ke DB live:
+  tidak ada kredensial psql/service_role di sesi ini (psql butuh password;
+  `~/.pgpass` kosong; env PGPASSWORD/DATABASE_URL/SUPABASE_ACCESS_TOKEN tidak ada).
 - Deploy: main 295a15d, gh-pages 0fd1f35 (live md5 main.dart.js MATCH
   eae0b83289debbeece0f8cdf5ec20497; smoke test live: login + nav 0 error).
