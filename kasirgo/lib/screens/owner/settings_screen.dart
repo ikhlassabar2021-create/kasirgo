@@ -1527,7 +1527,9 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     final quotaCurrent = _staffQuotaCurrent ?? 0;
     final quotaMax = _staffQuotaMax ?? 5;
     final quotaRemaining = quotaMax - quotaCurrent;
-    final percentage = quotaCurrent / quotaMax;
+    final percentage = quotaMax > 0
+        ? (quotaCurrent / quotaMax).clamp(0.0, 1.0)
+        : 0.0;
 
     return Container(
       padding: const EdgeInsets.all(20),
