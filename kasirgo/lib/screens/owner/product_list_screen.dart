@@ -495,6 +495,7 @@ class _ProductListScreenState extends ConsumerState<ProductListScreen> {
             right: 16,
             bottom: 16,
             child: FloatingActionButton.extended(
+              heroTag: 'fab_products_embedded',
               onPressed: () => context.push('/owner/products/add'),
               backgroundColor: AppTheme.primaryColor,
               icon: const Icon(Icons.add, color: Colors.white),
@@ -518,6 +519,7 @@ class _ProductListScreenState extends ConsumerState<ProductListScreen> {
       ),
       body: content,
       floatingActionButton: FloatingActionButton.extended(
+        heroTag: 'fab_products',
         onPressed: () => context.push('/owner/products/add'),
         backgroundColor: AppTheme.primaryColor,
         icon: const Icon(Icons.add),

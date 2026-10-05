@@ -9,14 +9,16 @@ import '../../providers/auth_provider.dart';
 import '../../services/supabase_service.dart';
 
 class QrTableScreen extends ConsumerStatefulWidget {
-  const QrTableScreen({super.key});
+  const QrTableScreen({super.key, this.service});
+
+  final SupabaseService? service;
 
   @override
   ConsumerState<QrTableScreen> createState() => _QrTableScreenState();
 }
 
 class _QrTableScreenState extends ConsumerState<QrTableScreen> {
-  final _service = SupabaseService();
+  late final _service = widget.service ?? SupabaseService();
   List<String> _tables = [];
   bool _isLoading = true;
   bool _isAdding = false;
@@ -315,6 +317,8 @@ class _QrTableScreenState extends ConsumerState<QrTableScreen> {
                       backgroundColor: AppTheme.primaryColor,
                       foregroundColor: Colors.white,
                       elevation: 0,
+                      minimumSize: const Size(0, AppTheme.touchTargetLarge),
+                      padding: const EdgeInsets.symmetric(horizontal: 16),
                       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppTheme.radiusMedium)),
                     ),
                     onPressed: _isAdding ? null : _addTable,

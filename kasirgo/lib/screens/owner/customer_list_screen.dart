@@ -647,6 +647,7 @@ class _CustomerListScreenState extends ConsumerState<CustomerListScreen> {
         title: const Text('Pelanggan'),
       ),
       floatingActionButton: FloatingActionButton.extended(
+        heroTag: 'fab_customer',
         backgroundColor: AppTheme.primaryColor,
         icon: const Icon(Icons.person_add, color: Colors.white),
         label: const Text('Pelanggan', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),

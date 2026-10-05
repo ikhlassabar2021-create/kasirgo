@@ -1006,6 +1006,7 @@ class _EmployeeScreenState extends ConsumerState<EmployeeScreen> with SingleTick
         ),
       ),
       floatingActionButton: FloatingActionButton.extended(
+        heroTag: 'fab_employee',
         backgroundColor: AppTheme.primaryColor,
         icon: const Icon(Icons.person_add, color: Colors.white),
         label: const Text('Karyawan', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),

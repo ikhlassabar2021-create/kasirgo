@@ -182,6 +182,7 @@ class _MultiOutletScreenState extends ConsumerState<MultiOutletScreen> {
         ],
       ),
       floatingActionButton: FloatingActionButton.extended(
+        heroTag: 'fab_multi_outlet',
         onPressed: _addOutlet,
         backgroundColor: AppTheme.primaryColor,
         foregroundColor: Colors.white,

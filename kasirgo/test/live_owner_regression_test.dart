@@ -99,6 +99,22 @@ void main() {
     await client.auth.signOut();
   });
 
+  test('MASALAH 2b: gate qr_table terbuka utk Toko Test (trial aktif)', () async {
+    final client = SupabaseClient(SupabaseConfig.url, SupabaseConfig.anonKey);
+    await client.auth
+        .signInWithPassword(email: ownerEmail, password: ownerPassword);
+    final svc = SupporterService(client: client);
+    final ent = await svc.getEntitlements(outletTokoTest);
+    final gate = await svc.hasFeature(outletTokoTest, 'qr_table');
+    // ignore: avoid_print
+    print('tokotest: trialActive=${ent.isTrialActive} hasAccess=${ent.hasAccess} '
+        'trialDaysLeft=${ent.trialDaysLeft} gateQrTable=$gate');
+    expect(gate, isTrue,
+        reason: 'gate qr_table harus TERBUKA (layar QR Meja + tombol Tambah '
+            'tampil, bukan layar terkunci)');
+    await client.auth.signOut();
+  });
+
   test('MASALAH 3: akun tanpa trial -> hasAccess=false', () async {
     final client = SupabaseClient(SupabaseConfig.url, SupabaseConfig.anonKey);
     await client.auth

@@ -219,6 +219,7 @@ class _ReportScreenState extends ConsumerState<ReportScreen> with SingleTickerPr
           ),
         ),
         floatingActionButton: FloatingActionButton.extended(
+          heroTag: 'fab_report_embedded',
           backgroundColor: AppTheme.primaryColor,
           icon: const Icon(Icons.table_view, color: Colors.white),
           label: const Text('Excel', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
@@ -268,6 +269,7 @@ class _ReportScreenState extends ConsumerState<ReportScreen> with SingleTickerPr
         ),
       ),
       floatingActionButton: FloatingActionButton.extended(
+        heroTag: 'fab_report',
         backgroundColor: AppTheme.primaryColor,
         icon: const Icon(Icons.table_view, color: Colors.white),
         label: const Text('Excel', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
