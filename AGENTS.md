@@ -342,4 +342,4 @@ Migrasi: docs/migrations/2026-10-01-kasirgo-8.sql. Detail: PROGRESS-PHASE8.md.
 - PELAJARAN: `flutter analyze` TIDAK menangkap bug layout runtime; perlu
   widget test / render nyata. `flutter build web` di Flutter 3.47 sudah tanpa
   `--web-renderer` (CanvasKit).
-- Deploy: main 25ec5bb, gh-pages <akan diisi>.
+- Deploy: main 25ec5bb, gh-pages c130af4 (live md5 main.dart.js MATCH).
