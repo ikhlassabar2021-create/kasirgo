@@ -1389,6 +1389,37 @@ onboarding KYC wajib (app terkunci sampai verified); panduan PDF/video via Contr
 - ST12-3: Build APK release split-per-abi <10MB + deploy superadmin
 - Test: full flow end-to-end semua role + offline + Program Pendukung.
 
+### PHASE 13A - QRIS Dinamis Midtrans (zero-custody, server-side)  [SELESAI KODE]
+Tujuan: QRIS dinamis yang otomatis LUNAS lewat webhook, tanpa server key menyentuh APK.
+Prinsip: **zero-custody** -- Server Key hanya di server (Supabase Edge Function + Vault),
+terenkripsi at-rest; tidak pernah dikirim ke klien/APK.
+- ST13A-1 (skema DB): tabel `outlet_pg_configs` (kredensial PG per outlet; server key
+  disimpan sebagai `server_key_secret_id` = uuid `vault.secrets`). RLS owner-read +
+  column-level grant: `authenticated` tidak bisa membaca `server_key_secret_id`; `anon`
+  tanpa akses. `transactions` + kolom `provider_ref`, `paid_at`. RPC
+  `get_outlet_payment_config(outlet)` mengembalikan config ter-mask. `platform_integrations`
+  key `payment_gateway` -> provider `midtrans` (base_url sandbox + production); `pg_duitku` dihapus.
+- ST13A-2 (EF `save_payment_config`): verifikasi JWT = owner outlet; simpan server key ke
+  Vault via RPC `vault_put_secret` (EXECUTE hanya service_role); upsert `outlet_pg_configs`;
+  kembalikan config ter-mask. `payment_orders.provider_order_id` untuk id order Midtrans.
+- ST13A-3 (EF `test_payment_connection`): validasi kredensial tanpa efek samping (probe
+  status order dummy; 401 = invalid, 404/200 = valid); update status verified/pending.
+- ST13A-4 (EF `create_payment`): ambil kredensial outlet + server key dari Vault; Midtrans
+  Core API `POST /v2/charge` `payment_type=qris` (Basic auth `Base64(ServerKey:)`); simpan
+  `payment_orders` (provider midtrans, qris_string, qris_url, transaction_id, expiry) dan
+  kembalikan `qr_string` + `provider_ref`.
+- ST13A-5 (EF `midtrans_webhook`): verifikasi signature
+  `SHA512(order_id + status_code + gross_amount + ServerKey)`; map
+  `transaction_status`/`fraud_status` -> PAID/PENDING/EXPIRED/FAILED/REFUND; **idempotent**;
+  aktivasi langganan bila `purpose='subscription'`; tandai `transactions.payment_status='paid'`
+  + `paid_at` + `provider_ref`. Signature salah -> 401.
+- Migrasi: `docs/migrations/2026-10-12-kasirgo-13a-midtrans-schema.sql`,
+  `2026-10-12-kasirgo-13a-midtrans-2.sql`.
+- Catatan deploy: `midtrans_webhook` harus `verify_jwt=false`; `create_payment` /
+  `save_payment_config` / `test_payment_connection` `verify_jwt=true`.
+- Kredensial per outlet diisi owner via UI (merchant_id + client_key + server_key);
+  server key hanya dikirim sekali ke EF lalu disimpan terenkripsi.
+
 ### DELTA TERBARU (2026-09-29) - Pesanan Dine-in QR Meja (Pelanggan -> Kasir/Dapur)
 Bukan phase baru; menyempurnakan alur QR Meja pelanggan yang sudah live.
 - Pelanggan: katalog + keranjang gaya POS (`CartContent`), checkout **bayar di meja**

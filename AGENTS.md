@@ -426,3 +426,33 @@ Migrasi: docs/migrations/2026-10-01-kasirgo-8.sql. Detail: PROGRESS-PHASE8.md.
 - Verifikasi: `flutter analyze` 0 error (hanya info pre-existing);
   bundle `main.dart.js` memuat string "Tanpa batas" + "extra_from_supporter".
 - Deploy: main 565c71a, gh-pages ade5ab0.
+
+## Sesi 2026-10-05 (2): Phase 13A - QRIS Dinamis Midtrans (zero-custody) [KODE SELESAI, DEPLOY PENDING]
+- Tujuan: QRIS dinamis otomatis LUNAS via webhook Midtrans; Server Key TIDAK PERNAH
+  menyentuh APK/klien (zero-custody). Hanya di Edge Function + Supabase Vault.
+- ST13A-1 `daac450` migrasi `2026-10-12-kasirgo-13a-midtrans-schema.sql` (DITERAPKAN):
+  tabel `outlet_pg_configs` (server key = `server_key_secret_id` uuid Vault, bukan teks);
+  RLS owner-read + column-grant (authenticated TIDAK bisa baca secret id, anon none);
+  `transactions` + `provider_ref`/`paid_at`; RPC `get_outlet_payment_config` (ter-mask);
+  `platform_integrations.payment_gateway` -> provider midtrans, `pg_duitku` dihapus.
+- ST13A-2 `307e0d0`: migrasi `2026-10-12-kasirgo-13a-midtrans-2.sql` (DITERAPKAN) RPC
+  `vault_put_secret`/`vault_read_secret` (SECURITY DEFINER, EXECUTE hanya service_role;
+  roundtrip Vault terverifikasi) + `payment_orders.provider_order_id`; EF
+  `save_payment_config` (JWT owner -> simpan server key ke Vault -> config ter-mask).
+- ST13A-3 `129004d`: EF `test_payment_connection` (probe status dummy; 401 invalid,
+  404/200 valid; update status verified/pending).
+- ST13A-4 `d916ac0`: EF `create_payment` (Midtrans Core API `POST /v2/charge`
+  `payment_type=qris`, Basic auth server key dari Vault; simpan payment_orders; return
+  `qr_string` + `provider_ref`).
+- ST13A-5 `a3ee31d`: EF `midtrans_webhook` (verify SHA512(order_id+status_code+
+  gross_amount+ServerKey); map status -> PAID/PENDING/EXPIRED/FAILED/REFUND; idempotent;
+  aktivasi langganan; tandai transaksi paid). WAJIB `verify_jwt=false`.
+- Kredensial outlet Toko Test (`229c94d7-...`) DISIMPAN ke Vault via psql (server key
+  terenkripsi; md5 terverifikasi). CATATAN: kunci yang diberikan user = **PRODUCTION**
+  (sandbox 401, production auth valid) -> `is_production=true`. Jangan commit kunci.
+- BLOCKER: `SUPABASE_ACCESS_TOKEN` belum tersedia di env + Supabase CLI tidak terpasang
+  -> 4 EF BELUM ter-deploy. Perlu token untuk `supabase functions deploy`.
+- Verifikasi yang sudah lulus: Vault put/read roundtrip; column-grant secret tidak
+  terbaca authenticated; probe auth Midtrans production (HTTP 200 "Transaction doesn't
+  exist" = kredensial valid). Belum: create_payment -> qr_string & webhook -> PAID (butuh
+  EF deploy). Docs workflow Bagian 8 (PHASE 13A) + AGENTS diperbarui.
