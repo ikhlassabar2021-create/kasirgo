@@ -1420,6 +1420,35 @@ terenkripsi at-rest; tidak pernah dikirim ke klien/APK.
 - Kredensial per outlet diisi owner via UI (merchant_id + client_key + server_key);
   server key hanya dikirim sekali ke EF lalu disimpan terenkripsi.
 
+### PHASE 13B - Retrofit App ke Midtrans (zero-custody)  [SELESAI]
+Tujuan: aplikasi memakai Midtrans untuk QRIS dinamis (LUNAS otomatis via webhook),
+menggantikan RCB. Server Key tetap hanya di server/Vault.
+- ST13B-1 (`payment_service.dart`): lapisan `PgProviderClient` + `MidtransProvider`
+  (facade `PaymentService`). `createQris` memanggil EF `create_payment`;
+  `checkStatus` membaca tabel `payment_orders` (di-update webhook); `confirmPaid`
+  no-op (webhook = sumber kebenaran). `PgPaymentOrder.providerOrderId` (dulu
+  `rcbOrderId`); `fromApi` toleran terhadap variasi field. `getFinancialConfig`
+  async dari RPC `get_financial_config` (min/max/free nyata) + cache SharedPreferences;
+  `loadProviderConfig` dari RPC `get_outlet_payment_config` (ter-mask). Hapus
+  dependensi RCB/`get_pg_client_config`/`sandbox_direct`. Hapus cabang auto-pay
+  "Pembayaran Gratis" (`free_threshold` = ambang biaya platform, bukan pembayaran gratis).
+- ST13B-2 (`checkout_dialog.dart`): render QR asli dari `qr_string` (QrImageView),
+  panel status menunggu + polling 5 detik auto-update saat PAID/EXPIRED, batas
+  nominal dari `_finCfg`. `supporter_service.dart`/`supporter_screen.dart` ikut
+  memakai `providerOrderId`.
+- ST13B-3 (wizard `screens/owner/midtrans_connect_screen.dart`): status koneksi,
+  panduan 3 langkah + deep link Access Keys, form Merchant ID/Client Key/Server Key
+  (obscure, tidak pernah ditampilkan kembali), toggle Produksi/Sandbox, Tes Koneksi
+  (simpan via EF `save_payment_config` + probe via EF `test_payment_connection`).
+  Entry: Pengaturan > "Hubungkan Midtrans (QRIS Dinamis)".
+- Gating: QRIS dinamis hanya untuk peserta Pendukung/trial
+  (`hasFeature('payment_gateway')`), else dialog Pendukung; QRIS statis tetap
+  gratis sebagai fallback.
+- Commit: ST13B-1 `3b6765a`, ST13B-3 `6cddb0a`.
+- BLOCKER EKSTERNAL: channel QRIS akun Midtrans production belum diaktifkan
+  (`402 Payment channel is not activated`) -> charge nyata belum menghasilkan
+  `qr_string`. Alur webhook -> PAID sudah terbukti lulus (Phase 13A).
+
 ### DELTA TERBARU (2026-09-29) - Pesanan Dine-in QR Meja (Pelanggan -> Kasir/Dapur)
 Bukan phase baru; menyempurnakan alur QR Meja pelanggan yang sudah live.
 - Pelanggan: katalog + keranjang gaya POS (`CartContent`), checkout **bayar di meja**

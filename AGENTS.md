@@ -185,6 +185,18 @@ Status: SELESAI. Project Supabase sudah dibuat dan schema terpasang serta diuji.
   BLOCKER EKSTERNAL: channel QRIS akun Midtrans production belum aktif
   (`402 Payment channel is not activated`) -> charge nyata belum hasilkan qr_string.
   App belum di-retrofit (payment_service.dart masih RCB) -> Phase 13B.)
+- [x] Phase 13B: Retrofit app ke Midtrans (zero-custody)
+  (payment_service.dart ditulis ulang: lapisan `PgProviderClient` + `MidtransProvider`;
+  `createQris` -> EF `create_payment`, `checkStatus` baca `payment_orders` (di-update
+  webhook), `confirmPaid` no-op; `PgPaymentOrder.rcbOrderId` -> `providerOrderId`.
+  `getFinancialConfig` async dari RPC `get_financial_config` + cache SharedPreferences;
+  checkout QRIS baca `_finCfg` (min/max/free). Wizard "Hubungkan Midtrans"
+  (`screens/owner/midtrans_connect_screen.dart`): status koneksi, panduan + deep link
+  Access Keys, form Merchant ID/Client Key/Server Key (mask), toggle Produksi/Sandbox,
+  Tes Koneksi via EF `test_payment_connection` + `save_payment_config`. Server Key
+  hanya dikirim ke server (Vault) = zero-custody. Gating QRIS dinamis via
+  `hasFeature('payment_gateway')`; QRIS statis tetap gratis. Commit: ST13B-1 `3b6765a`,
+  ST13B-3 `6cddb0a`. BLOCKER sama: channel QRIS production belum aktif.)
 - [x] Edge Functions create_staff + onboard_merchant DIDELOY + Fix WA Katalog
   (create_staff & onboard_merchant deployed via SUPABASE_ACCESS_TOKEN; smoke
    test create_staff OK: user langsung confirmed + user_roles dibuat fungsi.
@@ -490,3 +502,38 @@ Migrasi: docs/migrations/2026-10-01-kasirgo-8.sql. Detail: PROGRESS-PHASE8.md.
   belum dibersihkan (menunggu izin hapus).
 - Docs workflow Bagian 8 (PHASE 13A) + AGENTS diperbarui. App belum di-retrofit ke
   Midtrans (payment_service.dart masih RCB) -> masuk Phase 13B.
+
+## Sesi 2026-10-05 (3): Phase 13B - Retrofit App ke Midtrans (zero-custody) [SELESAI]
+- Tujuan: app memakai Midtrans (QRIS dinamis otomatis LUNAS via webhook), Server Key
+  tetap hanya di server/Vault. RCB ditinggalkan.
+- ST13B-1 `3b6765a`: `payment_service.dart` ditulis ulang. Lapisan provider
+  `PgProviderClient` + `MidtransProvider`; facade `PaymentService`.
+  - `createQris` panggil EF `create_payment`; `checkStatus` baca tabel `payment_orders`
+    via `.or(provider_order_id/external_id)`; `confirmPaid` no-op (webhook otoritatif).
+  - `loadProviderConfig` (RPC `get_outlet_payment_config`, ter-mask);
+    `getFinancialConfig` async RPC `get_financial_config` + cache prefs
+    (`min_payment`/`max_payment`/`free_threshold`).
+  - `PgPaymentOrder.rcbOrderId` -> `providerOrderId`; `fromApi` toleran
+    (order_id/provider_order_id/qris_string/qr_code/qris_image_url).
+  - `supporter_service.dart`/`supporter_screen.dart`/`checkout_dialog.dart` ikut
+    di-update. Hapus cabang auto-pay "Pembayaran Gratis" (free_threshold = ambang
+    biaya platform, bukan pembayaran gratis).
+- ST13B-2 (dalam `3b6765a`): `checkout_dialog.dart` render QR asli dari `qr_string`
+  (QrImageView), panel status menunggu + polling 5 dtk auto-update saat PAID/EXPIRED,
+  baca batas nominal dari `_finCfg`.
+- ST13B-3 `6cddb0a`: layar `MidtransConnectScreen` (wizard "Hubungkan Midtrans"):
+  status koneksi, panduan 3 langkah + deep link Access Keys, form Merchant ID/Client
+  Key/Server Key (obscure, tidak pernah ditampilkan kembali), toggle Produksi/Sandbox,
+  Tes Koneksi (simpan + probe via EF `test_payment_connection`). `PaymentService`
+  tambah `savePaymentConfig`/`testPaymentConnection`. Entry: Pengaturan >
+  "Hubungkan Midtrans (QRIS Dinamis)".
+- Gating: QRIS dinamis di checkout hanya bila `hasFeature('payment_gateway')`
+  (Pendukung/trial), else dialog Pendukung; QRIS statis tetap gratis (fallback default).
+- Verifikasi: `flutter analyze` 0 error (hanya info pre-existing); `flutter build web
+  --release` SUKSES.
+- BLOCKER EKSTERNAL (bukan kode): channel QRIS akun Midtrans production Toko Test
+  belum aktif (`402`) -> charge nyata belum hasilkan `qr_string`. Alur webhook -> PAID
+  sudah terbukti lulus di Phase 13A. Aksi user: aktifkan QRIS di dashboard Midtrans.
+- CATATAN: Server Key yang diberikan user = PRODUCTION; disarankan rotate karena
+  sudah melewati chat. Data uji 13A (`payment_orders` + transaksi `KGO-13A-*`) masih
+  ada (menunggu izin hapus).
