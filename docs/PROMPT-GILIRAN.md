@@ -5,21 +5,21 @@ bagian "PHASE AKTIF" setiap ganti phase.
 
 ## Status ringkas
 
-- Phase 1 s.d. Phase 13B: SELESAI.
-- Phase 13C (Superadmin kelola Payment Gateway + uji sandbox + go-live): DALAM PROSES.
-  - ST13C-1 SELESAI: RPC `admin_list_outlet_pg_configs` / `admin_set_outlet_pg_status`
+- Phase 1 s.d. Phase 13C: SELESAI (Phase 13 tuntas).
+- Phase 13C (Superadmin kelola Payment Gateway + uji sandbox + go-live): SELESAI.
+  - ST13C-1: RPC `admin_list_outlet_pg_configs` / `admin_set_outlet_pg_status`
     + tabel "Status Payment Gateway per Outlet" di Control Plane; EF
     `test_payment_connection` izinkan superadmin; EF `create_payment` blok `disabled`.
-  - ST13C-2 SELESAI: E2E sandbox Warung Test lulus semua (tes koneksi, charge QRIS
+  - ST13C-2: E2E sandbox Warung Test lulus semua (tes koneksi, charge QRIS
     dinamis, webhook settlement -> PAID, idempotent, signature salah 401, alur POS
     transaksi unpaid -> paid).
-  - ST13C-3 (go-live + audit keamanan) menyusul.
-- Phase 13A (QRIS Dinamis Midtrans, zero-custody): SELESAI.
-- Phase 13B (Retrofit app ke Midtrans): SELESAI (ST13B-1 `3b6765a`, ST13B-3 `6cddb0a`).
-- Blocker eksternal: channel QRIS akun Midtrans production belum aktif
-  (`402 Payment channel is not activated`) -> charge QRIS nyata belum menghasilkan
-  `qr_string`. Alur webhook -> PAID sudah terbukti lulus. Aksi user: aktifkan QRIS
-  di dashboard Midtrans.
+  - ST13C-3: audit keamanan bersih + remediasi `create_payment` (validasi
+    transaction_id & nominal) + dokumen `docs/GO-LIVE-PAYMENT-GATEWAY.md`
+    (checklist go-live, rotate key, alternatif provider PJP: Xendit/iPaymu/Tripay).
+- Blocker eksternal: channel QRIS akun Midtrans **production** Toko Test belum aktif
+  (`402 Payment channel is not activated`) -> QRIS nyata belum bisa terbit di Toko
+  Test. Sandbox sudah terbukti E2E lulus. Aksi user: aktifkan QRIS di dashboard
+  Midtrans (lihat checklist go-live).
 
 ## Prompt pembuka (tempel di awal sesi)
 

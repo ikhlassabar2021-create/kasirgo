@@ -71,6 +71,25 @@ Deno.serve(async (req: Request) => {
       return json({ success: false, message: "Payment gateway outlet dinonaktifkan oleh admin." }, 403);
     }
 
+    // Audit 13C: bila transaction_id diberikan, transaksi harus milik outlet yang
+    // sama dan nominal wajib sama dengan final_amount (cegah manipulasi nominal).
+    if (transactionId) {
+      const { data: trx } = await admin
+        .from("transactions")
+        .select("id, outlet_id, final_amount, payment_status")
+        .eq("id", transactionId)
+        .maybeSingle();
+      if (!trx || String(trx.outlet_id ?? "") !== outletId) {
+        return json({ success: false, message: "Transaksi tidak ditemukan di outlet ini." }, 403);
+      }
+      if (String(trx.payment_status ?? "") === "paid") {
+        return json({ success: false, message: "Transaksi sudah dibayar." }, 409);
+      }
+      if (Math.round(Number(trx.final_amount ?? 0)) !== amount) {
+        return json({ success: false, message: "Nominal tidak sesuai transaksi." }, 400);
+      }
+    }
+
     const { data: serverKey, error: vaultErr } = await admin.rpc("vault_read_secret", {
       p_secret_id: cfg.server_key_secret_id,
     });

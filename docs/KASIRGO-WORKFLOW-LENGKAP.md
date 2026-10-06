@@ -1449,7 +1449,7 @@ menggantikan RCB. Server Key tetap hanya di server/Vault.
   (`402 Payment channel is not activated`) -> charge nyata belum menghasilkan
   `qr_string`. Alur webhook -> PAID sudah terbukti lulus (Phase 13A).
 
-### PHASE 13C - Superadmin kelola Payment Gateway + uji sandbox + go-live  [DALAM PROSES]
+### PHASE 13C - Superadmin kelola Payment Gateway + uji sandbox + go-live  [SELESAI]
 Tujuan: superadmin mengelola status Payment Gateway tiap outlet dari Control Plane
 (tanpa melihat Server Key), lalu uji sandbox end-to-end, go-live, dan audit keamanan.
 - ST13C-1 (SELESAI): migrasi `docs/migrations/2026-10-13-kasirgo-13c-superadmin-pg.sql`:
@@ -1479,7 +1479,20 @@ Tujuan: superadmin mengelola status Payment Gateway tiap outlet dari Control Pla
   5. Alur POS penuh: transaksi `unpaid` dibuat -> charge QRIS dengan
      `transaction_id` -> webhook settlement -> `payment_orders.status=PAID` +
      `transactions.payment_status='paid'`, `paid_at` terisi, `provider_ref`=order id.
-- ST13C-3 (go-live + audit keamanan) menyusul.
+- ST13C-3 (SELESAI):
+  - **Audit keamanan** (detail di `docs/GO-LIVE-PAYMENT-GATEWAY.md`): tidak ada kunci
+    di repo/history/bundle; hanya anon key; RLS + kolom grant + Vault benar; webhook
+    signature + idempotent benar. REMEDIASI: `create_payment` kini memvalidasi
+    `transaction_id` (milik outlet, belum dibayar, nominal = `final_amount`) —
+    terverifikasi 400/403/409. Regression E2E POS lulus setelah deploy.
+  - **Dokumen go-live**: `docs/GO-LIVE-PAYMENT-GATEWAY.md` — checklist go-live per
+    outlet (aktifkan channel QRIS, Notification URL webhook, uji nominal kecil),
+    rekomendasi rotate Server Key, dan perbandingan provider QRIS dinamis alternatif
+    berizin PJP (Xendit/iPaymu/Tripay/Duitku) — rekomendasi Xendit atau iPaymu;
+    arsitektur `PgProviderClient` siap tambah provider tanpa ubah UI.
+  - Catatan QRIS statis vs dinamis: QRIS statis (GoPay/QR tetap toko) tidak bisa
+    otomatis (tanpa webhook); tetap tersedia sebagai fallback gratis. QRIS otomatis
+    memerlukan channel QRIS API (dinamis) di provider PJP.
 
 ### DELTA TERBARU (2026-09-29) - Pesanan Dine-in QR Meja (Pelanggan -> Kasir/Dapur)
 Bukan phase baru; menyempurnakan alur QR Meja pelanggan yang sudah live.

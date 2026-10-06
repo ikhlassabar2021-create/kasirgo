@@ -215,8 +215,14 @@ Status: SELESAI. Project Supabase sudah dibuat dan schema terpasang serta diuji.
   charge QRIS dinamis -> `qris_string` + `qris_url` PNG; webhook `settlement` -> PAID,
   ulang -> `idempotent:true`; signature salah -> 401; alur POS penuh transaksi
   `unpaid` -> charge (dengan `transaction_id`) -> webhook -> `payment_orders=PAID` +
-  `transactions.payment_status='paid'` + `paid_at` + `provider_ref`. ST13C-3
-  (go-live + audit keamanan) menyusul.)
+  `transactions.payment_status='paid'` + `paid_at` + `provider_ref`.
+  ST13C-3 SELESAI: audit keamanan bersih (tidak ada kunci di repo/history/bundle;
+  hanya anon key; RLS/grant/Vault benar; webhook signature+idempotent benar);
+  REMEDIASI `create_payment` (validasi transaction_id: milik outlet 403, belum
+  dibayar 409, nominal = final_amount 400) ter-deploy + regression E2E lulus;
+  dokumen `docs/GO-LIVE-PAYMENT-GATEWAY.md` (checklist go-live, rotate key,
+  alternatif provider QRIS PJP: Xendit/iPaymu/Tripay; QRIS statis tidak bisa
+  otomatis -> fallback manual). **PHASE 13 TUNTAS.**)
 - [x] Edge Functions create_staff + onboard_merchant DIDELOY + Fix WA Katalog
   (create_staff & onboard_merchant deployed via SUPABASE_ACCESS_TOKEN; smoke
    test create_staff OK: user langsung confirmed + user_roles dibuat fungsi.
@@ -608,3 +614,28 @@ Migrasi: docs/migrations/2026-10-01-kasirgo-8.sql. Detail: PROGRESS-PHASE8.md.
   `KGO-17912818*`) + 2 transaksi uji di Warung Test.
 - BERIKUTNYA: ST13C-3 (go-live production + audit keamanan + dokumentasi provider
   alternatif QRIS dinamis).
+
+## Sesi 2026-10-06 (2): Phase 13C ST13C-3 - Go-live + Audit Keamanan [SELESAI]
+- AUDIT KEAMANAN (semua BERSIH, detail `docs/GO-LIVE-PAYMENT-GATEWAY.md`):
+  - Kunci asli (sandbox/production) tidak ada di repo, git history (`git log -S`),
+    bundle web app & admin. `SB-Mid-server-...` di dart = placeholder hint saja.
+  - JWT hardcoded di repo hanya anon key (app + admin, role `anon`).
+  - RLS `outlet_pg_configs` aktif; kolom `server_key_secret_id` hanya
+    postgres/service_role; `vault_read_secret`/`vault_put_secret` ditolak untuk
+    authenticated (pen-test 403); `vault.decrypted_secrets` tak terbaca klien.
+  - EF tanpa JWT -> 401 (save/test/create); `midtrans_webhook` verify_jwt=false
+    (sesuai desain) tapi dilindungi signature SHA512 (pen-test 401).
+- REMEDIASI `create_payment`: dulu nominal bebas dari klien. Kini bila
+  `transaction_id` diberikan -> transaksi wajib milik outlet yang sama (403),
+  belum dibayar (409), nominal == `final_amount` (400). Ter-deploy + terverifikasi
+  (400/403/409 benar) + regression E2E POS lulus (charge -> webhook -> paid).
+- DOKUMEN GO-LIVE `docs/GO-LIVE-PAYMENT-GATEWAY.md`: checklist go-live per outlet
+  (aktifkan channel QRIS production, Notification URL =
+  .../functions/v1/midtrans_webhook, uji nominal kecil), rotate Server Key
+  (production key pernah lewat chat), dan tabel perbandingan provider QRIS dinamis
+  berizin PJP: **Xendit** (rekomendasi utama), **iPaymu** (onboarding ringan),
+  Tripay, Duitku. Arsitektur `PgProviderClient` siap tambah provider tanpa ubah UI.
+- JAWABAN MASALAH USER: QRIS GoPay **statis** milik toko tidak bisa otomatis
+  (tanpa webhook/order_id). Solusi: aktifkan channel **QRIS API (dinamis)** di
+  Midtrans, atau ganti provider PJP lain; QRIS statis tetap jadi fallback manual.
+- **PHASE 13 TUNTAS** (13A + 13B + 13C-1/2/3 SELESAI).
