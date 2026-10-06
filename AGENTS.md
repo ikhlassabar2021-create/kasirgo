@@ -639,3 +639,35 @@ Migrasi: docs/migrations/2026-10-01-kasirgo-8.sql. Detail: PROGRESS-PHASE8.md.
   (tanpa webhook/order_id). Solusi: aktifkan channel **QRIS API (dinamis)** di
   Midtrans, atau ganti provider PJP lain; QRIS statis tetap jadi fallback manual.
 - **PHASE 13 TUNTAS** (13A + 13B + 13C-1/2/3 SELESAI).
+
+## Sesi 2026-10-06 (3): Phase 14 Dokter Bisnis AI (BERJALAN)
+- Tujuan: asisten AI "Dokter Bisnis" (diagnosa -> resep -> evaluasi) untuk owner
+  gaptek. Skema doctor + EF LLM + tab superadmin + chat owner. Provider LLM
+  dikonfigurasi superadmin (Control Plane), `api_key_enc` hanya service_role.
+- ST14-1 `f2c618b`: migrasi `docs/migrations/2026-10-06-kasirgo-14-dokter-bisnis.sql`
+  (DITERAPKAN): 7 tabel (`outlet_ai_configs`, `doctor_conversations`,
+  `doctor_messages`, `doctor_memory`, `doctor_intake`, `doctor_action_logs`,
+  `doctor_outlet_profile`) + index + seed `platform_configs.business_doctor` +
+  RLS (`is_outlet_owner`/`is_platform_admin`) + view `outlet_ai_configs_public`
+  (tanpa `api_key_enc`, kolom `has_api_key`) + helper `outlet_supporter_active()`.
+- ST14-2 `b1cd1b8`: EF `business_doctor_chat` (deployed): konteks bisnis via tools
+  (snapshot/trend/stok/kas/memori), tool-loop maks 2 putaran, output
+  `{reply,blocks,phase,memory}` block types text/card/gauge/checklist/choices/action,
+  gating `outlet_supporter_active`, provider override outlet else
+  `platform_configs.business_doctor.provider_default`, fallback "Otak penuh belum
+  aktif", regex FORBIDDEN, simpan messages/memory. Teruji 401 tanpa JWT, 200 owner.
+- ST14-3 `32992a5` + dist `4d498e2` + gh-pages `ea59052`: Control Plane admin tab
+  "Dokter Bisnis AI" (`DoctorTab`): config global (aktif/bahasa/prompt/guardrails/
+  internet_tool/provider_default), tombol Tes Koneksi Provider + Chat Uji pilih
+  outlet. EF mode `test_provider` (superadmin-only) + superadmin bypass
+  membership/gating.
+- ST14-4 `a6e6457` + gh-pages `5812cc1`: app owner. `business_doctor_service.dart`
+  (klien EF), `business_doctor_screen.dart` (welcome 4 tombol besar: Diagnosa Usaha/
+  Kenapa Omzet Turun/Saran Promosi/Cek Stok & Kas + kotak chat + renderer blocks +
+  indikator loading + disclaimer), `widgets/common/business_doctor/doctor_blocks.dart`
+  (renderer text/card/gauge/checklist/choices/action), kartu "Dokter Bisnis AI" di
+  beranda owner (`_buildModularQuickActions`). `dart analyze` bersih (info style).
+- BERIKUTNYA: ST14-5 intake wizard + deteksi fase; ST14-6 Peta Resep + tool
+  `save_prescription`; ST14-7 catat hasil promosi + ROI + web tool; ST14-8
+  Escalation Ladder; ST14-9 memori jangka panjang + cron `doctor_observe` +
+  "Riwayat Kasus"; ST14-10 override outlet superadmin + rate limit + E2E.
