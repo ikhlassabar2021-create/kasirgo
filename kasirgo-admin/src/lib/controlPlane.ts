@@ -13,6 +13,7 @@ export type ConfigKey =
   | 'fintech_partner'
   | 'affiliate'
   | 'system'
+  | 'business_doctor'
 
 export interface PlatformConfig {
   id?: string
@@ -408,6 +409,31 @@ export async function setOutletPgStatus(outletId: string, status: string) {
   })
   if (error) throw error
   return data
+}
+
+// ---------------------------------------------------------------------------
+// Dokter Bisnis AI (ST14-3): uji provider + chat uji dari Control Plane
+// ---------------------------------------------------------------------------
+export interface DoctorProviderProbe {
+  ok: boolean
+  message: string
+  sample?: string
+}
+
+export async function testDoctorProvider(provider: Record<string, any>): Promise<DoctorProviderProbe> {
+  const { data, error } = await supabase.functions.invoke('business_doctor_chat', {
+    body: { mode: 'test_provider', provider },
+  })
+  if (error) throw error
+  return data as DoctorProviderProbe
+}
+
+export async function testDoctorChat(outletId: string, message: string) {
+  const { data, error } = await supabase.functions.invoke('business_doctor_chat', {
+    body: { outlet_id: outletId, message },
+  })
+  if (error) throw error
+  return data as Record<string, any>
 }
 
 async function logAdminAction(action: string, target: string, meta: Record<string, any>) {

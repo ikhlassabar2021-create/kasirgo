@@ -24,6 +24,7 @@ import {
   Truck,
   ImagePlus,
   X,
+  Stethoscope,
 } from 'lucide-react';
 import {
   loadConfig,
@@ -46,6 +47,8 @@ import {
   saveIntegrationSecrets,
   listOutletPgConfigs,
   setOutletPgStatus,
+  testDoctorProvider,
+  testDoctorChat,
 } from '../lib/controlPlane';
 import type {
   ConfigKey,
@@ -57,12 +60,13 @@ import type {
   OutletPgConfig,
 } from '../lib/controlPlane';
 import { supabase } from '../config/supabase';
-import { rp as supabaseRpc, UsersListResult } from '../lib/adminApi';
+import { rp as supabaseRpc, platformOutletsList, UsersListResult } from '../lib/adminApi';
 
 type TabId =
   | 'ads'
   | 'guide'
   | 'financial'
+  | 'doctor'
   | 'ppob'
   | 'b2b'
   | 'modal_usaha'
@@ -83,6 +87,7 @@ const TABS: { id: TabId; name: string; icon: any }[] = [
   { id: 'ads', name: 'Iklan', icon: Megaphone },
   { id: 'guide', name: 'Panduan', icon: BookOpen },
   { id: 'financial', name: 'Payment Gateway', icon: Coins },
+  { id: 'doctor', name: 'Dokter Bisnis AI', icon: Stethoscope },
   { id: 'ppob', name: 'PPOB', icon: Wallet },
   { id: 'b2b', name: 'B2B Kulakan', icon: Truck },
   { id: 'modal_usaha', name: 'Modal Usaha', icon: Store },
@@ -2086,6 +2091,166 @@ function AdminsTab() {
 }
 
 // ===========================================================================
+// ST14-3: Dokter Bisnis AI - provider LLM global + uji koneksi + chat uji
+// ===========================================================================
+function DoctorTab() {
+  const [v, setV] = useState<any>({});
+  const [loading, setLoading] = useState(false);
+  const [probing, setProbing] = useState(false);
+  const [probe, setProbe] = useState<string | null>(null);
+  const [outlets, setOutlets] = useState<{ outlet_id: string; outlet_name: string | null }[]>([]);
+  const [testOutlet, setTestOutlet] = useState('');
+  const [testMsg, setTestMsg] = useState('Usaha saya sepi, apa yang harus saya lakukan?');
+  const [chatBusy, setChatBusy] = useState(false);
+  const [chatOut, setChatOut] = useState<string | null>(null);
+  const { msg, show } = useToast();
+
+  useEffect(() => {
+    loadConfig('business_doctor').then((d) => setV(d ?? {})).catch(() => {});
+    platformOutletsList({ p_kyc: 'all', p_plan: 'all', p_limit: 200, p_offset: 0 })
+      .then((r) => {
+        const rows = (r?.rows ?? []).map((o) => ({ outlet_id: o.outlet_id, outlet_name: o.outlet_name }));
+        setOutlets(rows);
+        if (rows[0]) setTestOutlet(rows[0].outlet_id);
+      })
+      .catch(() => {});
+  }, []);
+
+  const set = (k: string, val: any) => setV((prev: any) => ({ ...prev, [k]: val }));
+  const pd = v.provider_default ?? {};
+  const setPd = (k: string, val: any) => set('provider_default', { ...pd, [k]: val });
+  const it = v.internet_tool ?? {};
+  const setIt = (k: string, val: any) => set('internet_tool', { ...it, [k]: val });
+
+  const save = async () => {
+    setLoading(true);
+    try {
+      await saveConfig('business_doctor', v);
+      show('ok', 'Konfigurasi Dokter Bisnis disimpan.');
+    } catch (e: any) { show('err', e.message); } finally { setLoading(false); }
+  };
+
+  const probeProvider = async () => {
+    setProbing(true);
+    setProbe(null);
+    try {
+      const r = await testDoctorProvider(pd);
+      setProbe(`${r.ok ? 'OK' : 'GAGAL'}: ${r.message}${r.sample ? ` (contoh: ${r.sample})` : ''}`);
+      show(r.ok ? 'ok' : 'err', r.ok ? 'Provider terhubung.' : 'Provider gagal.');
+    } catch (e: any) { setProbe(e.message); show('err', e.message); } finally { setProbing(false); }
+  };
+
+  const runChat = async () => {
+    if (!testOutlet) { show('err', 'Pilih outlet dulu.'); return; }
+    setChatBusy(true);
+    setChatOut(null);
+    try {
+      const r = await testDoctorChat(testOutlet, testMsg);
+      const texts = (r?.blocks ?? []).map((b: any) => b.title || b.text || b.label).filter(Boolean).join(' | ');
+      setChatOut(`fallback=${r?.fallback ?? false} | phase=${r?.phase ?? '-'} | tokens=${r?.tokens ?? 0}\n${texts || r?.reply || '-'}`);
+    } catch (e: any) { setChatOut(e.message); show('err', e.message); } finally { setChatBusy(false); }
+  };
+
+  return (
+    <div className="space-y-3.5">
+      <Card title="Dokter Bisnis AI" subtitle="Otak AI global: provider LLM, prompt, guardrails, dan internet tool. Semua tanpa ubah koding.">
+        <div className="max-w-[760px] space-y-3.5">
+          <label className="flex items-center gap-2 text-xs font-semibold text-slate-600">
+            <input type="checkbox" checked={!!v.aktif} onChange={(e) => set('aktif', e.target.checked)} />
+            Aktifkan Dokter Bisnis AI untuk semua outlet
+          </label>
+          <div>
+            <label className={labelCls}>Bahasa</label>
+            <input className={inputCls} value={v.bahasa ?? ''} placeholder="id" onChange={(e) => set('bahasa', e.target.value)} />
+          </div>
+          <div>
+            <label className={labelCls}>Prompt Utama</label>
+            <textarea className={inputCls} rows={5} value={v.prompt_utama ?? ''} onChange={(e) => set('prompt_utama', e.target.value)} />
+          </div>
+          <div>
+            <label className={labelCls}>Guardrails (pisahkan dengan koma)</label>
+            <input
+              className={inputCls}
+              value={Array.isArray(v.guardrails) ? v.guardrails.join(', ') : v.guardrails ?? ''}
+              onChange={(e) => set('guardrails', e.target.value.split(',').map((s) => s.trim()).filter(Boolean))}
+            />
+          </div>
+          <label className="flex items-center gap-2 text-xs font-semibold text-slate-600">
+            <input type="checkbox" checked={!!it.aktif} onChange={(e) => setIt('aktif', e.target.checked)} />
+            Izinkan AI mengakses internet (web search)
+          </label>
+
+          <div className="pt-2 border-t border-slate-100">
+            <p className="text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-2">Provider Default</p>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div className="sm:col-span-2">
+                <label className={labelCls}>Base URL</label>
+                <input className={inputCls} value={pd.base_url ?? ''} placeholder="https://api.deepseek.com/v1" onChange={(e) => setPd('base_url', e.target.value)} />
+              </div>
+              <div className="sm:col-span-2">
+                <label className={labelCls}>API Key</label>
+                <input className={inputCls} type="password" value={pd.api_key ?? ''} placeholder="sk-..." onChange={(e) => setPd('api_key', e.target.value)} />
+                <p className="text-[11px] text-slate-400 mt-1">Hanya disimpan di server (Edge Function). Tidak pernah dikirim ke aplikasi.</p>
+              </div>
+              <div>
+                <label className={labelCls}>Model</label>
+                <input className={inputCls} value={pd.model ?? ''} placeholder="deepseek-chat" onChange={(e) => setPd('model', e.target.value)} />
+              </div>
+              <div>
+                <label className={labelCls}>Temperature</label>
+                <input className={inputCls} type="number" step="0.1" value={pd.temperature ?? ''} onChange={(e) => setPd('temperature', Number(e.target.value))} />
+              </div>
+              <div>
+                <label className={labelCls}>Maks Token</label>
+                <input className={inputCls} type="number" value={pd.max_tokens ?? ''} onChange={(e) => setPd('max_tokens', Number(e.target.value))} />
+              </div>
+            </div>
+          </div>
+
+          <div className="flex flex-wrap items-center gap-2">
+            <SaveButton loading={loading} onClick={save} />
+            <button
+              onClick={probeProvider}
+              disabled={probing}
+              className="flex items-center gap-2 px-4 py-2.5 rounded-xl font-semibold text-xs border border-slate-200 bg-white hover:bg-slate-50 text-slate-700 transition"
+            >
+              {probing ? <RefreshCw className="w-4 h-4 animate-spin" /> : <Zap className="w-4 h-4" />}
+              Tes Koneksi Provider
+            </button>
+          </div>
+          {probe && <p className="text-[11px] text-slate-600 bg-slate-50 border border-slate-200 rounded-lg px-3 py-2">{probe}</p>}
+        </div>
+        <Toast msg={msg} />
+      </Card>
+
+      <Card title="Chat Uji" subtitle="Simulasikan percakapan Dokter Bisnis pada outlet nyata. Berguna memastikan prompt & tool berjalan.">
+        <div className="max-w-[760px] space-y-3">
+          <div>
+            <label className={labelCls}>Outlet Uji</label>
+            <select className={inputCls} value={testOutlet} onChange={(e) => setTestOutlet(e.target.value)}>
+              {outlets.map((o) => <option key={o.outlet_id} value={o.outlet_id}>{o.outlet_name ?? o.outlet_id}</option>)}
+            </select>
+          </div>
+          <div>
+            <label className={labelCls}>Pesan Uji</label>
+            <input className={inputCls} value={testMsg} onChange={(e) => setTestMsg(e.target.value)} />
+          </div>
+          <button
+            onClick={runChat}
+            disabled={chatBusy}
+            className="flex items-center gap-2 px-4 py-2.5 rounded-xl font-semibold text-xs bg-gradient-to-r from-cyan-500 to-sky-600 hover:from-cyan-600 hover:to-sky-700 text-white shadow-md shadow-sky-500/25 transition active:scale-95"
+          >
+            {chatBusy ? <RefreshCw className="w-4 h-4 animate-spin" /> : <Activity className="w-4 h-4" />}
+            Kirim Uji
+          </button>
+          {chatOut && <pre className="text-[11px] text-slate-700 bg-slate-50 border border-slate-200 rounded-lg px-3 py-2 whitespace-pre-wrap">{chatOut}</pre>}
+        </div>
+      </Card>
+    </div>
+  );
+}
+
+// ===========================================================================
 export function ControlPlanePage() {
   const [activeId, setActiveId] = useState<TabId>('ads');
   const [warning] = useState<string | null>(null);
@@ -2143,6 +2308,7 @@ export function ControlPlanePage() {
           {activeId === 'ads' && <AdsTab />}
           {activeId === 'guide' && <GuideTab />}
           {activeId === 'financial' && <FinancialTab />}
+          {activeId === 'doctor' && <DoctorTab />}
           {activeId === 'report' && <StructuredConfigTab configKey="report" title="Laporan Otomatis" subtitle="Template, jadwal default, kanal, dan batas penerima." fields={[
             { key: 'default_period', label: 'Periode Default', type: 'text', options: ['daily', 'weekly', 'monthly'] },
             { key: 'default_time', label: 'Jam Default', type: 'text', placeholder: '21:00' },

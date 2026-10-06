@@ -374,22 +374,49 @@ Deno.serve(async (req: Request) => {
     const message = String(body.message ?? "").slice(0, 4000);
     let conversationId = body.conversation_id ? String(body.conversation_id) : null;
     const mode = String(body.mode ?? "chat");
+
+    const { data: isAdminFlag } = await userClient.rpc("is_platform_admin");
+    const isPlatformAdmin = !!isAdminFlag;
+
+    // Superadmin: uji koneksi provider tanpa outlet (dari form Control Plane).
+    if (mode === "test_provider") {
+      if (!isPlatformAdmin) return json({ success: false, message: "Forbidden" }, 403);
+      const p = (body.provider ?? {}) as Json;
+      if (!p.base_url || !p.api_key || !p.model) {
+        return json({ success: true, ok: false, message: "Lengkapi Base URL, API Key, dan Model." });
+      }
+      try {
+        const data = await callLlm({ ...p, max_tokens: 16, temperature: 0 }, [
+          { role: "user", content: "Balas satu kata: ok" },
+        ], false);
+        const sample = String(data?.choices?.[0]?.message?.content ?? "").slice(0, 120);
+        return json({ success: true, ok: true, message: "Koneksi provider berhasil.", sample });
+      } catch (e) {
+        return json({ success: true, ok: false, message: String((e as Error)?.message ?? e).slice(0, 300) });
+      }
+    }
+
     if (!outletId) return json({ success: false, message: "outlet_id wajib." }, 400);
 
     const admin = createClient(supabaseUrl, serviceKey);
 
-    const { data: owned } = await admin
-      .from("outlets").select("id").eq("id", outletId).eq("owner_id", userId).maybeSingle();
-    let isMember = !!owned;
-    if (!isMember) {
-      const { data: role } = await admin
-        .from("user_roles").select("id").eq("outlet_id", outletId).eq("user_id", userId).maybeSingle();
-      isMember = !!role;
+    if (!isPlatformAdmin) {
+      const { data: owned } = await admin
+        .from("outlets").select("id").eq("id", outletId).eq("owner_id", userId).maybeSingle();
+      let isMember = !!owned;
+      if (!isMember) {
+        const { data: role } = await admin
+          .from("user_roles").select("id").eq("outlet_id", outletId).eq("user_id", userId).maybeSingle();
+        isMember = !!role;
+      }
+      if (!isMember) return json({ success: false, message: "Forbidden" }, 403);
     }
-    if (!isMember) return json({ success: false, message: "Forbidden" }, 403);
 
     // Gating: butuh Program Pendukung/trial aktif sebelum memanggil LLM.
-    const { data: active } = await admin.rpc("outlet_supporter_active", { target_outlet: outletId });
+    // Superadmin dikecualikan (mode uji/chat uji Control Plane).
+    const { data: active } = isPlatformAdmin
+      ? { data: true }
+      : await admin.rpc("outlet_supporter_active", { target_outlet: outletId });
     if (!active) {
       return json({
         success: true,
