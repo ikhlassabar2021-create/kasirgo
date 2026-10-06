@@ -1465,7 +1465,21 @@ Tujuan: superadmin mengelola status Payment Gateway tiap outlet dari Control Pla
     Helper `src/lib/controlPlane.ts`: `listOutletPgConfigs`/`setOutletPgStatus`.
   - EF `test_payment_connection` kini juga mengizinkan superadmin (selain owner);
     EF `create_payment` menolak outlet ber-status `disabled` (403).
-- ST13C-2 (uji E2E sandbox) & ST13C-3 (go-live + audit keamanan) menyusul.
+- ST13C-2 (SELESAI): uji E2E sandbox outlet percontohan **Warung Test**
+  (`5dda8727-...`, owner `ikhlassabar2021+warung@gmail.com`), mode `is_production=false`.
+  Kredensial sandbox disimpan via EF `save_payment_config` (Server Key -> Vault).
+  Hasil (semua lulus):
+  1. `test_payment_connection` -> `valid:true, http_status:200` ("Kredensial valid"),
+     status config -> `verified`.
+  2. `create_payment` QRIS sandbox (Rp 11.008) -> `success:true`, `status:PENDING`,
+     `qris_string` dinamis terbit + `qris_url` (PNG 200) + `expired_at`.
+  3. Webhook `settlement` (signature SHA512 valid) -> `status:PAID`;
+     panggil ulang -> `idempotent:true`.
+  4. Signature salah -> **401** "Invalid signature" (ditolak).
+  5. Alur POS penuh: transaksi `unpaid` dibuat -> charge QRIS dengan
+     `transaction_id` -> webhook settlement -> `payment_orders.status=PAID` +
+     `transactions.payment_status='paid'`, `paid_at` terisi, `provider_ref`=order id.
+- ST13C-3 (go-live + audit keamanan) menyusul.
 
 ### DELTA TERBARU (2026-09-29) - Pesanan Dine-in QR Meja (Pelanggan -> Kasir/Dapur)
 Bukan phase baru; menyempurnakan alur QR Meja pelanggan yang sudah live.

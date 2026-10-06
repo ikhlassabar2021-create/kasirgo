@@ -197,7 +197,7 @@ Status: SELESAI. Project Supabase sudah dibuat dan schema terpasang serta diuji.
   hanya dikirim ke server (Vault) = zero-custody. Gating QRIS dinamis via
   `hasFeature('payment_gateway')`; QRIS statis tetap gratis. Commit: ST13B-1 `3b6765a`,
   ST13B-3 `6cddb0a`. BLOCKER sama: channel QRIS production belum aktif.)
-- [~] Phase 13C: Superadmin kelola Payment Gateway + uji sandbox + go-live + audit
+- [x] Phase 13C: Superadmin kelola Payment Gateway + uji sandbox + go-live + audit
   (ST13C-1 SELESAI: migrasi `2026-10-13-kasirgo-13c-superadmin-pg.sql` ->
   RPC `admin_list_outlet_pg_configs` (daftar outlet + status PG ter-mask, cek
   `is_platform_admin`, tanpa server key) + `admin_set_outlet_pg_status(outlet,status)`
@@ -209,7 +209,14 @@ Status: SELESAI. Project Supabase sudah dibuat dan schema terpasang serta diuji.
   EF `test_payment_connection` izinkan superadmin (selain owner). EF `create_payment`
   tolak `status='disabled'`. Verifikasi REST: superadmin list 7 outlet, toggle
   verified<->disabled + audit tercatat, non-admin 403; EF superadmin valid + non-owner
-  403; create_payment saat disabled diblok. Deploy EF 2 fungsi. ST13C-2 & ST13C-3 menyusul.)
+  403; create_payment saat disabled diblok. Deploy EF 2 fungsi.
+  ST13C-2 SELESAI: E2E sandbox outlet **Warung Test** (kredensial sandbox via
+  `save_payment_config`, Server Key -> Vault) lulus semua: tes koneksi `valid:true`;
+  charge QRIS dinamis -> `qris_string` + `qris_url` PNG; webhook `settlement` -> PAID,
+  ulang -> `idempotent:true`; signature salah -> 401; alur POS penuh transaksi
+  `unpaid` -> charge (dengan `transaction_id`) -> webhook -> `payment_orders=PAID` +
+  `transactions.payment_status='paid'` + `paid_at` + `provider_ref`. ST13C-3
+  (go-live + audit keamanan) menyusul.)
 - [x] Edge Functions create_staff + onboard_merchant DIDELOY + Fix WA Katalog
   (create_staff & onboard_merchant deployed via SUPABASE_ACCESS_TOKEN; smoke
    test create_staff OK: user langsung confirmed + user_roles dibuat fungsi.
@@ -579,3 +586,25 @@ Migrasi: docs/migrations/2026-10-01-kasirgo-8.sql. Detail: PROGRESS-PHASE8.md.
 - Deploy: EF `test_payment_connection` + `create_payment` (verify_jwt=true) via CLI;
   admin build `tsc -b && vite build` sukses; `dist` disalin ke gh-pages `/admin/`.
 - Berikutnya: ST13C-2 (uji E2E sandbox) & ST13C-3 (go-live + audit keamanan).
+
+## Sesi 2026-10-06: Phase 13C ST13C-2 - Uji E2E Sandbox Midtrans [SELESAI]
+- Kredensial sandbox Midtrans (Merchant ID + client/server key `SB-Mid-*`) diberikan
+  user via chat; disimpan ke outlet percontohan **Warung Test**
+  (`5dda8727-2439-432a-91e6-308c824c4f7a`) via EF `save_payment_config` (JWT owner;
+  Server Key langsung ke Vault; `is_production=false`; status awal `pending`).
+- Hasil uji (semua LULUS):
+  1. `test_payment_connection` -> `{valid:true, http_status:200}`; config -> `verified`.
+  2. `create_payment` (Rp 11.008, `payment_type=qris`) -> `success:true, PENDING`,
+     `qris_string` dinamis terbit, `qris_url` PNG (HTTP 200), `expired_at` terisi.
+  3. Webhook `settlement` signature SHA512 valid -> `PAID`; ulang -> `idempotent:true`.
+  4. Webhook signature salah -> 401 "Invalid signature".
+  5. **Alur POS penuh**: transaksi `unpaid` (REST) -> `create_payment` dengan
+     `transaction_id` -> webhook settlement -> `payment_orders.status=PAID` +
+     `transactions.payment_status='paid'`, `paid_at` terisi, `provider_ref` = order id.
+- Artinya QRIS dinamis Midtrans berfungsi END-TO-END di sandbox: charge -> QR ->
+  (pembayaran disimulasikan via webhook, karena QR sandbox tidak bisa discan
+  sungguhan) -> auto PAID -> transaksi POS ter-update otomatis.
+- Data uji tertinggal di sandbox (aman, tanpa nilai): 2 payment_orders (`KGO-17912816*`,
+  `KGO-17912818*`) + 2 transaksi uji di Warung Test.
+- BERIKUTNYA: ST13C-3 (go-live production + audit keamanan + dokumentasi provider
+  alternatif QRIS dinamis).

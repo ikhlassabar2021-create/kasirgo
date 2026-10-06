@@ -10,7 +10,10 @@ bagian "PHASE AKTIF" setiap ganti phase.
   - ST13C-1 SELESAI: RPC `admin_list_outlet_pg_configs` / `admin_set_outlet_pg_status`
     + tabel "Status Payment Gateway per Outlet" di Control Plane; EF
     `test_payment_connection` izinkan superadmin; EF `create_payment` blok `disabled`.
-  - ST13C-2 (uji E2E sandbox) & ST13C-3 (go-live + audit keamanan) menyusul.
+  - ST13C-2 SELESAI: E2E sandbox Warung Test lulus semua (tes koneksi, charge QRIS
+    dinamis, webhook settlement -> PAID, idempotent, signature salah 401, alur POS
+    transaksi unpaid -> paid).
+  - ST13C-3 (go-live + audit keamanan) menyusul.
 - Phase 13A (QRIS Dinamis Midtrans, zero-custody): SELESAI.
 - Phase 13B (Retrofit app ke Midtrans): SELESAI (ST13B-1 `3b6765a`, ST13B-3 `6cddb0a`).
 - Blocker eksternal: channel QRIS akun Midtrans production belum aktif
