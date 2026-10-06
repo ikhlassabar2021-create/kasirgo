@@ -24,6 +24,7 @@ import 'whatsapp_broadcast_screen.dart';
 import 'qr_table_screen.dart';
 import 'online_catalog_screen.dart';
 import 'health_score_screen.dart';
+import 'business_doctor_screen.dart';
 import '../../screens/owner/fintech_screen.dart';
 import '../modules/kitchen_display_screen.dart';
 import 'shift_screen.dart';
@@ -869,6 +870,17 @@ class _OwnerHomeScreenState extends ConsumerState<OwnerHomeScreen> {
     final modules = ref.watch(activeModulesProvider(outletId));
 
     final quickActionItems = <Widget>[];
+
+    quickActionItems.add(
+      _ModuleCard(
+        icon: Icons.medical_services_rounded,
+        title: 'Dokter Bisnis AI',
+        subtitle: 'Diagnosa & resep',
+        color: const Color(0xFF4F46E5),
+        onTap: () => Navigator.push(context,
+            MaterialPageRoute(builder: (_) => const BusinessDoctorScreen())),
+      ),
+    );
 
     final ppobEnabled = ref.watch(ppobEnabledProvider).valueOrNull ?? true;
 
