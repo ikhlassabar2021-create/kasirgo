@@ -751,3 +751,15 @@ Migrasi: docs/migrations/2026-10-01-kasirgo-8.sql. Detail: PROGRESS-PHASE8.md.
   block "Kuota Dokter Bisnis hari ini habis (7/1 pesan)" (config dipulihkan).
   Admin build sukses; gh-pages `bebb76d`.
   **PHASE 14 TUNTAS** (ST14-1..ST14-10).
+- PERBAIKAN pasca-test owner (commit `2dbc202`, web gh-pages `127ad99`):
+  (1) `max_tokens` provider default dinaikkan 4000 + guard (model reasoning
+  `deepseek-4.1-flash` menghabiskan token; 800 bikin content kosong -> fallback);
+  (2) CTA "Cek Fisik Toko" kini PERMANEN di atas chat (sebelumnya hanya saat
+  percakapan kosong & fase A -> tak muncul untuk outlet yang sudah chat);
+  (3) tombol "Evaluasi Resep" (Berhasil / Belum Berhasil) saat fase B/C memicu
+  perbaikan resep + escalation; fase diperbarui tiap respons;
+  (4) EF: push assistant tool_call sebagai objek bersih (buang reasoning_content)
+  agar panggilan lanjutan tak keluarkan markup tool mentah; `extractJson`
+  brace-matching ambil objek JSON pertama walau ada teks setelahnya.
+  Teruji: chat fase A->B (fallback:false), prompt gagal -> escalation level 3
+  `kasus_bandel` + blok card danger, reply JSON bersih.
