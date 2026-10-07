@@ -10,6 +10,7 @@ import '../../widgets/common/centennial_background.dart';
 import '../../widgets/common/supporter_gate.dart';
 import '../modules/supporter_screen.dart';
 import 'doctor_intake_screen.dart';
+import 'doctor_promotion_log_screen.dart';
 import 'product_list_screen.dart';
 import 'report_screen.dart';
 import 'whatsapp_broadcast_screen.dart';
@@ -156,6 +157,10 @@ class _BusinessDoctorScreenState extends ConsumerState<BusinessDoctorScreen> {
       );
       return;
     }
+    if (actionKey == 'catat_promosi') {
+      _openPromotionLog();
+      return;
+    }
     final screen = _actionScreen(actionKey);
     if (screen != null) {
       Navigator.push(
@@ -165,6 +170,17 @@ class _BusinessDoctorScreenState extends ConsumerState<BusinessDoctorScreen> {
       return;
     }
     _send(label);
+  }
+
+  Future<void> _openPromotionLog() async {
+    final saved = await Navigator.push<bool>(
+      context,
+      MaterialPageRoute(builder: (_) => const DoctorPromotionLogScreen()),
+    );
+    if (saved == true) {
+      await _send(
+          'Saya sudah mencatat hasil promosi. Tolong evaluasi ROI-nya dan tentukan langkah selanjutnya.');
+    }
   }
 
   Widget? _actionScreen(String actionKey) {

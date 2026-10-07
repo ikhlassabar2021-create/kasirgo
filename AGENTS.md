@@ -685,6 +685,17 @@ Migrasi: docs/migrations/2026-10-01-kasirgo-8.sql. Detail: PROGRESS-PHASE8.md.
   `sidak_bos`/`progress_tracker` -> Laporan, `dynamic_pricing`/`bundling`/
   `cross_sell` -> Produk; `referral`/lainnya -> kirim sbg pesan). Teruji:
   no-JWT 401, owner 200 (fallback provider belum diatur). `flutter analyze` bersih.
-- BERIKUTNYA: ST14-7 catat hasil promosi + ROI + web tool; ST14-8
+- ST14-7: Catat Hasil Promosi + ROI + web tool. App: `doctor_promotion_log_screen.dart`
+  (BARU) form chips jenis promosi/kanal/hasil + biaya & omzet tambahan + kartu ROI
+  live (untung/rugi) -> `BusinessDoctorService.logPromotion()` insert
+  `doctor_action_logs` (`result:{extra_revenue}`, `outcome`); `getActionLogs()`.
+  `business_doctor_screen.dart`: action_key `catat_promosi` -> buka form, setelah
+  simpan otomatis kirim pesan minta evaluasi ROI. EF `business_doctor_chat`
+  (redeployed): tool baru `get_action_history` (riwayat promosi+biaya+hasil),
+  `fetch_url` (web tool, gated `internet_tool.aktif`, guard SSRF host privat),
+  riwayat aksi + aturan fase C (hitung ROI) di system prompt, action_key
+  `catat_promosi` diizinkan. Teruji: no-JWT 401, owner 200, insert+delete
+  `doctor_action_logs` 201/204, `flutter analyze` bersih.
+- BERIKUTNYA: ST14-8
   Escalation Ladder; ST14-9 memori jangka panjang + cron `doctor_observe` +
   "Riwayat Kasus"; ST14-10 override outlet superadmin + rate limit + E2E.

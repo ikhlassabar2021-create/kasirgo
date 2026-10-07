@@ -182,6 +182,14 @@ const TOOLS = [
   {
     type: "function",
     function: {
+      name: "get_action_history",
+      description: "Riwayat promosi/aksi yang pernah dicatat beserta biaya dan hasil ROI-nya.",
+      parameters: { type: "object", properties: {} },
+    },
+  },
+  {
+    type: "function",
+    function: {
       name: "recall_memory",
       description: "Baca memori jangka panjang & kasus terbuka outlet.",
       parameters: { type: "object", properties: {} },
@@ -235,10 +243,54 @@ const TOOLS = [
   },
 ];
 
-async function execTool(admin: any, outletId: string, name: string, args: Json) {
+function privateHost(host: string) {
+  const h = host.toLowerCase();
+  return h === "localhost" || h === "0.0.0.0" || h === "::1" ||
+    h.endsWith(".internal") || h.endsWith(".local") ||
+    /^(127\.|10\.|192\.168\.|169\.254\.|172\.(1[6-9]|2\d|3[01])\.)/.test(h);
+}
+
+async function toolFetchUrl(url: string) {
+  let u: URL;
+  try {
+    u = new URL(url);
+  } catch {
+    return { error: "url_tidak_valid" };
+  }
+  if (u.protocol !== "http:" && u.protocol !== "https:") return { error: "protokol_ditolak" };
+  if (privateHost(u.hostname)) return { error: "host_ditolak" };
+  try {
+    const resp = await fetch(u.toString(), { headers: { "User-Agent": "KasirGo-Doctor/1.0" } });
+    const html = await resp.text();
+    const text = html
+      .replace(/<script[\s\S]*?<\/script>/gi, " ")
+      .replace(/<style[\s\S]*?<\/style>/gi, " ")
+      .replace(/<[^>]+>/g, " ")
+      .replace(/&nbsp;/g, " ")
+      .replace(/\s+/g, " ")
+      .trim()
+      .slice(0, 2000);
+    return { url: u.toString(), status: resp.status, text };
+  } catch (e) {
+    return { error: String((e as Error)?.message ?? e).slice(0, 200) };
+  }
+}
+
+async function execTool(admin: any, outletId: string, name: string, args: Json, internetActive: boolean) {
   switch (name) {
     case "get_business_snapshot":
       return await toolGetSnapshot(admin, outletId);
+    case "get_action_history": {
+      const { data } = await admin
+        .from("doctor_action_logs")
+        .select("action_type, channel, cost, description, action_date, result, outcome")
+        .eq("outlet_id", outletId)
+        .order("created_at", { ascending: false })
+        .limit(20);
+      return data ?? [];
+    }
+    case "fetch_url":
+      return internetActive ? await toolFetchUrl(String(args?.url ?? "")) : { error: "internet_nonaktif" };
     case "get_sales_trend":
       return await toolSalesTrend(admin, outletId, Number(args?.days) || 14);
     case "get_low_stock":
@@ -291,7 +343,7 @@ async function execTool(admin: any, outletId: string, name: string, args: Json) 
   }
 }
 
-function buildSystem(cfg: Json, snap: Json, profile: Json | null, openCases: Json[], history: Json[]) {
+function buildSystem(cfg: Json, snap: Json, profile: Json | null, openCases: Json[], history: Json[], actionLogs: Json[], internetActive: boolean) {
   const roleMap = cfg.role_outlet ?? {};
   const roleText = roleMap?.[snap.outlet_type] ?? "Fokus pada perbaikan omzet dan arus kas UMKM.";
   const guard = Array.isArray(cfg.guardrails) ? cfg.guardrails.join("\n- ") : "";
@@ -301,6 +353,12 @@ function buildSystem(cfg: Json, snap: Json, profile: Json | null, openCases: Jso
   const histText = history.length
     ? history.map((m) => `${m.role}: ${String(m.content ?? "").slice(0, 300)}`).join("\n")
     : "(sesi baru)";
+  const roiText = actionLogs.length
+    ? actionLogs.map((a) => `- ${a.action_date ?? "?"} ${a.action_type ?? "aksi"}${a.channel ? ` (${a.channel})` : ""}: biaya Rp${a.cost ?? 0}, hasil ${a.outcome ?? "belum diukur"} ${a.result ? JSON.stringify(a.result).slice(0, 200) : ""}`).join("\n")
+    : "(belum ada aksi promosi dicatat)";
+  const netLine = internetActive
+    ? "- Anda BISA memakai tool fetch_url untuk membaca halaman web bila perlu info pasar/referensi. Jangan mengarang sumber."
+    : "- Internet tidak aktif; jangan mengarang data dari luar.";
   return `${cfg.prompt_utama ?? "Kamu adalah Dokter Bisnis KasirGo."}
 
 PERAN UNTUK TIPE OUTLET (${snap.outlet_type ?? "umum"}):
@@ -313,11 +371,13 @@ FASE SAAT INI: ${profile?.phase ?? "A"} | Umur usaha: ${snap.business_age_days ?
 ALUR FASE (pindah otomatis saat progres tercapai):
 - A = Diagnosa: kumpulkan fakta (cek fisik + data penjualan), tentukan masalah utama & skor kesehatan. Setelah vonis jelas -> fase B.
 - B = Resep: susun langkah perbaikan konkret dalam checklist. Setelah resep dijalankan -> fase C.
-- C = Evaluasi: bandingkan hasil dengan target, putuskan lanjut, selesai, atau ubah resep.
+- C = Evaluasi: bandingkan hasil dengan target. WAJIB pakai tool get_action_history untuk melihat biaya & hasil promosi, hitung ROI tiap aksi (omzet tambahan vs biaya), lalu putuskan: lanjut, selesai, atau ubah resep (kembali fase B).
 MEMORI JANGKA PANJANG:
 ${profile?.memory_digest ?? "(belum ada)"}
 KASUS TERBUKA:
 ${openText}
+RIWAYAT AKSI PROMOSI (biaya & hasil):
+${roiText}
 
 SNAPSHOT BISNIS (ringkas):
 ${JSON.stringify(snap)}
@@ -334,11 +394,13 @@ ATURAN OUTPUT:
   {"type":"gauge","label":"Skor Kesehatan Usaha","value":0-100,"hint":"..."},
   {"type":"checklist","title":"Peta Resep","items":[{"text":"...","done":false}]},
   {"type":"choices","prompt":"...","options":[{"label":"...","value":"..."}]},
-  {"type":"action","label":"...","action_key":"sidak_bos|dynamic_pricing|bundling|cross_sell|referral|wa_marketing|progress_tracker"}
+  {"type":"action","label":"...","action_key":"sidak_bos|dynamic_pricing|bundling|cross_sell|referral|wa_marketing|progress_tracker|catat_promosi"}
 - Bahasa Indonesia sederhana, minim istilah teknis, langkah kecil yang bisa dikerjakan.
 - Isi "phase" dengan fase saat ini sesuai ALUR FASE di atas.
 - Saat vonis sudah jelas dan Anda mulai menyusun resep (fase B), WAJIB panggil tool save_prescription dengan vonis + maksimal 8 langkah (tiap langkah boleh punya action_key). Lalu tampilkan peta resep sebagai block checklist.
 - Setiap langkah resep yang cocok dengan fitur aplikasi, sertakan block action dengan action_key terkait agar owner bisa langsung membuka fiturnya.
+- Saat fase C, tampilkan hasil evaluasi sebagai card (tone success bila berhasil) + gauge skor, sebutkan ROI ringkas per aksi, dan beri block action "Catat Hasil Promosi" bila owner belum mencatat.
+${netLine}
 - Selalu akhiri dengan disclaimer singkat "saran AI".`;
 }
 
@@ -380,7 +442,24 @@ function fallbackBlocks(snap: Json, reason: string) {
   ];
 }
 
-async function callLlm(cfg: Json, messages: Json[], useTools: boolean) {
+const FETCH_TOOL = {
+  type: "function",
+  function: {
+    name: "fetch_url",
+    description: "Ambil isi sebuah halaman web (http/https) untuk mencari info bisnis. Hasil berupa teks ringkas.",
+    parameters: {
+      type: "object",
+      properties: { url: { type: "string", description: "URL lengkap yang ingin dibaca." } },
+      required: ["url"],
+    },
+  },
+};
+
+function toolsFor(internetActive: boolean) {
+  return internetActive ? [...TOOLS, FETCH_TOOL] : TOOLS;
+}
+
+async function callLlm(cfg: Json, messages: Json[], tools: Json[] | null) {
   let base = String(cfg.base_url ?? "").replace(/\/+$/, "");
   const url = base.includes("/chat/completions") ? base : `${base}/chat/completions`;
   const body: Json = {
@@ -389,8 +468,8 @@ async function callLlm(cfg: Json, messages: Json[], useTools: boolean) {
     temperature: Number(cfg.temperature ?? 0.7),
     max_tokens: Number(cfg.max_tokens ?? 800),
   };
-  if (useTools) {
-    body.tools = TOOLS;
+  if (tools && tools.length) {
+    body.tools = tools;
     body.tool_choice = "auto";
   }
   const resp = await fetch(url, {
@@ -440,7 +519,7 @@ Deno.serve(async (req: Request) => {
       try {
         const data = await callLlm({ ...p, max_tokens: 16, temperature: 0 }, [
           { role: "user", content: "Balas satu kata: ok" },
-        ], false);
+        ], null);
         const sample = String(data?.choices?.[0]?.message?.content ?? "").slice(0, 120);
         return json({ success: true, ok: true, message: "Koneksi provider berhasil.", sample });
       } catch (e) {
@@ -524,6 +603,11 @@ Deno.serve(async (req: Request) => {
     const { data: openCases } = await admin
       .from("doctor_memory").select("kind, title, content, status")
       .eq("outlet_id", outletId).eq("status", "open").limit(10);
+    const { data: actionLogs } = await admin
+      .from("doctor_action_logs")
+      .select("action_type, channel, cost, description, action_date, result, outcome")
+      .eq("outlet_id", outletId).order("created_at", { ascending: false }).limit(10);
+    const internetActive = globalCfg?.internet_tool?.aktif === true;
 
     // Conversation.
     if (!conversationId) {
@@ -547,7 +631,7 @@ Deno.serve(async (req: Request) => {
       .order("created_at", { ascending: true }).limit(12);
 
     const messages: Json[] = [
-      { role: "system", content: buildSystem(globalCfg, snap, profile, openCases ?? [], history ?? []) },
+      { role: "system", content: buildSystem(globalCfg, snap, profile, openCases ?? [], history ?? [], actionLogs ?? [], internetActive) },
       { role: "user", content: message || "Mulai diagnosa usaha saya." },
     ];
 
@@ -560,10 +644,11 @@ Deno.serve(async (req: Request) => {
     } else {
       try {
         let data: Json;
+        const tools = toolsFor(internetActive);
         try {
-          data = await callLlm(provider, messages, true);
+          data = await callLlm(provider, messages, tools);
         } catch (_e) {
-          data = await callLlm(provider, messages, false);
+          data = await callLlm(provider, messages, null);
         }
         // Tool loop (maks 2 putaran).
         for (let round = 0; round < 2; round++) {
@@ -575,10 +660,10 @@ Deno.serve(async (req: Request) => {
           for (const tc of toolCalls) {
             let args: Json = {};
             try { args = JSON.parse(tc?.function?.arguments ?? "{}"); } catch { args = {}; }
-            const result = await execTool(admin, outletId, tc?.function?.name, args);
+            const result = await execTool(admin, outletId, tc?.function?.name, args, internetActive);
             messages.push({ role: "tool", tool_call_id: tc.id, content: JSON.stringify(result) });
           }
-          data = await callLlm(provider, messages, true);
+          data = await callLlm(provider, messages, tools);
         }
         parsed = extractJson(data?.choices?.[0]?.message?.content ?? "");
         if (!parsed) parsed = { reply: String(data?.choices?.[0]?.message?.content ?? ""), blocks: [] };

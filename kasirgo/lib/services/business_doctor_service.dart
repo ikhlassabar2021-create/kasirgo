@@ -60,4 +60,40 @@ class BusinessDoctorService {
     final phase = res?['phase']?.toString();
     return (phase == null || phase.isEmpty) ? 'A' : phase;
   }
+
+  Future<void> logPromotion({
+    required String outletId,
+    String? conversationId,
+    required String actionType,
+    String? channel,
+    double cost = 0,
+    String? description,
+    DateTime? actionDate,
+    double extraRevenue = 0,
+    String? outcome,
+  }) async {
+    await _client.from('doctor_action_logs').insert({
+      'outlet_id': outletId,
+      'conversation_id': conversationId,
+      'action_type': actionType,
+      'channel': channel,
+      'cost': cost,
+      'description': description,
+      'action_date':
+          (actionDate ?? DateTime.now()).toIso8601String().substring(0, 10),
+      'result': {'extra_revenue': extraRevenue},
+      'outcome': outcome,
+    });
+  }
+
+  Future<List<Map<String, dynamic>>> getActionLogs(String outletId) async {
+    final res = await _client
+        .from('doctor_action_logs')
+        .select(
+            'id, action_type, channel, cost, description, action_date, result, outcome')
+        .eq('outlet_id', outletId)
+        .order('created_at', ascending: false)
+        .limit(50);
+    return (res as List).cast<Map<String, dynamic>>();
+  }
 }
