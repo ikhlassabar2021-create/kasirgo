@@ -675,7 +675,16 @@ Migrasi: docs/migrations/2026-10-01-kasirgo-8.sql. Detail: PROGRESS-PHASE8.md.
   +`saveIntake()`/`getPhase()`. EF `business_doctor_chat` (redeployed): definisi
   ALUR FASE A/B/C di system prompt (A diagnosa -> B resep -> C evaluasi). Verifikasi
   REST: insert `doctor_intake` 201, baca fase A. `flutter analyze` bersih.
-- BERIKUTNYA: ST14-6 Peta Resep + tool
-  `save_prescription`; ST14-7 catat hasil promosi + ROI + web tool; ST14-8
+- ST14-6: Peta Resep + Vonis + tool `save_prescription`. EF `business_doctor_chat`
+  (redeployed): tool `save_prescription(verdict, steps[<=8])` simpan ke
+  `doctor_memory` kind `prescription` (content JSON steps); system prompt wajib
+  panggil tool saat masuk fase B + tampilkan peta resep sbg block checklist +
+  sisipkan block action ber-`action_key` untuk langkah yang cocok fitur app.
+  App `business_doctor_screen.dart`: `_handleAction`/`_actionScreen` memetakan
+  `action_key` -> layar existing (`wa_marketing` -> WA Marketing ter-gate,
+  `sidak_bos`/`progress_tracker` -> Laporan, `dynamic_pricing`/`bundling`/
+  `cross_sell` -> Produk; `referral`/lainnya -> kirim sbg pesan). Teruji:
+  no-JWT 401, owner 200 (fallback provider belum diatur). `flutter analyze` bersih.
+- BERIKUTNYA: ST14-7 catat hasil promosi + ROI + web tool; ST14-8
   Escalation Ladder; ST14-9 memori jangka panjang + cron `doctor_observe` +
   "Riwayat Kasus"; ST14-10 override outlet superadmin + rate limit + E2E.

@@ -7,8 +7,12 @@ import '../../providers/auth_provider.dart';
 import '../../services/business_doctor_service.dart';
 import '../../widgets/common/business_doctor/doctor_blocks.dart';
 import '../../widgets/common/centennial_background.dart';
+import '../../widgets/common/supporter_gate.dart';
 import '../modules/supporter_screen.dart';
 import 'doctor_intake_screen.dart';
+import 'product_list_screen.dart';
+import 'report_screen.dart';
+import 'whatsapp_broadcast_screen.dart';
 
 class BusinessDoctorScreen extends ConsumerStatefulWidget {
   const BusinessDoctorScreen({super.key, this.service});
@@ -152,7 +156,35 @@ class _BusinessDoctorScreenState extends ConsumerState<BusinessDoctorScreen> {
       );
       return;
     }
+    final screen = _actionScreen(actionKey);
+    if (screen != null) {
+      Navigator.push(
+        context,
+        MaterialPageRoute(builder: (_) => screen),
+      );
+      return;
+    }
     _send(label);
+  }
+
+  Widget? _actionScreen(String actionKey) {
+    switch (actionKey) {
+      case 'wa_marketing':
+        return const SupporterFeatureGate(
+          featureKey: 'wa_marketing',
+          title: 'WA Marketing',
+          child: WhatsappBroadcastScreen(),
+        );
+      case 'sidak_bos':
+      case 'progress_tracker':
+        return const ReportScreen();
+      case 'dynamic_pricing':
+      case 'bundling':
+      case 'cross_sell':
+        return const ProductListScreen();
+      default:
+        return null;
+    }
   }
 
   void _scrollDown() {

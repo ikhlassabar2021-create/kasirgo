@@ -204,6 +204,35 @@ const TOOLS = [
       },
     },
   },
+  {
+    type: "function",
+    function: {
+      name: "save_prescription",
+      description: "Simpan vonis + peta resep (langkah perbaikan) ke memori outlet dan majukan fase ke B.",
+      parameters: {
+        type: "object",
+        properties: {
+          verdict: { type: "string", description: "Vonis singkat masalah utama." },
+          steps: {
+            type: "array",
+            description: "Maksimal 8 langkah perbaikan berurutan.",
+            items: {
+              type: "object",
+              properties: {
+                text: { type: "string" },
+                action_key: {
+                  type: "string",
+                  enum: ["sidak_bos", "dynamic_pricing", "bundling", "cross_sell", "referral", "wa_marketing", "progress_tracker"],
+                },
+              },
+              required: ["text"],
+            },
+          },
+        },
+        required: ["verdict", "steps"],
+      },
+    },
+  },
 ];
 
 async function execTool(admin: any, outletId: string, name: string, args: Json) {
@@ -240,6 +269,22 @@ async function execTool(admin: any, outletId: string, name: string, args: Json) 
         .select("id")
         .maybeSingle();
       return { saved: true, id: data?.id ?? null };
+    }
+    case "save_prescription": {
+      const verdict = String(args?.verdict ?? "").slice(0, 300);
+      const steps = Array.isArray(args?.steps) ? args.steps.slice(0, 8) : [];
+      const { data } = await admin
+        .from("doctor_memory")
+        .insert({
+          outlet_id: outletId,
+          kind: "prescription",
+          title: verdict || "Resep perbaikan",
+          content: JSON.stringify(steps),
+          status: "open",
+        })
+        .select("id")
+        .maybeSingle();
+      return { saved: true, id: data?.id ?? null, steps: steps.length };
     }
     default:
       return { error: `unknown_tool:${name}` };
@@ -292,6 +337,8 @@ ATURAN OUTPUT:
   {"type":"action","label":"...","action_key":"sidak_bos|dynamic_pricing|bundling|cross_sell|referral|wa_marketing|progress_tracker"}
 - Bahasa Indonesia sederhana, minim istilah teknis, langkah kecil yang bisa dikerjakan.
 - Isi "phase" dengan fase saat ini sesuai ALUR FASE di atas.
+- Saat vonis sudah jelas dan Anda mulai menyusun resep (fase B), WAJIB panggil tool save_prescription dengan vonis + maksimal 8 langkah (tiap langkah boleh punya action_key). Lalu tampilkan peta resep sebagai block checklist.
+- Setiap langkah resep yang cocok dengan fitur aplikasi, sertakan block action dengan action_key terkait agar owner bisa langsung membuka fiturnya.
 - Selalu akhiri dengan disclaimer singkat "saran AI".`;
 }
 
