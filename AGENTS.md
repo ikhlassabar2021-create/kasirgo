@@ -667,7 +667,15 @@ Migrasi: docs/migrations/2026-10-01-kasirgo-8.sql. Detail: PROGRESS-PHASE8.md.
   indikator loading + disclaimer), `widgets/common/business_doctor/doctor_blocks.dart`
   (renderer text/card/gauge/checklist/choices/action), kartu "Dokter Bisnis AI" di
   beranda owner (`_buildModularQuickActions`). `dart analyze` bersih (info style).
-- BERIKUTNYA: ST14-5 intake wizard + deteksi fase; ST14-6 Peta Resep + tool
+- ST14-5 `e30dde5` + gh-pages `3ee5814`: intake wizard "Cek Fisik Toko" (3 langkah
+  bergambar: fisik/tampilan/perilaku, progress bar, catatan opsional) ->
+  `doctor_intake_screen.dart`; ringkasan jawaban dikirim sebagai pesan diagnosa.
+  `business_doctor_screen.dart` tombol CTA (tampil saat fase A) + muat fase dari
+  `doctor_outlet_profile` + refresh setelah intake. `business_doctor_service.dart`
+  +`saveIntake()`/`getPhase()`. EF `business_doctor_chat` (redeployed): definisi
+  ALUR FASE A/B/C di system prompt (A diagnosa -> B resep -> C evaluasi). Verifikasi
+  REST: insert `doctor_intake` 201, baca fase A. `flutter analyze` bersih.
+- BERIKUTNYA: ST14-6 Peta Resep + tool
   `save_prescription`; ST14-7 catat hasil promosi + ROI + web tool; ST14-8
   Escalation Ladder; ST14-9 memori jangka panjang + cron `doctor_observe` +
   "Riwayat Kasus"; ST14-10 override outlet superadmin + rate limit + E2E.
