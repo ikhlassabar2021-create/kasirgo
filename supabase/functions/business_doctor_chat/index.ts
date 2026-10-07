@@ -241,6 +241,22 @@ const TOOLS = [
       },
     },
   },
+  {
+    type: "function",
+    function: {
+      name: "escalate_case",
+      description: "Naikkan tingkat penanganan kasus saat resep gagal/berulang. level 1=evaluasi ulang (cari akar masalah), 2=lini kedua (ganti pendekatan), 3=kasus bandel (butuh bantuan manusia).",
+      parameters: {
+        type: "object",
+        properties: {
+          level: { type: "integer", enum: [1, 2, 3] },
+          root_cause: { type: "string", description: "Dugaan akar masalah dari kegagalan sebelumnya." },
+          reason: { type: "string", description: "Alasan singkat mengapa naik tingkat." },
+        },
+        required: ["level", "root_cause"],
+      },
+    },
+  },
 ];
 
 function privateHost(host: string) {
@@ -276,7 +292,7 @@ async function toolFetchUrl(url: string) {
   }
 }
 
-async function execTool(admin: any, outletId: string, name: string, args: Json, internetActive: boolean) {
+async function execTool(admin: any, outletId: string, name: string, args: Json, internetActive: boolean, conversationId: string | null) {
   switch (name) {
     case "get_business_snapshot":
       return await toolGetSnapshot(admin, outletId);
@@ -338,6 +354,22 @@ async function execTool(admin: any, outletId: string, name: string, args: Json, 
         .maybeSingle();
       return { saved: true, id: data?.id ?? null, steps: steps.length };
     }
+    case "escalate_case": {
+      const level = Math.max(1, Math.min(3, Number(args?.level) || 1));
+      const rootCause = String(args?.root_cause ?? "").slice(0, 500);
+      const status = level >= 3 ? "kasus_bandel" : "evaluasi_ulang";
+      if (conversationId) {
+        await admin.from("doctor_conversations")
+          .update({ status, escalation_level: level, updated_at: new Date().toISOString() })
+          .eq("id", conversationId);
+      }
+      await admin.from("doctor_memory").insert({
+        outlet_id: outletId, conversation_id: conversationId,
+        kind: "lesson", title: `Akar masalah (naik tingkat ${level})`,
+        content: rootCause, status: "open",
+      });
+      return { escalated: true, level, status };
+    }
     default:
       return { error: `unknown_tool:${name}` };
   }
@@ -372,6 +404,11 @@ ALUR FASE (pindah otomatis saat progres tercapai):
 - A = Diagnosa: kumpulkan fakta (cek fisik + data penjualan), tentukan masalah utama & skor kesehatan. Setelah vonis jelas -> fase B.
 - B = Resep: susun langkah perbaikan konkret dalam checklist. Setelah resep dijalankan -> fase C.
 - C = Evaluasi: bandingkan hasil dengan target. WAJIB pakai tool get_action_history untuk melihat biaya & hasil promosi, hitung ROI tiap aksi (omzet tambahan vs biaya), lalu putuskan: lanjut, selesai, atau ubah resep (kembali fase B).
+ESCALATION LADDER (saat resep gagal / hasil tak membaik):
+- Level 0 = normal. Selama perbaikan berjalan, tetap di fase B/C.
+- Level 1 = evaluasi_ulang: hasil tidak membaik setelah resep dijalankan. Panggil tool escalate_case level 1 + root_cause (dugaan akar masalah), lalu susun ulang resep dengan pendekatan berbeda (kembali fase B).
+- Level 2 = lini kedua: resep kedua juga gagal. Panggil escalate_case level 2 + root_cause, cari faktor lain (harga, lokasi, jam, kompetitor) dan tawarkan pendekatan alternatif.
+- Level 3 = kasus_bandel: sudah 2+ kali gagal. Panggil escalate_case level 3 + root_cause, jelaskan terus terang bahwa kasus ini bandel & sarankan minta bantuan manusia (pendamping/komunitas), tampilkan block card tone danger "Kasus Bandel".
 MEMORI JANGKA PANJANG:
 ${profile?.memory_digest ?? "(belum ada)"}
 KASUS TERBUKA:
@@ -660,7 +697,7 @@ Deno.serve(async (req: Request) => {
           for (const tc of toolCalls) {
             let args: Json = {};
             try { args = JSON.parse(tc?.function?.arguments ?? "{}"); } catch { args = {}; }
-            const result = await execTool(admin, outletId, tc?.function?.name, args, internetActive);
+            const result = await execTool(admin, outletId, tc?.function?.name, args, internetActive, conversationId);
             messages.push({ role: "tool", tool_call_id: tc.id, content: JSON.stringify(result) });
           }
           data = await callLlm(provider, messages, tools);
@@ -686,6 +723,8 @@ Deno.serve(async (req: Request) => {
     await admin.from("doctor_conversations")
       .update({ updated_at: new Date().toISOString(), phase: String(parsed?.phase ?? profile?.phase ?? "A") })
       .eq("id", conversationId);
+    const { data: convState } = await admin
+      .from("doctor_conversations").select("status, escalation_level").eq("id", conversationId).maybeSingle();
 
     // Memori: simpan vonis/resep + perbarui digest.
     const mem = parsed?.memory;
@@ -711,6 +750,8 @@ Deno.serve(async (req: Request) => {
       success: true,
       conversation_id: conversationId,
       phase: String(parsed?.phase ?? profile?.phase ?? "A"),
+      status: String(convState?.status ?? "aktif"),
+      escalation_level: Number(convState?.escalation_level ?? 0),
       blocks,
       reply: replyText,
       fallback: !!fallbackReason,

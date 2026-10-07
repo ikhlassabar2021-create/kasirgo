@@ -37,7 +37,7 @@ class SecureLocalStorage extends LocalStorage {
 class SupabaseConfig {
   static const String url = 'https://lmvjecdvfzsmrowwwpck.supabase.co';
   static const String anonKey =
-      'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImxtdmplY2R2ZnpzbXJvd3d3cGNrIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODkxMjk3MjgsImV4cCI6MjEwNDcwNTcyOH0.6waUmz-Kj32gGuxBs4DutgBDQtsSljazTuJQw_qZstI';
+      'sb_publishable_8RJnG66i_37cih8GTG1sBA_0B91KOW_';
 
   /// URL dasar aplikasi (dipakai untuk deep-link QR meja & redirect auth).
   static String get appUrl {

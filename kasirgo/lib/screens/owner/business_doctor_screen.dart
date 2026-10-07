@@ -65,6 +65,8 @@ class _BusinessDoctorScreenState extends ConsumerState<BusinessDoctorScreen> {
   String? _conversationId;
   String? _disclaimer;
   String _phase = 'A';
+  int _escalationLevel = 0;
+  String _caseStatus = 'aktif';
 
   @override
   void initState() {
@@ -114,11 +116,15 @@ class _BusinessDoctorScreenState extends ConsumerState<BusinessDoctorScreen> {
       final blocks = (res['blocks'] as List?) ?? const [];
       final reply = res['reply']?.toString() ?? '';
       final disclaimer = res['disclaimer']?.toString();
+      final escLevel = int.tryParse(res['escalation_level']?.toString() ?? '') ?? 0;
+      final caseStatus = res['status']?.toString() ?? 'aktif';
       if (!mounted) return;
       setState(() {
         if (disclaimer != null && disclaimer.isNotEmpty) {
           _disclaimer = disclaimer;
         }
+        _escalationLevel = escLevel;
+        _caseStatus = caseStatus;
         _messages.add(_Msg('assistant', reply, blocks));
         _loading = false;
       });
@@ -271,6 +277,10 @@ class _BusinessDoctorScreenState extends ConsumerState<BusinessDoctorScreen> {
       controller: _scroll,
       padding: const EdgeInsets.all(16),
       children: [
+        if (_escalationLevel > 0) ...[
+          _buildEscalationBanner(),
+          const SizedBox(height: 12),
+        ],
         if (_messages.isEmpty) _buildWelcome(),
         for (final msg in _messages) ...[
           const SizedBox(height: 12),
@@ -293,6 +303,50 @@ class _BusinessDoctorScreenState extends ConsumerState<BusinessDoctorScreen> {
         ],
         const SizedBox(height: 8),
       ],
+    );
+  }
+
+  Widget _buildEscalationBanner() {
+    final bandel = _caseStatus == 'kasus_bandel' || _escalationLevel >= 3;
+    final color = bandel ? AppTheme.errorColor : AppTheme.warningColor;
+    final title = bandel
+        ? 'Kasus Bandel'
+        : (_escalationLevel >= 2 ? 'Lini Kedua' : 'Evaluasi Ulang');
+    final body = bandel
+        ? 'Kasus ini sudah berulang kali belum membaik. Sebaiknya minta bantuan pendamping/komunitas.'
+        : 'Resep sebelumnya belum berhasil. Dokter sedang mencari akar masalah dan pendekatan baru.';
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.08),
+        borderRadius: BorderRadius.circular(AppTheme.radiusMedium),
+        border: Border.all(color: color.withValues(alpha: 0.4)),
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Icon(bandel ? Icons.report_gmailerrorred_rounded : Icons.refresh_rounded,
+              color: color, size: 20),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(title,
+                    style: GoogleFonts.inter(
+                        fontWeight: FontWeight.w700, color: color)),
+                const SizedBox(height: 2),
+                Text(body,
+                    style: GoogleFonts.inter(
+                        fontSize: 12,
+                        color: AppTheme.textSecondary,
+                        height: 1.35)),
+              ],
+            ),
+          ),
+        ],
+      ),
     );
   }
 

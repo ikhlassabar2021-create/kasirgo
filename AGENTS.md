@@ -696,6 +696,20 @@ Migrasi: docs/migrations/2026-10-01-kasirgo-8.sql. Detail: PROGRESS-PHASE8.md.
   riwayat aksi + aturan fase C (hitung ROI) di system prompt, action_key
   `catat_promosi` diizinkan. Teruji: no-JWT 401, owner 200, insert+delete
   `doctor_action_logs` 201/204, `flutter analyze` bersih.
-- BERIKUTNYA: ST14-8
-  Escalation Ladder; ST14-9 memori jangka panjang + cron `doctor_observe` +
+- ST14-8: Escalation Ladder. EF `business_doctor_chat` (redeployed): tool baru
+  `escalate_case(level 1-3, root_cause, reason)` -> update `doctor_conversations`
+  (`status`: level>=3 `kasus_bandel` else `evaluasi_ulang`, `escalation_level`) +
+  insert `doctor_memory` kind `lesson` (root cause); `execTool` kini terima
+  `conversationId`; system prompt + blok ESCALATION LADDER (level 0 normal -> 1
+  evaluasi ulang -> 2 lini kedua -> 3 kasus bandel, wajib `escalate_case`); respons
+  EF + `status`/`escalation_level`. App `business_doctor_screen.dart`: state
+  `_escalationLevel`/`_caseStatus` + banner (`_buildEscalationBanner`: Evaluasi
+  Ulang/Lini Kedua/Kasus Bandel). Teruji: no-JWT 401, owner 200 (respons punya
+  `status`/`escalation_level`), simulasi update conv level 3 -> respons
+  `kasus_bandel`/3, RLS owner 204, `dart analyze` bersih.
+- FIX KRITIS (infra, terpisah): kunci `anon` legacy yang di-hardcode di app +
+  admin sudah DINONAKTIFKAN Supabase (`Invalid API key`). Diganti ke publishable
+  key aktif `sb_publishable_8RJnG66i_37cih8GTG1sBA_0B91KOW_` di
+  `kasirgo/lib/config/supabase_config.dart` + `kasirgo-admin/src/config/supabase.ts`.
+- BERIKUTNYA: ST14-9 memori jangka panjang + cron `doctor_observe` +
   "Riwayat Kasus"; ST14-10 override outlet superadmin + rate limit + E2E.
