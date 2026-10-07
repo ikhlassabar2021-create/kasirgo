@@ -447,17 +447,36 @@ function extractJson(text: string): Json | null {
   try {
     return JSON.parse(cleaned);
   } catch {
-    const s = cleaned.indexOf("{");
-    const e = cleaned.lastIndexOf("}");
-    if (s >= 0 && e > s) {
-      try {
-        return JSON.parse(cleaned.slice(s, e + 1));
-      } catch {
-        return null;
+    /* fallthrough */
+  }
+  // Ambil objek JSON pertama yang seimbang (model kadang menambah teks setelahnya).
+  const start = cleaned.indexOf("{");
+  if (start < 0) return null;
+  let depth = 0;
+  let inStr = false;
+  let esc = false;
+  for (let i = start; i < cleaned.length; i++) {
+    const ch = cleaned[i];
+    if (inStr) {
+      if (esc) esc = false;
+      else if (ch === "\\") esc = true;
+      else if (ch === '"') inStr = false;
+      continue;
+    }
+    if (ch === '"') inStr = true;
+    else if (ch === "{") depth++;
+    else if (ch === "}") {
+      depth--;
+      if (depth === 0) {
+        try {
+          return JSON.parse(cleaned.slice(start, i + 1));
+        } catch {
+          return null;
+        }
       }
     }
-    return null;
   }
+  return null;
 }
 
 function fallbackBlocks(snap: Json, reason: string) {
@@ -713,13 +732,19 @@ Deno.serve(async (req: Request) => {
           tokens += Number(data?.usage?.total_tokens ?? 0);
           const toolCalls = choice?.message?.tool_calls ?? [];
           if (!toolCalls.length) break;
-          messages.push(choice.message);
+          messages.push({
+            role: "assistant",
+            content: choice?.message?.content ?? null,
+            tool_calls: toolCalls,
+          });
           for (const tc of toolCalls) {
             let args: Json = {};
             try { args = JSON.parse(tc?.function?.arguments ?? "{}"); } catch { args = {}; }
             const result = await execTool(admin, outletId, tc?.function?.name, args, internetActive, conversationId);
             messages.push({ role: "tool", tool_call_id: tc.id, content: JSON.stringify(result) });
           }
+          // Panggil lanjutan tanpa tool_choice agar model berhenti memanggil tool
+          // dan menulis jawaban final.
           data = await callLlm(provider, messages, tools);
         }
         parsed = extractJson(data?.choices?.[0]?.message?.content ?? "");

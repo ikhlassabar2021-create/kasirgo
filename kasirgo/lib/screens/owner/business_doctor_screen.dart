@@ -146,6 +146,7 @@ class _BusinessDoctorScreenState extends ConsumerState<BusinessDoctorScreen> {
       final disclaimer = res['disclaimer']?.toString();
       final escLevel = int.tryParse(res['escalation_level']?.toString() ?? '') ?? 0;
       final caseStatus = res['status']?.toString() ?? 'aktif';
+      final phase = res['phase']?.toString();
       if (!mounted) return;
       setState(() {
         if (disclaimer != null && disclaimer.isNotEmpty) {
@@ -153,6 +154,7 @@ class _BusinessDoctorScreenState extends ConsumerState<BusinessDoctorScreen> {
         }
         _escalationLevel = escLevel;
         _caseStatus = caseStatus;
+        if (phase != null && phase.isNotEmpty) _phase = phase;
         _messages.add(_Msg('assistant', reply, blocks));
         _loading = false;
       });
@@ -321,6 +323,12 @@ class _BusinessDoctorScreenState extends ConsumerState<BusinessDoctorScreen> {
           _buildEscalationBanner(),
           const SizedBox(height: 12),
         ],
+        _buildIntakeCta(),
+        const SizedBox(height: 12),
+        if (_phase != 'A') ...[
+          _buildEvaluationCta(),
+          const SizedBox(height: 12),
+        ],
         if (_messages.isEmpty) _buildWelcome(),
         for (final msg in _messages) ...[
           const SizedBox(height: 12),
@@ -437,10 +445,6 @@ class _BusinessDoctorScreenState extends ConsumerState<BusinessDoctorScreen> {
           ),
         ),
         const SizedBox(height: 16),
-        if (_phase == 'A') ...[
-          _buildIntakeCta(),
-          const SizedBox(height: 16),
-        ],
         GridView.count(
           crossAxisCount: 2,
           shrinkWrap: true,
@@ -502,6 +506,106 @@ class _BusinessDoctorScreenState extends ConsumerState<BusinessDoctorScreen> {
               ),
               const Icon(Icons.chevron_right_rounded,
                   color: AppTheme.primaryColor),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildEvaluationCta() {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: AppTheme.surfaceColor,
+        borderRadius: BorderRadius.circular(AppTheme.radiusLarge),
+        border: Border.all(color: AppTheme.borderColor),
+        boxShadow: AppTheme.shadowSoft,
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Container(
+                width: 40,
+                height: 40,
+                decoration: BoxDecoration(
+                  gradient: AppTheme.aiBadgeGradient,
+                  borderRadius: BorderRadius.circular(AppTheme.radiusMedium),
+                ),
+                child: const Icon(Icons.rule_rounded,
+                    color: Colors.white, size: 22),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text('Evaluasi Resep',
+                        style: GoogleFonts.inter(
+                            fontSize: 14, fontWeight: FontWeight.w700)),
+                    const SizedBox(height: 2),
+                    Text(
+                      'Sudah dijalankan? Beri tahu hasilnya, Dokter perbaiki resepnya.',
+                      style: GoogleFonts.inter(
+                          fontSize: 12, color: AppTheme.textSecondary),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          Row(
+            children: [
+              Expanded(
+                child: _buildEvalButton(
+                  'Berhasil',
+                  Icons.check_circle_rounded,
+                  AppTheme.successColor,
+                  'Resep yang saya jalankan berhasil, omzet membaik. Tolong evaluasi dan beri langkah lanjutan.',
+                ),
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: _buildEvalButton(
+                  'Belum Berhasil',
+                  Icons.refresh_rounded,
+                  AppTheme.warningColor,
+                  'Resep yang saya jalankan belum berhasil, hasil tidak membaik. Tolong cari akar masalahnya dan perbaiki resepnya.',
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildEvalButton(
+      String label, IconData icon, Color color, String prompt) {
+    return Material(
+      color: color.withValues(alpha: 0.1),
+      borderRadius: BorderRadius.circular(AppTheme.radiusMedium),
+      child: InkWell(
+        borderRadius: BorderRadius.circular(AppTheme.radiusMedium),
+        onTap: () => _send(prompt),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 10),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(icon, size: 16, color: color),
+              const SizedBox(width: 6),
+              Flexible(
+                child: Text(
+                  label,
+                  style: GoogleFonts.inter(
+                      fontSize: 12, fontWeight: FontWeight.w700, color: color),
+                ),
+              ),
             ],
           ),
         ),
