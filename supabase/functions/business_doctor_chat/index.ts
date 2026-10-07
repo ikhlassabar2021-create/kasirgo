@@ -503,7 +503,7 @@ async function callLlm(cfg: Json, messages: Json[], tools: Json[] | null) {
     model: cfg.model,
     messages,
     temperature: Number(cfg.temperature ?? 0.7),
-    max_tokens: Number(cfg.max_tokens ?? 800),
+    max_tokens: Number(cfg.max_tokens ?? 4000) || 4000,
   };
   if (tools && tools.length) {
     body.tools = tools;
