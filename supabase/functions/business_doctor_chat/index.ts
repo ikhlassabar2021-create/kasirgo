@@ -425,7 +425,12 @@ function buildSystem(cfg: Json, snap: Json, profile: Json | null, openCases: Jso
   const netLine = internetActive
     ? "- Anda BISA memakai tool fetch_url untuk membaca halaman web bila perlu info pasar/referensi. Jangan mengarang sumber."
     : "- Internet tidak aktif; jangan mengarang data dari luar.";
+  const sk = skillList(cfg);
+  const skillLine = sk.length
+    ? `\nSKILL AKTIF (hanya fitur/tool ini yang tersedia untuk Anda): ${sk.join(", ")}. Jangan menjanjikan fitur di luar daftar ini.`
+    : "";
   return `${cfg.prompt_utama ?? "Kamu adalah Dokter Bisnis KasirGo."}
+${skillLine}
 
 PERAN UNTUK TIPE OUTLET (${snap.outlet_type ?? "umum"}):
 ${roleText}
@@ -547,8 +552,33 @@ const FETCH_TOOL = {
   },
 };
 
-function toolsFor(internetActive: boolean) {
-  return internetActive ? [...TOOLS, FETCH_TOOL] : TOOLS;
+// ST15-1: peta skill -> tool (BAGIAN 13.26). Tool yang tidak dipetakan selalu aktif.
+const SKILL_TOOLS: Record<string, string[]> = {
+  snapshot: ["get_business_snapshot"],
+  trend: ["get_sales_trend"],
+  low_stock: ["get_low_stock"],
+  slow_products: ["list_slow_products"],
+  cashflow: ["get_cashflow", "get_action_history"],
+  memory: ["recall_memory", "save_memory", "save_prescription", "get_active_prescription"],
+  internet: ["fetch_url"],
+};
+
+function skillList(cfg: Json): string[] {
+  const s = cfg?.skills;
+  return Array.isArray(s) ? s.map((x) => String(x)) : [];
+}
+
+function toolAllowed(name: string, skills: string[]): boolean {
+  if (!skills.length) return true; // belum diatur -> semua aktif (kompatibilitas)
+  const owner = Object.keys(SKILL_TOOLS).find((k) => SKILL_TOOLS[k].includes(name));
+  if (!owner) return true; // tool inti (mis. escalate_case) selalu aktif
+  return skills.includes(owner);
+}
+
+function toolsFor(internetActive: boolean, skills: string[]) {
+  const base = TOOLS.filter((t: Json) => toolAllowed(String(t?.function?.name ?? ""), skills));
+  if (internetActive && toolAllowed("fetch_url", skills)) return [...base, FETCH_TOOL];
+  return base;
 }
 
 async function callLlm(cfg: Json, messages: Json[], tools: Json[] | null) {
@@ -757,14 +787,14 @@ Deno.serve(async (req: Request) => {
     } else {
       try {
         let data: Json;
-        const tools = toolsFor(internetActive);
+        const tools = toolsFor(internetActive, skillList(globalCfg));
         try {
           data = await callLlm(provider, messages, tools);
         } catch (_e) {
           data = await callLlm(provider, messages, null);
         }
-        // Tool loop (maks 2 putaran).
-        for (let round = 0; round < 2; round++) {
+        // Tool loop (maks 3 putaran).
+        for (let round = 0; round < 3; round++) {
           const choice = data?.choices?.[0];
           tokens += Number(data?.usage?.total_tokens ?? 0);
           const toolCalls = choice?.message?.tool_calls ?? [];

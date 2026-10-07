@@ -2097,6 +2097,25 @@ function AdminsTab() {
 // ===========================================================================
 // ST14-3: Dokter Bisnis AI - provider LLM global + uji koneksi + chat uji
 // ===========================================================================
+const DOCTOR_SKILLS: { key: string; label: string }[] = [
+  { key: 'chat', label: 'Konsultasi Chat' },
+  { key: 'snapshot', label: 'Snapshot Bisnis' },
+  { key: 'trend', label: 'Tren Penjualan' },
+  { key: 'low_stock', label: 'Stok Menipis' },
+  { key: 'slow_products', label: 'Produk Mati' },
+  { key: 'cashflow', label: 'Arus Kas & ROI Aksi' },
+  { key: 'memory', label: 'Memori & Resep' },
+  { key: 'internet', label: 'Internet (Fetch)' },
+  { key: 'target', label: 'Konsultasi Target' },
+  { key: 'scaling', label: 'Business Scaling' },
+  { key: 'market_intel', label: 'Intelijen Pasar' },
+  { key: 'cross_sell', label: 'Cross-Selling' },
+  { key: 'bundling', label: 'Bundling' },
+  { key: 'referral', label: 'Referral' },
+  { key: 'reprimand', label: 'Teguran Otomatis' },
+  { key: 'weekly_report', label: 'Laporan Mingguan' },
+];
+
 function DoctorTab() {
   const [v, setV] = useState<any>({});
   const [loading, setLoading] = useState(false);
@@ -2167,6 +2186,17 @@ function DoctorTab() {
   const setIt = (k: string, val: any) => set('internet_tool', { ...it, [k]: val });
   const rl = v.rate_limit ?? {};
   const setRl = (k: string, val: any) => set('rate_limit', { ...rl, [k]: val });
+  const sk: string[] = Array.isArray(v.skills) ? v.skills : [];
+  const toggleSkill = (k: string) =>
+    set('skills', sk.includes(k) ? sk.filter((s) => s !== k) : [...sk, k]);
+  const [showPrompt, setShowPrompt] = useState(false);
+
+  const resetPrompt = () => {
+    const def = v.prompt_utama_default;
+    if (!def) { show('err', 'Default prompt tidak tersedia.'); return; }
+    set('prompt_utama', def);
+    show('ok', 'Prompt dikembalikan ke default (belum disimpan).');
+  };
 
   const save = async () => {
     setLoading(true);
@@ -2210,8 +2240,40 @@ function DoctorTab() {
             <input className={inputCls} value={v.bahasa ?? ''} placeholder="id" onChange={(e) => set('bahasa', e.target.value)} />
           </div>
           <div>
-            <label className={labelCls}>Prompt Utama</label>
-            <textarea className={inputCls} rows={5} value={v.prompt_utama ?? ''} onChange={(e) => set('prompt_utama', e.target.value)} />
+            <div className="flex items-center justify-between mb-1.5">
+              <label className={`${labelCls} mb-0`}>Master Prompt Karakter & Skill</label>
+              <div className="flex gap-2">
+                <button type="button" onClick={() => setShowPrompt((s) => !s)} className="px-2.5 py-1 rounded-lg text-[11px] font-semibold border border-slate-200 bg-white hover:bg-slate-50 text-slate-700">
+                  {showPrompt ? 'Sembunyikan' : 'Preview'}
+                </button>
+                <button type="button" onClick={resetPrompt} className="px-2.5 py-1 rounded-lg text-[11px] font-semibold border border-slate-200 bg-white hover:bg-slate-50 text-slate-700">
+                  Reset ke Default
+                </button>
+              </div>
+            </div>
+            <textarea className={inputCls} rows={10} value={v.prompt_utama ?? ''} onChange={(e) => set('prompt_utama', e.target.value)} />
+            <p className="text-[11px] text-slate-400 mt-1">Karakter + skill AI (BAGIAN 13.23). Dapat diubah tanpa koding.</p>
+            {showPrompt && (
+              <pre className="mt-2 max-h-72 overflow-auto whitespace-pre-wrap rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-[11px] text-slate-600">
+                {v.prompt_utama || '(kosong)'}
+              </pre>
+            )}
+          </div>
+          <div>
+            <label className={labelCls}>Daftar Skill (alat yang boleh dipakai AI)</label>
+            <div className="flex flex-wrap gap-2">
+              {DOCTOR_SKILLS.map((s) => (
+                <button
+                  key={s.key}
+                  type="button"
+                  onClick={() => toggleSkill(s.key)}
+                  className={`px-3 py-1.5 rounded-full text-[11px] font-semibold border transition ${sk.includes(s.key) ? 'bg-gradient-to-r from-cyan-500 to-sky-600 text-white border-transparent' : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-50'}`}
+                >
+                  {s.label}
+                </button>
+              ))}
+            </div>
+            <p className="text-[11px] text-slate-400 mt-1">Kosong = semua skill aktif. Tool diluar skill terpilih tidak dikirim ke AI.</p>
           </div>
           <div>
             <label className={labelCls}>Guardrails (pisahkan dengan koma)</label>

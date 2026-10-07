@@ -260,6 +260,9 @@ Status: SELESAI. Project Supabase sudah dibuat dan schema terpasang serta diuji.
   intake wizard + peta resep + catat promosi/ROI + Riwayat Kasus; Control Plane tab
   Dokter Bisnis AI + override provider per outlet + rate limit/kuota harian.
   ST14-1..ST14-10. Detail: sesi "Phase 14 Dokter Bisnis AI".)
+- [ ] Phase 15: Master Prompt Karakter & Skill + 12 Fitur Bos Virtual
+  (15A ST15-1 Master Prompt + Daftar Skill SELESAI; berikutnya 15B ST15-2.
+  Detail: `PROGRESS-PHASE15.md`.)
 
 Catatan: Phase 7.6 adalah redesign visual menyeluruh (semua dashboard + fitur Produk/Pelanggan/
 Karyawan/Laporan/Pengaturan) tanpa mengubah fitur/logic. Spec: workflow Bagian 1.6 & 7C.
@@ -763,6 +766,23 @@ Migrasi: docs/migrations/2026-10-01-kasirgo-8.sql. Detail: PROGRESS-PHASE8.md.
   brace-matching ambil objek JSON pertama walau ada teks setelahnya.
   Teruji: chat fase A->B (fallback:false), prompt gagal -> escalation level 3
   `kasus_bandel` + blok card danger, reply JSON bersih.
+
+## Sesi 2026-10-08: Phase 15A Master Prompt Karakter & Skill (ST15-1 SELESAI)
+- Spec: `KASIRGO-WORKFLOW-LENGKAP.md` BAGIAN 13 (13.23-13.26) + BAGIAN 14.3.
+  Progress baru: `PROGRESS-PHASE15.md` (15A SELESAI, berikutnya ST15-2).
+- Migrasi `docs/migrations/2026-10-15-kasirgo-15a-master-prompt-skills.sql` (DITERAPKAN):
+  merge `platform_configs.business_doctor`:
+  - `prompt_utama` = teks BAGIAN 13.23 I (master prompt) + II (addendum A-O).
+  - `prompt_utama_default` = salinan (untuk tombol Reset ke Default admin).
+  - `skills[]` = 16 skill (chat..weekly_report).
+  - `provider_default`/role_outlet/guardrails/internet_tool/rate_limit DIPERTAHANKAN.
+- EF `business_doctor_chat` (REDEPLOYED): `SKILL_TOOLS` peta skill->tool; `toolAllowed()`,
+  `skillList()`, `toolsFor(internetActive, skills)` mengirim tool sesuai skill terpilih
+  (kosong = semua aktif); system context menyuntik "SKILL AKTIF: ..."; tool loop 2->3 putaran.
+- kasirgo-admin `ControlPlane.tsx` `DoctorTab`: field "Master Prompt Karakter & Skill"
+  (multi-line + Preview + Reset ke Default) + toggle "Daftar Skill" (chip 16 skill).
+- Verifikasi: config live skills terisi & provider default utuh (deepseek-4.1-flash);
+  EF chat superadmin fallback:false phase B menjawab; admin build EXIT 0; gh-pages admin dist.
 
 ## Sesi 2026-10-07: Dokter Bisnis - Resep Kaya + Jalankan (SELESAI)
 - Tujuan: resep bukan sekadar teks, tapi kartu terstruktur + tombol "Jalankan"
