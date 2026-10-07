@@ -8,6 +8,7 @@ import '../../services/business_doctor_service.dart';
 import '../../widgets/common/business_doctor/doctor_blocks.dart';
 import '../../widgets/common/centennial_background.dart';
 import '../modules/supporter_screen.dart';
+import 'doctor_intake_screen.dart';
 
 class BusinessDoctorScreen extends ConsumerStatefulWidget {
   const BusinessDoctorScreen({super.key, this.service});
@@ -58,6 +59,23 @@ class _BusinessDoctorScreenState extends ConsumerState<BusinessDoctorScreen> {
   bool _loading = false;
   String? _conversationId;
   String? _disclaimer;
+  String _phase = 'A';
+
+  @override
+  void initState() {
+    super.initState();
+    _loadPhase();
+  }
+
+  Future<void> _loadPhase() async {
+    final outletId = ref.read(currentUserProvider)?.outletId;
+    if (outletId == null || outletId.isEmpty) return;
+    try {
+      final phase =
+          await (widget.service ?? BusinessDoctorService()).getPhase(outletId);
+      if (mounted) setState(() => _phase = phase);
+    } catch (_) {}
+  }
 
   @override
   void dispose() {
@@ -111,6 +129,19 @@ class _BusinessDoctorScreenState extends ConsumerState<BusinessDoctorScreen> {
       });
     }
     _scrollDown();
+  }
+
+  Future<void> _openIntake() async {
+    final summary = await Navigator.push<String>(
+      context,
+      MaterialPageRoute(
+        builder: (_) => DoctorIntakeScreen(service: widget.service),
+      ),
+    );
+    if (summary != null && summary.isNotEmpty) {
+      await _send(summary);
+      _loadPhase();
+    }
   }
 
   void _handleAction(String actionKey, String label) {
@@ -264,6 +295,10 @@ class _BusinessDoctorScreenState extends ConsumerState<BusinessDoctorScreen> {
           ),
         ),
         const SizedBox(height: 16),
+        if (_phase == 'A') ...[
+          _buildIntakeCta(),
+          const SizedBox(height: 16),
+        ],
         GridView.count(
           crossAxisCount: 2,
           shrinkWrap: true,
@@ -277,6 +312,58 @@ class _BusinessDoctorScreenState extends ConsumerState<BusinessDoctorScreen> {
           ],
         ),
       ],
+    );
+  }
+
+  Widget _buildIntakeCta() {
+    return Material(
+      color: AppTheme.primaryColor.withValues(alpha: 0.06),
+      borderRadius: BorderRadius.circular(AppTheme.radiusLarge),
+      child: InkWell(
+        borderRadius: BorderRadius.circular(AppTheme.radiusLarge),
+        onTap: _openIntake,
+        child: Container(
+          padding: const EdgeInsets.all(14),
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(AppTheme.radiusLarge),
+            border: Border.all(
+                color: AppTheme.primaryColor.withValues(alpha: 0.35)),
+          ),
+          child: Row(
+            children: [
+              Container(
+                width: 40,
+                height: 40,
+                decoration: BoxDecoration(
+                  gradient: AppTheme.primaryGradient,
+                  borderRadius: BorderRadius.circular(AppTheme.radiusMedium),
+                ),
+                child: const Icon(Icons.fact_check_rounded,
+                    color: Colors.white, size: 22),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text('Cek Fisik Toko',
+                        style: GoogleFonts.inter(
+                            fontSize: 14, fontWeight: FontWeight.w700)),
+                    const SizedBox(height: 2),
+                    Text(
+                      'Diagnosa lebih akurat dengan 3 langkah singkat.',
+                      style: GoogleFonts.inter(
+                          fontSize: 12, color: AppTheme.textSecondary),
+                    ),
+                  ],
+                ),
+              ),
+              const Icon(Icons.chevron_right_rounded,
+                  color: AppTheme.primaryColor),
+            ],
+          ),
+        ),
+      ),
     );
   }
 

@@ -264,7 +264,11 @@ ${roleText}
 GUARDRAILS:
 - ${guard}
 
-FASE: ${profile?.phase ?? "A"} | Umur usaha: ${snap.business_age_days ?? "?"} hari
+FASE SAAT INI: ${profile?.phase ?? "A"} | Umur usaha: ${snap.business_age_days ?? "?"} hari
+ALUR FASE (pindah otomatis saat progres tercapai):
+- A = Diagnosa: kumpulkan fakta (cek fisik + data penjualan), tentukan masalah utama & skor kesehatan. Setelah vonis jelas -> fase B.
+- B = Resep: susun langkah perbaikan konkret dalam checklist. Setelah resep dijalankan -> fase C.
+- C = Evaluasi: bandingkan hasil dengan target, putuskan lanjut, selesai, atau ubah resep.
 MEMORI JANGKA PANJANG:
 ${profile?.memory_digest ?? "(belum ada)"}
 KASUS TERBUKA:
@@ -287,6 +291,7 @@ ATURAN OUTPUT:
   {"type":"choices","prompt":"...","options":[{"label":"...","value":"..."}]},
   {"type":"action","label":"...","action_key":"sidak_bos|dynamic_pricing|bundling|cross_sell|referral|wa_marketing|progress_tracker"}
 - Bahasa Indonesia sederhana, minim istilah teknis, langkah kecil yang bisa dikerjakan.
+- Isi "phase" dengan fase saat ini sesuai ALUR FASE di atas.
 - Selalu akhiri dengan disclaimer singkat "saran AI".`;
 }
 

@@ -34,4 +34,30 @@ class BusinessDoctorService {
     }
     return details?.toString();
   }
+
+  Future<String?> saveIntake({
+    required String outletId,
+    required Map<String, dynamic> physical,
+    String? visualNotes,
+    required Map<String, dynamic> behavior,
+  }) async {
+    final res = await _client.from('doctor_intake').insert({
+      'outlet_id': outletId,
+      'physical': physical,
+      'visual_notes': visualNotes,
+      'behavior': behavior,
+      'completed': true,
+    }).select('id').maybeSingle();
+    return res?['id']?.toString();
+  }
+
+  Future<String> getPhase(String outletId) async {
+    final res = await _client
+        .from('doctor_outlet_profile')
+        .select('phase')
+        .eq('outlet_id', outletId)
+        .maybeSingle();
+    final phase = res?['phase']?.toString();
+    return (phase == null || phase.isEmpty) ? 'A' : phase;
+  }
 }
