@@ -252,6 +252,14 @@ Status: SELESAI. Project Supabase sudah dibuat dan schema terpasang serta diuji.
   E2E terverifikasi via REST+psql: unpaid -> confirm owner -> paid; anon
   get_public_catalog hanya produk is_published; outlet_tables insert/delete OK.
   Deploy web gh-pages e40a4f7; main 06004a2.)
+- [x] Phase 14: Dokter Bisnis AI (SELESAI)
+  (7 tabel doctor + RLS + view ter-mask + seed `platform_configs.business_doctor`,
+  migrasi `2026-10-06-kasirgo-14-dokter-bisnis.sql`; EF `business_doctor_chat`
+  (tools snapshot/trend/stok/kasflow/aksi/memori/resep/escalate + web `fetch_url`)
+  dengan fase A/B/C, ESCALATION LADDER, gating Program Pendukung; app owner chat +
+  intake wizard + peta resep + catat promosi/ROI + Riwayat Kasus; Control Plane tab
+  Dokter Bisnis AI + override provider per outlet + rate limit/kuota harian.
+  ST14-1..ST14-10. Detail: sesi "Phase 14 Dokter Bisnis AI".)
 
 Catatan: Phase 7.6 adalah redesign visual menyeluruh (semua dashboard + fitur Produk/Pelanggan/
 Karyawan/Laporan/Pengaturan) tanpa mengubah fitur/logic. Spec: workflow Bagian 1.6 & 7C.
@@ -640,7 +648,7 @@ Migrasi: docs/migrations/2026-10-01-kasirgo-8.sql. Detail: PROGRESS-PHASE8.md.
   Midtrans, atau ganti provider PJP lain; QRIS statis tetap jadi fallback manual.
 - **PHASE 13 TUNTAS** (13A + 13B + 13C-1/2/3 SELESAI).
 
-## Sesi 2026-10-06 (3): Phase 14 Dokter Bisnis AI (BERJALAN)
+## Sesi 2026-10-06 (3): Phase 14 Dokter Bisnis AI (SELESAI)
 - Tujuan: asisten AI "Dokter Bisnis" (diagnosa -> resep -> evaluasi) untuk owner
   gaptek. Skema doctor + EF LLM + tab superadmin + chat owner. Provider LLM
   dikonfigurasi superadmin (Control Plane), `api_key_enc` hanya service_role.
@@ -723,4 +731,23 @@ Migrasi: docs/migrations/2026-10-01-kasirgo-8.sql. Detail: PROGRESS-PHASE8.md.
   CATATAN: cron `doctor_observe` DITUNDA -- ekstensi `pg_cron`/`pg_net` TIDAK
   terpasang di DB live (hanya `pgcrypto`). Alternatif: aktifkan di dashboard Supabase
   lalu jadwalkan, atau pakai scheduled Edge Function.
-- BERIKUTNYA: ST14-10 override outlet superadmin + rate limit + E2E.
+- ST14-10: Override provider AI per outlet (superadmin) + rate limit/kuota harian.
+  Migrasi `docs/migrations/2026-10-14-kasirgo-14d-ai-override-ratelimit.sql`
+  (DITERAPKAN): RPC `admin_list_outlet_ai_configs()` (daftar outlet + status override
+  ter-mask, tanpa api_key), `admin_set_outlet_ai_config(outlet, config)` (upsert;
+  api_key hanya ditimpa bila dikirim; tulis `log_admin_action`),
+  `admin_delete_outlet_ai_config(outlet)`, `doctor_daily_usage(outlet)` (messages+tokens
+  24 jam, service_role). Semua cek `is_platform_admin()`.
+  EF `business_doctor_chat` (REDEPLOYED): rate limit non-superadmin via RPC
+  `doctor_daily_usage`; config `business_doctor.rate_limit {messages_per_day=60,
+  tokens_per_day=200000}` -> balas block "Batas harian tercapai" bila lewat.
+  Admin Control Plane tab Dokter Bisnis AI: field Batas Pemakaian Harian + kartu
+  "Override Provider per Outlet" (tabel outlet, Atur/Hapus; kunci di server saja).
+  `controlPlane.ts` +`listOutletAiConfigs`/`setOutletAiConfig`/`deleteOutletAiConfig`
+  +type `OutletAiConfig`.
+  Teruji REST: list 7 outlet; set override Warung Test -> has_config/is_active/model/
+  has_api_key benar -> delete -> kembali global; owner non-admin -> `forbidden`;
+  usage service -> `{messages:7,tokens:0}`; EF rate limit (messages_per_day=1) ->
+  block "Kuota Dokter Bisnis hari ini habis (7/1 pesan)" (config dipulihkan).
+  Admin build sukses; gh-pages `bebb76d`.
+  **PHASE 14 TUNTAS** (ST14-1..ST14-10).

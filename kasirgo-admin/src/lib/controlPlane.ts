@@ -436,6 +436,46 @@ export async function testDoctorChat(outletId: string, message: string) {
   return data as Record<string, any>
 }
 
+export interface OutletAiConfig {
+  outlet_id: string
+  outlet_name: string | null
+  has_config: boolean
+  is_active: boolean
+  provider: string | null
+  base_url: string | null
+  model: string | null
+  temperature: number | null
+  max_tokens: number | null
+  has_api_key: boolean
+  last_tested_at: string | null
+  last_test_result: string | null
+}
+
+export async function listOutletAiConfigs(): Promise<OutletAiConfig[]> {
+  const { data, error } = await supabase.rpc('admin_list_outlet_ai_configs')
+  if (error) throw error
+  return (data ?? []) as OutletAiConfig[]
+}
+
+export async function setOutletAiConfig(outletId: string, config: Record<string, any>) {
+  const { data, error } = await supabase.rpc('admin_set_outlet_ai_config', {
+    p_outlet: outletId,
+    p_config: config,
+  })
+  if (error) throw error
+  if (data?.forbidden) throw new Error('Akses ditolak.')
+  return data
+}
+
+export async function deleteOutletAiConfig(outletId: string) {
+  const { data, error } = await supabase.rpc('admin_delete_outlet_ai_config', {
+    p_outlet: outletId,
+  })
+  if (error) throw error
+  if (data?.forbidden) throw new Error('Akses ditolak.')
+  return data
+}
+
 async function logAdminAction(action: string, target: string, meta: Record<string, any>) {
   try {
     await supabase.rpc('log_admin_action', {

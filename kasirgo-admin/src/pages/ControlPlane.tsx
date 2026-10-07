@@ -49,6 +49,9 @@ import {
   setOutletPgStatus,
   testDoctorProvider,
   testDoctorChat,
+  listOutletAiConfigs,
+  setOutletAiConfig,
+  deleteOutletAiConfig,
 } from '../lib/controlPlane';
 import type {
   ConfigKey,
@@ -58,6 +61,7 @@ import type {
   AuditLog,
   PendingSupporter,
   OutletPgConfig,
+  OutletAiConfig,
 } from '../lib/controlPlane';
 import { supabase } from '../config/supabase';
 import { rp as supabaseRpc, platformOutletsList, UsersListResult } from '../lib/adminApi';
@@ -2103,6 +2107,10 @@ function DoctorTab() {
   const [testMsg, setTestMsg] = useState('Usaha saya sepi, apa yang harus saya lakukan?');
   const [chatBusy, setChatBusy] = useState(false);
   const [chatOut, setChatOut] = useState<string | null>(null);
+  const [aiConfigs, setAiConfigs] = useState<OutletAiConfig[]>([]);
+  const [editOutlet, setEditOutlet] = useState('');
+  const [aiForm, setAiForm] = useState<Record<string, any>>({});
+  const [aiBusy, setAiBusy] = useState(false);
   const { msg, show } = useToast();
 
   useEffect(() => {
@@ -2114,13 +2122,51 @@ function DoctorTab() {
         if (rows[0]) setTestOutlet(rows[0].outlet_id);
       })
       .catch(() => {});
+    listOutletAiConfigs().then(setAiConfigs).catch(() => {});
   }, []);
+
+  const refreshAiConfigs = () => listOutletAiConfigs().then(setAiConfigs).catch(() => {});
+
+  const openAiEdit = (o: OutletAiConfig) => {
+    setEditOutlet(o.outlet_id);
+    setAiForm({
+      provider: o.provider ?? '',
+      base_url: o.base_url ?? '',
+      model: o.model ?? '',
+      temperature: o.temperature ?? 0.7,
+      max_tokens: o.max_tokens ?? 800,
+      is_active: o.is_active,
+      api_key: '',
+    });
+  };
+
+  const saveAi = async () => {
+    if (!editOutlet) { show('err', 'Pilih outlet dulu.'); return; }
+    setAiBusy(true);
+    try {
+      await setOutletAiConfig(editOutlet, aiForm);
+      await refreshAiConfigs();
+      show('ok', 'Override provider AI disimpan.');
+      setEditOutlet('');
+    } catch (e: any) { show('err', e.message); } finally { setAiBusy(false); }
+  };
+
+  const clearAi = async (outletId: string) => {
+    setAiBusy(true);
+    try {
+      await deleteOutletAiConfig(outletId);
+      await refreshAiConfigs();
+      show('ok', 'Override dihapus (kembali ke provider global).');
+    } catch (e: any) { show('err', e.message); } finally { setAiBusy(false); }
+  };
 
   const set = (k: string, val: any) => setV((prev: any) => ({ ...prev, [k]: val }));
   const pd = v.provider_default ?? {};
   const setPd = (k: string, val: any) => set('provider_default', { ...pd, [k]: val });
   const it = v.internet_tool ?? {};
   const setIt = (k: string, val: any) => set('internet_tool', { ...it, [k]: val });
+  const rl = v.rate_limit ?? {};
+  const setRl = (k: string, val: any) => set('rate_limit', { ...rl, [k]: val });
 
   const save = async () => {
     setLoading(true);
@@ -2181,6 +2227,20 @@ function DoctorTab() {
           </label>
 
           <div className="pt-2 border-t border-slate-100">
+            <p className="text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-2">Batas Pemakaian Harian (per outlet)</p>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div>
+                <label className={labelCls}>Maks Pesan / Hari</label>
+                <input className={inputCls} type="number" value={rl.messages_per_day ?? ''} placeholder="60" onChange={(e) => setRl('messages_per_day', Number(e.target.value))} />
+              </div>
+              <div>
+                <label className={labelCls}>Maks Token / Hari</label>
+                <input className={inputCls} type="number" value={rl.tokens_per_day ?? ''} placeholder="200000" onChange={(e) => setRl('tokens_per_day', Number(e.target.value))} />
+              </div>
+            </div>
+          </div>
+
+          <div className="pt-2 border-t border-slate-100">
             <p className="text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-2">Provider Default</p>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div className="sm:col-span-2">
@@ -2221,6 +2281,88 @@ function DoctorTab() {
           {probe && <p className="text-[11px] text-slate-600 bg-slate-50 border border-slate-200 rounded-lg px-3 py-2">{probe}</p>}
         </div>
         <Toast msg={msg} />
+      </Card>
+
+      <Card title="Override Provider per Outlet" subtitle="Ganti provider LLM untuk outlet tertentu (mis. kunci/limit terpisah). Kunci hanya disimpan di server, tidak pernah ditampilkan kembali.">
+        <div className="space-y-3">
+          <div className="overflow-x-auto">
+            <table className="w-full text-xs">
+              <thead>
+                <tr className="text-left text-slate-500 border-b border-slate-200">
+                  <th className="py-2 pr-3 font-semibold">Outlet</th>
+                  <th className="py-2 pr-3 font-semibold">Override</th>
+                  <th className="py-2 pr-3 font-semibold">Status</th>
+                  <th className="py-2 pr-3 font-semibold">Kunci</th>
+                  <th className="py-2 font-semibold">Aksi</th>
+                </tr>
+              </thead>
+              <tbody>
+                {aiConfigs.map((o) => (
+                  <tr key={o.outlet_id} className="border-b border-slate-100">
+                    <td className="py-2 pr-3 text-slate-800">{o.outlet_name ?? o.outlet_id}</td>
+                    <td className="py-2 pr-3 text-slate-600">{o.has_config ? (o.model ?? o.provider ?? '-') : '-'}</td>
+                    <td className="py-2 pr-3">
+                      {o.has_config ? (
+                        <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${o.is_active ? 'bg-emerald-50 text-emerald-700 border border-emerald-200' : 'bg-slate-100 text-slate-500 border border-slate-200'}`}>
+                          {o.is_active ? 'Aktif' : 'Nonaktif'}
+                        </span>
+                      ) : <span className="text-slate-400">Global</span>}
+                    </td>
+                    <td className="py-2 pr-3 text-slate-500">{o.has_api_key ? 'Tersimpan' : '-'}</td>
+                    <td className="py-2">
+                      <div className="flex gap-2">
+                        <button onClick={() => openAiEdit(o)} className="px-2.5 py-1 rounded-lg text-[11px] font-semibold border border-slate-200 bg-white hover:bg-slate-50 text-slate-700">Atur</button>
+                        {o.has_config && (
+                          <button onClick={() => clearAi(o.outlet_id)} disabled={aiBusy} className="px-2.5 py-1 rounded-lg text-[11px] font-semibold border border-red-200 bg-red-50 hover:bg-red-100 text-red-600">Hapus</button>
+                        )}
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+                {aiConfigs.length === 0 && (
+                  <tr><td colSpan={5} className="py-3 text-center text-slate-400">Memuat data outlet...</td></tr>
+                )}
+              </tbody>
+            </table>
+          </div>
+
+          {editOutlet && (
+            <div className="pt-2 border-t border-slate-100 max-w-[760px] space-y-3">
+              <p className="text-[11px] font-bold text-slate-500 uppercase tracking-wider">
+                Atur Override: {aiConfigs.find((o) => o.outlet_id === editOutlet)?.outlet_name ?? editOutlet}
+              </p>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div className="sm:col-span-2">
+                  <label className={labelCls}>Base URL</label>
+                  <input className={inputCls} value={aiForm.base_url ?? ''} placeholder="https://api.deepseek.com/v1" onChange={(e) => setAiForm({ ...aiForm, base_url: e.target.value })} />
+                </div>
+                <div className="sm:col-span-2">
+                  <label className={labelCls}>API Key</label>
+                  <input className={inputCls} type="password" value={aiForm.api_key ?? ''} placeholder="Kosongkan bila tidak diubah" onChange={(e) => setAiForm({ ...aiForm, api_key: e.target.value })} />
+                </div>
+                <div>
+                  <label className={labelCls}>Model</label>
+                  <input className={inputCls} value={aiForm.model ?? ''} placeholder="deepseek-chat" onChange={(e) => setAiForm({ ...aiForm, model: e.target.value })} />
+                </div>
+                <div>
+                  <label className={labelCls}>Maks Token</label>
+                  <input className={inputCls} type="number" value={aiForm.max_tokens ?? ''} onChange={(e) => setAiForm({ ...aiForm, max_tokens: Number(e.target.value) })} />
+                </div>
+              </div>
+              <label className="flex items-center gap-2 text-xs font-semibold text-slate-600">
+                <input type="checkbox" checked={!!aiForm.is_active} onChange={(e) => setAiForm({ ...aiForm, is_active: e.target.checked })} />
+                Gunakan override ini untuk outlet tersebut
+              </label>
+              <div className="flex flex-wrap gap-2">
+                <button onClick={saveAi} disabled={aiBusy} className="flex items-center gap-2 px-4 py-2.5 rounded-xl font-semibold text-xs bg-gradient-to-r from-cyan-500 to-sky-600 hover:from-cyan-600 hover:to-sky-700 text-white shadow-md shadow-sky-500/25 transition active:scale-95">
+                  {aiBusy ? <RefreshCw className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
+                  Simpan Override
+                </button>
+                <button onClick={() => setEditOutlet('')} className="px-4 py-2.5 rounded-xl font-semibold text-xs border border-slate-200 bg-white hover:bg-slate-50 text-slate-700">Batal</button>
+              </div>
+            </div>
+          )}
+        </div>
       </Card>
 
       <Card title="Chat Uji" subtitle="Simulasikan percakapan Dokter Bisnis pada outlet nyata. Berguna memastikan prompt & tool berjalan.">

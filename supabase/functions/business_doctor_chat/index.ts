@@ -634,6 +634,26 @@ Deno.serve(async (req: Request) => {
         max_tokens: globalCfg?.provider_default?.max_tokens,
       };
 
+    // Rate limit / kuota token harian (superadmin dikecualikan).
+    if (!isPlatformAdmin) {
+      const rl = (globalCfg?.rate_limit ?? {}) as Json;
+      const maxMsgs = Number(rl.messages_per_day ?? 60);
+      const maxTokens = Number(rl.tokens_per_day ?? 200000);
+      const { data: usage } = await admin.rpc("doctor_daily_usage", { target_outlet: outletId });
+      const usedMsgs = Number(usage?.messages ?? 0);
+      const usedTokens = Number(usage?.tokens ?? 0);
+      if (usedMsgs >= maxMsgs || usedTokens >= maxTokens) {
+        return json({
+          success: true,
+          conversation_id: conversationId,
+          blocks: [
+            { type: "card", tone: "warning", title: "Batas harian tercapai", body: `Kuota Dokter Bisnis hari ini habis (${usedMsgs}/${maxMsgs} pesan). Coba lagi besok ya.` },
+          ],
+          disclaimer: DISCLAIMER,
+        });
+      }
+    }
+
     const snap = await loadSnapshot(admin, outletId);
     const { data: profile } = await admin
       .from("doctor_outlet_profile").select("*").eq("outlet_id", outletId).maybeSingle();
