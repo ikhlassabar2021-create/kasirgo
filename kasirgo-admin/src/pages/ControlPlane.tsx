@@ -2155,6 +2155,8 @@ function DoctorTab() {
       temperature: o.temperature ?? 0.7,
       max_tokens: o.max_tokens ?? 800,
       is_active: o.is_active,
+      unlimited_tokens: o.unlimited_tokens ?? false,
+      token_quota: o.token_quota ?? '',
       api_key: '',
     });
   };
@@ -2355,6 +2357,7 @@ function DoctorTab() {
                   <th className="py-2 pr-3 font-semibold">Override</th>
                   <th className="py-2 pr-3 font-semibold">Status</th>
                   <th className="py-2 pr-3 font-semibold">Kunci</th>
+                  <th className="py-2 pr-3 font-semibold">Kuota</th>
                   <th className="py-2 font-semibold">Aksi</th>
                 </tr>
               </thead>
@@ -2371,6 +2374,9 @@ function DoctorTab() {
                       ) : <span className="text-slate-400">Global</span>}
                     </td>
                     <td className="py-2 pr-3 text-slate-500">{o.has_api_key ? 'Tersimpan' : '-'}</td>
+                    <td className="py-2 pr-3 text-slate-500">
+                      {o.unlimited_tokens ? 'Unlimited' : (o.token_quota ? o.token_quota.toLocaleString('id-ID') : 'Global')}
+                    </td>
                     <td className="py-2">
                       <div className="flex gap-2">
                         <button onClick={() => openAiEdit(o)} className="px-2.5 py-1 rounded-lg text-[11px] font-semibold border border-slate-200 bg-white hover:bg-slate-50 text-slate-700">Atur</button>
@@ -2382,7 +2388,7 @@ function DoctorTab() {
                   </tr>
                 ))}
                 {aiConfigs.length === 0 && (
-                  <tr><td colSpan={5} className="py-3 text-center text-slate-400">Memuat data outlet...</td></tr>
+                  <tr><td colSpan={6} className="py-3 text-center text-slate-400">Memuat data outlet...</td></tr>
                 )}
               </tbody>
             </table>
@@ -2415,6 +2421,16 @@ function DoctorTab() {
                 <input type="checkbox" checked={!!aiForm.is_active} onChange={(e) => setAiForm({ ...aiForm, is_active: e.target.checked })} />
                 Gunakan override ini untuk outlet tersebut
               </label>
+              <label className="flex items-center gap-2 text-xs font-semibold text-slate-600">
+                <input type="checkbox" checked={!!aiForm.unlimited_tokens} onChange={(e) => setAiForm({ ...aiForm, unlimited_tokens: e.target.checked })} />
+                Unlimited token (lewati kuota; tetap dicatat)
+              </label>
+              {!aiForm.unlimited_tokens && (
+                <div className="max-w-[240px]">
+                  <label className={labelCls}>Kuota Token / Hari (kosong = global)</label>
+                  <input className={inputCls} type="number" value={aiForm.token_quota ?? ''} placeholder="mis. 200000" onChange={(e) => setAiForm({ ...aiForm, token_quota: e.target.value })} />
+                </div>
+              )}
               <div className="flex flex-wrap gap-2">
                 <button onClick={saveAi} disabled={aiBusy} className="flex items-center gap-2 px-4 py-2.5 rounded-xl font-semibold text-xs bg-gradient-to-r from-cyan-500 to-sky-600 hover:from-cyan-600 hover:to-sky-700 text-white shadow-md shadow-sky-500/25 transition active:scale-95">
                   {aiBusy ? <RefreshCw className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}

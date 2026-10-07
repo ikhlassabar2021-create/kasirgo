@@ -446,6 +446,8 @@ export interface OutletAiConfig {
   model: string | null
   temperature: number | null
   max_tokens: number | null
+  unlimited_tokens: boolean
+  token_quota: number | null
   has_api_key: boolean
   last_tested_at: string | null
   last_test_result: string | null

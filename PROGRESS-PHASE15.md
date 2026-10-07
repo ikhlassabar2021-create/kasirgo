@@ -31,6 +31,17 @@ Sumber spec: `KASIRGO-WORKFLOW-LENGKAP.md` BAGIAN 13 (13.23-13.26) + BAGIAN 14.3
 - Verifikasi: config live `skills` terisi, `provider_default` tetap (model deepseek-4.1-flash);
   EF chat superadmin -> `fallback:false`, phase B, jawaban nyata; admin build EXIT 0.
 
+## Penutup celah Phase 14 (unlimited token + token_quota) - SELESAI
+ST14-1..12 sudah selesai, namun field `unlimited_tokens` + `token_quota` belum ada:
+- Migrasi `docs/migrations/2026-10-16-kasirgo-14d-unlimited-token-quota.sql` (DITERAPKAN):
+  `ALTER TABLE outlet_ai_configs ADD unlimited_tokens bool default false, token_quota int`;
+  RPC list/set diperbarui menyertakan field.
+- EF `business_doctor_chat` (REDEPLOYED): kuota per outlet - bila unlimited ON tidak diblokir;
+  bila OFF pakai `token_quota` (null -> global tokens_per_day); pemakaian tetap dicatat.
+- Admin `DoctorTab` override: toggle "Unlimited token" + input "Kuota Token / Hari" + kolom "Kuota".
+- Verifikasi E2E: list memuat field; unlimited ON -> owner token 255649>200000 tidak diblokir;
+  token_quota=10 -> diblokir; cleanup override uji; admin build EXIT 0.
+
 ### ST15-2 (15B) Bos Virtual Analitik - BERIKUTNYA
 - Migration `outlet_targets`, `doctor_scaling_plans` (+ RLS outlet sendiri); skill target/scaling/market_intel.
 - Konsultasi Target (tool get_targets/save_target + kartu Target & Progress + pace alert).

@@ -783,6 +783,10 @@ Migrasi: docs/migrations/2026-10-01-kasirgo-8.sql. Detail: PROGRESS-PHASE8.md.
   (multi-line + Preview + Reset ke Default) + toggle "Daftar Skill" (chip 16 skill).
 - Verifikasi: config live skills terisi & provider default utuh (deepseek-4.1-flash);
   EF chat superadmin fallback:false phase B menjawab; admin build EXIT 0; gh-pages admin dist.
+- Penutup celah Phase 14: migrasi `2026-10-16-kasirgo-14d-unlimited-token-quota.sql` (DITERAPKAN)
+  menambah `outlet_ai_configs.unlimited_tokens` + `token_quota` + RPC list/set; EF kuota per outlet
+  (unlimited ON -> lewati, OFF -> token_quota/global); admin DoctorTab toggle unlimited + kuota +
+  kolom Kuota. Teruji E2E (unlimited ON lolos token 255649>200000; token_quota=10 diblokir).
 
 ## Sesi 2026-10-07: Dokter Bisnis - Resep Kaya + Jalankan (SELESAI)
 - Tujuan: resep bukan sekadar teks, tapi kartu terstruktur + tombol "Jalankan"

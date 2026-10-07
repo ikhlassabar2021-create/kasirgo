@@ -697,7 +697,7 @@ Deno.serve(async (req: Request) => {
     // Provider: override outlet -> fallback global.
     const { data: override } = await admin
       .from("outlet_ai_configs")
-      .select("provider, base_url, api_key_enc, model, temperature, max_tokens, is_active")
+      .select("provider, base_url, api_key_enc, model, temperature, max_tokens, is_active, unlimited_tokens, token_quota")
       .eq("outlet_id", outletId)
       .maybeSingle();
     const { data: pcfg } = await admin
@@ -720,10 +720,12 @@ Deno.serve(async (req: Request) => {
       };
 
     // Rate limit / kuota token harian (superadmin dikecualikan).
-    if (!isPlatformAdmin) {
+    // Unlimited: outlet unlimited_tokens ON -> kuota dilewati (tetap dicatat).
+    if (!isPlatformAdmin && !override?.unlimited_tokens) {
       const rl = (globalCfg?.rate_limit ?? {}) as Json;
       const maxMsgs = Number(rl.messages_per_day ?? 60);
-      const maxTokens = Number(rl.tokens_per_day ?? 200000);
+      const quota = Number(override?.token_quota ?? 0);
+      const maxTokens = quota > 0 ? quota : Number(rl.tokens_per_day ?? 200000);
       const { data: usage } = await admin.rpc("doctor_daily_usage", { target_outlet: outletId });
       const usedMsgs = Number(usage?.messages ?? 0);
       const usedTokens = Number(usage?.tokens ?? 0);
