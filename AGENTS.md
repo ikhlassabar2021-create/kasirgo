@@ -763,3 +763,40 @@ Migrasi: docs/migrations/2026-10-01-kasirgo-8.sql. Detail: PROGRESS-PHASE8.md.
   brace-matching ambil objek JSON pertama walau ada teks setelahnya.
   Teruji: chat fase A->B (fallback:false), prompt gagal -> escalation level 3
   `kasus_bandel` + blok card danger, reply JSON bersih.
+
+## Sesi 2026-10-07: Dokter Bisnis - Resep Kaya + Jalankan (SELESAI)
+- Tujuan: resep bukan sekadar teks, tapi kartu terstruktur + tombol "Jalankan"
+  yang membuka fitur KasirGo terkait, plus menu "Resep Aktif" dan teguran masa target.
+- EF `business_doctor_chat` (REDEPLOYED, commit `edd6bc7`):
+  - `save_prescription` diperluas: `target_days` (default 7), `steps[].action_key`;
+    saat simpan, resep open lama ditutup `status:'failed'`; `doctor_memory.due_at`
+    = now + target_days hari; `content = JSON{verdict,target_days,started_at,steps}`.
+  - tool BARU `get_active_prescription` (baca resep status open).
+  - `sink: Json` diteruskan ke `execTool`; bila model lupa, blok `prescription`
+    tetap di-push dari `sink.prescription` (jamin kartu tampil).
+  - enum action_key valid: `sidak_bos|progress_tracker|dynamic_pricing|bundling|
+    cross_sell|wa_marketing|catat_promosi|health_score|online_catalog|qr_table|
+    multi_outlet|recipe` (referral & ai_copilot dihapus).
+  - system prompt: daftar action_key + aturan WAJIB save_prescription saat
+    menyusun/memperbarui resep; fase C pakai card+gauge+action "Catat Hasil Promosi";
+    resep gagal -> escalate_case + save_prescription baru.
+- App owner (commit `edd6bc7`, web gh-pages `e127061`):
+  - `doctor_blocks.dart`: blok `prescription` dirender kartu (gradient badge AI,
+    badge RESEP AKTIF/SELESAI, baris masa target, daftar langkah, pesan merah bila
+    lewat) + callback `onPrescription(block, step, index)`; tombol "Jalankan" bila
+    ada `action_key`, else "Tandai".
+  - `business_doctor_service.dart`: `getActivePrescription` (parse content JSON ->
+    blok) + `savePrescription` (update content/status).
+  - `business_doctor_screen.dart`: muat resep aktif saat buka; kartu "Resep Aktif"
+    di atas chat; `_maybeWarnOverdue` (AlertDialog bila `due_at` lewat);
+    `_actionScreen` diperluas (health_score, online_catalog, qr_table, multi_outlet,
+    recipe; beberapa dibungkus `SupporterFeatureGate`); `_onPrescriptionStep` buka
+    fitur + tandai langkah done + auto `achieved` bila semua langkah selesai.
+- TANPA migrasi baru: `doctor_memory.due_at` sudah ada; owner punya full akses
+  `doctor_memory`.
+- Verifikasi E2E (superadmin, outlet Warung Test): EF terpanggil -> blok `text` +
+  `prescription` (5 langkah, action_key progress_tracker/sidak_bos/dynamic_pricing/
+  wa_marketing/catat_promosi); baris `doctor_memory` kind prescription status `open`
+  `due_at` terisi. `dart analyze` 3 file bersih (hanya info style pre-existing).
+  CATATAN: rate limit owner 60 pesan/hari (superadmin dikecualikan) -- saat uji owner
+  kuota sudah 30/60.
