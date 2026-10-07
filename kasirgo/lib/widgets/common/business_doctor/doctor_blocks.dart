@@ -8,12 +8,15 @@ class DoctorBlocks extends StatelessWidget {
   final List blocks;
   final void Function(String value)? onChoice;
   final void Function(String actionKey, String label)? onAction;
+  final void Function(
+      Map<String, dynamic> block, Map<String, dynamic> step, int index)? onPrescription;
 
   const DoctorBlocks({
     super.key,
     required this.blocks,
     this.onChoice,
     this.onAction,
+    this.onPrescription,
   });
 
   @override
@@ -54,6 +57,8 @@ class DoctorBlocks extends StatelessWidget {
         return _choices(b);
       case 'action':
         return _action(b);
+      case 'prescription':
+        return _prescription(b);
       default:
         return null;
     }
@@ -276,6 +281,258 @@ class DoctorBlocks extends StatelessWidget {
           ? null
           : () => onAction!(_s(b['action_key']), label),
     );
+  }
+
+  Widget _prescription(Map<String, dynamic> b) {
+    final items = ((b['items'] as List?) ?? const [])
+        .whereType<Map>()
+        .map((e) => e.cast<String, dynamic>())
+        .toList();
+    final due = DateTime.tryParse(_s(b['due_at']));
+    final target = (b['target_days'] as num?)?.toInt() ?? 7;
+    final now = DateTime.now();
+    final allDone =
+        items.isNotEmpty && items.every((e) => e['done'] == true);
+    final overdue = due != null && due.isBefore(now) && !allDone;
+    final accent = allDone
+        ? AppTheme.successColor
+        : (overdue ? AppTheme.errorColor : AppTheme.primaryColor);
+    final remaining = due == null ? '' : _remainingLabel(due, now);
+    return Container(
+      width: double.infinity,
+      decoration: BoxDecoration(
+        color: AppTheme.surfaceColor,
+        borderRadius: BorderRadius.circular(AppTheme.radiusLarge),
+        border: Border.all(color: accent.withValues(alpha: 0.4)),
+        boxShadow: AppTheme.shadowSoft,
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Container(
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              gradient: allDone
+                  ? LinearGradient(colors: [
+                      AppTheme.successColor.withValues(alpha: 0.9),
+                      AppTheme.successColor,
+                    ])
+                  : AppTheme.aiBadgeGradient,
+              borderRadius: const BorderRadius.vertical(
+                  top: Radius.circular(AppTheme.radiusLarge - 1)),
+            ),
+            child: Row(
+              children: [
+                const Icon(Icons.medication_liquid_rounded,
+                    color: Colors.white, size: 20),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    _s(b['title']).isEmpty
+                        ? 'Resep Perbaikan'
+                        : _s(b['title']),
+                    style: GoogleFonts.inter(
+                      fontSize: 14,
+                      fontWeight: FontWeight.w800,
+                      color: Colors.white,
+                    ),
+                  ),
+                ),
+                Container(
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                  decoration: BoxDecoration(
+                    color: Colors.white.withValues(alpha: 0.22),
+                    borderRadius: BorderRadius.circular(20),
+                  ),
+                  child: Text(
+                    allDone ? 'SELESAI' : 'RESEP AKTIF',
+                    style: GoogleFonts.inter(
+                      fontSize: 9,
+                      fontWeight: FontWeight.w800,
+                      color: Colors.white,
+                      letterSpacing: 0.5,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          Padding(
+            padding: const EdgeInsets.all(12),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    Icon(
+                      overdue
+                          ? Icons.warning_amber_rounded
+                          : Icons.schedule_rounded,
+                      size: 14,
+                      color: accent,
+                    ),
+                    const SizedBox(width: 6),
+                    Text(
+                      'Masa target $target hari'
+                      '${remaining.isEmpty ? '' : ' • $remaining'}',
+                      style: GoogleFonts.inter(
+                        fontSize: 11,
+                        fontWeight: FontWeight.w600,
+                        color: accent,
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 10),
+                for (var i = 0; i < items.length; i++) ...[
+                  _prescriptionStep(b, items[i], i, accent),
+                  if (i < items.length - 1) const SizedBox(height: 8),
+                ],
+                if (overdue)
+                  Padding(
+                    padding: const EdgeInsets.only(top: 10),
+                    child: Text(
+                      'Resep ini belum tuntas padahal masa target sudah lewat. '
+                      'Ayo jalankan langkah yang tersisa.',
+                      style: GoogleFonts.inter(
+                        fontSize: 11,
+                        height: 1.35,
+                        color: AppTheme.errorColor,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _prescriptionStep(
+      Map<String, dynamic> block, Map<String, dynamic> step, int index, Color accent) {
+    final done = step['done'] == true;
+    final key = _s(step['action_key']);
+    final hasFeature = key.isNotEmpty;
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Container(
+          width: 22,
+          height: 22,
+          alignment: Alignment.center,
+          decoration: BoxDecoration(
+            color: done
+                ? AppTheme.successColor
+                : AppTheme.primaryColor.withValues(alpha: 0.12),
+            shape: BoxShape.circle,
+          ),
+          child: done
+              ? const Icon(Icons.check_rounded, size: 14, color: Colors.white)
+              : Text(
+                  '${index + 1}',
+                  style: GoogleFonts.inter(
+                    fontSize: 11,
+                    fontWeight: FontWeight.w800,
+                    color: AppTheme.primaryColor,
+                  ),
+                ),
+        ),
+        const SizedBox(width: 8),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                _s(step['text']),
+                style: GoogleFonts.inter(
+                  fontSize: 13,
+                  height: 1.35,
+                  color: done
+                      ? AppTheme.textSecondary
+                      : AppTheme.textPrimary,
+                  decoration: done ? TextDecoration.lineThrough : null,
+                ),
+              ),
+              if (hasFeature)
+                Padding(
+                  padding: const EdgeInsets.only(top: 4),
+                  child: Text(
+                    _featureLabel(key),
+                    style: GoogleFonts.inter(
+                      fontSize: 10,
+                      fontWeight: FontWeight.w700,
+                      color: AppTheme.accentColor,
+                    ),
+                  ),
+                ),
+            ],
+          ),
+        ),
+        const SizedBox(width: 8),
+        if (!done)
+          Material(
+            color: accent.withValues(alpha: 0.1),
+            borderRadius: BorderRadius.circular(20),
+            child: InkWell(
+              borderRadius: BorderRadius.circular(20),
+              onTap: onPrescription == null
+                  ? null
+                  : () => onPrescription!(block, step, index),
+              child: Padding(
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(hasFeature ? Icons.play_arrow_rounded : Icons.check_rounded,
+                        size: 14, color: accent),
+                    const SizedBox(width: 2),
+                    Text(
+                      hasFeature ? 'Jalankan' : 'Tandai',
+                      style: GoogleFonts.inter(
+                        fontSize: 11,
+                        fontWeight: FontWeight.w700,
+                        color: accent,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+      ],
+    );
+  }
+
+  String _remainingLabel(DateTime due, DateTime now) {
+    final diff = due.difference(now);
+    if (diff.isNegative) {
+      final d = -diff.inDays + (diff.inHours % 24 == 0 ? 0 : 1);
+      return 'Lewat ${d < 1 ? 1 : d} hari';
+    }
+    final d = (diff.inHours / 24).ceil();
+    return 'Sisa $d hari';
+  }
+
+  String _featureLabel(String key) {
+    const labels = {
+      'sidak_bos': 'Laporan ke Bos',
+      'progress_tracker': 'Laporan & Progres',
+      'dynamic_pricing': 'Atur Harga Produk',
+      'bundling': 'Bundling Produk',
+      'cross_sell': 'Produk Terkait',
+      'wa_marketing': 'WA Marketing',
+      'catat_promosi': 'Catat Hasil Promosi',
+      'health_score': 'Skor Kesehatan Usaha',
+      'online_catalog': 'Katalog Online',
+      'qr_table': 'QR Meja',
+      'multi_outlet': 'Multi Outlet',
+      'recipe': 'Resep & HPP',
+    };
+    return labels[key] ?? 'Fitur KasirGo';
   }
 
   Color _tone(String? tone) {

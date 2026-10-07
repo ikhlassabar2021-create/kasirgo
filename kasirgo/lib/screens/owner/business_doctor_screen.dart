@@ -12,7 +12,12 @@ import '../modules/supporter_screen.dart';
 import 'doctor_cases_screen.dart';
 import 'doctor_intake_screen.dart';
 import 'doctor_promotion_log_screen.dart';
+import 'health_score_screen.dart';
+import 'multi_outlet_screen.dart';
+import 'online_catalog_screen.dart';
 import 'product_list_screen.dart';
+import 'qr_table_screen.dart';
+import 'recipe_screen.dart';
 import 'report_screen.dart';
 import 'whatsapp_broadcast_screen.dart';
 
@@ -69,13 +74,59 @@ class _BusinessDoctorScreenState extends ConsumerState<BusinessDoctorScreen> {
   String _phase = 'A';
   int _escalationLevel = 0;
   String _caseStatus = 'aktif';
+  Map<String, dynamic>? _activePrescription;
+  bool _overduePrompted = false;
 
   @override
   void initState() {
     super.initState();
     _conversationId = widget.conversationId;
     _loadPhase();
+    _loadPrescription();
     if (_conversationId != null) _loadHistory();
+  }
+
+  Future<void> _loadPrescription() async {
+    final outletId = ref.read(currentUserProvider)?.outletId;
+    if (outletId == null || outletId.isEmpty) return;
+    try {
+      final p = await (widget.service ?? BusinessDoctorService())
+          .getActivePrescription(outletId);
+      if (!mounted) return;
+      setState(() => _activePrescription = p);
+      _maybeWarnOverdue();
+    } catch (_) {}
+  }
+
+  void _maybeWarnOverdue() {
+    final p = _activePrescription;
+    if (p == null || _overduePrompted) return;
+    final due = DateTime.tryParse(p['due_at']?.toString() ?? '');
+    if (due == null || !due.isBefore(DateTime.now())) return;
+    _overduePrompted = true;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      showDialog<void>(
+        context: context,
+        builder: (_) => AlertDialog(
+          title: const Text('Resep Belum Dijalankan'),
+          content: Text(
+            'Masa target resep "${p['title'] ?? 'perbaikan'}" sudah lewat. '
+            'Ayo jalankan langkahnya sekarang agar omzet membaik.',
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text('Nanti'),
+            ),
+            FilledButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text('Lihat Resep'),
+            ),
+          ],
+        ),
+      );
+    });
   }
 
   Future<void> _loadHistory() async {
@@ -147,6 +198,12 @@ class _BusinessDoctorScreenState extends ConsumerState<BusinessDoctorScreen> {
       final escLevel = int.tryParse(res['escalation_level']?.toString() ?? '') ?? 0;
       final caseStatus = res['status']?.toString() ?? 'aktif';
       final phase = res['phase']?.toString();
+      final prescription = blocks
+          .whereType<Map>()
+          .map((b) => b.cast<String, dynamic>())
+          .where((b) => b['type'] == 'prescription')
+          .cast<Map<String, dynamic>?>()
+          .firstWhere((b) => true, orElse: () => null);
       if (!mounted) return;
       setState(() {
         if (disclaimer != null && disclaimer.isNotEmpty) {
@@ -155,6 +212,7 @@ class _BusinessDoctorScreenState extends ConsumerState<BusinessDoctorScreen> {
         _escalationLevel = escLevel;
         _caseStatus = caseStatus;
         if (phase != null && phase.isNotEmpty) _phase = phase;
+        if (prescription != null) _activePrescription = prescription;
         _messages.add(_Msg('assistant', reply, blocks));
         _loading = false;
       });
@@ -219,6 +277,33 @@ class _BusinessDoctorScreenState extends ConsumerState<BusinessDoctorScreen> {
     }
   }
 
+  Future<void> _onPrescriptionStep(
+      Map<String, dynamic> block, Map<String, dynamic> step, int index) async {
+    final items = ((block['items'] as List?) ?? const [])
+        .whereType<Map>()
+        .map((e) => Map<String, dynamic>.from(e))
+        .toList();
+    if (index < 0 || index >= items.length) return;
+    final key = items[index]['action_key']?.toString() ?? '';
+    if (key.isNotEmpty) {
+      _handleAction(key, items[index]['text']?.toString() ?? '');
+    }
+    items[index]['done'] = true;
+    final updated = {...block, 'items': items};
+    setState(() => _activePrescription = updated);
+    final memoryId = block['memory_id']?.toString();
+    if (memoryId != null && memoryId.isNotEmpty) {
+      final allDone = items.every((e) => e['done'] == true);
+      try {
+        await (widget.service ?? BusinessDoctorService()).savePrescription(
+          memoryId: memoryId,
+          block: updated,
+          status: allDone ? 'achieved' : null,
+        );
+      } catch (_) {}
+    }
+  }
+
   Widget? _actionScreen(String actionKey) {
     switch (actionKey) {
       case 'wa_marketing':
@@ -234,6 +319,32 @@ class _BusinessDoctorScreenState extends ConsumerState<BusinessDoctorScreen> {
       case 'bundling':
       case 'cross_sell':
         return const ProductListScreen();
+      case 'health_score':
+        return const SupporterFeatureGate(
+          featureKey: 'health_score_pro',
+          title: 'Skor Kesehatan Usaha',
+          child: HealthScoreScreen(),
+        );
+      case 'online_catalog':
+        return const SupporterFeatureGate(
+          featureKey: 'online_catalog',
+          title: 'Katalog Online',
+          child: OnlineCatalogScreen(),
+        );
+      case 'qr_table':
+        return const SupporterFeatureGate(
+          featureKey: 'qr_table',
+          title: 'QR Meja',
+          child: QrTableScreen(),
+        );
+      case 'multi_outlet':
+        return const SupporterFeatureGate(
+          featureKey: 'multi_outlet',
+          title: 'Multi Outlet',
+          child: MultiOutletScreen(),
+        );
+      case 'recipe':
+        return const RecipeScreen();
       default:
         return null;
     }
@@ -321,6 +432,13 @@ class _BusinessDoctorScreenState extends ConsumerState<BusinessDoctorScreen> {
       children: [
         if (_escalationLevel > 0) ...[
           _buildEscalationBanner(),
+          const SizedBox(height: 12),
+        ],
+        if (_activePrescription != null) ...[
+          DoctorBlocks(
+            blocks: [_activePrescription!],
+            onPrescription: _onPrescriptionStep,
+          ),
           const SizedBox(height: 12),
         ],
         _buildIntakeCta(),
@@ -714,6 +832,7 @@ class _BusinessDoctorScreenState extends ConsumerState<BusinessDoctorScreen> {
                     blocks: msg.blocks,
                     onChoice: _send,
                     onAction: _handleAction,
+                    onPrescription: _onPrescriptionStep,
                   ),
           ),
         ),

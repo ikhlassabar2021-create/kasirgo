@@ -216,11 +216,12 @@ const TOOLS = [
     type: "function",
     function: {
       name: "save_prescription",
-      description: "Simpan vonis + peta resep (langkah perbaikan) ke memori outlet dan majukan fase ke B.",
+      description: "Simpan vonis + resep (langkah perbaikan) ke memori outlet dan majukan fase ke B. Panggil ini SETIAP kali menyusun atau memperbarui resep, termasuk setelah resep lama gagal.",
       parameters: {
         type: "object",
         properties: {
           verdict: { type: "string", description: "Vonis singkat masalah utama." },
+          target_days: { type: "integer", description: "Masa target menjalankan resep (hari), default 7." },
           steps: {
             type: "array",
             description: "Maksimal 8 langkah perbaikan berurutan.",
@@ -230,7 +231,7 @@ const TOOLS = [
                 text: { type: "string" },
                 action_key: {
                   type: "string",
-                  enum: ["sidak_bos", "dynamic_pricing", "bundling", "cross_sell", "referral", "wa_marketing", "progress_tracker"],
+                  enum: ["sidak_bos", "progress_tracker", "dynamic_pricing", "bundling", "cross_sell", "wa_marketing", "catat_promosi", "health_score", "online_catalog", "qr_table", "multi_outlet", "recipe"],
                 },
               },
               required: ["text"],
@@ -239,6 +240,14 @@ const TOOLS = [
         },
         required: ["verdict", "steps"],
       },
+    },
+  },
+  {
+    type: "function",
+    function: {
+      name: "get_active_prescription",
+      description: "Baca resep yang sedang berjalan (status open) beserta langkah dan masa targetnya.",
+      parameters: { type: "object", properties: {} },
     },
   },
   {
@@ -292,7 +301,7 @@ async function toolFetchUrl(url: string) {
   }
 }
 
-async function execTool(admin: any, outletId: string, name: string, args: Json, internetActive: boolean, conversationId: string | null) {
+async function execTool(admin: any, outletId: string, name: string, args: Json, internetActive: boolean, conversationId: string | null, sink: Json) {
   switch (name) {
     case "get_business_snapshot":
       return await toolGetSnapshot(admin, outletId);
@@ -338,21 +347,46 @@ async function execTool(admin: any, outletId: string, name: string, args: Json, 
         .maybeSingle();
       return { saved: true, id: data?.id ?? null };
     }
+    case "get_active_prescription": {
+      const { data } = await admin
+        .from("doctor_memory")
+        .select("id, title, content, status, due_at, created_at")
+        .eq("outlet_id", outletId).eq("kind", "prescription").eq("status", "open")
+        .order("created_at", { ascending: false }).limit(1).maybeSingle();
+      return data ?? { none: true };
+    }
     case "save_prescription": {
       const verdict = String(args?.verdict ?? "").slice(0, 300);
-      const steps = Array.isArray(args?.steps) ? args.steps.slice(0, 8) : [];
+      const targetDays = Math.max(1, Math.min(90, Number(args?.target_days) || 7));
+      const steps = (Array.isArray(args?.steps) ? args.steps : []).slice(0, 8).map((s: Json) => ({
+        text: String(s?.text ?? "").slice(0, 300),
+        action_key: s?.action_key ? String(s.action_key) : null,
+        done: false,
+      })).filter((s: Json) => s.text);
+      const startedAt = new Date();
+      const dueAt = new Date(startedAt.getTime() + targetDays * 86400000).toISOString();
+      // Tutup resep lama yang belum selesai agar hanya satu resep aktif.
+      await admin.from("doctor_memory")
+        .update({ status: "failed" })
+        .eq("outlet_id", outletId).eq("kind", "prescription").eq("status", "open");
       const { data } = await admin
         .from("doctor_memory")
         .insert({
-          outlet_id: outletId,
+          outlet_id: outletId, conversation_id: conversationId,
           kind: "prescription",
           title: verdict || "Resep perbaikan",
-          content: JSON.stringify(steps),
+          content: JSON.stringify({ verdict, target_days: targetDays, started_at: startedAt.toISOString(), steps }),
           status: "open",
+          due_at: dueAt,
         })
         .select("id")
         .maybeSingle();
-      return { saved: true, id: data?.id ?? null, steps: steps.length };
+      const memoryId = data?.id ?? null;
+      sink.prescription = {
+        type: "prescription", memory_id: memoryId, title: verdict || "Resep perbaikan",
+        target_days: targetDays, due_at: dueAt, items: steps,
+      };
+      return { saved: true, id: memoryId, target_days: targetDays, due_at: dueAt, steps: steps.length };
     }
     case "escalate_case": {
       const level = Math.max(1, Math.min(3, Number(args?.level) || 1));
@@ -431,12 +465,14 @@ ATURAN OUTPUT:
   {"type":"gauge","label":"Skor Kesehatan Usaha","value":0-100,"hint":"..."},
   {"type":"checklist","title":"Peta Resep","items":[{"text":"...","done":false}]},
   {"type":"choices","prompt":"...","options":[{"label":"...","value":"..."}]},
-  {"type":"action","label":"...","action_key":"sidak_bos|dynamic_pricing|bundling|cross_sell|referral|wa_marketing|progress_tracker|catat_promosi"}
+  {"type":"action","label":"...","action_key":"sidak_bos|progress_tracker|dynamic_pricing|bundling|cross_sell|wa_marketing|catat_promosi|health_score|online_catalog|qr_table|multi_outlet|recipe"}
 - Bahasa Indonesia sederhana, minim istilah teknis, langkah kecil yang bisa dikerjakan.
 - Isi "phase" dengan fase saat ini sesuai ALUR FASE di atas.
-- Saat vonis sudah jelas dan Anda mulai menyusun resep (fase B), WAJIB panggil tool save_prescription dengan vonis + maksimal 8 langkah (tiap langkah boleh punya action_key). Lalu tampilkan peta resep sebagai block checklist.
-- Setiap langkah resep yang cocok dengan fitur aplikasi, sertakan block action dengan action_key terkait agar owner bisa langsung membuka fiturnya.
+- Saat menyusun ATAU memperbarui resep (fase B, atau setiap resep lama gagal), WAJIB panggil tool save_prescription dengan verdict, target_days (mis. 7), dan steps (maks 8). Sistem otomatis menampilkan kartu resep yang bisa diklik "Jalankan". Jangan menulis langkah hanya sebagai teks biasa.
+- Setiap langkah resep WAJIB diisi action_key bila cocok dengan fitur aplikasi, agar owner bisa langsung menekan "Jalankan". Pilih HANYA dari daftar action_key di atas.
+- Dasar resep = data LOKAL (snapshot/tren/stok/kas). Bila internet aktif, boleh pakai fetch_url untuk referensi pasar/ide promosi, lalu gabungkan; jangan mengarang sumber.
 - Saat fase C, tampilkan hasil evaluasi sebagai card (tone success bila berhasil) + gauge skor, sebutkan ROI ringkas per aksi, dan beri block action "Catat Hasil Promosi" bila owner belum mencatat.
+- Bila owner menyatakan resep BELUM berhasil: panggil escalate_case, lalu WAJIB buat resep BARU (save_prescription) dengan pendekatan berbeda dan target_days baru.
 ${netLine}
 - Selalu akhiri dengan disclaimer singkat "saran AI".`;
 }
@@ -714,6 +750,7 @@ Deno.serve(async (req: Request) => {
     let parsed: Json | null = null;
     let fallbackReason = "";
     let tokens = 0;
+    const sink: Json = {};
 
     if (!provider.base_url || !provider.api_key || !provider.model) {
       fallbackReason = "Provider AI belum diatur superadmin. Sementara pakai analisa lokal.";
@@ -740,7 +777,7 @@ Deno.serve(async (req: Request) => {
           for (const tc of toolCalls) {
             let args: Json = {};
             try { args = JSON.parse(tc?.function?.arguments ?? "{}"); } catch { args = {}; }
-            const result = await execTool(admin, outletId, tc?.function?.name, args, internetActive, conversationId);
+            const result = await execTool(admin, outletId, tc?.function?.name, args, internetActive, conversationId, sink);
             messages.push({ role: "tool", tool_call_id: tc.id, content: JSON.stringify(result) });
           }
           // Panggil lanjutan tanpa tool_choice agar model berhenti memanggil tool
@@ -759,6 +796,11 @@ Deno.serve(async (req: Request) => {
     if (!blocks.length && replyText) blocks = [{ type: "text", text: replyText }];
     if (fallbackReason) blocks = fallbackBlocks(snap, fallbackReason);
     if (!blocks.length) blocks = fallbackBlocks(snap, "Belum ada jawaban dari AI.");
+    // Pastikan kartu resep tampil walau model lupa menyertakannya.
+    if (!fallbackReason && sink.prescription &&
+        !blocks.some((b: Json) => b?.type === "prescription")) {
+      blocks.push(sink.prescription);
+    }
 
     // Simpan jawaban assistant.
     await admin.from("doctor_messages").insert({

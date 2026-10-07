@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 class BusinessDoctorService {
@@ -125,5 +127,58 @@ class BusinessDoctorService {
         .order('created_at', ascending: true)
         .limit(60);
     return (res as List).cast<Map<String, dynamic>>();
+  }
+
+  Future<Map<String, dynamic>?> getActivePrescription(String outletId) async {
+    final res = await _client
+        .from('doctor_memory')
+        .select('id, title, content, status, due_at, created_at')
+        .eq('outlet_id', outletId)
+        .eq('kind', 'prescription')
+        .eq('status', 'open')
+        .order('created_at', ascending: false)
+        .limit(1)
+        .maybeSingle();
+    if (res == null) return null;
+    return _toBlock(res);
+  }
+
+  Map<String, dynamic> _toBlock(Map<String, dynamic> row) {
+    Map<String, dynamic> content = const {};
+    final raw = row['content'];
+    if (raw is String && raw.isNotEmpty) {
+      try {
+        final d = jsonDecode(raw);
+        if (d is Map) content = d.cast<String, dynamic>();
+      } catch (_) {}
+    } else if (raw is Map) {
+      content = raw.cast<String, dynamic>();
+    }
+    return {
+      'type': 'prescription',
+      'memory_id': row['id']?.toString(),
+      'title': row['title'] ?? content['verdict'] ?? 'Resep',
+      'verdict': content['verdict'] ?? row['title'] ?? '',
+      'target_days': content['target_days'] ?? 7,
+      'started_at': content['started_at'],
+      'due_at': row['due_at'] ?? content['due_at'],
+      'items': content['steps'] ?? const [],
+    };
+  }
+
+  Future<void> savePrescription({
+    required String memoryId,
+    required Map<String, dynamic> block,
+    String? status,
+  }) async {
+    await _client.from('doctor_memory').update({
+      'content': jsonEncode({
+        'verdict': block['verdict'] ?? block['title'] ?? '',
+        'target_days': block['target_days'] ?? 7,
+        'started_at': block['started_at'],
+        'steps': block['items'] ?? const [],
+      }),
+      if (status != null) 'status': status,
+    }).eq('id', memoryId);
   }
 }
