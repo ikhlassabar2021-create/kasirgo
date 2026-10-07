@@ -96,4 +96,34 @@ class BusinessDoctorService {
         .limit(50);
     return (res as List).cast<Map<String, dynamic>>();
   }
+
+  Future<List<Map<String, dynamic>>> listConversations(String outletId) async {
+    final res = await _client
+        .from('doctor_conversations')
+        .select('id, title, phase, status, escalation_level, updated_at')
+        .eq('outlet_id', outletId)
+        .order('updated_at', ascending: false)
+        .limit(50);
+    return (res as List).cast<Map<String, dynamic>>();
+  }
+
+  Future<List<Map<String, dynamic>>> listMemories(String outletId) async {
+    final res = await _client
+        .from('doctor_memory')
+        .select('id, kind, title, content, status, lesson, created_at')
+        .eq('outlet_id', outletId)
+        .order('created_at', ascending: false)
+        .limit(50);
+    return (res as List).cast<Map<String, dynamic>>();
+  }
+
+  Future<List<Map<String, dynamic>>> listMessages(String conversationId) async {
+    final res = await _client
+        .from('doctor_messages')
+        .select('role, content, blocks')
+        .eq('conversation_id', conversationId)
+        .order('created_at', ascending: true)
+        .limit(60);
+    return (res as List).cast<Map<String, dynamic>>();
+  }
 }

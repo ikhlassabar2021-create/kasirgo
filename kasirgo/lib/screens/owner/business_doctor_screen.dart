@@ -9,6 +9,7 @@ import '../../widgets/common/business_doctor/doctor_blocks.dart';
 import '../../widgets/common/centennial_background.dart';
 import '../../widgets/common/supporter_gate.dart';
 import '../modules/supporter_screen.dart';
+import 'doctor_cases_screen.dart';
 import 'doctor_intake_screen.dart';
 import 'doctor_promotion_log_screen.dart';
 import 'product_list_screen.dart';
@@ -16,9 +17,10 @@ import 'report_screen.dart';
 import 'whatsapp_broadcast_screen.dart';
 
 class BusinessDoctorScreen extends ConsumerStatefulWidget {
-  const BusinessDoctorScreen({super.key, this.service});
+  const BusinessDoctorScreen({super.key, this.service, this.conversationId});
 
   final BusinessDoctorService? service;
+  final String? conversationId;
 
   @override
   ConsumerState<BusinessDoctorScreen> createState() =>
@@ -71,7 +73,33 @@ class _BusinessDoctorScreenState extends ConsumerState<BusinessDoctorScreen> {
   @override
   void initState() {
     super.initState();
+    _conversationId = widget.conversationId;
     _loadPhase();
+    if (_conversationId != null) _loadHistory();
+  }
+
+  Future<void> _loadHistory() async {
+    final convId = _conversationId;
+    if (convId == null) return;
+    setState(() => _loading = true);
+    try {
+      final rows =
+          await (widget.service ?? BusinessDoctorService()).listMessages(convId);
+      if (!mounted) return;
+      setState(() {
+        _messages
+          ..clear()
+          ..addAll(rows.map((r) => _Msg(
+                r['role']?.toString() ?? 'assistant',
+                r['content']?.toString() ?? '',
+                (r['blocks'] as List?) ?? const [],
+              )));
+        _loading = false;
+      });
+      _scrollDown();
+    } catch (_) {
+      if (mounted) setState(() => _loading = false);
+    }
   }
 
   Future<void> _loadPhase() async {
@@ -255,6 +283,18 @@ class _BusinessDoctorScreenState extends ConsumerState<BusinessDoctorScreen> {
         foregroundColor: AppTheme.textPrimary,
         elevation: 0,
         scrolledUnderElevation: 0,
+        actions: [
+          IconButton(
+            tooltip: 'Riwayat Kasus',
+            icon: const Icon(Icons.history_rounded),
+            onPressed: () => Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (_) => const DoctorCasesScreen(),
+              ),
+            ),
+          ),
+        ],
       ),
       body: CentennialBackground(
         child: Center(

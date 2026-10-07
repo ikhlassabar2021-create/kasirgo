@@ -711,5 +711,16 @@ Migrasi: docs/migrations/2026-10-01-kasirgo-8.sql. Detail: PROGRESS-PHASE8.md.
   admin sudah DINONAKTIFKAN Supabase (`Invalid API key`). Diganti ke publishable
   key aktif `sb_publishable_8RJnG66i_37cih8GTG1sBA_0B91KOW_` di
   `kasirgo/lib/config/supabase_config.dart` + `kasirgo-admin/src/config/supabase.ts`.
-- BERIKUTNYA: ST14-9 memori jangka panjang + cron `doctor_observe` +
-  "Riwayat Kasus"; ST14-10 override outlet superadmin + rate limit + E2E.
+- ST14-9: Memori jangka panjang + "Riwayat Kasus". App: `business_doctor_service.dart`
+  +`listConversations`/`listMemories`/`listMessages` (baca `doctor_conversations`,
+  `doctor_memory`, `doctor_messages` via RLS owner); layar baru
+  `doctor_cases_screen.dart` (2 seksi: Kasus Konsultasi + Catatan Memori, badge
+  status/fase/tingkat, tap kasus -> resume chat); `business_doctor_screen.dart`
+  terima `conversationId` (resume + `_loadHistory`) + action AppBar "Riwayat Kasus".
+  Memori jangka panjang (`doctor_outlet_profile.memory_digest`) sudah diperbarui tiap
+  chat sejak ST14-2. Teruji REST owner: conversations 200 (5 baris), memory 200,
+  messages by conversation 200; `dart analyze` bersih.
+  CATATAN: cron `doctor_observe` DITUNDA -- ekstensi `pg_cron`/`pg_net` TIDAK
+  terpasang di DB live (hanya `pgcrypto`). Alternatif: aktifkan di dashboard Supabase
+  lalu jadwalkan, atau pakai scheduled Edge Function.
+- BERIKUTNYA: ST14-10 override outlet superadmin + rate limit + E2E.
