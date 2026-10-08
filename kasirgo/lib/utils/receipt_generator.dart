@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'dart:typed_data';
 
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:pdf/pdf.dart';
 import 'package:pdf/widgets.dart' as pw;
 import 'package:printing/printing.dart';
@@ -9,6 +10,8 @@ import 'package:shared_preferences/shared_preferences.dart';
 import '../models/transaction.dart';
 import '../services/supporter_service.dart';
 import 'formatters.dart';
+import 'web_download_stub.dart'
+    if (dart.library.html) 'web_download_web.dart';
 
 /// Struk digital (PDF 80mm) dengan opsi logo kustom (Program Pendukung,
 /// feature `custom_receipt`). Logo disimpan LOKAL di perangkat (kebijakan
@@ -87,14 +90,21 @@ class ReceiptGenerator {
       );
       final shortId =
           txId.length > 8 ? txId.substring(0, 8).toUpperCase() : txId;
-      await Printing.sharePdf(
-        bytes: bytes,
-        filename: 'Struk_$shortId.pdf',
-      );
+      await share(bytes, 'Struk_$shortId.pdf');
       return true;
     } catch (_) {
       return false;
     }
+  }
+
+  /// Bagikan / unduh PDF. Di web pakai unduhan browser (blob),
+  /// di native pakai share sheet Printing.
+  static Future<void> share(Uint8List bytes, String filename) async {
+    if (kIsWeb) {
+      await webDownload(bytes, filename);
+      return;
+    }
+    await Printing.sharePdf(bytes: bytes, filename: filename);
   }
 
   /// Bangun struk PDF. [logoBase64] kosong/null -> struk polos (fitur gratis),

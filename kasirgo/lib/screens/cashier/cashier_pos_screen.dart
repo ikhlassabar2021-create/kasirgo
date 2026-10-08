@@ -15,6 +15,7 @@ import '../owner/product_list_screen.dart';
 import '../../widgets/pos/product_grid.dart';
 import '../../widgets/pos/cart_panel.dart';
 import '../../widgets/pos/checkout_dialog.dart';
+import '../../widgets/pos/checkout_success_dialog.dart';
 import '../../widgets/common/logout_button.dart';
 import 'incoming_orders_screen.dart';
 
@@ -267,32 +268,28 @@ class _CashierPosScreenState extends ConsumerState<CashierPosScreen> {
         });
 
         final outletName = ref.read(currentUserProvider)?.name ?? 'KasirGo';
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(
-              result.change > 0
-                  ? 'Transaksi berhasil! Kembalian: Rp ${result.change.toStringAsFixed(0)}'
-                  : 'Transaksi berhasil!',
-            ),
-            backgroundColor: AppTheme.successColor,
-            duration: const Duration(seconds: 12),
-            action: SnackBarAction(
-              label: 'STRUK',
-              textColor: Colors.white,
-              onPressed: () {
-                ReceiptGenerator.shareTransactionReceipt(
-                  outletId: outletId,
-                  storeName: outletName,
-                  items: cartSnapshot,
-                  txId: created.id,
-                  createdAt: DateTime.now(),
-                  paymentMethod: result.paymentMethod,
-                  totalAmount: cartSnapshot.fold<double>(
-                      0, (s, i) => s + i.price * i.quantity),
-                  finalAmount: result.amount,
-                );
-              },
-            ),
+        final changeMsg = result.change > 0
+            ? 'Kembalian: Rp ${result.change.toStringAsFixed(0)}'
+            : '';
+        await showDialog<void>(
+          context: context,
+          barrierDismissible: false,
+          builder: (_) => CheckoutSuccessDialog(
+            message: changeMsg,
+            onReceipt: () {
+              ReceiptGenerator.shareTransactionReceipt(
+                outletId: outletId,
+                storeName: outletName,
+                items: cartSnapshot,
+                txId: created.id,
+                createdAt: DateTime.now(),
+                paymentMethod: result.paymentMethod,
+                totalAmount: cartSnapshot.fold<double>(
+                    0, (s, i) => s + i.price * i.quantity),
+                finalAmount: result.amount,
+              );
+            },
+            onFinish: () => Navigator.of(context).pop(),
           ),
         );
       }
