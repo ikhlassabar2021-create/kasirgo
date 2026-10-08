@@ -260,6 +260,18 @@ class _CashierPosScreenState extends ConsumerState<CashierPosScreen> {
         } catch (_) {}
       }
 
+      // Auto-create pelanggan dari data WA/nama saat pembayaran (best-effort).
+      final waPhone = result.customerPhone;
+      if (waPhone != null && waPhone.isNotEmpty) {
+        try {
+          await SupabaseService().upsertCustomerFromPhone(
+            outletId: outletId,
+            phone: waPhone,
+            name: result.customerName,
+          );
+        } catch (_) {}
+      }
+
       ref.invalidate(productsProvider);
 
       if (mounted) {

@@ -1516,6 +1516,41 @@ class SupabaseService {
     }
   }
 
+  /// Auto-create pelanggan dari pembayaran: cek dulu nomor WA terdaftar;
+  /// bila belum ada, buat baru dengan nama (atau "Pelanggan <4 digit akhir>").
+  Future<void> upsertCustomerFromPhone({
+    required String outletId,
+    required String phone,
+    String? name,
+  }) async {
+    final digits = phone.replaceAll(RegExp(r'\D'), '');
+    if (digits.length < 8) return;
+    // Normalisasi ke format 08xx.
+    final normalized = digits.startsWith('62')
+        ? '0${digits.substring(2)}'
+        : digits.startsWith('0')
+            ? digits
+            : digits;
+    try {
+      final existing = await _client
+          .from('customers')
+          .select('id')
+          .eq('outlet_id', outletId)
+          .eq('phone_wa', normalized)
+          .limit(1)
+          .maybeSingle();
+      if (existing != null) return; // sudah terdaftar
+      final fallbackName = (name != null && name.trim().isNotEmpty)
+          ? name.trim()
+          : 'Pelanggan ${normalized.substring(normalized.length - 4)}';
+      await _client.from('customers').insert({
+        'outlet_id': outletId,
+        'name': fallbackName,
+        'phone_wa': normalized,
+      });
+    } catch (_) {}
+  }
+
   // ==========================================
   // PPOB & RESTOCK ORDERS & FINTECH
   // ==========================================

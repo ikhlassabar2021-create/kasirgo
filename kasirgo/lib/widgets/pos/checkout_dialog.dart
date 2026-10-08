@@ -33,6 +33,8 @@ class CheckoutResult {
   final String? notes;
   final bool sendWhatsApp;
   final List<SplitPayment> payments;
+  final String? customerName;
+  final String? customerPhone;
 
   const CheckoutResult({
     required this.paymentMethod,
@@ -43,6 +45,8 @@ class CheckoutResult {
     this.notes,
     this.sendWhatsApp = false,
     this.payments = const [],
+    this.customerName,
+    this.customerPhone,
   });
 }
 
@@ -77,6 +81,7 @@ class _CheckoutDialogState extends State<CheckoutDialog> {
   final _tipController = TextEditingController();
   final _notesController = TextEditingController();
   final _customerWaController = TextEditingController();
+  final _customerNameController = TextEditingController();
   bool _sendWaReceipt = false;
   bool _isLoadingQris = false;
   QrisConfig _qrisConfig = const QrisConfig();
@@ -177,6 +182,7 @@ class _CheckoutDialogState extends State<CheckoutDialog> {
     _tipController.dispose();
     _notesController.dispose();
     _customerWaController.dispose();
+    _customerNameController.dispose();
     super.dispose();
   }
 
@@ -205,6 +211,12 @@ class _CheckoutDialogState extends State<CheckoutDialog> {
       tipAmount: _tipAmount,
       notes: _notesController.text.trim().isNotEmpty ? _notesController.text.trim() : null,
       sendWhatsApp: _sendWaReceipt,
+      customerName: _customerNameController.text.trim().isNotEmpty
+          ? _customerNameController.text.trim()
+          : null,
+      customerPhone: _customerWaController.text.trim().isNotEmpty
+          ? _customerWaController.text.trim()
+          : null,
     );
 
     if (_sendWaReceipt && _customerWaController.text.trim().isNotEmpty) {
@@ -975,6 +987,37 @@ class _CheckoutDialogState extends State<CheckoutDialog> {
     );
   }
 
+  /// Auto-isi nama pelanggan dari nomor WA yang sudah terdaftar.
+  void _autofillCustomerName(String phone) {
+    final digits = phone.replaceAll(RegExp(r'\D'), '');
+    if (digits.length < 8) return;
+    final outletId = widget.outletId;
+    if (outletId == null || outletId.isEmpty) return;
+    // Cari via query langsung (best-effort, jangan blok UI).
+    () async {
+      try {
+        final digits = phone.replaceAll(RegExp(r'\D'), '');
+        // Normalisasi: 628xx == 08xx.
+        final alt = digits.startsWith('62')
+            ? '0${digits.substring(2)}'
+            : (digits.startsWith('0') ? '62${digits.substring(1)}' : digits);
+        final res = await Supabase.instance.client
+            .from('customers')
+            .select('name')
+            .eq('outlet_id', outletId)
+            .inFilter('phone_wa', [digits, alt])
+            .limit(1)
+            .maybeSingle();
+        if (res != null && mounted) {
+          final name = res['name']?.toString() ?? '';
+          if (name.isNotEmpty && _customerNameController.text.trim().isEmpty) {
+            setState(() => _customerNameController.text = name);
+          }
+        }
+      } catch (_) {}
+    }();
+  }
+
   Widget _buildWaReceiptSection() {
     return Container(
       padding: const EdgeInsets.fromLTRB(12, 4, 12, 12),
@@ -1001,7 +1044,7 @@ class _CheckoutDialogState extends State<CheckoutDialog> {
               const Icon(Icons.receipt_long_rounded, color: AppTheme.whatsAppColor, size: 20),
             ],
           ),
-          if (_sendWaReceipt)
+          if (_sendWaReceipt) ...[
             Padding(
               padding: const EdgeInsets.only(top: 4),
               child: TextField(
@@ -1014,8 +1057,24 @@ class _CheckoutDialogState extends State<CheckoutDialog> {
                   prefixIcon: Icon(Icons.phone_rounded, size: 18),
                   isDense: true,
                 ),
+                onChanged: (phone) => _autofillCustomerName(phone),
               ),
             ),
+            Padding(
+              padding: const EdgeInsets.only(top: 8),
+              child: TextField(
+                controller: _customerNameController,
+                textCapitalization: TextCapitalization.words,
+                style: const TextStyle(fontSize: 13),
+                decoration: const InputDecoration(
+                  labelText: 'Nama Pelanggan',
+                  hintText: 'Contoh: Pak Budi',
+                  prefixIcon: Icon(Icons.person_rounded, size: 18),
+                  isDense: true,
+                ),
+              ),
+            ),
+          ],
         ],
       ),
     );
