@@ -363,6 +363,36 @@ const TOOLS = [
   {
     type: "function",
     function: {
+      name: "propose_action",
+      description: "Ajukan aksi yang MENGUBAH data/harga/promosi (mis. terapkan flash sale, ubah harga, pasang promo). WAJIB lewat tool ini: owner harus MENYETUJUI dulu sebelum dieksekusi. Jangan pernah bilang aksi sudah dijalankan sebelum disetujui.",
+      parameters: {
+        type: "object",
+        properties: {
+          action_type: { type: "string", description: "mis. flash_sale | price_change | promotion | bundling | referral." },
+          title: { type: "string" },
+          body: { type: "string", description: "Penjelasan singkat dampak & alasan." },
+          payload: { type: "object", description: "Data teknis aksi (produk, harga, diskon, dsb)." },
+        },
+        required: ["action_type", "title"],
+      },
+    },
+  },
+  {
+    type: "function",
+    function: {
+      name: "benchmark_hyperlocal",
+      description: "Bandingkan performa outlet vs outlet sejenis (agregat ANONIM wilayah). Bila data tipis, tandai 'perlu verifikasi'.",
+      parameters: {
+        type: "object",
+        properties: {
+          region: { type: "string", description: "Nama wilayah (default dari alamat outlet)." },
+        },
+      },
+    },
+  },
+  {
+    type: "function",
+    function: {
       name: "escalate_case",
       description: "Naikkan tingkat penanganan kasus saat resep gagal/berulang. level 1=evaluasi ulang (cari akar masalah), 2=lini kedua (ganti pendekatan), 3=kasus bandel (butuh bantuan manusia).",
       parameters: {
@@ -699,6 +729,63 @@ async function execTool(admin: any, outletId: string, name: string, args: Json, 
       sink.referral = { type: "card", tone: "success", title: "Kode Referral dibuat", body: `Kode ${code} aktif. Pembawa dapat Rp${Number(args?.reward_amount ?? 0).toLocaleString("id-ID")}, teman dapat Rp${Number(args?.friend_reward_amount ?? 0).toLocaleString("id-ID")}.` };
       return { saved: true, code };
     }
+    case "propose_action": {
+      // ST15-4 (M): guardrail — aksi pengubah data TIDAK dieksekusi; hanya diusulkan.
+      const actionType = String(args?.action_type ?? "").slice(0, 60);
+      const title = String(args?.title ?? "").slice(0, 200);
+      if (!actionType || !title) return { error: "action_type_dan_title_wajib" };
+      const payload = (args?.payload && typeof args.payload === "object") ? args.payload : {};
+      const { data, error } = await admin.from("doctor_pending_actions").insert({
+        outlet_id: outletId,
+        conversation_id: conversationId,
+        action_type: actionType,
+        title,
+        body: String(args?.body ?? "").slice(0, 800),
+        payload,
+        status: "pending",
+      }).select("id").maybeSingle();
+      if (error) return { error: String(error.message).slice(0, 200) };
+      sink.pending = {
+        type: "pending_action",
+        id: data?.id ?? null,
+        action_type: actionType,
+        title,
+        body: String(args?.body ?? "").slice(0, 400),
+        status: "pending",
+      };
+      return { proposed: true, id: data?.id ?? null, note: "Menunggu persetujuan owner. JANGAN bilang sudah dijalankan." };
+    }
+    case "benchmark_hyperlocal": {
+      // ST15-4 (N): benchmark agregat anonim wilayah.
+      let region = String(args?.region ?? "").trim();
+      if (!region) {
+        const { data: o } = await admin.from("outlets").select("address").eq("id", outletId).maybeSingle();
+        region = String(o?.address ?? "").trim();
+      }
+      if (!region) return { error: "region_kosong", note: "Wilayah tidak diketahui; minta owner isi alamat/wilayah." };
+      const { data: rows } = await admin
+        .from("hyperlocal_reports")
+        .select("period, payload")
+        .ilike("region", region).eq("is_anonymous", true)
+        .order("created_at", { ascending: false }).limit(50);
+      const list = (rows ?? []) as Json[];
+      const n = list.length;
+      const sumBasket = list.reduce((s: number, r: Json) => s + Number(r?.payload?.avg_basket ?? 0), 0);
+      const sumTx = list.reduce((s: number, r: Json) => s + Number(r?.payload?.tx_count ?? 0), 0);
+      const needVerify = n < 3;
+      const snapLocal = await toolGetSnapshot(admin, outletId);
+      return {
+        region,
+        participants: n,
+        avg_basket: n ? Math.round(sumBasket / n) : 0,
+        avg_tx: n ? Math.round(sumTx / n) : 0,
+        outlet_basket: Number(snapLocal?.avg_ticket ?? 0),
+        need_verification: needVerify,
+        note: needVerify
+          ? "Data wilayah terlalu tipis (<3 outlet) — tandai 'perlu verifikasi' dan jangan jadikan dasar utama."
+          : "Data agregat anonim wilayah; gunakan sebagai konteks, bukan kepastian.",
+      };
+    }
     case "observe_progress": {
       const { data: openRx } = await admin
         .from("doctor_memory")
@@ -820,7 +907,6 @@ ${roleText}
 
 GUARDRAILS:
 - ${guard}
-
 FASE SAAT INI: ${profile?.phase ?? "A"} | Umur usaha: ${snap.business_age_days ?? "?"} hari
 ALUR FASE (pindah otomatis saat progres tercapai):
 - A = Diagnosa: kumpulkan fakta (cek fisik + data penjualan), tentukan masalah utama & skor kesehatan. Setelah vonis jelas -> fase B.
@@ -831,6 +917,8 @@ ESCALATION LADDER (saat resep gagal / hasil tak membaik):
 - Level 1 = evaluasi_ulang: hasil tidak membaik setelah resep dijalankan. Panggil tool escalate_case level 1 + root_cause (dugaan akar masalah), lalu susun ulang resep dengan pendekatan berbeda (kembali fase B).
 - Level 2 = lini kedua: resep kedua juga gagal. Panggil escalate_case level 2 + root_cause, cari faktor lain (harga, lokasi, jam, kompetitor) dan tawarkan pendekatan alternatif.
 - Level 3 = kasus_bandel: sudah 2+ kali gagal. Panggil escalate_case level 3 + root_cause, jelaskan terus terang bahwa kasus ini bandel & sarankan minta bantuan manusia (pendamping/komunitas), tampilkan block card tone danger "Kasus Bandel".
+GUARDRAIL AKSI OTOMATIS: Untuk SEMUA aksi yang mengubah data/harga/promo (flash sale, ubah harga, pasang promo, dll), WAJIB panggil tool propose_action. JANGAN bilang aksi sudah dijalankan — aksi berstatus pending sampai owner menyetujui.
+BENCHMARK HYPERLOCAL: Bila owner bertanya pembanding wilayah, panggil benchmark_hyperlocal. Bila hasil need_verification=true (data tipis), WAJIB tulis "perlu verifikasi" dan jangan jadikan dasar utama.
 MEMORI JANGKA PANJANG:
 ${profile?.memory_digest ?? "(belum ada)"}
 KASUS TERBUKA:
@@ -950,6 +1038,8 @@ const SKILL_TOOLS: Record<string, string[]> = {
   cross_sell: ["get_cross_sell"],
   bundling: ["save_bundle"],
   referral: ["save_referral"],
+  market_intel: ["fetch_url", "benchmark_hyperlocal"],
+  weekly_report: ["propose_action"],
 };
 
 function skillList(cfg: Json): string[] {
@@ -1218,7 +1308,7 @@ Deno.serve(async (req: Request) => {
     if (fallbackReason) blocks = fallbackBlocks(snap, fallbackReason);
     if (!blocks.length) blocks = fallbackBlocks(snap, "Belum ada jawaban dari AI.");
     // Pastikan kartu resep / target / peta ekspansi tampil walau model lupa menyertakannya.
-    for (const key of ["prescription", "target", "scaling", "bundle", "referral"] as const) {
+    for (const key of ["prescription", "target", "scaling", "bundle", "referral", "pending"] as const) {
       const s = sink[key];
       if (!fallbackReason && s && !blocks.some((b: Json) => b?.type === s.type && b?.title === s.title)) {
         blocks.push(s);
@@ -1235,6 +1325,34 @@ Deno.serve(async (req: Request) => {
       .eq("id", conversationId);
     const { data: convState } = await admin
       .from("doctor_conversations").select("status, escalation_level").eq("id", conversationId).maybeSingle();
+
+    // ST15-4 (O): Kartu Identitas Bisnis.
+    const openList = (openCases ?? []) as Json[];
+    const activeDisease = openList.find((c: Json) => String(c.kind ?? "") === "diagnosis") ?? null;
+    const activePresc = openList.find((c: Json) => String(c.kind ?? "") === "prescription") ?? null;
+    const { data: prescRow } = await admin
+      .from("doctor_memory").select("title, due_at")
+      .eq("outlet_id", outletId).eq("kind", "prescription").eq("status", "open")
+      .order("created_at", { ascending: false }).maybeSingle();
+    // Health score sederhana: bonus aktivitas & stok sehat, penalti stok kritis & kasus terbuka.
+    const lowRatio = Number(snap.product_count ?? 0) > 0
+      ? Number(snap.low_stock_count ?? 0) / Number(snap.product_count) : 0;
+    let healthScore = 70 + Math.min(20, Number(snap.trx_30d ?? 0)) - Math.round(lowRatio * 40) - openList.length * 3;
+    healthScore = Math.max(5, Math.min(100, healthScore));
+    const identity = {
+      phase: String(parsed?.phase ?? profile?.phase ?? "A"),
+      active_disease: activeDisease ? String(activeDisease.title ?? "") : null,
+      active_prescription: prescRow?.title ? String(prescRow.title) : (activePresc ? String(activePresc.title) : null),
+      deadline: prescRow?.due_at ?? null,
+      health_score: healthScore,
+      business_age_days: snap.business_age_days ?? null,
+      revenue_today: snap.revenue_today ?? 0,
+    };
+    await admin.from("doctor_outlet_profile").update({
+      health_score: healthScore,
+      active_disease: activeDisease ? String(activeDisease.title ?? "").slice(0, 200) : null,
+      active_disease_since: activeDisease ? new Date().toISOString() : null,
+    }).eq("outlet_id", outletId);
 
     // Memori: simpan vonis/resep + perbarui digest.
     const mem = parsed?.memory;
@@ -1262,6 +1380,7 @@ Deno.serve(async (req: Request) => {
       phase: String(parsed?.phase ?? profile?.phase ?? "A"),
       status: String(convState?.status ?? "aktif"),
       escalation_level: Number(convState?.escalation_level ?? 0),
+      identity,
       blocks,
       reply: replyText,
       fallback: !!fallbackReason,

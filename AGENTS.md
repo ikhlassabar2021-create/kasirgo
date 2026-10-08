@@ -260,9 +260,10 @@ Status: SELESAI. Project Supabase sudah dibuat dan schema terpasang serta diuji.
   intake wizard + peta resep + catat promosi/ROI + Riwayat Kasus; Control Plane tab
   Dokter Bisnis AI + override provider per outlet + rate limit/kuota harian.
   ST14-1..ST14-10. Detail: sesi "Phase 14 Dokter Bisnis AI".)
-- [ ] Phase 15: Master Prompt Karakter & Skill + 12 Fitur Bos Virtual
+- [x] Phase 15: Master Prompt Karakter & Skill + 12 Fitur Bos Virtual
   (15A ST15-1 Master Prompt + Daftar Skill SELESAI; 15B ST15-2 Bos Virtual Analitik SELESAI;
-  15C ST15-3 Bos Virtual Growth SELESAI; berikutnya 15D ST15-4. Detail: `PROGRESS-PHASE15.md`.)
+  15C ST15-3 Bos Virtual Growth SELESAI; 15D ST15-4 Addendum L-O + Hardening SELESAI.
+  PHASE 15 SELESAI. Detail: `PROGRESS-PHASE15.md`.)
 
 Catatan: Phase 7.6 adalah redesign visual menyeluruh (semua dashboard + fitur Produk/Pelanggan/
 Karyawan/Laporan/Pengaturan) tanpa mengubah fitur/logic. Spec: workflow Bagian 1.6 & 7C.
@@ -866,3 +867,30 @@ Migrasi: docs/migrations/2026-10-01-kasirgo-8.sql. Detail: PROGRESS-PHASE8.md.
   - `supabase_service.dart`: `getPublicBundles`.
 - Verifikasi E2E: referral HEMAT10 tersimpan; bundle Sembako Hemat (28000/31000, 2 item) tersimpan;
   get_cross_sell jalan (kosong karena outlet uji tanpa transaksi). `dart analyze` bersih.
+
+## Sesi 2026-10-08: Phase 15D Addendum + Hardening (ST15-4 SELESAI) - PHASE 15 SELESAI
+- Migrasi `docs/migrations/2026-10-20-kasirgo-15d-addendum-hardening.sql` (DITERAPKAN):
+  - `doctor_memory` kind +`weekly_report` (constraint check diperbarui).
+  - `doctor_outlet_profile` +`health_score`/`active_disease`/`active_disease_since`/`last_weekly_report_at`.
+  - Tabel BARU `doctor_pending_actions` (action_type/title/body/payload/status pending|approved|rejected/
+    decision_note/decided_at) + RLS owner (is_outlet_owner) & superadmin.
+- Edge Function `business_doctor_chat` (REDEPLOYED):
+  - Tool BARU `propose_action` (guardrail M): menulis `doctor_pending_actions` (status pending) +
+    sink `pending_action`; JANGAN eksekusi langsung. Tool BARU `benchmark_hyperlocal` (N):
+    agregat anonim `hyperlocal_reports` (+ fallback alamat outlet); `need_verification` bila <3 outlet.
+  - `SKILL_TOOLS` +`market_intel` (`fetch_url`,`benchmark_hyperlocal`) & `weekly_report` (`propose_action`).
+  - Output +`identity` (O): {fase, active_disease, active_prescription, deadline, health_score,
+    business_age_days, revenue_today}; juga update `doctor_outlet_profile.health_score/active_disease`.
+  - Sink push list +`pending`; prompt ditambah 2 baris (guardrail aksi otomatis + benchmark).
+- Edge Function `doctor_observe` (REDEPLOYED):
+  - (L) Laporan mingguan: maks 1/pekan/outlet (gate `last_weekly_report_at`); isi `doctor_memory`
+    kind `weekly_report` (omzet 7 hari, produk terlaris, resep/teguran aktif) + update profil.
+- App Flutter (commit ST15-4):
+  - `business_doctor_service.dart`: `getLatestWeeklyReport`, `listPendingActions`,
+    `decidePendingAction`, `getOutletIdentity`.
+  - `business_doctor_screen.dart`: kartu Identitas Bisnis (O), kartu Laporan Mingguan (L),
+    kartu Persetujuan Aksi Setujui/Tolak (M); load saat init & reload saat blok pending muncul.
+- Verifikasi E2E: `propose_action` -> pending + approve owner via RLS OK; `benchmark_hyperlocal`
+  tanpa wilayah -> fallback aman + "perlu verifikasi"; `doctor_observe` -> `weekly_report` omzet
+  7 hari Rp30.000 & `last_weekly_report_at` terisi; `identity` (fase B, skor 42). `dart analyze` bersih.
+- BLOCKER tetap: pg_cron/pg_net tak terpasang -> jadwal via manual admin/Dashboard; Midtrans prod QRIS.

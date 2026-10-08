@@ -260,4 +260,55 @@ class BusinessDoctorService {
         .limit(5);
     return List<Map<String, dynamic>>.from(res as List);
   }
+
+  // --- ST15-4: Addendum & Hardening (L/M/N/O) ---
+
+  /// Laporan mingguan terbaru (kind='weekly_report'); null bila belum ada.
+  Future<Map<String, dynamic>?> getLatestWeeklyReport(String outletId) async {
+    final res = await _client
+        .from('doctor_memory')
+        .select('id, title, content, data, created_at')
+        .eq('outlet_id', outletId)
+        .eq('kind', 'weekly_report')
+        .order('created_at', ascending: false)
+        .limit(1)
+        .maybeSingle();
+    return res;
+  }
+
+  /// Aksi otomatis yang menunggu persetujuan owner (guardrail).
+  Future<List<Map<String, dynamic>>> listPendingActions(String outletId) async {
+    final res = await _client
+        .from('doctor_pending_actions')
+        .select('*')
+        .eq('outlet_id', outletId)
+        .eq('status', 'pending')
+        .order('created_at', ascending: false)
+        .limit(20);
+    return List<Map<String, dynamic>>.from(res as List);
+  }
+
+  /// Setujui / tolak aksi yang diusulkan AI.
+  Future<void> decidePendingAction({
+    required String actionId,
+    required bool approve,
+    String? note,
+  }) async {
+    await _client.from('doctor_pending_actions').update({
+      'status': approve ? 'approved' : 'rejected',
+      'decision_note': note,
+      'decided_at': DateTime.now().toIso8601String(),
+    }).eq('id', actionId);
+  }
+
+  /// Profil/identitas bisnis (fase, penyakit aktif, skor kesehatan).
+  Future<Map<String, dynamic>?> getOutletIdentity(String outletId) async {
+    final res = await _client
+        .from('doctor_outlet_profile')
+        .select(
+            'phase, health_score, active_disease, active_disease_since, business_age_days, last_weekly_report_at')
+        .eq('outlet_id', outletId)
+        .maybeSingle();
+    return res;
+  }
 }

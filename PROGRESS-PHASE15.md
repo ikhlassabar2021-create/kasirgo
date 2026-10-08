@@ -1,6 +1,6 @@
 # PROGRESS PHASE 15 - Master Prompt Karakter & Skill + 12 Fitur Bos Virtual
 
-STATUS: 15A (ST15-1) + 15B (ST15-2) + 15C (ST15-3) SELESAI. Berikutnya ST15-4 (15D Addendum L-O).
+STATUS: 15A (ST15-1) + 15B (ST15-2) + 15C (ST15-3) + 15D (ST15-4) SELESAI. PHASE 15 SELESAI.
 Sumber spec: `KASIRGO-WORKFLOW-LENGKAP.md` BAGIAN 13 (13.23-13.26) + BAGIAN 14.3.
 
 ## Prinsip (WAJIB)
@@ -118,13 +118,24 @@ Sumber spec: `KASIRGO-WORKFLOW-LENGKAP.md` BAGIAN 13 (13.23-13.26) + BAGIAN 14.3
   - `save_bundle` -> `product_bundles` Sembako Hemat (harga 28000, original 31000, 2 item) tersimpan.
   - `dart analyze` file baru bersih (0 error). Web release built & deployed.
 
-### ST15-4 (15D) Perilaku Addendum + Hardening
-- Cross-Selling (chip POS + kartu Peluang Cross-Sell), Bundling (manajer + 1 item POS),
-  Referral (kode/kupon + tracking + wa.me).
-
-### ST15-4 (15D) Perilaku Addendum + Hardening
-- Laporan Mingguan Proaktif (L), Guardrail Aksi Otomatis/persetujuan (M),
-  Benchmark Hyperlocal (N), Kartu Identitas Bisnis (O), uji end-to-end + tracker + dokumen.
+### ST15-4 (15D) Perilaku Addendum + Hardening - SELESAI
+- Migrasi `docs/migrations/2026-10-20-kasirgo-15d-addendum-hardening.sql` (DITERAPKAN):
+  `doctor_memory` kind +`weekly_report`; `doctor_outlet_profile` +`health_score`/`active_disease`/
+  `active_disease_since`/`last_weekly_report_at`; tabel `doctor_pending_actions` + RLS owner/superadmin.
+- (L) Laporan Mingguan: EF `doctor_observe` kirim `weekly_report` maks 1/pekan/outlet (omzet 7 hari,
+  produk terlaris, resep/teguran aktif) + set `last_weekly_report_at`; app kartu "Laporan Mingguan"
+  (`getLatestWeeklyReport`).
+- (M) Guardrail Aksi Otomatis: EF tool `propose_action` -> `doctor_pending_actions` (status pending),
+  sink `pending_action`; prompt tegas "JANGAN bilang sudah dijalankan"; app kartu Setujui/Tolak
+  (`listPendingActions`/`decidePendingAction`) + reload saat blok pending muncul.
+- (N) Benchmark Hyperlocal: EF tool `benchmark_hyperlocal` (agregat anonim `hyperlocal_reports`,
+  fallback alamat outlet); `need_verification=true` bila <3 outlet -> AI wajib tulis "perlu verifikasi".
+- (O) Kartu Identitas Bisnis: EF hitung `health_score` + `active_disease`/deadline, kembalikan `identity`
+  di output & simpan ke `doctor_outlet_profile`; app kartu header chat (fase, penyakit aktif, resep,
+  tenggat, skor kesehatan, usia usaha).
+- E2E: `propose_action` -> pending (approve owner via RLS OK); `benchmark_hyperlocal` tanpa wilayah ->
+  fallback aman, menandai "perlu verifikasi"; `doctor_observe` -> `weekly_report` omzet 7 hari Rp30.000;
+  `identity` (fase B, skor 42). EF chat + `doctor_observe` REDEPLOYED. `dart analyze` bersih.
 
 ## CATATAN
 - Cron `doctor_observe`/`doctor_reprimand` (13.15/13.21B) ditunda: ekstensi `pg_cron`/`pg_net`

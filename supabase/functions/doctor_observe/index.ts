@@ -72,6 +72,71 @@ Deno.serve(async (req: Request) => {
       const outletId = String(o.id);
       if (onlyOutlet && outletId !== onlyOutlet) continue;
 
+      // --- 0. Laporan mingguan (ST15-4 L): maks 1/pekan/outlet.
+      const { data: prof } = await admin
+        .from("doctor_outlet_profile")
+        .select("last_weekly_report_at")
+        .eq("outlet_id", outletId).maybeSingle();
+      const lastWeekly = prof?.last_weekly_report_at ? new Date(String(prof.last_weekly_report_at)).getTime() : 0;
+      if (Date.now() - lastWeekly >= 7 * DAY) {
+        const since = new Date(Date.now() - 7 * DAY).toISOString();
+        const { data: tx7 } = await admin
+          .from("transactions")
+          .select("id, final_amount, payment_status, created_at")
+          .eq("outlet_id", outletId).gte("created_at", since);
+        const paid7 = (tx7 ?? []).filter((t: Json) => String(t.payment_status ?? "") === "paid");
+        const rev7 = paid7.reduce((s: number, t: Json) => s + Number(t.final_amount ?? 0), 0);
+        // Top produk 7 hari.
+        const txIds = paid7.map((t: Json) => String(t.id));
+        const prodCount: Record<string, number> = {};
+        if (txIds.length) {
+          const { data: items } = await admin
+            .from("transaction_items").select("product_id, quantity")
+            .in("transaction_id", txIds);
+          for (const it of items ?? []) {
+            const k = String(it.product_id ?? "");
+            if (!k) continue;
+            prodCount[k] = (prodCount[k] ?? 0) + Number(it.quantity ?? 0);
+          }
+        }
+        const topId = Object.entries(prodCount).sort((a, b) => b[1] - a[1])[0]?.[0] ?? null;
+        let topName: string | null = null;
+        if (topId) {
+          const { data: p } = await admin.from("products").select("name").eq("id", topId).maybeSingle();
+          topName = p?.name ? String(p.name) : null;
+        }
+        const { data: openCases } = await admin
+          .from("doctor_memory").select("kind, title")
+          .eq("outlet_id", outletId).eq("status", "open").limit(20);
+        const openRx = (openCases ?? []).filter((c: Json) => String(c.kind) === "prescription");
+        const reprCount = (openCases ?? []).filter((c: Json) => String(c.kind) === "reprimand").length;
+        const title = `Laporan mingguan: omzet 7 hari Rp${rev7.toLocaleString("id-ID")}`;
+        const content = [
+          `Omzet 7 hari terakhir: Rp${rev7.toLocaleString("id-ID")} dari ${paid7.length} transaksi.`,
+          topName ? `Produk terlaris: ${topName}.` : "Belum ada produk terjual pekan ini.",
+          openRx.length ? `Resep berjalan: ${openRx.map((r: Json) => String(r.title)).join("; ")}.` : "Tidak ada resep berjalan.",
+          reprCount ? `Teguran aktif: ${reprCount}.` : "Tidak ada teguran aktif.",
+        ].join(" ");
+        await admin.from("doctor_memory").insert({
+          outlet_id: outletId,
+          conversation_id: null,
+          kind: "weekly_report",
+          title,
+          content,
+          status: "open",
+          data: {
+            revenue_7d: rev7, trx_7d: paid7.length,
+            top_product: topName, open_prescriptions: openRx.length, reprimands: reprCount,
+          },
+        });
+        await admin.from("doctor_outlet_profile").upsert({
+          outlet_id: outletId,
+          last_weekly_report_at: new Date().toISOString(),
+          updated_at: new Date().toISOString(),
+        });
+        results.push({ outlet: o.name, weekly_report: true, revenue_7d: rev7 });
+      }
+
       // --- 1. Resep open yang lewat due_at -> evaluasi.
       const { data: openRx } = await admin
         .from("doctor_memory")

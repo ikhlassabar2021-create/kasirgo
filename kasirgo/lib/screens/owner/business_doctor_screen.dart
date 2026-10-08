@@ -80,6 +80,9 @@ class _BusinessDoctorScreenState extends ConsumerState<BusinessDoctorScreen> {
   String _caseStatus = 'aktif';
   Map<String, dynamic>? _activePrescription;
   Map<String, dynamic>? _reprimand;
+  Map<String, dynamic>? _weeklyReport;
+  List<Map<String, dynamic>> _pendingActions = const [];
+  Map<String, dynamic>? _identity;
   bool _overduePrompted = false;
 
   @override
@@ -89,7 +92,58 @@ class _BusinessDoctorScreenState extends ConsumerState<BusinessDoctorScreen> {
     _loadPhase();
     _loadPrescription();
     _loadReprimand();
+    _loadIdentity();
+    _loadWeeklyReport();
+    _loadPendingActions();
     if (_conversationId != null) _loadHistory();
+  }
+
+  Future<void> _loadIdentity() async {
+    final outletId = ref.read(currentUserProvider)?.outletId;
+    if (outletId == null || outletId.isEmpty) return;
+    try {
+      final id = await (widget.service ?? BusinessDoctorService())
+          .getOutletIdentity(outletId);
+      if (!mounted) return;
+      setState(() => _identity = id);
+    } catch (_) {}
+  }
+
+  Future<void> _loadWeeklyReport() async {
+    final outletId = ref.read(currentUserProvider)?.outletId;
+    if (outletId == null || outletId.isEmpty) return;
+    try {
+      final r = await (widget.service ?? BusinessDoctorService())
+          .getLatestWeeklyReport(outletId);
+      if (!mounted || r == null) return;
+      setState(() => _weeklyReport = r);
+    } catch (_) {}
+  }
+
+  Future<void> _loadPendingActions() async {
+    final outletId = ref.read(currentUserProvider)?.outletId;
+    if (outletId == null || outletId.isEmpty) return;
+    try {
+      final list = await (widget.service ?? BusinessDoctorService())
+          .listPendingActions(outletId);
+      if (!mounted) return;
+      setState(() => _pendingActions = list);
+    } catch (_) {}
+  }
+
+  Future<void> _decidePending(Map<String, dynamic> action, bool approve) async {
+    final id = action['id']?.toString();
+    if (id == null || id.isEmpty) return;
+    try {
+      await (widget.service ?? BusinessDoctorService())
+          .decidePendingAction(actionId: id, approve: approve);
+      if (!mounted) return;
+      setState(() => _pendingActions =
+          _pendingActions.where((a) => a['id']?.toString() != id).toList());
+      _snack(approve ? 'Aksi disetujui.' : 'Aksi ditolak.');
+    } catch (e) {
+      _snack('Gagal: ${e.toString().replaceFirst('Exception: ', '')}');
+    }
   }
 
   Future<void> _loadReprimand() async {
@@ -221,6 +275,15 @@ class _BusinessDoctorScreenState extends ConsumerState<BusinessDoctorScreen> {
           .where((b) => b['type'] == 'prescription')
           .cast<Map<String, dynamic>?>()
           .firstWhere((b) => true, orElse: () => null);
+      final pendingBlock = blocks
+          .whereType<Map>()
+          .map((b) => b.cast<String, dynamic>())
+          .where((b) => b['type'] == 'pending_action')
+          .cast<Map<String, dynamic>?>()
+          .firstWhere((b) => true, orElse: () => null);
+      final identity = (res['identity'] is Map)
+          ? (res['identity'] as Map).cast<String, dynamic>()
+          : null;
       if (!mounted) return;
       setState(() {
         if (disclaimer != null && disclaimer.isNotEmpty) {
@@ -230,9 +293,11 @@ class _BusinessDoctorScreenState extends ConsumerState<BusinessDoctorScreen> {
         _caseStatus = caseStatus;
         if (phase != null && phase.isNotEmpty) _phase = phase;
         if (prescription != null) _activePrescription = prescription;
+        if (identity != null) _identity = identity;
         _messages.add(_Msg('assistant', reply, blocks));
         _loading = false;
       });
+      if (pendingBlock != null) _loadPendingActions();
     } catch (e) {
       if (!mounted) return;
       setState(() {
@@ -503,6 +568,20 @@ class _BusinessDoctorScreenState extends ConsumerState<BusinessDoctorScreen> {
       controller: _scroll,
       padding: const EdgeInsets.all(16),
       children: [
+        if (_identity != null) ...[
+          _buildIdentityCard(),
+          const SizedBox(height: 12),
+        ],
+        if (_weeklyReport != null) ...[
+          _buildWeeklyReportCard(),
+          const SizedBox(height: 12),
+        ],
+        if (_pendingActions.isNotEmpty) ...[
+          for (final a in _pendingActions) ...[
+            _buildPendingActionCard(a),
+            const SizedBox(height: 12),
+          ],
+        ],
         if (_escalationLevel > 0) ...[
           _buildEscalationBanner(),
           const SizedBox(height: 12),
@@ -556,6 +635,252 @@ class _BusinessDoctorScreenState extends ConsumerState<BusinessDoctorScreen> {
         ],
         const SizedBox(height: 8),
       ],
+    );
+  }
+
+  Widget _buildIdentityCard() {
+    final id = _identity!;
+    final score = int.tryParse(id['health_score']?.toString() ?? '');
+    final disease = id['active_disease']?.toString();
+    final phase = id['phase']?.toString() ?? 'A';
+    final presc = id['active_prescription']?.toString();
+    final age = id['business_age_days']?.toString();
+    final scoreColor = score == null
+        ? AppTheme.textSecondary
+        : (score >= 70
+            ? AppTheme.successColor
+            : (score >= 40 ? AppTheme.warningColor : AppTheme.errorColor));
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: AppTheme.surfaceColor,
+        borderRadius: BorderRadius.circular(AppTheme.radiusLarge),
+        border: Border.all(color: AppTheme.borderColor),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              const Icon(Icons.badge_outlined,
+                  color: AppTheme.primaryColor, size: 22),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Text(
+                  'Kartu Identitas Bisnis',
+                  style: GoogleFonts.inter(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w800,
+                    color: AppTheme.textPrimary,
+                  ),
+                ),
+              ),
+              if (score != null)
+                Container(
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                  decoration: BoxDecoration(
+                    color: scoreColor.withValues(alpha: 0.12),
+                    borderRadius: BorderRadius.circular(AppTheme.radiusMedium),
+                  ),
+                  child: Text(
+                    'Sehat $score',
+                    style: GoogleFonts.inter(
+                      fontSize: 12,
+                      fontWeight: FontWeight.w800,
+                      color: scoreColor,
+                    ),
+                  ),
+                ),
+            ],
+          ),
+          const SizedBox(height: 10),
+          Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            children: [
+              _identityChip('Fase $phase'),
+              if (disease != null && disease.isNotEmpty)
+                _identityChip('Penyakit: $disease', color: AppTheme.warningColor),
+              if (presc != null && presc.isNotEmpty)
+                _identityChip('Resep: $presc'),
+              if (id['deadline'] != null)
+                _identityChip(
+                    'Tenggat: ${id['deadline'].toString().substring(0, 10)}'),
+              if (age != null && age != 'null')
+                _identityChip('Usia usaha: $age hari'),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _identityChip(String label, {Color? color}) {
+    final c = color ?? AppTheme.primaryColor;
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+      decoration: BoxDecoration(
+        color: c.withValues(alpha: 0.08),
+        borderRadius: BorderRadius.circular(AppTheme.radiusMedium),
+        border: Border.all(color: c.withValues(alpha: 0.35)),
+      ),
+      child: Text(
+        label,
+        style: GoogleFonts.inter(
+          fontSize: 12,
+          fontWeight: FontWeight.w600,
+          color: AppTheme.textPrimary,
+        ),
+      ),
+    );
+  }
+
+  Widget _buildWeeklyReportCard() {
+    final r = _weeklyReport!;
+    final data =
+        (r['data'] is Map) ? (r['data'] as Map).cast<String, dynamic>() : const {};
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: AppTheme.primaryColor.withValues(alpha: 0.06),
+        borderRadius: BorderRadius.circular(AppTheme.radiusLarge),
+        border: Border.all(color: AppTheme.primaryColor.withValues(alpha: 0.3)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              const Icon(Icons.insights_rounded,
+                  color: AppTheme.primaryColor, size: 22),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Text(
+                  'Laporan Mingguan',
+                  style: GoogleFonts.inter(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w800,
+                    color: AppTheme.textPrimary,
+                  ),
+                ),
+              ),
+              IconButton(
+                tooltip: 'Tutup',
+                icon: const Icon(Icons.close, size: 18),
+                color: AppTheme.textSecondary,
+                onPressed: () => setState(() => _weeklyReport = null),
+              ),
+            ],
+          ),
+          const SizedBox(height: 6),
+          Text(
+            r['content']?.toString() ?? '',
+            style: GoogleFonts.inter(
+              fontSize: 13,
+              height: 1.45,
+              color: AppTheme.textPrimary,
+            ),
+          ),
+          if (data['top_product'] != null) ...[
+            const SizedBox(height: 8),
+            Text(
+              'Terlaris: ${data['top_product']}',
+              style: GoogleFonts.inter(
+                fontSize: 12,
+                fontWeight: FontWeight.w700,
+                color: AppTheme.successColor,
+              ),
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+
+  Widget _buildPendingActionCard(Map<String, dynamic> a) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: AppTheme.warningColor.withValues(alpha: 0.08),
+        borderRadius: BorderRadius.circular(AppTheme.radiusLarge),
+        border: Border.all(color: AppTheme.warningColor.withValues(alpha: 0.4)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              const Icon(Icons.rule_rounded,
+                  color: AppTheme.warningColor, size: 22),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Text(
+                  'Perlu Persetujuan Anda',
+                  style: GoogleFonts.inter(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w800,
+                    color: AppTheme.textPrimary,
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          Text(
+            a['title']?.toString() ?? '',
+            style: GoogleFonts.inter(
+              fontSize: 13,
+              fontWeight: FontWeight.w700,
+              color: AppTheme.textPrimary,
+            ),
+          ),
+          if ((a['body']?.toString() ?? '').isNotEmpty) ...[
+            const SizedBox(height: 4),
+            Text(
+              a['body'].toString(),
+              style: GoogleFonts.inter(
+                fontSize: 13,
+                height: 1.4,
+                color: AppTheme.textSecondary,
+              ),
+            ),
+          ],
+          const SizedBox(height: 6),
+          Text(
+            'AI mengusulkan aksi ini tetapi BELUM dijalankan. Anda yang memutuskan.',
+            style: GoogleFonts.inter(
+              fontSize: 11,
+              fontStyle: FontStyle.italic,
+              color: AppTheme.textSecondary,
+            ),
+          ),
+          const SizedBox(height: 10),
+          Row(
+            children: [
+              Expanded(
+                child: AppButton(
+                  label: 'Setujui',
+                  icon: Icons.check_rounded,
+                  onPressed: () => _decidePending(a, true),
+                ),
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: AppButton(
+                  label: 'Tolak',
+                  icon: Icons.close_rounded,
+                  variant: AppButtonVariant.outline,
+                  onPressed: () => _decidePending(a, false),
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
     );
   }
 
