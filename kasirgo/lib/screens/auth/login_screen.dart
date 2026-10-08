@@ -92,7 +92,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text(isUnconfirmed
-                ? 'Belum bisa login. Harap konfirmasi email dulu — silakan cek kotak masuk / folder spam email Anda.'
+                ? 'Belum bisa login. Email harus dikonfirmasi dulu. Silakan cek email Anda (kotak masuk / folder spam) untuk tautan konfirmasi.'
                 : 'Login gagal: ${msg.replaceFirst('Exception: ', '')}'),
             backgroundColor: AppTheme.errorColor,
             duration: const Duration(seconds: 5),

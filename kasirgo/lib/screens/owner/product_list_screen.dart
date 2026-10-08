@@ -138,6 +138,7 @@ class _ProductListScreenState extends ConsumerState<ProductListScreen> {
       builder: (ctx) => AlertDialog(
         backgroundColor: AppTheme.surfaceColor,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        titlePadding: const EdgeInsets.fromLTRB(20, 16, 8, 0),
         title: Row(
           children: [
             Container(
@@ -155,7 +156,7 @@ class _ProductListScreenState extends ConsumerState<ProductListScreen> {
                   style: TextStyle(fontSize: 17, fontWeight: FontWeight.w800)),
             ),
             IconButton(
-              tooltip: 'Batal',
+              tooltip: 'Tutup',
               icon: const Icon(Icons.close_rounded,
                   color: AppTheme.textSecondary),
               onPressed: () => Navigator.pop(ctx, false),

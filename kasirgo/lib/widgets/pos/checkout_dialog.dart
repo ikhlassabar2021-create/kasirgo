@@ -148,8 +148,19 @@ class _CheckoutDialogState extends State<CheckoutDialog> {
       if (outletId == null) return;
       _outletId = outletId;
       final config = await QrisConfig.load(outletId: outletId);
+      // #7: QRIS Dinamis OTOMATIS aktif begitu outlet punya akses Payment
+      // Gateway (Program Pendukung / masa trial). Tanpa akses -> tetap QRIS
+      // Statis manual (gratis). Superadmin bisa mematikan per outlet.
+      bool dynamicAllowed = false;
+      try {
+        dynamicAllowed =
+            await SupporterService().hasFeature(outletId, 'payment_gateway');
+      } catch (_) {}
       if (mounted) {
-        setState(() => _qrisConfig = config);
+        setState(() {
+          _qrisConfig = config;
+          _qrisMode = dynamicAllowed ? 'dynamic' : 'static';
+        });
       }
     } catch (_) {}
   }
@@ -295,8 +306,9 @@ class _CheckoutDialogState extends State<CheckoutDialog> {
                           _buildPaymentOption('qris', 'QRIS Manual', Icons.qr_code_2_rounded),
                           if (_paymentMethod == 'qris') ...[
                             const SizedBox(height: 10),
-                            // CATATAN (owner): QRIS Dinamis disembunyikan dari semua
-                            // login; pembayaran memakai QRIS Statis saja.
+                            // #7: QRIS Dinamis otomatis aktif bila outlet punya
+                            // akses Payment Gateway (Program Pendukung/trial);
+                            // tanpa akses -> QRIS Statis manual (gratis).
                             Container(
                               width: double.infinity,
                               padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
@@ -307,14 +319,25 @@ class _CheckoutDialogState extends State<CheckoutDialog> {
                               ),
                               child: Row(
                                 children: [
-                                  const Icon(Icons.info_outline_rounded,
-                                      size: 15, color: AppTheme.textSecondary),
+                                  Icon(
+                                    _qrisMode == 'dynamic'
+                                        ? Icons.bolt_rounded
+                                        : Icons.info_outline_rounded,
+                                    size: 15,
+                                    color: _qrisMode == 'dynamic'
+                                        ? AppTheme.accentColor
+                                        : AppTheme.textSecondary,
+                                  ),
                                   const SizedBox(width: 8),
                                   Expanded(
                                     child: Text(
-                                      'Mode QRIS Statis (sesuai kebijakan pembayaran)',
+                                      _qrisMode == 'dynamic'
+                                          ? 'QRIS Dinamis aktif - pembayaran terverifikasi otomatis'
+                                          : 'Mode QRIS Statis (aktifkan Pendukung untuk QRIS otomatis)',
                                       style: GoogleFonts.inter(
-                                        color: AppTheme.textSecondary,
+                                        color: _qrisMode == 'dynamic'
+                                            ? AppTheme.accentColor
+                                            : AppTheme.textSecondary,
                                         fontSize: 12,
                                         fontWeight: FontWeight.w600,
                                       ),

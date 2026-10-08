@@ -18,6 +18,7 @@ import 'bundle_manager_screen.dart';
 import 'health_score_screen.dart';
 import 'multi_outlet_screen.dart';
 import 'online_catalog_screen.dart';
+import 'pos_screen.dart';
 import 'product_list_screen.dart';
 import 'qr_table_screen.dart';
 import 'recipe_screen.dart';
@@ -398,8 +399,36 @@ class _BusinessDoctorScreenState extends ConsumerState<BusinessDoctorScreen> {
     if (index < 0 || index >= items.length) return;
     items[index]['done'] = done;
     final updated = {...block, 'items': items};
-    setState(() => _activePrescription = updated);
     final memoryId = block['memory_id']?.toString();
+    setState(() {
+      _activePrescription = updated;
+      // Sinkronkan kartu resep di dalam gelembung chat (bila ada) agar langkah
+      // langsung tercoret begitu ditekan "Tandai Selesai"/"Jalankan".
+      for (var mi = 0; mi < _messages.length; mi++) {
+        final msg = _messages[mi];
+        if (msg.blocks.isEmpty) continue;
+        var changed = false;
+        final newBlocks = <dynamic>[];
+        for (final raw in msg.blocks) {
+          if (raw is Map && raw['type'] == 'prescription') {
+            final sameRef = identical(raw, block);
+            final bm = raw['memory_id']?.toString();
+            final sameId = memoryId != null &&
+                memoryId.isNotEmpty &&
+                bm == memoryId;
+            if (sameRef || sameId) {
+              newBlocks.add(updated);
+              changed = true;
+              continue;
+            }
+          }
+          newBlocks.add(raw);
+        }
+        if (changed) {
+          _messages[mi] = _Msg(msg.role, msg.text, newBlocks);
+        }
+      }
+    });
     final allDone = items.isNotEmpty && items.every((e) => e['done'] == true);
     try {
       if (memoryId != null && memoryId.isNotEmpty) {
@@ -479,11 +508,9 @@ class _BusinessDoctorScreenState extends ConsumerState<BusinessDoctorScreen> {
           child: BundleManagerScreen(),
         );
       case 'cross_sell':
-        return const SupporterFeatureGate(
-          featureKey: 'wa_marketing',
-          title: 'Paket Bundling',
-          child: BundleManagerScreen(),
-        );
+        // Langkah cross-sell = tawarkan barang tambahan saat pelanggan bayar.
+        // Buka POS (di sana muncul chip saran cross-sell), bukan Paket Bundling.
+        return const PosScreen();
       case 'referral':
         // CATATAN (owner): fitur Referral dihapus dari UI -> langkah resep
         // dengan aksi referral cukup ditandai selesai (tercoret).

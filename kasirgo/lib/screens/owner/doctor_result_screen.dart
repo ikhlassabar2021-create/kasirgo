@@ -9,7 +9,7 @@ import '../../widgets/common/centennial_background.dart';
 /// Layar HASIL diagnosa (BAGIAN 13.21A) - ramah gaptek, Design System v2.
 /// Menampilkan: header + tanggal, skor kesehatan (gauge), kartu vonis,
 /// peta resep (checklist bernomor), target/timeline, dan footer aksi.
-class DoctorResultScreen extends StatelessWidget {
+class DoctorResultScreen extends StatefulWidget {
   const DoctorResultScreen({
     super.key,
     this.verdictTitle = 'Hasil Pemeriksaan',
@@ -38,6 +38,47 @@ class DoctorResultScreen extends StatelessWidget {
   final VoidCallback? onStart;
   final VoidCallback? onShare;
   final VoidCallback? onAsk;
+
+  @override
+  State<DoctorResultScreen> createState() => _DoctorResultScreenState();
+}
+
+class _DoctorResultScreenState extends State<DoctorResultScreen> {
+  late List<Map<String, dynamic>> _steps;
+
+  String get verdictTitle => widget.verdictTitle;
+  String get verdictBody => widget.verdictBody;
+  int? get score => widget.score;
+  String get scoreHint => widget.scoreHint;
+  int? get targetDays => widget.targetDays;
+  DateTime? get dueDate => widget.dueDate;
+  void Function(int, Map<String, dynamic>)? get onRunStep => widget.onRunStep;
+  void Function(int, Map<String, dynamic>)? get onToggleStep =>
+      widget.onToggleStep;
+  VoidCallback? get onStart => widget.onStart;
+  VoidCallback? get onShare => widget.onShare;
+  VoidCallback? get onAsk => widget.onAsk;
+
+  @override
+  void initState() {
+    super.initState();
+    // Salin agar perubahan (tercoret) langsung tampil tanpa menunggu parent.
+    _steps = widget.steps
+        .map((e) => Map<String, dynamic>.from(e))
+        .toList();
+  }
+
+  void _toggle(int i) {
+    if (i < 0 || i >= _steps.length) return;
+    setState(() => _steps[i]['done'] = !(_steps[i]['done'] == true));
+    widget.onToggleStep?.call(i, _steps[i]);
+  }
+
+  void _run(int i) {
+    if (i < 0 || i >= _steps.length) return;
+    setState(() => _steps[i]['done'] = true);
+    widget.onRunStep?.call(i, _steps[i]);
+  }
 
   Color get _scoreColor {
     final s = score ?? 0;
@@ -73,7 +114,7 @@ class DoctorResultScreen extends StatelessWidget {
                     const SizedBox(height: 16),
                   ],
                   _verdictCard(),
-                  if (steps.isNotEmpty) ...[
+                  if (_steps.isNotEmpty) ...[
                     const SizedBox(height: 16),
                     _recipeCard(),
                   ],
@@ -314,8 +355,8 @@ class DoctorResultScreen extends StatelessWidget {
             ),
           ),
           const SizedBox(height: 14),
-          ...List.generate(steps.length, (i) {
-            final step = steps[i];
+          ...List.generate(_steps.length, (i) {
+            final step = _steps[i];
             final done = step['done'] == true;
             final hasAction = (step['action_key']?.toString() ?? '').isNotEmpty;
             return Padding(
@@ -374,7 +415,7 @@ class DoctorResultScreen extends StatelessWidget {
                                   expanded: false,
                                   onPressed: onRunStep == null
                                       ? null
-                                      : () => onRunStep!(i, step),
+                                      : () => _run(i),
                                 ),
                               ),
                             SizedBox(
@@ -393,7 +434,7 @@ class DoctorResultScreen extends StatelessWidget {
                                 onPressed:
                                     done || onToggleStep == null
                                         ? null
-                                        : () => onToggleStep!(i, step),
+                                        : () => _toggle(i),
                               ),
                             ),
                           ],
