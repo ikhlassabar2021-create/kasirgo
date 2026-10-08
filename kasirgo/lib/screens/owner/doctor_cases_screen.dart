@@ -27,6 +27,37 @@ class _DoctorCasesScreenState extends ConsumerState<DoctorCasesScreen> {
   List<Map<String, dynamic>> _cases = const [];
   List<Map<String, dynamic>> _memories = const [];
 
+  /// Filter periode: all / hari / minggu / bulan.
+  String _period = 'all';
+
+  DateTime? get _periodStart {
+    final now = DateTime.now();
+    switch (_period) {
+      case 'day':
+        return DateTime(now.year, now.month, now.day);
+      case 'week':
+        final start = DateTime(now.year, now.month, now.day);
+        return start.subtract(Duration(days: start.weekday - 1));
+      case 'month':
+        return DateTime(now.year, now.month, 1);
+      default:
+        return null;
+    }
+  }
+
+  bool _inPeriod(dynamic raw) {
+    final start = _periodStart;
+    if (start == null) return true;
+    final dt = DateTime.tryParse(raw?.toString() ?? '')?.toLocal();
+    if (dt == null) return _period == 'all';
+    return !dt.isBefore(start);
+  }
+
+  List<Map<String, dynamic>> get _filteredCases =>
+      _cases.where((c) => _inPeriod(c['updated_at'] ?? c['created_at'])).toList();
+  List<Map<String, dynamic>> get _filteredMemories =>
+      _memories.where((m) => _inPeriod(m['created_at'])).toList();
+
   @override
   void initState() {
     super.initState();
@@ -75,6 +106,13 @@ class _DoctorCasesScreenState extends ConsumerState<DoctorCasesScreen> {
         foregroundColor: AppTheme.textPrimary,
         elevation: 0,
         scrolledUnderElevation: 0,
+        actions: [
+          IconButton(
+            tooltip: 'Hapus semua di periode ini',
+            icon: const Icon(Icons.delete_sweep_rounded),
+            onPressed: _confirmDeleteAll,
+          ),
+        ],
       ),
       body: CentennialBackground(
         child: Center(
@@ -133,26 +171,94 @@ class _DoctorCasesScreenState extends ConsumerState<DoctorCasesScreen> {
         ],
       );
     }
+    final cases = _filteredCases;
+    final memories = _filteredMemories;
     return ListView(
       padding: const EdgeInsets.all(16),
       children: [
-        if (_cases.isNotEmpty) ...[
+        _periodSelector(),
+        const SizedBox(height: 12),
+        if (cases.isEmpty && memories.isEmpty)
+          _buildCard(
+            child: Padding(
+              padding: const EdgeInsets.symmetric(vertical: 8),
+              child: Text(
+                'Tidak ada riwayat pada periode ini.',
+                textAlign: TextAlign.center,
+                style: GoogleFonts.inter(color: AppTheme.textSecondary),
+              ),
+            ),
+          ),
+        if (cases.isNotEmpty) ...[
           _sectionTitle('Kasus Konsultasi'),
-          for (final c in _cases) ...[
+          for (final c in cases) ...[
             _buildCase(c),
             const SizedBox(height: 10),
           ],
         ],
-        if (_memories.isNotEmpty) ...[
+        if (memories.isNotEmpty) ...[
           const SizedBox(height: 8),
           _sectionTitle('Catatan Memori'),
-          for (final m in _memories) ...[
+          for (final m in memories) ...[
             _buildMemory(m),
             const SizedBox(height: 10),
           ],
         ],
         const SizedBox(height: 8),
       ],
+    );
+  }
+
+  Widget _periodSelector() {
+    final options = const [
+      ('all', 'Semua'),
+      ('day', 'Harian'),
+      ('week', 'Mingguan'),
+      ('month', 'Bulanan'),
+    ];
+    return Row(
+      children: [
+        for (var i = 0; i < options.length; i++) ...[
+          if (i > 0) const SizedBox(width: 8),
+          Expanded(
+            child: _periodChip(options[i].$1, options[i].$2),
+          ),
+        ],
+      ],
+    );
+  }
+
+  Widget _periodChip(String value, String label) {
+    final selected = _period == value;
+    return Material(
+      color: selected
+          ? AppTheme.primaryColor
+          : AppTheme.surfaceColor,
+      borderRadius: BorderRadius.circular(20),
+      child: InkWell(
+        borderRadius: BorderRadius.circular(20),
+        onTap: () => setState(() => _period = value),
+        child: Container(
+          padding: const EdgeInsets.symmetric(vertical: 8),
+          alignment: Alignment.center,
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(20),
+            border: Border.all(
+              color: selected
+                  ? AppTheme.primaryColor
+                  : AppTheme.borderColor,
+            ),
+          ),
+          child: Text(
+            label,
+            style: GoogleFonts.inter(
+              fontSize: 12,
+              fontWeight: FontWeight.w700,
+              color: selected ? Colors.white : AppTheme.textSecondary,
+            ),
+          ),
+        ),
+      ),
     );
   }
 
@@ -193,6 +299,9 @@ class _DoctorCasesScreenState extends ConsumerState<DoctorCasesScreen> {
                   ),
                 ),
                 _badge(_statusLabel(status), color),
+                _itemMenu(
+                  onDelete: () => _confirmDeleteCase(c),
+                ),
               ],
             ),
             const SizedBox(height: 6),
@@ -241,6 +350,7 @@ class _DoctorCasesScreenState extends ConsumerState<DoctorCasesScreen> {
               Text(_fmtDate(m['created_at']),
                   style: GoogleFonts.inter(
                       fontSize: 12, color: AppTheme.textSecondary)),
+              _itemMenu(onDelete: () => _confirmDeleteMemory(m)),
             ],
           ),
           const SizedBox(height: 8),
@@ -262,6 +372,144 @@ class _DoctorCasesScreenState extends ConsumerState<DoctorCasesScreen> {
         ],
       ),
     );
+  }
+
+  Widget _itemMenu({required VoidCallback onDelete}) {
+    return SizedBox(
+      width: 32,
+      height: 32,
+      child: PopupMenuButton<String>(
+        padding: EdgeInsets.zero,
+        icon: Icon(Icons.more_vert_rounded,
+            size: 18, color: AppTheme.textSecondary),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(AppTheme.radiusMedium),
+        ),
+        onSelected: (v) {
+          if (v == 'delete') onDelete();
+        },
+        itemBuilder: (_) => const [
+          PopupMenuItem(
+            value: 'delete',
+            height: 44,
+            child: Row(
+              children: [
+                Icon(Icons.delete_outline_rounded,
+                    size: 18, color: AppTheme.errorColor),
+                SizedBox(width: 8),
+                Text('Hapus'),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Future<void> _confirmDeleteCase(Map<String, dynamic> c) async {
+    final ok = await _confirmDialog(
+      title: 'Hapus Kasus?',
+      body: 'Kasus "${c['title'] ?? 'Konsultasi'}" beserta seluruh pesannya '
+          'akan dihapus permanen.',
+    );
+    if (!ok) return;
+    try {
+      await _service.deleteConversation(c['id']?.toString() ?? '');
+      if (!mounted) return;
+      _snack('Kasus dihapus.');
+      _load();
+    } catch (e) {
+      if (!mounted) return;
+      _snack('Gagal menghapus: ${e.toString().replaceFirst('Exception: ', '')}');
+    }
+  }
+
+  Future<void> _confirmDeleteMemory(Map<String, dynamic> m) async {
+    final ok = await _confirmDialog(
+      title: 'Hapus Catatan?',
+      body: 'Catatan "${m['title'] ?? '-'}" akan dihapus permanen.',
+    );
+    if (!ok) return;
+    try {
+      await _service.deleteMemory(m['id']?.toString() ?? '');
+      if (!mounted) return;
+      _snack('Catatan dihapus.');
+      _load();
+    } catch (e) {
+      if (!mounted) return;
+      _snack('Gagal menghapus: ${e.toString().replaceFirst('Exception: ', '')}');
+    }
+  }
+
+  Future<void> _confirmDeleteAll() async {
+    final cases = _filteredCases;
+    final memories = _filteredMemories;
+    if (cases.isEmpty && memories.isEmpty) {
+      _snack('Tidak ada riwayat pada periode ini.');
+      return;
+    }
+    final label = _period == 'all'
+        ? 'SEMUA riwayat'
+        : 'seluruh riwayat pada periode ini';
+    final ok = await _confirmDialog(
+      title: 'Hapus Semua?',
+      body: '$label (${cases.length} kasus, ${memories.length} catatan) '
+          'akan dihapus permanen. Tindakan ini tidak bisa dibatalkan.',
+    );
+    if (!ok) return;
+    try {
+      for (final c in cases) {
+        await _service.deleteConversation(c['id']?.toString() ?? '');
+      }
+      for (final m in memories) {
+        await _service.deleteMemory(m['id']?.toString() ?? '');
+      }
+      if (!mounted) return;
+      _snack('Riwayat pada periode ini dihapus.');
+      _load();
+    } catch (e) {
+      if (!mounted) return;
+      _snack('Gagal menghapus: ${e.toString().replaceFirst('Exception: ', '')}');
+    }
+  }
+
+  Future<bool> _confirmDialog(
+      {required String title, required String body}) async {
+    final res = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(AppTheme.radiusLarge),
+        ),
+        title: Text(title,
+            style: GoogleFonts.inter(
+                fontWeight: FontWeight.w800,
+                color: AppTheme.textPrimary,
+                fontSize: 17)),
+        content: Text(body,
+            style: GoogleFonts.inter(
+                height: 1.45, color: AppTheme.textSecondary, fontSize: 13)),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text('Batal'),
+          ),
+          FilledButton(
+            style: FilledButton.styleFrom(
+              backgroundColor: AppTheme.errorColor,
+            ),
+            onPressed: () => Navigator.pop(ctx, true),
+            child: const Text('Hapus'),
+          ),
+        ],
+      ),
+    );
+    return res == true;
+  }
+
+  void _snack(String text) {
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(text)));
   }
 
   Widget _buildCard({required Widget child}) {

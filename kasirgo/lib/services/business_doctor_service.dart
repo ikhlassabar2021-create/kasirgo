@@ -119,6 +119,16 @@ class BusinessDoctorService {
     return (res as List).cast<Map<String, dynamic>>();
   }
 
+  /// Hapus satu kasus konsultasi (pesan ikut terhapus via ON DELETE CASCADE).
+  Future<void> deleteConversation(String conversationId) async {
+    await _client.from('doctor_conversations').delete().eq('id', conversationId);
+  }
+
+  /// Hapus satu catatan memori.
+  Future<void> deleteMemory(String memoryId) async {
+    await _client.from('doctor_memory').delete().eq('id', memoryId);
+  }
+
   /// Teguran terbaru hari ini (kind='reprimand'); null bila tidak ada.
   Future<Map<String, dynamic>?> getLatestReprimand(String outletId) async {
     final today = DateTime.now().toUtc().toIso8601String().substring(0, 10);
