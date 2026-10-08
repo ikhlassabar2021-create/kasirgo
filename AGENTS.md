@@ -173,6 +173,20 @@ Status: SELESAI. Project Supabase sudah dibuat dan schema terpasang serta diuji.
     HANYA untuk tes; wajib pindah ke Edge Function (mode `live_server`) sebelum
     produksi. Edge Functions RCB SUDAH ter-deploy (rcb_create_charge /
     rcb_check_status verify_jwt=true, rcb_webhook verify_jwt=false).)
+- [x] Payment Gateway RCB - Provider-aware + zero-custody (SELESAI, sesi 2026-10-08)
+  (Aplikasi kini memilih provider otomatis dari RPC `get_pg_client_config`
+   (cache prefs): `RcbProvider` (default) atau `MidtransProvider`, dibaca dari
+   `platform_integrations.payment_gateway.provider`. Superadmin dapat mengganti
+   provider (RCB/Midtrans) dan mode (sandbox/production) via Control Plane tab
+   Payment Gateway TANPA ubah kode. Semua charge/poll RCB lewat Edge Function
+   (zero-custody; `api_key` TIDAK lagi dikembalikan `get_pg_client_config`).
+   FIX EF `rcb_create_charge`: `expired_time` epoch (int) dikonversi ke ISO ->
+   kolom `expired_at` timestamptz (sebelumnya insert gagal senyap -> webhook
+   "Order tidak ditemukan"); ditambah cek error insert. Migrasi
+   `2026-10-08-kasirgo-rcb-provider-normalize.sql` (config -> provider rcb +
+   mode sandbox_server). E2E LULUS: create_supporter_checkout -> rcb_create_charge
+   (subscription) -> webhook SHA256 PAID -> `supporters` active +30 hari;
+   `confirm_pg_order` (polling fallback) OK. Default = RCB sandbox.)
 - [x] Phase 13A: Payment Gateway Midtrans (QRIS dinamis, zero-custody)
   (tabel `outlet_pg_configs` server key di Supabase Vault (`server_key_secret_id`
   uuid, bukan teks; column-grant: authenticated tak bisa baca); RPC
