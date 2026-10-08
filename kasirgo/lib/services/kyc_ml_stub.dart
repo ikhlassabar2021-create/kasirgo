@@ -14,6 +14,10 @@ const bool kycMlAvailable = false;
 Future<KtpOcrResult> ocrKtp(String imagePath) async =>
     const KtpOcrResult();
 
+/// Cek apakah teks OCR memuat penanda KTP asli (anti screenshot/gambar asal).
+/// Web stub: tidak ada OCR -> selalu true (fallback input manual).
+bool ktpTextLooksReal(String text) => true;
+
 /// Deteksi jumlah wajah pada sebuah gambar (untuk validasi selfie).
 Future<int> countFaces(String imagePath) async => -1;
 

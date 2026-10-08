@@ -26,6 +26,23 @@ Future<KtpOcrResult> ocrKtp(String imagePath) async {
   );
 }
 
+/// Cek apakah teks OCR memuat penanda KTP asli (anti screenshot/gambar asal).
+/// KTP asli hampir selalu memuat salah satu label: PROVINSI, KARTU TANDA
+/// PENDUDUK / KTP, REPUBLIK INDONESIA, GOL.DARAH, atau NIK.
+bool ktpTextLooksReal(String text) {
+  final up = text.toUpperCase();
+  const markers = [
+    'PROVINSI',
+    'KARTU TANDA PENDUDUK',
+    'KTP',
+    'REPUBLIK INDONESIA',
+    'GOL.DARAH',
+    'GOL DARAH',
+    'NIK',
+  ];
+  return markers.any(up.contains);
+}
+
 Future<String> _recognize(String imagePath) async {
   final recognizer = TextRecognizer(script: TextRecognitionScript.latin);
   try {

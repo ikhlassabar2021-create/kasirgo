@@ -56,7 +56,9 @@ class _OnboardingKycScreenState extends ConsumerState<OnboardingKycScreen> {
   bool _scanning = false;
   String? _ktpName; // nama terbaca dari KTP
   bool _ktpHasFace = false; // foto KTP memuat wajah (orang asli)
+  bool _ktpLooksReal = false; // OCR memuat label penanda KTP asli
   bool _selfieHasFace = false; // selfie memuat wajah
+  bool _selfieKtpMatch = true; // KTP di selfie = KTP yang diunggah (bila terbaca)
   bool _ktpChecked = false;
   bool _selfieChecked = false;
 
@@ -205,12 +207,14 @@ class _OnboardingKycScreenState extends ConsumerState<OnboardingKycScreen> {
           _ktpBytes = bytes;
           _ktpChecked = false;
           _ktpHasFace = false;
+          _ktpLooksReal = false;
           _ktpName = null;
         } else {
           _selfieImage = image;
           _selfieBytes = bytes;
           _selfieChecked = false;
           _selfieHasFace = false;
+          _selfieKtpMatch = true;
         }
       });
       // OCR/validasi on-device (gratis). Di web: stub -> input manual.
@@ -238,6 +242,7 @@ class _OnboardingKycScreenState extends ConsumerState<OnboardingKycScreen> {
         _ktpName = result.name;
         // -1 = mesin tak mendukung (web); true/false hanya bila terdeteksi.
         _ktpHasFace = faces < 0 ? true : faces > 0;
+        _ktpLooksReal = ktpTextLooksReal(result.text);
 
         if ((result.nik ?? '').isNotEmpty) {
           _nik.text = result.nik!;
@@ -248,7 +253,10 @@ class _OnboardingKycScreenState extends ConsumerState<OnboardingKycScreen> {
         }
       });
 
-      if ((result.nik ?? '').isEmpty && kycMlAvailable) {
+      if (!_ktpLooksReal && kycMlAvailable) {
+        _snack('Ini bukan KTP asli. Unggah foto KTP asli (bukan gambar lain).',
+            AppTheme.errorColor);
+      } else if ((result.nik ?? '').isEmpty && kycMlAvailable) {
         _snack('NIK tidak terbaca otomatis. Isi manual di kolom NIK.',
             AppTheme.warningColor);
       }
@@ -261,16 +269,34 @@ class _OnboardingKycScreenState extends ConsumerState<OnboardingKycScreen> {
     }
   }
 
-  /// Validasi selfie: harus memuat wajah (orang asli).
+  /// Validasi selfie: harus memuat wajah (orang asli). Bila KTP pada selfie
+  /// terbaca OCR-nya, NIK-nya harus sama dengan KTP yang diunggah.
   Future<void> _checkSelfie(XFile image) async {
     final faces = await countFaces(image.path);
+    String? selfieNik;
+    if (kycMlAvailable) {
+      try {
+        final ocr = await ocrKtp(image.path);
+        selfieNik = ocr.nik;
+      } catch (_) {}
+    }
     if (!mounted) return;
     setState(() {
       _selfieChecked = true;
       _selfieHasFace = faces < 0 ? true : faces > 0;
+      // Match bila NIK selfie tidak terbaca (tidak bisa dipastikan) ATAU
+      // sama dengan NIK KTP yang diunggah.
+      final ktpNik = _nik.text.replaceAll(RegExp(r'\D'), '');
+      _selfieKtpMatch =
+          selfieNik == null || selfieNik.isEmpty || ktpNik.isEmpty
+              ? true
+              : selfieNik == ktpNik;
     });
     if (!_selfieHasFace) {
       _snack('Wajah tidak terdeteksi pada selfie. Ambil selfie dengan jelas.',
+          AppTheme.errorColor);
+    } else if (!_selfieKtpMatch) {
+      _snack('KTP yang dipegang harus sama dengan KTP yang diunggah.',
           AppTheme.errorColor);
     }
   }
@@ -318,6 +344,20 @@ class _OnboardingKycScreenState extends ConsumerState<OnboardingKycScreen> {
     if (!_ktpHasFace || !_selfieHasFace) {
       if (!silent) {
         _snack('Wajah tidak terdeteksi. Gunakan foto KTP & selfie yang jelas.',
+            AppTheme.errorColor);
+      }
+      return false;
+    }
+    if (!_selfieKtpMatch) {
+      if (!silent) {
+        _snack('KTP yang dipegang harus sama dengan KTP yang diunggah.',
+            AppTheme.errorColor);
+      }
+      return false;
+    }
+    if (!_ktpLooksReal) {
+      if (!silent) {
+        _snack('Gambar ini bukan KTP asli. Unggah foto KTP asli.',
             AppTheme.errorColor);
       }
       return false;
@@ -654,12 +694,14 @@ class _OnboardingKycScreenState extends ConsumerState<OnboardingKycScreen> {
             onTap: _scanning ? null : () => _pickImage(true),
           ),
           if (_ktpChecked) _scanStatus(
-            ok: _ktpHasFace,
-            label: _ktpHasFace
-                ? (_ktpName == null || _ktpName!.isEmpty
-                    ? 'KTP terbaca'
-                    : 'KTP terbaca: ${_ktpName!}')
-                : 'Wajah tidak terdeteksi — pakai KTP asli',
+            ok: _ktpHasFace && _ktpLooksReal,
+            label: !_ktpLooksReal
+                ? 'Bukan KTP asli — unggah foto KTP asli'
+                : (_ktpHasFace
+                    ? (_ktpName == null || _ktpName!.isEmpty
+                        ? 'KTP asli terbaca'
+                        : 'KTP asli terbaca: ${_ktpName!}')
+                    : 'Wajah tidak terdeteksi — pakai KTP asli'),
           ),
           const SizedBox(height: 16),
           _photoPicker(
@@ -670,10 +712,12 @@ class _OnboardingKycScreenState extends ConsumerState<OnboardingKycScreen> {
             onTap: () => _pickImage(false),
           ),
           if (_selfieChecked) _scanStatus(
-            ok: _selfieHasFace,
-            label: _selfieHasFace
-                ? 'Wajah selfie terdeteksi'
-                : 'Wajah tidak terdeteksi — ambil ulang',
+            ok: _selfieHasFace && _selfieKtpMatch,
+            label: !_selfieHasFace
+                ? 'Wajah tidak terdeteksi — ambil ulang selfie memegang KTP'
+                : (!_selfieKtpMatch
+                    ? 'KTP yang dipegang harus sama dengan KTP yang diunggah'
+                    : 'Wajah selfie terdeteksi'),
           ),
           const SizedBox(height: 16),
           _field(
