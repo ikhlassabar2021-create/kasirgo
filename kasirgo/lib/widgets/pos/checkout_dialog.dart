@@ -116,8 +116,9 @@ class _CheckoutDialogState extends State<CheckoutDialog> {
     setState(() => _finCfg = cfg);
   }
 
-  /// Gate QRIS Dinamis: hanya peserta Program Pendukung (payment gateway
-  /// otomatis). QRIS Statis tetap gratis selamanya.
+  /// Gate QRIS Dinamis: (saat ini disembunyikan dari UI; dipakai bila mode
+  /// dinamis dibuka kembali).
+  // ignore: unused_element
   Future<void> _trySetQrisMode(String mode) async {
     if (mode == 'dynamic') {
       final outletId = widget.outletId ?? _outletId;
@@ -294,7 +295,10 @@ class _CheckoutDialogState extends State<CheckoutDialog> {
                           _buildPaymentOption('qris', 'QRIS Manual', Icons.qr_code_2_rounded),
                           if (_paymentMethod == 'qris') ...[
                             const SizedBox(height: 10),
+                            // CATATAN (owner): QRIS Dinamis disembunyikan dari semua
+                            // login; pembayaran memakai QRIS Statis saja.
                             Container(
+                              width: double.infinity,
                               padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                               decoration: BoxDecoration(
                                 color: AppTheme.backgroundColor,
@@ -303,86 +307,17 @@ class _CheckoutDialogState extends State<CheckoutDialog> {
                               ),
                               child: Row(
                                 children: [
-                                  Text(
-                                    'Mode QRIS:',
-                                    style: GoogleFonts.inter(
-                                      color: AppTheme.textSecondary,
-                                      fontSize: 12,
-                                      fontWeight: FontWeight.w600,
-                                    ),
-                                  ),
+                                  const Icon(Icons.info_outline_rounded,
+                                      size: 15, color: AppTheme.textSecondary),
                                   const SizedBox(width: 8),
                                   Expanded(
-                                    child: Row(
-                                      children: [
-                                        Expanded(
-                                          child: InkWell(
-                                            onTap: () => _trySetQrisMode('static'),
-                                            borderRadius: BorderRadius.circular(8),
-                                            child: Container(
-                                              padding: const EdgeInsets.symmetric(vertical: 10),
-                                              decoration: BoxDecoration(
-                                                color: _qrisMode == 'static'
-                                                    ? AppTheme.primaryColor.withValues(alpha: 0.25)
-                                                    : Colors.transparent,
-                                                borderRadius: BorderRadius.circular(8),
-                                                border: Border.all(
-                                                  color: _qrisMode == 'static'
-                                                      ? AppTheme.primaryColor
-                                                      : AppTheme.borderColor,
-                                                  width: 1.5,
-                                                ),
-                                              ),
-                                              child: Center(
-                                                child: Text(
-                                                  'Statis',
-                                                  style: GoogleFonts.inter(
-                                                    fontSize: 11,
-                                                    fontWeight: FontWeight.w700,
-                                                    color: _qrisMode == 'static'
-                                                        ? AppTheme.accentColor
-                                                        : AppTheme.textSecondary,
-                                                  ),
-                                                ),
-                                              ),
-                                            ),
-                                          ),
-                                        ),
-                                        const SizedBox(width: 8),
-                                        Expanded(
-                                          child: InkWell(
-                                            onTap: () => _trySetQrisMode('dynamic'),
-                                            borderRadius: BorderRadius.circular(8),
-                                            child: Container(
-                                              padding: const EdgeInsets.symmetric(vertical: 10),
-                                              decoration: BoxDecoration(
-                                                color: _qrisMode == 'dynamic'
-                                                    ? AppTheme.primaryColor.withValues(alpha: 0.25)
-                                                    : Colors.transparent,
-                                                borderRadius: BorderRadius.circular(8),
-                                                border: Border.all(
-                                                  color: _qrisMode == 'dynamic'
-                                                      ? AppTheme.primaryColor
-                                                      : AppTheme.borderColor,
-                                                  width: 1.5,
-                                                ),
-                                              ),
-                                              child: Center(
-                                                child: Text(
-                                                  'Dinamis',
-                                                  style: GoogleFonts.inter(
-                                                    fontSize: 11,
-                                                    fontWeight: FontWeight.w700,
-                                                    color: _qrisMode == 'dynamic'
-                                                        ? AppTheme.accentColor
-                                                        : AppTheme.textSecondary,
-                                                  ),
-                                                ),
-                                              ),
-                                            ),
-                                          ),
-                                        ),
-                                      ],
+                                    child: Text(
+                                      'Mode QRIS Statis (sesuai kebijakan pembayaran)',
+                                      style: GoogleFonts.inter(
+                                        color: AppTheme.textSecondary,
+                                        fontSize: 12,
+                                        fontWeight: FontWeight.w600,
+                                      ),
                                     ),
                                   ),
                                 ],
