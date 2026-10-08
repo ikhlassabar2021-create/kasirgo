@@ -1302,19 +1302,28 @@ function ModalUsahaTab() {
   );
 }
 
-// Afiliasi: pendaftaran mandiri (otomatis / persetujuan manual) + komisi default.
+// Afiliasi: pendaftaran mandiri (otomatis / persetujuan manual) + komisi default
+// + pengaturan pembayaran komisi (afiliasi outlet & partner).
 function AffiliateTab() {
-  const [v, setV] = useState<any>({ require_approval: false, default_commission: 10 });
+  const [v, setV] = useState<any>({
+    require_approval: false,
+    default_commission: 10,
+    owner_commission_percent: 5,
+    owner_payout_frequency: 'monthly',
+    owner_payout_day: 1,
+    owner_payout_mode: 'manual',
+  });
   const [loading, setLoading] = useState(false);
   const { msg, show } = useToast();
   useEffect(() => {
     loadConfig('affiliate').then((d) => d && setV((prev: any) => ({ ...prev, ...d }))).catch(() => {});
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+  const upd = (patch: any) => setV((p: any) => ({ ...p, ...patch }));
   return (
     <Card
       title="Program Afiliasi"
-      subtitle="Pendaftaran afiliasi mandiri dari Portal Afiliasi. Atur mode persetujuan & komisi default."
+      subtitle="Pendaftaran afiliasi mandiri, komisi default partner, dan pengaturan pembayaran komisi afiliasi outlet."
     >
       <div className="max-w-[760px] space-y-4">
         <div className="rounded-xl border border-slate-200 bg-slate-50/60 p-4 space-y-3">
@@ -1324,7 +1333,7 @@ function AffiliateTab() {
               type="radio"
               className="mt-0.5"
               checked={v.require_approval === true}
-              onChange={() => setV({ ...v, require_approval: true })}
+              onChange={() => upd({ require_approval: true })}
             />
             <span>
               Persetujuan manual
@@ -1338,7 +1347,7 @@ function AffiliateTab() {
               type="radio"
               className="mt-0.5"
               checked={v.require_approval !== true}
-              onChange={() => setV({ ...v, require_approval: false })}
+              onChange={() => upd({ require_approval: false })}
             />
             <span>
               Otomatis (default)
@@ -1348,16 +1357,62 @@ function AffiliateTab() {
             </span>
           </label>
         </div>
-        <div>
-          <label className={labelCls}>Komisi Default (%)</label>
-          <input
-            type="number"
-            step="0.1"
-            className={inputCls}
-            value={v.default_commission ?? 10}
-            onChange={(e) => setV({ ...v, default_commission: Number(e.target.value) })}
-          />
-          <p className="text-[10px] text-slate-400 mt-1">Diberikan ke afiliasi baru saat mendaftar mandiri.</p>
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          <div>
+            <label className={labelCls}>Komisi Default Partner (%)</label>
+            <input
+              type="number"
+              step="0.1"
+              className={inputCls}
+              value={v.default_commission ?? 10}
+              onChange={(e) => upd({ default_commission: Number(e.target.value) })}
+            />
+            <p className="text-[10px] text-slate-400 mt-1">Diberikan ke afiliasi partner baru saat mendaftar mandiri.</p>
+          </div>
+          <div>
+            <label className={labelCls}>Komisi Afiliasi Outlet (%)</label>
+            <input
+              type="number"
+              step="0.1"
+              className={inputCls}
+              value={v.owner_commission_percent ?? 5}
+              onChange={(e) => upd({ owner_commission_percent: Number(e.target.value) })}
+            />
+            <p className="text-[10px] text-slate-400 mt-1">Komisi owner ketika usaha baru bergabung lewat kode referral outlet-nya.</p>
+          </div>
+        </div>
+        <div className="rounded-xl border border-slate-200 bg-slate-50/60 p-4 space-y-3">
+          <p className="text-[11px] font-bold text-slate-500 uppercase tracking-wide">Pembayaran Komisi Afiliasi Outlet</p>
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+            <div>
+              <label className={labelCls}>Frekuensi</label>
+              <select className={inputCls} value={v.owner_payout_frequency ?? 'monthly'} onChange={(e) => upd({ owner_payout_frequency: e.target.value })}>
+                <option value="monthly">Bulanan</option>
+                <option value="weekly">Mingguan</option>
+              </select>
+            </div>
+            <div>
+              <label className={labelCls}>{(v.owner_payout_frequency ?? 'monthly') === 'weekly' ? 'Hari (1=Senin)' : 'Tanggal (1-28)'}</label>
+              <input
+                type="number"
+                min={1}
+                max={(v.owner_payout_frequency ?? 'monthly') === 'weekly' ? 7 : 28}
+                className={inputCls}
+                value={v.owner_payout_day ?? 1}
+                onChange={(e) => upd({ owner_payout_day: Number(e.target.value) })}
+              />
+            </div>
+            <div>
+              <label className={labelCls}>Mode</label>
+              <select className={inputCls} value={v.owner_payout_mode ?? 'manual'} onChange={(e) => upd({ owner_payout_mode: e.target.value })}>
+                <option value="manual">Manual</option>
+                <option value="auto">Otomatis</option>
+              </select>
+            </div>
+          </div>
+          <p className="text-[10px] text-slate-400">
+            Komisi dicatat pada tabel closing per outlet dan dibayar ke rekening yang diisi owner pada layar Afiliasi.
+          </p>
         </div>
         <SaveButton
           loading={loading}

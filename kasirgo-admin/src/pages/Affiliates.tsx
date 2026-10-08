@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Search, Plus, Copy, ExternalLink, UserCheck, TrendingUp, DollarSign, Percent, Banknote, X, Loader2 } from 'lucide-react';
+import { Search, Plus, Copy, ExternalLink, UserCheck, TrendingUp, DollarSign, Percent, Banknote, X, Loader2, Store, Eye } from 'lucide-react';
 import {
   platformAffiliatesList,
   platformAffiliateUpsert,
@@ -7,6 +7,8 @@ import {
   platformAffiliateSetPayout,
   platformAffiliatePayoutRun,
   platformAffiliateSetStatus,
+  platformOutletAffiliates,
+  platformAffiliateClosings,
 } from '../lib/adminApi';
 import type { AffiliateRow } from '../lib/adminApi';
 
@@ -36,6 +38,46 @@ export function AffiliatesPage() {
   const [payoutFor, setPayoutFor] = useState<AffiliateRow | null>(null);
   const [running, setRunning] = useState(false);
 
+  // FIX #12: tab afiliasi outlet + detail closing.
+  const [tab, setTab] = useState<'partner' | 'outlet'>('partner');
+  const [outletRows, setOutletRows] = useState<Record<string, any>[]>([]);
+  const [outletLoading, setOutletLoading] = useState(false);
+  const [closingsFor, setClosingsFor] = useState<Record<string, any> | null>(null);
+  const [closingRows, setClosingRows] = useState<Record<string, any>[]>([]);
+  const [closingLoading, setClosingLoading] = useState(false);
+
+  const loadOutletAffiliates = async (q?: string) => {
+    setOutletLoading(true);
+    try {
+      const res = await platformOutletAffiliates(q?.trim() || null);
+      setOutletRows(res.rows ?? []);
+    } catch (e: any) {
+      flash('err', e.message);
+      setOutletRows([]);
+    } finally {
+      setOutletLoading(false);
+    }
+  };
+
+  const openClosingsPartner = async (a: AffiliateRow) => {
+    setClosingsFor({ ...a, _kind: 'partner' });
+    setClosingLoading(true);
+    try {
+      const res = await platformAffiliateClosings(a.id);
+      setClosingRows(res.rows ?? []);
+    } catch (e: any) {
+      flash('err', e.message);
+      setClosingRows([]);
+    } finally {
+      setClosingLoading(false);
+    }
+  };
+
+  const openClosingsOutlet = (p: Record<string, any>) => {
+    setClosingsFor({ ...p, _kind: 'outlet' });
+    setClosingRows((p.closings_preview as any[]) ?? []);
+  };
+
   const flash = (kind: 'ok' | 'err', text: string) => {
     setToast({ kind, text });
     setTimeout(() => setToast(null), 3500);
@@ -55,6 +97,11 @@ export function AffiliatesPage() {
   };
 
   useEffect(() => { load(); /* eslint-disable-next-line */ }, []);
+
+  useEffect(() => {
+    if (tab === 'outlet' && outletRows.length === 0) loadOutletAffiliates(search);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [tab]);
 
   const totals = rows.reduce(
     (acc, r) => {
@@ -178,21 +225,49 @@ export function AffiliatesPage() {
         })}
       </div>
 
+      <div className="flex items-center gap-2 mb-4">
+        {([
+          { id: 'partner', label: 'Afiliasi Partner', icon: UserCheck },
+          { id: 'outlet', label: 'Afiliasi Outlet', icon: Store },
+        ] as const).map((t) => {
+          const Icon = t.icon;
+          const active = tab === t.id;
+          return (
+            <button
+              key={t.id}
+              onClick={() => setTab(t.id)}
+              className={`px-4 py-2 rounded-xl text-xs font-bold flex items-center gap-2 transition ${
+                active
+                  ? 'bg-gradient-to-r from-cyan-500 to-sky-600 text-white shadow-md shadow-sky-500/25'
+                  : 'bg-white border border-slate-200 text-slate-600 hover:bg-slate-50'
+              }`}
+            >
+              <Icon className="w-4 h-4" />
+              {t.label}
+            </button>
+          );
+        })}
+      </div>
+
       <div className="bg-white rounded-2xl p-4 sm:p-6 card-shadow border border-slate-200/80 mb-6">
         <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 sm:gap-4">
           <div className="relative flex-1">
             <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 w-5 h-5 text-slate-400" />
             <input
               type="text"
-              placeholder="Cari afiliasi atau kode referral..."
+              placeholder={tab === 'partner' ? 'Cari afiliasi atau kode referral...' : 'Cari kode referral outlet...'}
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              onKeyDown={(e) => e.key === 'Enter' && load(search)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') {
+                  tab === 'partner' ? load(search) : loadOutletAffiliates(search);
+                }
+              }}
               className="w-full pl-12 pr-4 py-2.5 sm:py-3 text-sm bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-sky-500 outline-none"
             />
           </div>
           <button
-            onClick={() => load(search)}
+            onClick={() => (tab === 'partner' ? load(search) : loadOutletAffiliates(search))}
             className="px-4 py-2.5 sm:py-3 text-sm font-semibold rounded-xl bg-slate-100 text-slate-700 hover:bg-slate-200"
           >
             Cari
@@ -200,6 +275,7 @@ export function AffiliatesPage() {
         </div>
       </div>
 
+      {tab === 'partner' && (
       <div className="bg-white rounded-2xl card-shadow border border-slate-200/80 overflow-hidden">
         <div className="overflow-x-auto">
           <table className="w-full min-w-[760px]">
@@ -269,6 +345,13 @@ export function AffiliatesPage() {
                         </button>
                       )}
                       <button
+                        onClick={() => openClosingsPartner(a)}
+                        className="p-1.5 sm:p-2 hover:bg-slate-100 rounded-lg transition-colors text-slate-600"
+                        title="Lihat Closing"
+                      >
+                        <Eye className="w-4 h-4" />
+                      </button>
+                      <button
                         onClick={() => { navigator.clipboard?.writeText(a.referral_code); flash('ok', `Kode ${a.referral_code} disalin.`); }}
                         className="p-1.5 sm:p-2 hover:bg-slate-100 rounded-lg transition-colors text-slate-600"
                         title="Salin Kode"
@@ -308,6 +391,66 @@ export function AffiliatesPage() {
           </table>
         </div>
       </div>
+      )}
+
+      {tab === 'outlet' && (
+      <div className="bg-white rounded-2xl card-shadow border border-slate-200/80 overflow-hidden">
+        <div className="overflow-x-auto">
+          <table className="w-full min-w-[820px]">
+            <thead className="bg-slate-50 border-b border-slate-100">
+              <tr>
+                <th className="text-left px-4 sm:px-6 py-3.5 text-xs font-semibold text-slate-600 uppercase">Outlet</th>
+                <th className="text-left px-4 sm:px-6 py-3.5 text-xs font-semibold text-slate-600 uppercase">Kode</th>
+                <th className="text-right px-4 sm:px-6 py-3.5 text-xs font-semibold text-slate-600 uppercase">Komisi</th>
+                <th className="text-right px-4 sm:px-6 py-3.5 text-xs font-semibold text-slate-600 uppercase">Closing</th>
+                <th className="text-left px-4 sm:px-6 py-3.5 text-xs font-semibold text-slate-600 uppercase">Rekening</th>
+                <th className="text-right px-4 sm:px-6 py-3.5 text-xs font-semibold text-slate-600 uppercase">Aksi</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-slate-100">
+              {outletLoading && (
+                <tr><td colSpan={6} className="px-6 py-8 text-center text-sm text-slate-400">Memuat...</td></tr>
+              )}
+              {!outletLoading && outletRows.length === 0 && (
+                <tr><td colSpan={6} className="px-6 py-8 text-center text-sm text-slate-400">Belum ada afiliasi outlet.</td></tr>
+              )}
+              {!outletLoading && outletRows.map((p) => (
+                <tr key={p.id} className="hover:bg-slate-50">
+                  <td className="px-4 sm:px-6 py-4">
+                    <div>
+                      <p className="font-medium text-sm text-slate-900">{p.outlet_name}</p>
+                      <p className="text-xs text-slate-400">{p.owner_email ?? '-'}</p>
+                    </div>
+                  </td>
+                  <td className="px-4 sm:px-6 py-4">
+                    <span className="font-mono text-xs text-sky-600 bg-sky-50 px-2 py-1 rounded font-bold">{p.referral_code}</span>
+                  </td>
+                  <td className="px-4 sm:px-6 py-4 text-right">
+                    <p className="text-xs sm:text-sm font-bold text-emerald-600">{fmtRp(p.commission_total)}</p>
+                    {Number(p.unpaid_total) > 0 && (
+                      <p className="text-[10px] text-amber-600">Belum cair {fmtRp(p.unpaid_total)}</p>
+                    )}
+                    <p className="text-[10px] text-slate-400">{p.commission_percent}%</p>
+                  </td>
+                  <td className="px-4 sm:px-6 py-4 text-right text-xs sm:text-sm font-semibold text-slate-700">{p.closing_count}</td>
+                  <td className="px-4 sm:px-6 py-4 text-xs text-slate-500">
+                    {p.bank_name ? `${p.bank_name} • ${p.bank_account_number ?? '-'}` : <span className="text-slate-300">Belum diisi</span>}
+                  </td>
+                  <td className="px-4 sm:px-6 py-4 text-right">
+                    <button
+                      onClick={() => openClosingsOutlet(p)}
+                      className="px-2.5 py-1.5 rounded-lg bg-slate-50 text-slate-700 text-[10px] font-bold hover:bg-slate-100 flex items-center gap-1.5"
+                    >
+                      <Eye className="w-3.5 h-3.5" /> Detail Closing
+                    </button>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </div>
+      )}
 
       {form && (
         <Modal title={form.id ? 'Edit Afiliasi' : 'Tambah Afiliasi'} onClose={() => setForm(null)}>
@@ -374,6 +517,30 @@ export function AffiliatesPage() {
           onRun={() => runPayout(payoutFor.id)}
           saving={saving}
         />
+      )}
+
+      {closingsFor && (
+        <Modal title={`Riwayat Closing — ${closingsFor.name ?? closingsFor.outlet_name ?? '-'}`} onClose={() => setClosingsFor(null)}>
+          <div className="space-y-2 max-h-[60vh] overflow-y-auto">
+            {closingLoading && <p className="text-xs text-slate-400 text-center py-4">Memuat...</p>}
+            {!closingLoading && closingRows.length === 0 && (
+              <p className="text-xs text-slate-400 text-center py-4">Belum ada closing.</p>
+            )}
+            {!closingLoading && closingRows.map((c: any, i) => (
+              <div key={c.id ?? i} className="flex items-center justify-between p-2.5 rounded-xl border border-slate-100 bg-slate-50/50 text-xs">
+                <div>
+                  <p className="font-semibold text-slate-800">{c.referred_name ?? c.referred_outlet_name ?? c.outlet_name ?? 'Usaha/Pelanggan'}</p>
+                  <p className="text-[10px] text-slate-400">
+                    {c.created_at ? new Date(c.created_at).toLocaleDateString('id-ID', { day: '2-digit', month: 'short', year: 'numeric' }) : '-'}
+                    {c.outlet_name && c.referred_name !== c.outlet_name ? ` · outlet: ${c.outlet_name}` : ''}
+                    {c.status ? ` · ${c.status}` : ''}
+                  </p>
+                </div>
+                <p className="font-bold text-emerald-600">{fmtRp(c.commission_amount ?? c.amount ?? 0)}</p>
+              </div>
+            ))}
+          </div>
+        </Modal>
       )}
 
       {toast && (

@@ -403,3 +403,25 @@ export const platformAffiliateSetStatus = (id: string, status: string) =>
   rp<{ ok: boolean; id: string; status: string; referral_code: string }>(
     'platform_affiliate_set_status', { p_id: id, p_status: status },
   )
+
+// FIX #12 (superadmin): detail closing + afiliasi outlet.
+export const platformAffiliateClosings = (affiliateId: string) =>
+  rp<{ rows: Record<string, unknown>[] }>('platform_affiliate_closings', {
+    p_affiliate_id: affiliateId,
+  })
+
+export const platformOutletAffiliates = (search?: string | null) =>
+  rp<{ rows: Record<string, unknown>[] }>('platform_outlet_affiliates', {
+    p_search: search ?? null,
+  })
+
+export const platformOutletAffiliateClosingAdd = (payload: {
+  profileId: string; amount: number; description?: string | null
+  referredOutletId?: string | null
+}) =>
+  rp<{ ok: boolean; id: string }>('platform_outlet_affiliate_closing_add', {
+    p_profile_id: payload.profileId,
+    p_amount: payload.amount,
+    p_description: payload.description ?? null,
+    p_referred_outlet_id: payload.referredOutletId ?? null,
+  })
