@@ -69,11 +69,32 @@ class _CustomerListScreenState extends ConsumerState<CustomerListScreen> {
             return AlertDialog(
               backgroundColor: AppTheme.surfaceColor,
               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-              title: const Row(
+              titlePadding: const EdgeInsets.fromLTRB(20, 16, 8, 0),
+              contentPadding: const EdgeInsets.fromLTRB(20, 16, 20, 0),
+              title: Row(
                 children: [
-                  Icon(Icons.person_add, color: AppTheme.primaryColor),
-                  SizedBox(width: 8),
-                  Text('Tambah Pelanggan', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+                  Container(
+                    padding: const EdgeInsets.all(8),
+                    decoration: BoxDecoration(
+                      color: AppTheme.primaryColor.withValues(alpha: 0.15),
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: const Icon(Icons.person_add,
+                        color: AppTheme.accentColor, size: 20),
+                  ),
+                  const SizedBox(width: 12),
+                  const Expanded(
+                    child: Text('Tambah Pelanggan',
+                        style: TextStyle(
+                            fontSize: 17, fontWeight: FontWeight.w800)),
+                  ),
+                  IconButton(
+                    tooltip: 'Tutup',
+                    icon: const Icon(Icons.close_rounded,
+                        color: AppTheme.textSecondary),
+                    onPressed:
+                        isSubmitting ? null : () => Navigator.pop(dialogCtx),
+                  ),
                 ],
               ),
               content: Form(
@@ -109,18 +130,19 @@ class _CustomerListScreenState extends ConsumerState<CustomerListScreen> {
                 ),
               ),
               actions: [
-                TextButton(
-                  onPressed: isSubmitting ? null : () => Navigator.pop(dialogCtx),
-                  child: const Icon(Icons.close_rounded, size: 20),
-                ),
-                ElevatedButton(
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: AppTheme.primaryColor,
-                    foregroundColor: Colors.white,
-                  ),
-                  onPressed: isSubmitting
-                      ? null
-                      : () async {
+                SizedBox(
+                  width: double.infinity,
+                  height: 48,
+                  child: ElevatedButton.icon(
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: AppTheme.primaryColor,
+                      foregroundColor: Colors.white,
+                      shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12)),
+                    ),
+                    onPressed: isSubmitting
+                        ? null
+                        : () async {
                           if (!formKey.currentState!.validate()) return;
                           setDialogState(() => isSubmitting = true);
 
@@ -157,14 +179,18 @@ class _CustomerListScreenState extends ConsumerState<CustomerListScreen> {
                             );
                           }
                         },
-                  child: isSubmitting
-                      ? const SizedBox(
-                          width: 16,
-                          height: 16,
-                          child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
-                        )
-                      : const Text('Simpan'),
+                    icon: isSubmitting
+                        ? const SizedBox(
+                            width: 16,
+                            height: 16,
+                            child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                          )
+                        : const Icon(Icons.check_rounded, size: 20),
+                    label: const Text('Simpan',
+                        style: TextStyle(fontWeight: FontWeight.w700)),
+                  ),
                 ),
+                const SizedBox(height: 8),
               ],
             );
           },
@@ -173,8 +199,45 @@ class _CustomerListScreenState extends ConsumerState<CustomerListScreen> {
     );
   }
 
-  void _showCustomerDetail(Customer customer) {
-    final outletId = ref.read(currentUserProvider)?.outletId ?? '';
+  /// Konfirmasi + hapus pelanggan.
+  Future<void> _confirmDeleteCustomer(Customer customer) async {
+    final ok = await showDialog<bool>(
+      context: context,
+      builder: (dialogCtx) => AlertDialog(
+        backgroundColor: AppTheme.surfaceColor,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: const Text('Hapus Pelanggan'),
+        content: Text(
+            'Yakin ingin menghapus "${customer.name}"? Riwayat transaksi tetap tersimpan.'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialogCtx, false),
+            child: const Text('Batal'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(dialogCtx, true),
+            style: TextButton.styleFrom(foregroundColor: AppTheme.errorColor),
+            child: const Text('Hapus'),
+          ),
+        ],
+      ),
+    );
+    if (ok != true || !mounted) return;
+    final success = await _supabaseService.deleteCustomer(customer.id);
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(success
+            ? 'Pelanggan dihapus.'
+            : 'Gagal menghapus pelanggan.'),
+        backgroundColor:
+            success ? AppTheme.successColor : AppTheme.errorColor,
+      ),
+    );
+    if (success) _loadCustomers();
+  }
+
+  void _showCustomerDetail(Customer customer) {    final outletId = ref.read(currentUserProvider)?.outletId ?? '';
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
@@ -785,7 +848,35 @@ class _CustomerListScreenState extends ConsumerState<CustomerListScreen> {
                                           ),
                                         ],
                                       ),
-                                      const SizedBox(width: 8),
+                                      const SizedBox(width: 4),
+                                      PopupMenuButton<String>(
+                                        tooltip: 'Menu',
+                                        icon: const Icon(Icons.more_vert_rounded,
+                                            size: 20, color: AppTheme.textSecondary),
+                                        shape: RoundedRectangleBorder(
+                                            borderRadius: BorderRadius.circular(12)),
+                                        onSelected: (v) {
+                                          if (v == 'delete') {
+                                            _confirmDeleteCustomer(customer);
+                                          }
+                                        },
+                                        itemBuilder: (_) => const [
+                                          PopupMenuItem(
+                                            value: 'delete',
+                                            child: Row(
+                                              children: [
+                                                Icon(Icons.delete_outline_rounded,
+                                                    size: 18, color: AppTheme.errorColor),
+                                                SizedBox(width: 8),
+                                                Text('Hapus',
+                                                    style: TextStyle(
+                                                        color: AppTheme.errorColor)),
+                                              ],
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                      const SizedBox(width: 4),
                                       const Icon(
                                         Icons.chevron_right,
                                         size: 18,
