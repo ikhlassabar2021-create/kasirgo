@@ -84,10 +84,18 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
       }
     } catch (e) {
       if (mounted) {
+        final msg = e.toString();
+        // Supabase: email belum dikonfirmasi -> pesan ramah, bukan "Login gagal".
+        final isUnconfirmed = msg.contains('email_not_confirmed') ||
+            msg.toLowerCase().contains('email not confirmed') ||
+            msg.toLowerCase().contains('confirm');
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Login gagal: ${e.toString()}'),
+            content: Text(isUnconfirmed
+                ? 'Belum bisa login. Harap konfirmasi email dulu — silakan cek kotak masuk / folder spam email Anda.'
+                : 'Login gagal: ${msg.replaceFirst('Exception: ', '')}'),
             backgroundColor: AppTheme.errorColor,
+            duration: const Duration(seconds: 5),
           ),
         );
       }
