@@ -19,6 +19,11 @@ class SupabaseService {
       : _client = client ?? Supabase.instance.client;
   final SupabaseClient _client;
 
+  /// Panggil RPC Postgres (untuk fitur yang tidak butuh method khusus).
+  Future<dynamic> rpc(String fn, {Map<String, dynamic>? params}) {
+    return params == null ? _client.rpc(fn) : _client.rpc(fn, params: params);
+  }
+
   Future<List<Product>> getProducts(String outletId) async {
     try {
       final response = await _client

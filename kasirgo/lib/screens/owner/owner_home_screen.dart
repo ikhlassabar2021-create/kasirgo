@@ -23,6 +23,7 @@ import 'social_commerce_screen.dart';
 import 'whatsapp_broadcast_screen.dart';
 import 'qr_table_screen.dart';
 import 'online_catalog_screen.dart';
+import 'affiliate_owner_screen.dart';
 import 'health_score_screen.dart';
 import 'business_doctor_screen.dart';
 import 'bundle_manager_screen.dart';
@@ -1011,6 +1012,17 @@ class _OwnerHomeScreenState extends ConsumerState<OwnerHomeScreen> {
         subtitle: 'Dukung Pengembangan',
         color: AppTheme.warningColor,
         onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const SupporterScreen())),
+      ),
+    );
+
+    quickActionItems.add(
+      _ModuleCard(
+        icon: Icons.handshake_rounded,
+        title: 'Afiliasi',
+        subtitle: 'Komisi Referral',
+        color: AppTheme.accentColor,
+        onTap: () => Navigator.push(
+            context, MaterialPageRoute(builder: (_) => const AffiliateOwnerScreen())),
       ),
     );
 
