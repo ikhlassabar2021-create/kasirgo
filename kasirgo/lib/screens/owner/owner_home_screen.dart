@@ -27,11 +27,8 @@ import 'health_score_screen.dart';
 import 'business_doctor_screen.dart';
 import 'bundle_manager_screen.dart';
 import '../../services/business_doctor_service.dart';
-import '../../screens/owner/fintech_screen.dart';
 import '../modules/kitchen_display_screen.dart';
 import 'shift_screen.dart';
-import '../modules/ppob_screen.dart';
-import '../modules/restock_screen.dart';
 import '../modules/supporter_screen.dart';
 import 'pos_screen.dart';
 import 'product_list_screen.dart';
@@ -907,39 +904,15 @@ class _OwnerHomeScreenState extends ConsumerState<OwnerHomeScreen> {
     // sesuai permintaan; layar & service tetap ada untuk masa depan.
 
     if (modules.contains(BusinessModule.ppob) && ppobEnabled) {
-      quickActionItems.add(
-        _ModuleCard(
-          icon: Icons.phone_android_rounded,
-          title: 'PPOB & Pulsa',
-          subtitle: 'Token PLN, pulsa',
-          color: AppTheme.primaryColor,
-          onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const PpobScreen())),
-        ),
-      );
+      // CATATAN (owner): PPOB & Pulsa disembunyikan dari dashboard sesuai permintaan.
     }
 
     if (modules.contains(BusinessModule.restockB2B)) {
-      quickActionItems.add(
-        _ModuleCard(
-          icon: Icons.local_shipping_rounded,
-          title: 'Kulakan B2B',
-          subtitle: 'Restock grosir',
-          color: AppTheme.successColor,
-          onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const RestockScreen())),
-        ),
-      );
+      // CATATAN (owner): Kulakan B2B disembunyikan dari dashboard sesuai permintaan.
     }
 
     if (ref.watch(fintechEnabledProvider).valueOrNull ?? true) {
-      quickActionItems.add(
-        _ModuleCard(
-          icon: Icons.account_balance_rounded,
-          title: 'Modal Usaha',
-          subtitle: 'Estimasi plafon',
-          color: const Color(0xFF4F46E5),
-          onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const FintechScreen())),
-        ),
-      );
+      // CATATAN (owner): Modal Usaha disembunyikan dari dashboard sesuai permintaan.
     }
 
 
@@ -1035,7 +1008,7 @@ class _OwnerHomeScreenState extends ConsumerState<OwnerHomeScreen> {
       _ModuleCard(
         icon: Icons.favorite_rounded,
         title: 'Pendukung KasirGo',
-        subtitle: 'Donasi Sukarela',
+        subtitle: 'Dukung Pengembangan',
         color: AppTheme.warningColor,
         onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const SupporterScreen())),
       ),

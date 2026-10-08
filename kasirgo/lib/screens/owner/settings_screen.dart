@@ -497,7 +497,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
           const SizedBox(height: 8),
           const Text(
             'Fitur inti tetap 100% Gratis Selamanya. Program Pendukung '
-            '(sukarela) membuka fitur bonus & menghilangkan iklan sponsor di '
+            'membuka fitur bonus & menghilangkan iklan sponsor di '
             'katalog pelanggan Anda.',
             style: TextStyle(
                 fontSize: 13, color: AppTheme.textSecondary, height: 1.4),
