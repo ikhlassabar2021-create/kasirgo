@@ -947,3 +947,31 @@ Commit berurutan di main; Flutter web + admin dist dideploy ulang.
   hidden; ControlPlane > Laporan 4 toggle untuk membuka kembali.
 - Verifikasi RPC via REST (JWT owner Warung Test & superadmin): affiliate_owner_me OK,
   affiliate_owner_update OK, platform_report_visibility OK (owner forbidden sesuai desain).
+
+## Sesi 2026-10-08 (2): BATCH #2 Perbaikan Owner (SELESAI)
+Commit `7d57a00` (main) + deploy web gh-pages `680c199`.
+- RESEP 2-TOMOL: `doctor_blocks.dart`/`doctor_result_screen.dart` kini tombol ganda
+  "Jalankan" (buka fitur terkait + tandai langkah selesai) & "Tandai Selesai"
+  (checklist murni). `business_doctor_screen.dart` `_onPrescriptionStep`/
+  `_togglePrescriptionStep`/`_markPrescriptionDone` + simpan `achieved` bila semua
+  langkah done; `business_doctor_service.savePrescription` `memoryId` opsional
+  (resolve dari `block['memory_id']`).
+- STRUK WA: `checkout_success_dialog.dart` opsi "Kirim Struk Text ke WA" &
+  "Kirim Struk PDF ke WA"; `receipt_generator.dart` +`buildTextReceipt`/
+  `sendTextToWhatsApp`/`sendPdfToWhatsApp` (+restore `shortId`/`methodLabel`);
+  wired di `pos_screen.dart` (owner) & `cashier_pos_screen.dart` memakai
+  `result.customerPhone`.
+- KYC HARDENING: `kyc_checks.dart` `isValidNikFormat` cukup tepat 16 digit angka
+  (tolak digit seragam `^(\d)\1{15}$`), `extractNikFromText` pakai teks
+  ternormalisasi (fix offset), +`isLikelyImageBytes` (magic bytes JPEG/PNG/GIF/
+  BMP/WEBP/HEIC); `kyc_ml_io.dart` `ktpTextLooksReal` butuh >=2 penanda struktural
+  + NIK; `onboarding_kyc_screen.dart` tolak berkas non-gambar saat unggah.
+- GATING DOKTER BISNIS AI: `supporter_service.dart` +fitur `business_doctor`
+  (premiumFeatures + featureLabels); `owner_home_screen.dart` kartu Dokter Bisnis AI
+  lewat `_pushGated('business_doctor', ...)`.
+- TRIAL: `supporter_gate.dart` (dialog & layar kunci) tawarkan dua jalur Trial/Upgrade
+  menuju `SupporterScreen`; `supporter_screen.dart` +tombol "Coba Trial Gratis"
+  (`SupporterService.ensureTrial`) saat belum punya akses. Upgrade tetap pakai QRIS
+  DINAMIS otomatis (`SupporterService.checkout` -> `PaymentService.createQris`).
+- Verifikasi: `dart analyze lib` 0 error (hanya info pre-existing); bundle web memuat
+  string fitur baru; live: https://ikhlassabar2021-create.github.io/kasirgo/
