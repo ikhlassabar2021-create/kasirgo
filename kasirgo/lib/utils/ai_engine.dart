@@ -80,8 +80,7 @@ class AIEngine {
     return anomalies;
   }
 
-  List<String> recommendProducts(dynamic items, String productId) {
-    if (productId.isEmpty) return [];
+  List<String> recommendProducts(dynamic items, String productId) {    if (productId.isEmpty) return [];
 
     final cooccurrence = <String, int>{};
     int targetCount = 0;
@@ -118,6 +117,84 @@ class AIEngine {
       ..sort((a, b) => b.value.compareTo(a.value));
 
     return sorted.take(5).map((e) => e.key).toList();
+  }
+
+  /// ST15-3 (13.17): Association rule lintas produk dengan confidence + lift.
+  /// Mengembalikan daftar pasangan produk yang sering dibeli bersama.
+  ///
+  /// [baskets] = daftar keranjang (tiap keranjang = daftar productId).
+  /// [minSupport] = minimal frekuensi kemunculan sebuah item (default 2).
+  List<Map<String, dynamic>> crossSellRules(
+    List<List<String>> baskets, {
+    int minSupport = 2,
+    int topN = 20,
+  }) {
+    final n = baskets.length;
+    if (n < 2) return [];
+
+    // Hitung frekuensi tiap produk (item support).
+    final itemCount = <String, int>{};
+    for (final basket in baskets) {
+      for (final id in basket.toSet()) {
+        itemCount[id] = (itemCount[id] ?? 0) + 1;
+      }
+    }
+
+    // Hitung pasangan (unordered) yang muncul bersama.
+    final pairCount = <String, int>{};
+    final pairItems = <String, List<String>>{};
+    for (final basket in baskets) {
+      final ids = basket.toSet().toList()..sort();
+      for (var i = 0; i < ids.length; i++) {
+        for (var j = i + 1; j < ids.length; j++) {
+          final a = ids[i];
+          final b = ids[j];
+          final key = '$a|$b';
+          pairCount[key] = (pairCount[key] ?? 0) + 1;
+          pairItems[key] = [a, b];
+        }
+      }
+    }
+
+    final rules = <Map<String, dynamic>>[];
+    pairCount.forEach((key, count) {
+      if (count < minSupport) return;
+      final items = pairItems[key]!;
+      final a = items[0];
+      final b = items[1];
+      final supportA = itemCount[a] ?? 0;
+      final supportB = itemCount[b] ?? 0;
+
+      // Kedua arah (a->b dan b->a).
+      final confAB = supportA > 0 ? count / supportA : 0.0;
+      final confBA = supportB > 0 ? count / supportB : 0.0;
+      final support = count / n;
+      final liftAB = supportB > 0 ? confAB / (supportB / n) : 0.0;
+      final liftBA = supportA > 0 ? confBA / (supportA / n) : 0.0;
+
+      if (confAB >= confBA) {
+        rules.add({
+          'antecedent': a,
+          'consequent': b,
+          'count': count,
+          'support': (support * 1000).round() / 1000,
+          'confidence': (confAB * 1000).round() / 1000,
+          'lift': (liftAB * 100).round() / 100,
+        });
+      } else {
+        rules.add({
+          'antecedent': b,
+          'consequent': a,
+          'count': count,
+          'support': (support * 1000).round() / 1000,
+          'confidence': (confBA * 1000).round() / 1000,
+          'lift': (liftBA * 100).round() / 100,
+        });
+      }
+    });
+
+    rules.sort((x, y) => (y['confidence'] as double).compareTo(x['confidence'] as double));
+    return rules.take(topN).toList();
   }
 
   Map<String, List<Product>> abcRanking(

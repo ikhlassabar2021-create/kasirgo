@@ -26,6 +26,8 @@ import 'online_catalog_screen.dart';
 import 'health_score_screen.dart';
 import 'business_doctor_screen.dart';
 import 'doctor_scaling_screen.dart';
+import 'bundle_manager_screen.dart';
+import 'referral_screen.dart';
 import '../../services/business_doctor_service.dart';
 import '../../screens/owner/fintech_screen.dart';
 import '../modules/kitchen_display_screen.dart';
@@ -733,6 +735,8 @@ class _OwnerHomeScreenState extends ConsumerState<OwnerHomeScreen> {
               const SizedBox(height: 12),
               _MarketIntelCard(outletId: userOutletId()),
               const SizedBox(height: 12),
+              _CrossSellCard(transactions: allTransactions, outletId: userOutletId()),
+              const SizedBox(height: 12),
               Row(
                 children: [
                   Expanded(
@@ -896,6 +900,28 @@ class _OwnerHomeScreenState extends ConsumerState<OwnerHomeScreen> {
         color: const Color(0xFF0284C7),
         onTap: () => Navigator.push(context,
             MaterialPageRoute(builder: (_) => const DoctorScalingScreen())),
+      ),
+    );
+
+    quickActionItems.add(
+      _ModuleCard(
+        icon: Icons.inventory_2_rounded,
+        title: 'Paket Bundling',
+        subtitle: 'Jual 1 harga',
+        color: const Color(0xFF7C3AED),
+        onTap: () => Navigator.push(context,
+            MaterialPageRoute(builder: (_) => const BundleManagerScreen())),
+      ),
+    );
+
+    quickActionItems.add(
+      _ModuleCard(
+        icon: Icons.card_giftcard_rounded,
+        title: 'Referral',
+        subtitle: 'Kode & hadiah',
+        color: const Color(0xFF25D366),
+        onTap: () => Navigator.push(context,
+            MaterialPageRoute(builder: (_) => const ReferralScreen())),
       ),
     );
 
@@ -1803,6 +1829,113 @@ class _MarketIntelCardState extends State<_MarketIntelCard> {
               ),
             ),
           ),
+        ],
+      ),
+    );
+  }
+}
+
+class _CrossSellCard extends StatelessWidget {
+  final List<dynamic> transactions;
+  final String outletId;
+
+  const _CrossSellCard({required this.transactions, required this.outletId});
+
+  @override
+  Widget build(BuildContext context) {
+    // Hitung keranjang dari transaksi yang dimuat dashboard.
+    final baskets = <String, Set<String>>{};
+    final nameOf = <String, String>{};
+    for (final tx in transactions) {
+      try {
+        final items = (tx.items as List);
+        final set = <String>{};
+        for (final it in items) {
+          final pid = it.productId?.toString() ?? '';
+          if (pid.isEmpty) continue;
+          set.add(pid);
+          nameOf[pid] = it.productName?.toString() ?? pid;
+        }
+        if (set.isNotEmpty) baskets['${tx.id}'] = set;
+      } catch (_) {}
+    }
+    if (baskets.length < 2) return const SizedBox.shrink();
+
+    final rules = AIEngine().crossSellRules(
+      baskets.values.map((s) => s.toList()).toList(),
+      minSupport: 1,
+      topN: 3,
+    );
+    if (rules.isEmpty) return const SizedBox.shrink();
+
+    return Container(
+      decoration: BoxDecoration(
+        color: const Color(0xFFFFFBEB),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: const Color(0xFFFDE68A)),
+      ),
+      padding: const EdgeInsets.all(16),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              const Icon(Icons.auto_awesome_rounded,
+                  size: 18, color: Color(0xFFD97706)),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Text(
+                  'Peluang Cross-Sell',
+                  style: GoogleFonts.inter(
+                    fontSize: 13,
+                    fontWeight: FontWeight.bold,
+                    color: const Color(0xFF92400E),
+                  ),
+                ),
+              ),
+              Container(
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFFEF3C7),
+                  borderRadius: BorderRadius.circular(6),
+                ),
+                child: const Text('AI',
+                    style: TextStyle(
+                        fontSize: 9,
+                        fontWeight: FontWeight.w800,
+                        color: Color(0xFFD97706))),
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          ...rules.map((r) {
+            final from = nameOf[r['antecedent']?.toString()] ?? 'Produk';
+            final to = nameOf[r['consequent']?.toString()] ?? 'Produk';
+            final conf = ((r['confidence'] as double) * 100).round();
+            return Padding(
+              padding: const EdgeInsets.only(bottom: 6),
+              child: Row(
+                children: [
+                  const Icon(Icons.arrow_forward_rounded,
+                      size: 14, color: Color(0xFFD97706)),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      'Beli "$from" → tawarkan "$to"',
+                      style: const TextStyle(
+                          fontSize: 12, color: Color(0xFF92400E)),
+                    ),
+                  ),
+                  Text('$conf%',
+                      style: const TextStyle(
+                          fontSize: 11,
+                          fontWeight: FontWeight.w700,
+                          color: Color(0xFFD97706))),
+                ],
+              ),
+            );
+          }),
         ],
       ),
     );

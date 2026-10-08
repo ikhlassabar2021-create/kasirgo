@@ -258,8 +258,7 @@ class SupabaseService {
   }
 
   /// Katalog online publik: hanya produk yang owner publikasikan.
-  Future<List<Product>> getPublicCatalog(String outletId) async {
-    try {
+  Future<List<Product>> getPublicCatalog(String outletId) async {    try {
       final res = await _client
           .rpc('get_public_catalog', params: {'p_outlet': outletId});
       return (res as List)
@@ -267,6 +266,18 @@ class SupabaseService {
           .toList();
     } catch (e) {
       debugPrint('getPublicCatalog error: $e');
+      return [];
+    }
+  }
+
+  /// ST15-3: paket bundling aktif untuk katalog publik (anon).
+  Future<List<Map<String, dynamic>>> getPublicBundles(String outletId) async {
+    try {
+      final res = await _client
+          .rpc('get_public_bundles', params: {'p_outlet': outletId});
+      return List<Map<String, dynamic>>.from(res as List);
+    } catch (e) {
+      debugPrint('getPublicBundles error: $e');
       return [];
     }
   }

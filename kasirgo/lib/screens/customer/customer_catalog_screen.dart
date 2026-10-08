@@ -29,6 +29,7 @@ class _CustomerCatalogScreenState extends State<CustomerCatalogScreen> {
   final _searchController = TextEditingController();
 
   List<Product> _products = [];
+  List<Map<String, dynamic>> _bundles = [];
   String _outletName = '';
   String _outletId = '';
   String _waNumber = '';
@@ -80,14 +81,16 @@ class _CustomerCatalogScreenState extends State<CustomerCatalogScreen> {
 
     final wa = await _service.getPublicOutletWa(outlet.id);
     final data = await _service.getPublicCatalog(outlet.id);
+    final bundles = await _service.getPublicBundles(outlet.id);
     if (!mounted) return;
     setState(() {
       _outletId = outlet.id;
       _outletName = outlet.name;
       _waNumber = wa ?? '';
       _products = data.where((p) => p.isActive).toList();
+      _bundles = bundles;
       _isLoading = false;
-      if (_products.isEmpty) {
+      if (_products.isEmpty && _bundles.isEmpty) {
         _error = 'Katalog masih kosong. Silakan cek kembali nanti.';
       }
     });
@@ -113,8 +116,132 @@ class _CustomerCatalogScreenState extends State<CustomerCatalogScreen> {
     }).toList();
   }
 
-  Future<void> _orderViaWhatsApp(Product product) async {
+  Widget _buildBundleStrip() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Padding(
+          padding: const EdgeInsets.fromLTRB(14, 12, 14, 6),
+          child: Row(
+            children: [
+              const Icon(Icons.inventory_2_rounded,
+                  size: 16, color: AppTheme.primaryColor),
+              const SizedBox(width: 6),
+              Text('Paket Hemat',
+                  style: GoogleFonts.inter(
+                      fontSize: 13, fontWeight: FontWeight.w800)),
+            ],
+          ),
+        ),
+        SizedBox(
+          height: 96,
+          child: ListView.separated(
+            scrollDirection: Axis.horizontal,
+            padding: const EdgeInsets.symmetric(horizontal: 12),
+            itemCount: _bundles.length,
+            separatorBuilder: (_, _) => const SizedBox(width: 10),
+            itemBuilder: (_, i) => _buildBundleCard(_bundles[i]),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildBundleCard(Map<String, dynamic> b) {
+    final name = b['name']?.toString() ?? 'Paket';
+    final price = (b['bundle_price'] as num?)?.toDouble() ?? 0;
+    final original = (b['original_price'] as num?)?.toDouble() ?? 0;
+    final count = (b['item_count'] as num?)?.toInt() ?? 0;
+
+    return InkWell(
+      onTap: () => _orderBundleViaWhatsApp(b),
+      borderRadius: BorderRadius.circular(AppTheme.radiusLarge),
+      child: Container(
+        width: 210,
+        padding: const EdgeInsets.all(12),
+        decoration: BoxDecoration(
+          color: const Color(0xFFF5F3FF),
+          borderRadius: BorderRadius.circular(AppTheme.radiusLarge),
+          border: Border.all(color: const Color(0xFFDDD6FE)),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Expanded(
+                  child: Text(name,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: GoogleFonts.inter(
+                          fontSize: 13, fontWeight: FontWeight.w800)),
+                ),
+                if (original > price)
+                  Container(
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 5, vertical: 2),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFDCFCE7),
+                      borderRadius: BorderRadius.circular(4),
+                    ),
+                    child: Text(
+                      '-${(((original - price) / original) * 100).round()}%',
+                      style: const TextStyle(
+                          fontSize: 9,
+                          fontWeight: FontWeight.w800,
+                          color: Color(0xFF15803D)),
+                    ),
+                  ),
+              ],
+            ),
+            const SizedBox(height: 2),
+            Text('$count item dalam paket',
+                style: const TextStyle(
+                    fontSize: 10.5, color: AppTheme.textSecondary)),
+            const Spacer(),
+            Row(
+              children: [
+                Text(Formatters.currency(price),
+                    style: GoogleFonts.inter(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w800,
+                        color: AppTheme.primaryColor)),
+                if (original > price) ...[
+                  const SizedBox(width: 6),
+                  Text(Formatters.currency(original),
+                      style: const TextStyle(
+                          fontSize: 10.5,
+                          color: AppTheme.textSecondary,
+                          decoration: TextDecoration.lineThrough)),
+                ],
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Future<void> _orderBundleViaWhatsApp(Map<String, dynamic> bundle) async {
     if (_waNumber.trim().isEmpty) {
+      ScaffoldMessenger.of(context)
+        ..hideCurrentSnackBar()
+        ..showSnackBar(const SnackBar(
+          content: Text('Toko belum mengatur nomor WhatsApp pemesanan.'),
+          backgroundColor: AppTheme.warningColor,
+        ));
+      return;
+    }
+    final price = (bundle['bundle_price'] as num?)?.toDouble() ?? 0;
+    final message = 'Halo *$_outletName*, saya ingin memesan paket:\n\n'
+        '*${bundle['name']}*\n'
+        'Harga Paket: ${Formatters.currency(price)}\n'
+        'Jumlah: 1\n\n'
+        'Pesan dari katalog online (${SupabaseConfig.catalogUrl(_outletId)}).';
+    await WaHelper.sendWhatsAppMessage(phone: _waNumber, message: message);
+  }
+
+  Future<void> _orderViaWhatsApp(Product product) async {    if (_waNumber.trim().isEmpty) {
       ScaffoldMessenger.of(context)
         ..hideCurrentSnackBar()
         ..showSnackBar(const SnackBar(
@@ -255,18 +382,28 @@ class _CustomerCatalogScreenState extends State<CustomerCatalogScreen> {
                                   : w >= 520
                                       ? 3
                                       : 2;
-                          return GridView.builder(
-                            padding: const EdgeInsets.all(12),
-                            gridDelegate:
-                                SliverGridDelegateWithFixedCrossAxisCount(
-                              crossAxisCount: cols,
-                              childAspectRatio: 0.82,
-                              crossAxisSpacing: 10,
-                              mainAxisSpacing: 10,
-                            ),
-                            itemCount: filtered.length,
-                            itemBuilder: (context, index) =>
-                                _buildProductCard(filtered[index]),
+                          return CustomScrollView(
+                            slivers: [
+                              if (_bundles.isNotEmpty)
+                                SliverToBoxAdapter(child: _buildBundleStrip()),
+                              SliverPadding(
+                                padding: const EdgeInsets.all(12),
+                                sliver: SliverGrid(
+                                  gridDelegate:
+                                      SliverGridDelegateWithFixedCrossAxisCount(
+                                    crossAxisCount: cols,
+                                    childAspectRatio: 0.82,
+                                    crossAxisSpacing: 10,
+                                    mainAxisSpacing: 10,
+                                  ),
+                                  delegate: SliverChildBuilderDelegate(
+                                    (context, index) =>
+                                        _buildProductCard(filtered[index]),
+                                    childCount: filtered.length,
+                                  ),
+                                ),
+                              ),
+                            ],
                           );
                         },
                       ),

@@ -262,7 +262,7 @@ Status: SELESAI. Project Supabase sudah dibuat dan schema terpasang serta diuji.
   ST14-1..ST14-10. Detail: sesi "Phase 14 Dokter Bisnis AI".)
 - [ ] Phase 15: Master Prompt Karakter & Skill + 12 Fitur Bos Virtual
   (15A ST15-1 Master Prompt + Daftar Skill SELESAI; 15B ST15-2 Bos Virtual Analitik SELESAI;
-  berikutnya 15C ST15-3. Detail: `PROGRESS-PHASE15.md`.)
+  15C ST15-3 Bos Virtual Growth SELESAI; berikutnya 15D ST15-4. Detail: `PROGRESS-PHASE15.md`.)
 
 Catatan: Phase 7.6 adalah redesign visual menyeluruh (semua dashboard + fitur Produk/Pelanggan/
 Karyawan/Laporan/Pengaturan) tanpa mengubah fitur/logic. Spec: workflow Bagian 1.6 & 7C.
@@ -841,3 +841,28 @@ Migrasi: docs/migrations/2026-10-01-kasirgo-8.sql. Detail: PROGRESS-PHASE8.md.
   `due_at` terisi. `dart analyze` 3 file bersih (hanya info style pre-existing).
   CATATAN: rate limit owner 60 pesan/hari (superadmin dikecualikan) -- saat uji owner
   kuota sudah 30/60.
+
+## Sesi 2026-10-08: Phase 15C Bos Virtual Growth (ST15-3 SELESAI)
+- Migrasi `docs/migrations/2026-10-19-kasirgo-15c-bos-virtual-growth.sql` (DITERAPKAN):
+  - `product_bundles` + `product_bundle_items`; `referral_codes` + `customer_referrals`.
+  - RLS owner/superadmin (pola Phase 14/15B); `product_bundle_items` via bundle_id.
+  - RPC `increment_referral_redeemed(uuid)` (SECURITY DEFINER, owner/admin).
+  - RPC publik `get_public_bundles(TEXT)` untuk katalog anon (hanya paket aktif & produk published).
+- Edge Function `business_doctor_chat` (REDEPLOYED):
+  - Tool BARU `get_cross_sell` (association rule 200 transaksi terakhir: support/confidence/lift),
+    `save_bundle` (resolve produk by nama/ID -> hitung original_price -> sink card),
+    `save_referral` (kode berjenjang -> sink card).
+  - `SKILL_TOOLS`: `cross_sell`, `bundling`, `referral`; helper `crossSellRules()`.
+  - action_key enum + prompt DItambah kembali `referral`; sink push list + bundle/referral.
+- App Flutter (commit ST15-3):
+  - `utils/ai_engine.dart`: `crossSellRules(baskets, {minSupport, topN})`.
+  - `services/growth_service.dart` (BARU): list/save/toggle/delete bundle, referral, tracking, stats;
+    `productsClient` untuk query ad-hoc.
+  - `screens/owner/bundle_manager_screen.dart` (BARU) + `referral_screen.dart` (BARU).
+  - POS: strip bundling + chip cross-sell; bundling = 1 item (productId `bundle:<id>`).
+  - Owner home: kartu Peluang Cross-Sell + shortcut Bundling/Referral.
+  - Doctor screen: aksi resep bundling/cross_sell/referral -> layar baru (di-gate Pendukung).
+  - Customer catalog: strip "Paket Hemat" (RPC get_public_bundles) + pesan via WA.
+  - `supabase_service.dart`: `getPublicBundles`.
+- Verifikasi E2E: referral HEMAT10 tersimpan; bundle Sembako Hemat (28000/31000, 2 item) tersimpan;
+  get_cross_sell jalan (kosong karena outlet uji tanpa transaksi). `dart analyze` bersih.

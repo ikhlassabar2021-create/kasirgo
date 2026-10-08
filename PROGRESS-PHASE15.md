@@ -1,6 +1,6 @@
 # PROGRESS PHASE 15 - Master Prompt Karakter & Skill + 12 Fitur Bos Virtual
 
-STATUS: 15A (ST15-1) + 15B (ST15-2) SELESAI. Berikutnya ST15-3 (15C Bos Virtual Growth).
+STATUS: 15A (ST15-1) + 15B (ST15-2) + 15C (ST15-3) SELESAI. Berikutnya ST15-4 (15D Addendum L-O).
 Sumber spec: `KASIRGO-WORKFLOW-LENGKAP.md` BAGIAN 13 (13.23-13.26) + BAGIAN 14.3.
 
 ## Prinsip (WAJIB)
@@ -80,14 +80,45 @@ Sumber spec: `KASIRGO-WORKFLOW-LENGKAP.md` BAGIAN 13 (13.23-13.26) + BAGIAN 14.3
 - Verifikasi E2E: list memuat field; unlimited ON -> owner token 255649>200000 tidak diblokir;
   token_quota=10 -> diblokir; cleanup override uji; admin build EXIT 0.
 
-### ST15-2 (15B) Bos Virtual Analitik - BERIKUTNYA
-- Migration `outlet_targets`, `doctor_scaling_plans` (+ RLS outlet sendiri); skill target/scaling/market_intel.
-- Konsultasi Target (tool get_targets/save_target + kartu Target & Progress + pace alert).
-- Business Scaling (checklist kesiapan + roadmap 30/60/90 + layar Peta Ekspansi).
-- Intelijen Pasar (input manual + fetch_url + benchmark hyperlocal -> kartu Intel Pasar).
+### ST15-2 (15B) Bos Virtual Analitik - SELESAI
+(Lihat detail di bagian "ST15-2 (15B) Bos Virtual Analitik - SELESAI" di atas.)
 
-### ST15-3 (15C) Bos Virtual Growth
-- Migration `product_bundles`, `product_bundle_items`, `referral_codes`, `customer_referrals`.
+### ST15-3 (15C) Bos Virtual Growth - SELESAI
+- Migrasi `docs/migrations/2026-10-19-kasirgo-15c-bos-virtual-growth.sql` (DITERAPKAN):
+  - `product_bundles` (nama, bundle_price, original_price, is_active) + `product_bundle_items`
+    (bundle_id, product_id, quantity). RLS owner/superadmin.
+  - `referral_codes` (code unik, reward_amount pembawa, friend_reward_amount teman, min_spend,
+    max_redemptions, redeemed_count, is_active) + `customer_referrals` (status pending/converted/
+    rewarded, spend_amount, transaction_id). RLS owner/superadmin.
+  - RPC `increment_referral_redeemed(code_id)`; RPC publik `get_public_bundles(outlet)` untuk katalog anon.
+- Edge Function `business_doctor_chat` (REDEPLOYED):
+  - Tool `get_cross_sell` (association rule dari 200 transaksi: support/confidence/lift),
+    `save_bundle` (resolve produk by nama/ID + hitung original_price + sink card),
+    `save_referral` (kode berjenjang + sink card). SKILL_TOOLS: cross_sell/bundling/referral.
+  - Helper `crossSellRules()` di EF; action_key enum + prompt ditambah `referral`.
+- App Flutter:
+  - `utils/ai_engine.dart`: metode baru `crossSellRules(baskets, minSupport, topN)` (association rule).
+  - `services/growth_service.dart` (BARU): CRUD bundle, referral code, tracking konversi + stats.
+  - `screens/owner/bundle_manager_screen.dart` (BARU): manajer bundling (buat/ubah/hapus/aktifkan,
+    pemilihan produk multi-qty, tampil harga normal vs paket + hemat).
+  - `screens/owner/referral_screen.dart` (BARU): kode referral berjenjang, ringkasan konversi,
+    toggle aktif, bagikan via wa.me.
+  - `screens/owner/pos_screen.dart`: strip bundling + chip saran cross-sell; bundling dijual 1 item
+    (productId `bundle:<id>`); tap chip menambah produk saran ke keranjang.
+  - `screens/owner/owner_home_screen.dart`: kartu "Peluang Cross-Sell" (AIEngine) + shortcut
+    "Paket Bundling" & "Referral" di Quick Actions.
+  - `screens/owner/business_doctor_screen.dart`: aksi resep bundling/cross_sell -> BundleManagerScreen,
+    referral -> ReferralScreen (di-gate Pendukung).
+  - `screens/customer/customer_catalog_screen.dart`: strip "Paket Hemat" dari RPC `get_public_bundles`,
+    pesan paket via WA.
+  - `services/supabase_service.dart`: `getPublicBundles(outletId)`.
+- Verifikasi E2E (chat Warung Test):
+  - `get_cross_sell` mengembalikan aturan (kosong wajar karena outlet uji tanpa transaksi).
+  - `save_referral` -> baris `referral_codes` (HEMAT10, reward 5000/3000) tersimpan.
+  - `save_bundle` -> `product_bundles` Sembako Hemat (harga 28000, original 31000, 2 item) tersimpan.
+  - `dart analyze` file baru bersih (0 error). Web release built & deployed.
+
+### ST15-4 (15D) Perilaku Addendum + Hardening
 - Cross-Selling (chip POS + kartu Peluang Cross-Sell), Bundling (manajer + 1 item POS),
   Referral (kode/kupon + tracking + wa.me).
 

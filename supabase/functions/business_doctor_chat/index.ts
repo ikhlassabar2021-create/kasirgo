@@ -234,7 +234,7 @@ const TOOLS = [
                 text: { type: "string" },
                 action_key: {
                   type: "string",
-                  enum: ["sidak_bos", "progress_tracker", "dynamic_pricing", "bundling", "cross_sell", "wa_marketing", "catat_promosi", "health_score", "online_catalog", "qr_table", "multi_outlet", "recipe"],
+                  enum: ["sidak_bos", "progress_tracker", "dynamic_pricing", "bundling", "cross_sell", "wa_marketing", "catat_promosi", "health_score", "online_catalog", "qr_table", "multi_outlet", "recipe", "referral"],
                 },
               },
               required: ["text"],
@@ -304,6 +304,65 @@ const TOOLS = [
   {
     type: "function",
     function: {
+      name: "get_cross_sell",
+      description: "Hitung peluang cross-selling: produk apa yang paling sering dibeli bersama produk tertentu (association rule dari riwayat transaksi).",
+      parameters: {
+        type: "object",
+        properties: {
+          product_id: { type: "string", description: "Opsional. Produk acuan; kosong = semua peluang teratas." },
+        },
+      },
+    },
+  },
+  {
+    type: "function",
+    function: {
+      name: "save_bundle",
+      description: "Simpan paket bundling (produk margin tinggi + slow-moving dijual 1 harga). HANYA setelah owner menyetujui harga paket.",
+      parameters: {
+        type: "object",
+        properties: {
+          name: { type: "string" },
+          description: { type: "string" },
+          bundle_price: { type: "number" },
+          items: {
+            type: "array",
+            items: {
+              type: "object",
+              properties: {
+                product_id: { type: "string", description: "ID produk (UUID) bila diketahui." },
+                product_name: { type: "string", description: "Nama produk persis seperti di katalog bila ID tidak diketahui." },
+                quantity: { type: "number" },
+              },
+            },
+          },
+        },
+        required: ["name", "bundle_price", "items"],
+      },
+    },
+  },
+  {
+    type: "function",
+    function: {
+      name: "save_referral",
+      description: "Buat kode referral berjenjang (pembawa + diajak dapat hadiah). HANYA setelah owner setuju.",
+      parameters: {
+        type: "object",
+        properties: {
+          code: { type: "string", description: "Kode unik, mis. HEMAT10." },
+          title: { type: "string" },
+          reward_amount: { type: "number", description: "Hadiah untuk pembawa (Rp)." },
+          friend_reward_amount: { type: "number", description: "Hadiah untuk teman yang diajak (Rp)." },
+          min_spend: { type: "number" },
+          max_redemptions: { type: "integer" },
+        },
+        required: ["code"],
+      },
+    },
+  },
+  {
+    type: "function",
+    function: {
       name: "escalate_case",
       description: "Naikkan tingkat penanganan kasus saat resep gagal/berulang. level 1=evaluasi ulang (cari akar masalah), 2=lini kedua (ganti pendekatan), 3=kasus bandel (butuh bantuan manusia).",
       parameters: {
@@ -318,12 +377,54 @@ const TOOLS = [
     },
   },
 ];
-
 function privateHost(host: string) {
   const h = host.toLowerCase();
   return h === "localhost" || h === "0.0.0.0" || h === "::1" ||
     h.endsWith(".internal") || h.endsWith(".local") ||
     /^(127\.|10\.|192\.168\.|169\.254\.|172\.(1[6-9]|2\d|3[01])\.)/.test(h);
+}
+
+// ST15-3 (13.17): association rule sederhana (support/confidence/lift).
+function crossSellRules(
+  baskets: string[][],
+  minSupport = 2,
+  topN = 20,
+): Json[] {
+  const n = baskets.length;
+  if (n < 2) return [];
+  const itemCount = new Map<string, number>();
+  for (const b of baskets) for (const id of new Set(b)) itemCount.set(id, (itemCount.get(id) ?? 0) + 1);
+  const pairCount = new Map<string, number>();
+  const pairItems = new Map<string, string[]>();
+  for (const b of baskets) {
+    const ids = Array.from(new Set(b)).sort();
+    for (let i = 0; i < ids.length; i++) {
+      for (let j = i + 1; j < ids.length; j++) {
+        const key = ids[i] + "|" + ids[j];
+        pairCount.set(key, (pairCount.get(key) ?? 0) + 1);
+        pairItems.set(key, [ids[i], ids[j]]);
+      }
+    }
+  }
+  const rules: Json[] = [];
+  for (const [key, count] of pairCount) {
+    if (count < minSupport) continue;
+    const [a, b] = pairItems.get(key)!;
+    const sa = itemCount.get(a) ?? 0;
+    const sb = itemCount.get(b) ?? 0;
+    const confAB = sa > 0 ? count / sa : 0;
+    const confBA = sb > 0 ? count / sb : 0;
+    const support = count / n;
+    const liftAB = sb > 0 ? confAB / (sb / n) : 0;
+    const liftBA = sa > 0 ? confBA / (sa / n) : 0;
+    if (confAB >= confBA) {
+      rules.push({ antecedent: a, consequent: b, count, support: Math.round(support * 1000) / 1000, confidence: Math.round(confAB * 1000) / 1000, lift: Math.round(liftAB * 100) / 100 });
+    } else {
+      rules.push({ antecedent: b, consequent: a, count, support: Math.round(support * 1000) / 1000, confidence: Math.round(confBA * 1000) / 1000, lift: Math.round(liftBA * 100) / 100 });
+    }
+  }
+  rules.sort((x, y) => Number(y.confidence) - Number(x.confidence));
+  return rules.slice(0, topN);
 }
 
 async function toolFetchUrl(url: string, admin: any) {
@@ -494,6 +595,110 @@ async function execTool(admin: any, outletId: string, name: string, args: Json, 
       sink.scaling = { type: "card", tone: "info", title: "Peta Ekspansi tersimpan", body: `Tujuan: ${goal}. Roadmap ${roadmap.length} langkah (30/60/90 hari).` };
       return { saved: true, id: data?.id ?? null, phases: roadmap.length };
     }
+    case "get_cross_sell": {
+      // Association rule sederhana dari 200 transaksi terakhir.
+      const { data: trx } = await admin
+        .from("transactions")
+        .select("id")
+        .eq("outlet_id", outletId).eq("payment_status", "paid")
+        .order("created_at", { ascending: false }).limit(200);
+      const txIds = (trx ?? []).map((t: Json) => t.id);
+      if (!txIds.length) return { rules: [], note: "Belum ada transaksi." };
+      const { data: items } = await admin
+        .from("transaction_items")
+        .select("transaction_id, product_id, product_name")
+        .in("transaction_id", txIds);
+      const baskets = new Map<string, Set<string>>();
+      const nameOf = new Map<string, string>();
+      for (const it of (items ?? []) as Json[]) {
+        const txId = String(it.transaction_id);
+        if (!baskets.has(txId)) baskets.set(txId, new Set());
+        baskets.get(txId)!.add(String(it.product_id));
+        if (it.product_name) nameOf.set(String(it.product_id), String(it.product_name));
+      }
+      const list = Array.from(baskets.values()).map((s) => Array.from(s));
+      const rules = crossSellRules(list, 2, 10).map((r: Json) => ({
+        from: nameOf.get(String(r.antecedent)) ?? r.antecedent,
+        to: nameOf.get(String(r.consequent)) ?? r.consequent,
+        confidence: r.confidence,
+        lift: r.lift,
+        count: r.count,
+      }));
+      const focus = String(args?.product_id ?? "");
+      return { rules, focus: focus || null };
+    }
+    case "save_bundle": {
+      const name = String(args?.name ?? "").slice(0, 200);
+      const bundlePrice = Number(args?.bundle_price ?? 0);
+      const rawItems = (Array.isArray(args?.items) ? args.items : [])
+        .slice(0, 10)
+        .map((it: Json) => ({
+          product_id: it?.product_id ? String(it.product_id) : "",
+          product_name: it?.product_name ? String(it.product_name) : "",
+          quantity: Number(it?.quantity ?? 1),
+        }))
+        .filter((it: Json) => it.product_id || it.product_name);
+      if (!name || !(bundlePrice > 0) || !rawItems.length) return { error: "nama_harga_item_wajib" };
+
+      // Resolve item -> product UUID (AI mungkin kirim nama, bukan UUID).
+      const { data: outletProds } = await admin
+        .from("products").select("id, name, base_price").eq("outlet_id", outletId);
+      const prods = (outletProds ?? []) as Json[];
+      const byId = new Map<string, Json>(prods.map((p: Json) => [String(p.id), p]));
+      const byName = new Map<string, Json>(prods.map((p: Json) => [String(p.name).toLowerCase(), p]));
+      const isUuid = (s: string) => /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(s);
+
+      const items: Json[] = [];
+      let originalPrice = 0;
+      for (const it of rawItems) {
+        let prod: Json | undefined;
+        if (it.product_id && isUuid(it.product_id)) prod = byId.get(it.product_id);
+        if (!prod && it.product_name) prod = byName.get(it.product_name.toLowerCase());
+        if (!prod && it.product_id && !isUuid(it.product_id)) prod = byName.get(it.product_id.toLowerCase());
+        if (!prod) continue;
+        items.push({ product_id: prod.id, quantity: it.quantity });
+        originalPrice += Number(prod.base_price ?? 0) * it.quantity;
+      }
+      if (!items.length) return { error: "produk_tidak_ditemukan", hint: "Sebutkan nama produk persis seperti di katalog." };
+
+      const { data: bundle, error } = await admin.from("product_bundles").insert({
+        outlet_id: outletId,
+        name,
+        description: String(args?.description ?? "").slice(0, 500),
+        bundle_price: bundlePrice,
+        original_price: originalPrice,
+        is_active: true,
+      }).select("id").maybeSingle();
+      if (error || !bundle) return { error: String(error?.message ?? "gagal_simpan").slice(0, 200) };
+      const { error: itemErr } = await admin.from("product_bundle_items").insert(
+        items.map((it: Json) => ({ bundle_id: bundle.id, product_id: it.product_id, quantity: it.quantity })),
+      );
+      if (itemErr) {
+        await admin.from("product_bundles").delete().eq("id", bundle.id);
+        return { error: String(itemErr.message).slice(0, 200) };
+      }
+      const saving = Math.max(0, originalPrice - bundlePrice);
+      sink.bundle = { type: "card", tone: "success", title: "Paket Bundling dibuat", body: `${name} — Rp${Math.round(bundlePrice).toLocaleString("id-ID")} (hemat Rp${Math.round(saving).toLocaleString("id-ID")} dari Rp${Math.round(originalPrice).toLocaleString("id-ID")}).` };
+      return { saved: true, id: bundle.id, original_price: originalPrice, saving, items: items.length };
+    }
+    case "save_referral": {
+      const code = String(args?.code ?? "").trim().toUpperCase().slice(0, 24);
+      if (!code) return { error: "kode_wajib" };
+      const { data, error } = await admin.from("referral_codes").upsert({
+        outlet_id: outletId,
+        code,
+        title: String(args?.title ?? "").slice(0, 200),
+        reward_amount: Number(args?.reward_amount ?? 0),
+        friend_reward_amount: Number(args?.friend_reward_amount ?? 0),
+        min_spend: Number(args?.min_spend ?? 0),
+        max_redemptions: Number(args?.max_redemptions ?? 0),
+        is_active: true,
+        updated_at: new Date().toISOString(),
+      }, { onConflict: "code" }).select("id, code").maybeSingle();
+      if (error) return { error: String(error.message).slice(0, 200) };
+      sink.referral = { type: "card", tone: "success", title: "Kode Referral dibuat", body: `Kode ${code} aktif. Pembawa dapat Rp${Number(args?.reward_amount ?? 0).toLocaleString("id-ID")}, teman dapat Rp${Number(args?.friend_reward_amount ?? 0).toLocaleString("id-ID")}.` };
+      return { saved: true, code };
+    }
     case "observe_progress": {
       const { data: openRx } = await admin
         .from("doctor_memory")
@@ -648,7 +853,7 @@ ATURAN OUTPUT:
   {"type":"gauge","label":"Skor Kesehatan Usaha","value":0-100,"hint":"..."},
   {"type":"checklist","title":"Peta Resep","items":[{"text":"...","done":false}]},
   {"type":"choices","prompt":"...","options":[{"label":"...","value":"..."}]},
-  {"type":"action","label":"...","action_key":"sidak_bos|progress_tracker|dynamic_pricing|bundling|cross_sell|wa_marketing|catat_promosi|health_score|online_catalog|qr_table|multi_outlet|recipe"}
+  {"type":"action","label":"...","action_key":"sidak_bos|progress_tracker|dynamic_pricing|bundling|cross_sell|wa_marketing|catat_promosi|health_score|online_catalog|qr_table|multi_outlet|recipe|referral"}
 - Bahasa Indonesia sederhana, minim istilah teknis, langkah kecil yang bisa dikerjakan.
 - Isi "phase" dengan fase saat ini sesuai ALUR FASE di atas.
 - Saat menyusun ATAU memperbarui resep (fase B, atau setiap resep lama gagal), WAJIB panggil tool save_prescription dengan verdict, target_days (mis. 7), dan steps (maks 8). Sistem otomatis menampilkan kartu resep yang bisa diklik "Jalankan". Jangan menulis langkah hanya sebagai teks biasa.
@@ -742,6 +947,9 @@ const SKILL_TOOLS: Record<string, string[]> = {
   internet: ["fetch_url"],
   target: ["get_targets", "save_target"],
   scaling: ["save_scaling_plan"],
+  cross_sell: ["get_cross_sell"],
+  bundling: ["save_bundle"],
+  referral: ["save_referral"],
 };
 
 function skillList(cfg: Json): string[] {
@@ -1010,7 +1218,7 @@ Deno.serve(async (req: Request) => {
     if (fallbackReason) blocks = fallbackBlocks(snap, fallbackReason);
     if (!blocks.length) blocks = fallbackBlocks(snap, "Belum ada jawaban dari AI.");
     // Pastikan kartu resep / target / peta ekspansi tampil walau model lupa menyertakannya.
-    for (const key of ["prescription", "target", "scaling"] as const) {
+    for (const key of ["prescription", "target", "scaling", "bundle", "referral"] as const) {
       const s = sink[key];
       if (!fallbackReason && s && !blocks.some((b: Json) => b?.type === s.type && b?.title === s.title)) {
         blocks.push(s);

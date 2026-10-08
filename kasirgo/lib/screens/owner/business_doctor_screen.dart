@@ -14,6 +14,8 @@ import 'doctor_cases_screen.dart';
 import 'doctor_intake_screen.dart';
 import 'doctor_promotion_log_screen.dart';
 import 'doctor_result_screen.dart';
+import 'bundle_manager_screen.dart';
+import 'referral_screen.dart';
 import 'health_score_screen.dart';
 import 'multi_outlet_screen.dart';
 import 'online_catalog_screen.dart';
@@ -371,9 +373,25 @@ class _BusinessDoctorScreenState extends ConsumerState<BusinessDoctorScreen> {
       case 'progress_tracker':
         return const ReportScreen();
       case 'dynamic_pricing':
-      case 'bundling':
-      case 'cross_sell':
         return const ProductListScreen();
+      case 'bundling':
+        return const SupporterFeatureGate(
+          featureKey: 'wa_marketing',
+          title: 'Paket Bundling',
+          child: BundleManagerScreen(),
+        );
+      case 'cross_sell':
+        return const SupporterFeatureGate(
+          featureKey: 'wa_marketing',
+          title: 'Peluang Cross-Sell',
+          child: BundleManagerScreen(),
+        );
+      case 'referral':
+        return const SupporterFeatureGate(
+          featureKey: 'wa_marketing',
+          title: 'Program Referral',
+          child: ReferralScreen(),
+        );
       case 'health_score':
         return const SupporterFeatureGate(
           featureKey: 'health_score_pro',

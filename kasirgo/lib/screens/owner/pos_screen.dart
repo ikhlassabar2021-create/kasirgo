@@ -9,6 +9,9 @@ import '../../models/transaction.dart';
 import '../../providers/auth_provider.dart';
 import '../../services/offline_transaction_service.dart';
 import '../../services/supabase_service.dart';
+import '../../services/growth_service.dart';
+import '../../utils/ai_engine.dart';
+import '../../utils/formatters.dart';
 import '../../utils/receipt_generator.dart';
 import '../../widgets/common/centennial_background.dart';
 import '../owner/product_list_screen.dart';
@@ -38,6 +41,13 @@ class _PosScreenState extends ConsumerState<PosScreen> {
   Map<String, Map<String, double>> _channelPrices = {};
   Map<String, Map<String, dynamic>> _activeDiscounts = {};
 
+  // ST15-3: bundling + cross-sell.
+  final GrowthService _growth = GrowthService();
+  final AIEngine _ai = AIEngine();
+  List<Map<String, dynamic>> _bundles = [];
+  List<Map<String, dynamic>> _productIndex = [];
+  List<Map<String, dynamic>> _crossSellChips = [];
+
   final List<String> _channels = [
     'Toko Fisik',
     'WhatsApp',
@@ -52,6 +62,75 @@ class _PosScreenState extends ConsumerState<PosScreen> {
     _loadOpenShift();
     super.initState();
     _loadPricingAndDiscounts();
+    _loadGrowthData();
+  }
+
+  /// ST15-3: muat paket bundling aktif + hitung peluang cross-sell.
+  Future<void> _loadGrowthData() async {
+    final outletId = ref.read(currentUserProvider)?.outletId;
+    if (outletId == null || outletId.isEmpty) return;
+    try {
+      final bundles = await _growth.listBundles(outletId, onlyActive: true);
+      final prods = await _growth.productsClient
+          .from('products')
+          .select('id, name, base_price, stock')
+          .eq('outlet_id', outletId);
+      if (mounted) {
+        setState(() {
+          _bundles = bundles;
+          _productIndex = List<Map<String, dynamic>>.from(prods as List);
+        });
+      }
+      await _computeCrossSell(outletId);
+    } catch (_) {}
+  }
+
+  Future<void> _computeCrossSell(String outletId) async {
+    try {
+      final trx = await _growth.productsClient
+          .from('transactions')
+          .select('id')
+          .eq('outlet_id', outletId)
+          .eq('payment_status', 'paid')
+          .order('created_at', ascending: false)
+          .limit(200);
+      final txIds = (trx as List).map((t) => t['id']).toList();
+      if (txIds.isEmpty) return;
+      final items = await _growth.productsClient
+          .from('transaction_items')
+          .select('transaction_id, product_id, product_name')
+          .inFilter('transaction_id', txIds);
+      final baskets = <String, Set<String>>{};
+      final nameOf = <String, String>{};
+      for (final it in items as List) {
+        final txId = it['transaction_id'].toString();
+        baskets.putIfAbsent(txId, () => <String>{});
+        baskets[txId]!.add(it['product_id'].toString());
+        if (it['product_name'] != null) {
+          nameOf[it['product_id'].toString()] = it['product_name'].toString();
+        }
+      }
+      final rules = _ai.crossSellRules(
+        baskets.values.map((s) => s.toList()).toList(),
+        minSupport: 1,
+      );
+      final chips = <Map<String, dynamic>>[];
+      for (final r in rules) {
+        final toId = r['consequent']?.toString() ?? '';
+        final prod = _productIndex.firstWhere(
+          (p) => p['id'] == toId,
+          orElse: () => const {},
+        );
+        if (prod.isEmpty) continue;
+        chips.add({
+          'from_name': nameOf[r['antecedent']?.toString()] ?? 'produk ini',
+          'product_id': toId,
+          'product_name': prod['name'],
+          'product': prod,
+        });
+      }
+      if (mounted) setState(() => _crossSellChips = chips.take(6).toList());
+    } catch (_) {}
   }
 
   Future<void> _loadPricingAndDiscounts() async {
@@ -507,8 +586,7 @@ class _PosScreenState extends ConsumerState<PosScreen> {
             borderRadius: BorderRadius.circular(14),
             child: BackdropFilter(
               filter: ImageFilter.blur(sigmaX: 12, sigmaY: 12),
-              child: TextField(
-                controller: _searchController,
+              child: TextField(                controller: _searchController,
                 style: const TextStyle(color: AppTheme.textPrimary, fontSize: 14),
                 onChanged: (v) => setState(() => _searchQuery = v),
                 decoration: InputDecoration(
@@ -542,6 +620,8 @@ class _PosScreenState extends ConsumerState<PosScreen> {
             ),
           ),
         ),
+        if (_bundles.isNotEmpty || _crossSellChips.isNotEmpty)
+          _buildGrowthStrip(),
         Expanded(
           child: ProductGrid(
             products: filtered,
@@ -566,8 +646,75 @@ class _PosScreenState extends ConsumerState<PosScreen> {
     );
   }
 
-  Widget _buildPersistentCart(List<Product> products) {
-    return Padding(
+  /// ST15-3: strip horizontal paket bundling + chip saran cross-sell.
+  Widget _buildGrowthStrip() {
+    return SizedBox(
+      height: 62,
+      child: ListView(
+        scrollDirection: Axis.horizontal,
+        padding: const EdgeInsets.fromLTRB(12, 2, 12, 6),
+        children: [
+          for (final b in _bundles)
+            _GrowthChip(
+              icon: Icons.inventory_2_rounded,
+              label: b['name']?.toString() ?? 'Paket',
+              sub: Formatters.currency(
+                  (b['bundle_price'] as num?)?.toDouble() ?? 0),
+              color: const Color(0xFF7C3AED),
+              onTap: () => _addBundleToCart(b),
+            ),
+          for (final c in _crossSellChips)
+            _GrowthChip(
+              icon: Icons.auto_awesome_rounded,
+              label: c['product_name']?.toString() ?? 'Saran',
+              sub: 'Sering dibeli dgn ${c['from_name']}',
+              color: AppTheme.accentColor,
+              onTap: () => _addProductById(c['product_id']?.toString()),
+            ),
+        ],
+      ),
+    );
+  }
+
+  Future<void> _addBundleToCart(Map<String, dynamic> bundle) async {
+    final items = (bundle['product_bundle_items'] as List?) ?? [];
+    if (items.isEmpty) return;
+    final bundlePrice = (bundle['bundle_price'] as num?)?.toDouble() ?? 0;
+    final bundleName = bundle['name']?.toString() ?? 'Paket';
+    setState(() {
+      _cart.add(TransactionItem(
+        productId: 'bundle:${bundle['id']}',
+        productName: '$bundleName (Paket)',
+        price: bundlePrice,
+        quantity: 1,
+        subtotal: bundlePrice,
+      ));
+    });
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+      content: Text('$bundleName ditambahkan sebagai 1 item paket'),
+      duration: const Duration(seconds: 2),
+      behavior: SnackBarBehavior.floating,
+    ));
+  }
+
+  void _addProductById(String? productId) {
+    if (productId == null) return;
+    final data = _productIndex.firstWhere(
+      (p) => p['id'] == productId,
+      orElse: () => const {},
+    );
+    if (data.isEmpty) return;
+    final product = Product(
+      id: productId,
+      outletId: data['outlet_id']?.toString() ?? '',
+      name: data['name']?.toString() ?? 'Produk',
+      basePrice: (data['base_price'] as num?)?.toDouble() ?? 0,
+      stock: ((data['stock'] as num?)?.toDouble() ?? 0).toInt(),
+    );
+    _addToCart(product);
+  }
+
+  Widget _buildPersistentCart(List<Product> products) {    return Padding(
       padding: const EdgeInsets.fromLTRB(0, 10, 10, 10),
       child: ClipRRect(
         borderRadius: BorderRadius.circular(20),
@@ -676,6 +823,78 @@ class _PosSkeleton extends StatelessWidget {
       ),
       itemCount: 9,
       itemBuilder: (_, _) => const CentennialSkeleton(borderRadius: BorderRadius.all(Radius.circular(16))),
+    );
+  }
+}
+
+class _GrowthChip extends StatelessWidget {
+  final IconData icon;
+  final String label;
+  final String sub;
+  final Color color;
+  final VoidCallback onTap;
+
+  const _GrowthChip({
+    required this.icon,
+    required this.label,
+    required this.sub,
+    required this.color,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.only(right: 8),
+      child: Material(
+        color: color.withValues(alpha: 0.10),
+        borderRadius: BorderRadius.circular(12),
+        child: InkWell(
+          borderRadius: BorderRadius.circular(12),
+          onTap: onTap,
+          child: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(color: color.withValues(alpha: 0.35)),
+            ),
+            child: Row(
+              children: [
+                Icon(icon, size: 18, color: color),
+                const SizedBox(width: 8),
+                Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    ConstrainedBox(
+                      constraints: const BoxConstraints(maxWidth: 140),
+                      child: Text(
+                        label,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: GoogleFonts.inter(
+                          fontSize: 12,
+                          fontWeight: FontWeight.w700,
+                          color: AppTheme.textPrimary,
+                        ),
+                      ),
+                    ),
+                    ConstrainedBox(
+                      constraints: const BoxConstraints(maxWidth: 150),
+                      child: Text(
+                        sub,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: TextStyle(fontSize: 10, color: color),
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
     );
   }
 }
