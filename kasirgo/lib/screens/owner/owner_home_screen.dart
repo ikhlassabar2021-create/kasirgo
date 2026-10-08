@@ -25,9 +25,7 @@ import 'qr_table_screen.dart';
 import 'online_catalog_screen.dart';
 import 'health_score_screen.dart';
 import 'business_doctor_screen.dart';
-import 'doctor_scaling_screen.dart';
 import 'bundle_manager_screen.dart';
-import 'referral_screen.dart';
 import '../../services/business_doctor_service.dart';
 import '../../screens/owner/fintech_screen.dart';
 import '../modules/kitchen_display_screen.dart';
@@ -894,17 +892,6 @@ class _OwnerHomeScreenState extends ConsumerState<OwnerHomeScreen> {
 
     quickActionItems.add(
       _ModuleCard(
-        icon: Icons.rocket_launch_rounded,
-        title: 'Peta Ekspansi',
-        subtitle: 'Scaling 30/60/90',
-        color: const Color(0xFF0284C7),
-        onTap: () => Navigator.push(context,
-            MaterialPageRoute(builder: (_) => const DoctorScalingScreen())),
-      ),
-    );
-
-    quickActionItems.add(
-      _ModuleCard(
         icon: Icons.inventory_2_rounded,
         title: 'Paket Bundling',
         subtitle: 'Jual 1 harga',
@@ -914,18 +901,10 @@ class _OwnerHomeScreenState extends ConsumerState<OwnerHomeScreen> {
       ),
     );
 
-    quickActionItems.add(
-      _ModuleCard(
-        icon: Icons.card_giftcard_rounded,
-        title: 'Referral',
-        subtitle: 'Kode & hadiah',
-        color: const Color(0xFF25D366),
-        onTap: () => Navigator.push(context,
-            MaterialPageRoute(builder: (_) => const ReferralScreen())),
-      ),
-    );
-
     final ppobEnabled = ref.watch(ppobEnabledProvider).valueOrNull ?? true;
+
+    // CATATAN (owner): fitur "Peta Ekspansi" dan "Referral" dihapus dari UI
+    // sesuai permintaan; layar & service tetap ada untuk masa depan.
 
     if (modules.contains(BusinessModule.ppob) && ppobEnabled) {
       quickActionItems.add(
