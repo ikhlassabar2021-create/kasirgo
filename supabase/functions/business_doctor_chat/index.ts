@@ -264,6 +264,46 @@ const TOOLS = [
   {
     type: "function",
     function: {
+      name: "get_targets",
+      description: "Baca target omzet aktif outlet (harian/bulanan) beserta capaian sebenarnya hari ini / bulan ini.",
+      parameters: { type: "object", properties: {} },
+    },
+  },
+  {
+    type: "function",
+    function: {
+      name: "save_target",
+      description: "Simpan/ubah target omzet outlet. HANYA setelah owner MENYETUJUI usulan target (guardrail persetujuan).",
+      parameters: {
+        type: "object",
+        properties: {
+          period: { type: "string", enum: ["day", "month"] },
+          target_amount: { type: "number", description: "Nominal target dalam Rupiah." },
+          note: { type: "string", description: "Catatan cara target dihitung (mis. moving average 14 hari)." },
+        },
+        required: ["period", "target_amount"],
+      },
+    },
+  },
+  {
+    type: "function",
+    function: {
+      name: "save_scaling_plan",
+      description: "Simpan rencana ekspansi (Business Scaling): tujuan, checklist kesiapan, roadmap 30/60/90 hari. HANYA setelah owner setuju.",
+      parameters: {
+        type: "object",
+        properties: {
+          goal: { type: "string" },
+          readiness: { type: "array", items: { type: "object", properties: { text: { type: "string" }, ok: { type: "boolean" } } } },
+          roadmap: { type: "array", items: { type: "object", properties: { phase: { type: "string", enum: ["30", "60", "90"] }, text: { type: "string" } } } },
+        },
+        required: ["goal", "roadmap"],
+      },
+    },
+  },
+  {
+    type: "function",
+    function: {
       name: "escalate_case",
       description: "Naikkan tingkat penanganan kasus saat resep gagal/berulang. level 1=evaluasi ulang (cari akar masalah), 2=lini kedua (ganti pendekatan), 3=kasus bandel (butuh bantuan manusia).",
       parameters: {
@@ -286,7 +326,7 @@ function privateHost(host: string) {
     /^(127\.|10\.|192\.168\.|169\.254\.|172\.(1[6-9]|2\d|3[01])\.)/.test(h);
 }
 
-async function toolFetchUrl(url: string) {
+async function toolFetchUrl(url: string, admin: any) {
   let u: URL;
   try {
     u = new URL(url);
@@ -295,6 +335,21 @@ async function toolFetchUrl(url: string) {
   }
   if (u.protocol !== "http:" && u.protocol !== "https:") return { error: "protokol_ditolak" };
   if (privateHost(u.hostname)) return { error: "host_ditolak" };
+
+  // Cache: bila entri masih segar (fetched_at + ttl), pakai tanpa fetch ulang.
+  try {
+    const { data: cached } = await admin
+      .from("web_cache")
+      .select("content, fetched_at, ttl_seconds")
+      .eq("url", u.toString())
+      .maybeSingle();
+    if (cached?.content) {
+      const age = Date.now() - new Date(String(cached.fetched_at ?? 0)).getTime();
+      const ttl = Number(cached.ttl_seconds ?? 3600) * 1000;
+      if (age < ttl) return { url: u.toString(), cached: true, text: String(cached.content).slice(0, 2000) };
+    }
+  } catch { /* cache gagal -> lanjut fetch langsung */ }
+
   try {
     const resp = await fetch(u.toString(), { headers: { "User-Agent": "KasirGo-Doctor/1.0" } });
     const html = await resp.text();
@@ -306,6 +361,13 @@ async function toolFetchUrl(url: string) {
       .replace(/\s+/g, " ")
       .trim()
       .slice(0, 2000);
+    // Simpan cache (abaikan kegagalan).
+    try {
+      await admin.from("web_cache").upsert({
+        url: u.toString(), content: text, source_label: u.hostname,
+        fetched_at: new Date().toISOString(), ttl_seconds: 3600,
+      }, { onConflict: "url" });
+    } catch { /* ignore */ }
     return { url: u.toString(), status: resp.status, text };
   } catch (e) {
     return { error: String((e as Error)?.message ?? e).slice(0, 200) };
@@ -326,7 +388,7 @@ async function execTool(admin: any, outletId: string, name: string, args: Json, 
       return data ?? [];
     }
     case "fetch_url":
-      return internetActive ? await toolFetchUrl(String(args?.url ?? "")) : { error: "internet_nonaktif" };
+      return internetActive ? await toolFetchUrl(String(args?.url ?? ""), admin) : { error: "internet_nonaktif" };
     case "get_sales_trend":
       return await toolSalesTrend(admin, outletId, Number(args?.days) || 14);
     case "get_low_stock":
@@ -366,8 +428,73 @@ async function execTool(admin: any, outletId: string, name: string, args: Json, 
         .order("created_at", { ascending: false }).limit(1).maybeSingle();
       return data ?? { none: true };
     }
+    case "get_targets": {
+      const { data: targets } = await admin
+        .from("outlet_targets")
+        .select("period, target_amount, set_by, source, note, effective_from")
+        .eq("outlet_id", outletId)
+        .order("effective_from", { ascending: false })
+        .limit(4);
+      // Capaian hari ini / bulan ini.
+      const { data: todayTrx } = await admin
+        .from("transactions")
+        .select("final_amount")
+        .eq("outlet_id", outletId).eq("payment_status", "paid")
+        .gte("created_at", new Date(new Date().toISOString().slice(0, 10)).toISOString());
+      const { data: monthTrx } = await admin
+        .from("transactions")
+        .select("final_amount")
+        .eq("outlet_id", outletId).eq("payment_status", "paid")
+        .gte("created_at", new Date(new Date().getFullYear(), new Date().getMonth(), 1).toISOString());
+      const sum = (rows: Json[] | null) =>
+        (rows ?? []).reduce((s: number, r: Json) => s + Number(r.final_amount ?? 0), 0);
+      return {
+        targets: targets ?? [],
+        today_revenue: sum(todayTrx),
+        month_revenue: sum(monthTrx),
+      };
+    }
+    case "save_target": {
+      const period = args?.period === "month" ? "month" : "day";
+      const amount = Number(args?.target_amount ?? 0);
+      if (!(amount > 0)) return { error: "nominal_tidak_valid" };
+      const today = new Date().toISOString().slice(0, 10);
+      const { error } = await admin.from("outlet_targets").upsert({
+        outlet_id: outletId,
+        period,
+        target_amount: amount,
+        set_by: "ai",
+        source: "business_doctor",
+        note: String(args?.note ?? "").slice(0, 300),
+        effective_from: today,
+      }, { onConflict: "outlet_id,period,effective_from" });
+      if (error) return { error: String(error.message).slice(0, 200) };
+      sink.target = { type: "action", label: `Target ${period === "day" ? "harian" : "bulanan"} tersimpan: Rp${Math.round(amount).toLocaleString("id-ID")}`, action_key: "progress_tracker" };
+      return { saved: true, period, target_amount: amount };
+    }
+    case "save_scaling_plan": {
+      const goal = String(args?.goal ?? "").slice(0, 300);
+      const roadmap = (Array.isArray(args?.roadmap) ? args.roadmap : []).slice(0, 12).map((r: Json) => ({
+        phase: ["30", "60", "90"].includes(String(r?.phase)) ? String(r.phase) : "30",
+        text: String(r?.text ?? "").slice(0, 300),
+      })).filter((r: Json) => r.text);
+      if (!goal || !roadmap.length) return { error: "goal_dan_roadmap_wajib" };
+      const readiness = (Array.isArray(args?.readiness) ? args.readiness : []).slice(0, 10).map((r: Json) => ({
+        text: String(r?.text ?? "").slice(0, 200),
+        ok: r?.ok === true,
+      }));
+      const { data, error } = await admin.from("doctor_scaling_plans").insert({
+        outlet_id: outletId,
+        conversation_id: conversationId,
+        goal,
+        readiness,
+        roadmap,
+      }).select("id").maybeSingle();
+      if (error) return { error: String(error.message).slice(0, 200) };
+      sink.scaling = { type: "card", tone: "info", title: "Peta Ekspansi tersimpan", body: `Tujuan: ${goal}. Roadmap ${roadmap.length} langkah (30/60/90 hari).` };
+      return { saved: true, id: data?.id ?? null, phases: roadmap.length };
+    }
     case "observe_progress": {
-      // Bandingkan resep open vs data nyata (omzet 7d terakhir vs 7d sebelumnya).
       const { data: openRx } = await admin
         .from("doctor_memory")
         .select("id, title, content, due_at, created_at")
@@ -613,6 +740,8 @@ const SKILL_TOOLS: Record<string, string[]> = {
   cashflow: ["get_cashflow", "get_action_history"],
   memory: ["recall_memory", "save_memory", "save_prescription", "get_active_prescription", "observe_progress"],
   internet: ["fetch_url"],
+  target: ["get_targets", "save_target"],
+  scaling: ["save_scaling_plan"],
 };
 
 function skillList(cfg: Json): string[] {
@@ -880,10 +1009,12 @@ Deno.serve(async (req: Request) => {
     if (!blocks.length && replyText) blocks = [{ type: "text", text: replyText }];
     if (fallbackReason) blocks = fallbackBlocks(snap, fallbackReason);
     if (!blocks.length) blocks = fallbackBlocks(snap, "Belum ada jawaban dari AI.");
-    // Pastikan kartu resep tampil walau model lupa menyertakannya.
-    if (!fallbackReason && sink.prescription &&
-        !blocks.some((b: Json) => b?.type === "prescription")) {
-      blocks.push(sink.prescription);
+    // Pastikan kartu resep / target / peta ekspansi tampil walau model lupa menyertakannya.
+    for (const key of ["prescription", "target", "scaling"] as const) {
+      const s = sink[key];
+      if (!fallbackReason && s && !blocks.some((b: Json) => b?.type === s.type && b?.title === s.title)) {
+        blocks.push(s);
+      }
     }
 
     // Simpan jawaban assistant.

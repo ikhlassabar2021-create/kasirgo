@@ -1,6 +1,6 @@
 # PROGRESS PHASE 15 - Master Prompt Karakter & Skill + 12 Fitur Bos Virtual
 
-STATUS: 15A (ST15-1) SELESAI. Berikutnya ST15-2 (15B Bos Virtual Analitik).
+STATUS: 15A (ST15-1) + 15B (ST15-2) SELESAI. Berikutnya ST15-3 (15C Bos Virtual Growth).
 Sumber spec: `KASIRGO-WORKFLOW-LENGKAP.md` BAGIAN 13 (13.23-13.26) + BAGIAN 14.3.
 
 ## Prinsip (WAJIB)
@@ -28,6 +28,33 @@ Sumber spec: `KASIRGO-WORKFLOW-LENGKAP.md` BAGIAN 13 (13.23-13.26) + BAGIAN 14.3
   - Tool loop dinaikkan maks 2 -> 3 putaran (master prompt panjang + model reasoning).
 - kasirgo-admin `ControlPlane.tsx` `DoctorTab`: field "Master Prompt Karakter & Skill"
   (textarea multi-line + tombol Preview + Reset ke Default) + toggle "Daftar Skill" (chip 16 skill).
+
+### ST15-2 (15B) Bos Virtual Analitik - SELESAI
+- Migrasi `docs/migrations/2026-10-18-kasirgo-15b-bos-virtual-analitik.sql` (DITERAPKAN):
+  - `outlet_targets`: id, outlet_id, period (day/month), target_amount, set_by (ai/owner),
+    source, note, effective_from, UNIQUE (outlet_id, period, effective_from). RLS owner + superadmin.
+  - `doctor_scaling_plans`: id, outlet_id, conversation_id, goal, readiness (jsonb),
+    roadmap (jsonb 30/60/90), status (open/on_track/achieved/cancelled). RLS owner + superadmin.
+  - `web_cache`: id, url (unique), content, source_label, fetched_at, ttl_seconds. RLS service_role/superadmin.
+- Edge Function `business_doctor_chat` (REDEPLOYED):
+  - Tool baru `get_targets`: baca target aktif outlet + capaian hari ini / bulan ini dari `transactions`.
+  - Tool baru `save_target`: simpan usulan target harian/bulanan (sink action progress_tracker).
+  - Tool baru `save_scaling_plan`: simpan roadmap 30/60/90 hari ekspansi (sink card).
+  - `fetch_url` diperbarui: cek cache `web_cache` sebelum fetch eksternal (TTL 3600 detik).
+  - `SKILL_TOOLS`: target -> get_targets, save_target; scaling -> save_scaling_plan; internet -> fetch_url.
+- App Owner:
+  - `business_doctor_service.dart`: method `getTargets`, `saveTarget`, `getScalingPlans`, `updateScalingPlanStatus`, `getMarketIntel`.
+  - Layar baru `screens/owner/doctor_scaling_screen.dart`: daftar scaling plans aktif,
+    tujuan, status chips, checklist kesiapan usaha, roadmap tahapan H-30/60/90, CTA konsultasi.
+  - `owner_home_screen.dart`:
+    - Widget `_TargetProgressCard`: progress bar capaian vs target omzet, Pace Alert bila jam >= 14:00 & progress < 50%, CTA konsultasi.
+    - Widget `_MarketIntelCard`: kartu intelijen pasar terbaru + tanggal + tombol "Terapkan ke Harga".
+    - Quick Actions: ditambah item "Peta Ekspansi" (Scaling 30/60/90) mengarah ke `DoctorScalingScreen`.
+- Verifikasi E2E:
+  - Chat Warung Test simpan target Rp 150.000/hari -> baris tersimpan di `outlet_targets`.
+  - Chat Warung Test simpan scaling plan buka cabang 90 hari -> baris tersimpan di `doctor_scaling_plans`.
+  - `dart analyze` bersih (0 error). Web release built & deployed.
+
 - Verifikasi: config live `skills` terisi, `provider_default` tetap (model deepseek-4.1-flash);
   EF chat superadmin -> `fallback:false`, phase B, jawaban nyata; admin build EXIT 0.
 

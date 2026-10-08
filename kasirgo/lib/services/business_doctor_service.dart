@@ -196,4 +196,68 @@ class BusinessDoctorService {
       if (status != null) 'status': status,
     }).eq('id', memoryId);
   }
+
+  // --- ST15-2: Bos Virtual Analitik ---
+
+  /// Baca target omzet aktif untuk outlet (harian/bulanan).
+  Future<List<Map<String, dynamic>>> getTargets(String outletId) async {
+    final res = await _client
+        .from('outlet_targets')
+        .select('*')
+        .eq('outlet_id', outletId)
+        .order('effective_from', ascending: false)
+        .limit(4);
+    return List<Map<String, dynamic>>.from(res as List);
+  }
+
+  /// Simpan / perbarui target omzet outlet.
+  Future<void> saveTarget({
+    required String outletId,
+    required String period,
+    required double targetAmount,
+    String setBy = 'owner',
+    String? note,
+  }) async {
+    final today = DateTime.now().toIso8601String().substring(0, 10);
+    await _client.from('outlet_targets').upsert({
+      'outlet_id': outletId,
+      'period': period,
+      'target_amount': targetAmount,
+      'set_by': setBy,
+      'source': 'app_owner',
+      'note': note,
+      'effective_from': today,
+    }, onConflict: 'outlet_id,period,effective_from');
+  }
+
+  /// Baca rencana scaling aktif outlet.
+  Future<List<Map<String, dynamic>>> getScalingPlans(String outletId) async {
+    final res = await _client
+        .from('doctor_scaling_plans')
+        .select('*')
+        .eq('outlet_id', outletId)
+        .order('created_at', ascending: false)
+        .limit(10);
+    return List<Map<String, dynamic>>.from(res as List);
+  }
+
+  /// Simpan / perbarui status scaling plan.
+  Future<void> updateScalingPlanStatus(String planId, String status) async {
+    await _client
+        .from('doctor_scaling_plans')
+        .update({'status': status, 'updated_at': DateTime.now().toIso8601String()})
+        .eq('id', planId);
+  }
+
+  /// Ambil catatan intel pasar terbaru (dari doctor_memory kind market).
+  Future<List<Map<String, dynamic>>> getMarketIntel(String outletId) async {
+    final res = await _client
+        .from('doctor_memory')
+        .select('*')
+        .eq('outlet_id', outletId)
+        .eq('kind', 'market')
+        .order('created_at', ascending: false)
+        .limit(5);
+    return List<Map<String, dynamic>>.from(res as List);
+  }
 }

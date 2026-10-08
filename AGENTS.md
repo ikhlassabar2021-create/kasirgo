@@ -261,8 +261,8 @@ Status: SELESAI. Project Supabase sudah dibuat dan schema terpasang serta diuji.
   Dokter Bisnis AI + override provider per outlet + rate limit/kuota harian.
   ST14-1..ST14-10. Detail: sesi "Phase 14 Dokter Bisnis AI".)
 - [ ] Phase 15: Master Prompt Karakter & Skill + 12 Fitur Bos Virtual
-  (15A ST15-1 Master Prompt + Daftar Skill SELESAI; berikutnya 15B ST15-2.
-  Detail: `PROGRESS-PHASE15.md`.)
+  (15A ST15-1 Master Prompt + Daftar Skill SELESAI; 15B ST15-2 Bos Virtual Analitik SELESAI;
+  berikutnya 15C ST15-3. Detail: `PROGRESS-PHASE15.md`.)
 
 Catatan: Phase 7.6 adalah redesign visual menyeluruh (semua dashboard + fitur Produk/Pelanggan/
 Karyawan/Laporan/Pengaturan) tanpa mengubah fitur/logic. Spec: workflow Bagian 1.6 & 7C.

@@ -25,6 +25,8 @@ import 'qr_table_screen.dart';
 import 'online_catalog_screen.dart';
 import 'health_score_screen.dart';
 import 'business_doctor_screen.dart';
+import 'doctor_scaling_screen.dart';
+import '../../services/business_doctor_service.dart';
 import '../../screens/owner/fintech_screen.dart';
 import '../modules/kitchen_display_screen.dart';
 import 'shift_screen.dart';
@@ -727,6 +729,10 @@ class _OwnerHomeScreenState extends ConsumerState<OwnerHomeScreen> {
               const SizedBox(height: 16),
               _HeroSalesCard(sales: todaySales, txCount: todayCount),
               const SizedBox(height: 12),
+              _TargetProgressCard(sales: todaySales, outletId: userOutletId()),
+              const SizedBox(height: 12),
+              _MarketIntelCard(outletId: userOutletId()),
+              const SizedBox(height: 12),
               Row(
                 children: [
                   Expanded(
@@ -879,6 +885,17 @@ class _OwnerHomeScreenState extends ConsumerState<OwnerHomeScreen> {
         color: const Color(0xFF4F46E5),
         onTap: () => Navigator.push(context,
             MaterialPageRoute(builder: (_) => const BusinessDoctorScreen())),
+      ),
+    );
+
+    quickActionItems.add(
+      _ModuleCard(
+        icon: Icons.rocket_launch_rounded,
+        title: 'Peta Ekspansi',
+        subtitle: 'Scaling 30/60/90',
+        color: const Color(0xFF0284C7),
+        onTap: () => Navigator.push(context,
+            MaterialPageRoute(builder: (_) => const DoctorScalingScreen())),
       ),
     );
 
@@ -1503,6 +1520,290 @@ class _HeroSalesCard extends StatelessWidget {
             ),
           ),
         ),
+      ),
+    );
+  }
+}
+
+class _TargetProgressCard extends StatefulWidget {
+  final double sales;
+  final String outletId;
+
+  const _TargetProgressCard({required this.sales, required this.outletId});
+
+  @override
+  State<_TargetProgressCard> createState() => _TargetProgressCardState();
+}
+
+class _TargetProgressCardState extends State<_TargetProgressCard> {
+  Map<String, dynamic>? _target;
+  bool _loading = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadTarget();
+  }
+
+  Future<void> _loadTarget() async {
+    try {
+      final list = await BusinessDoctorService().getTargets(widget.outletId);
+      if (mounted) {
+        setState(() {
+          _target = list.isNotEmpty ? list.first : null;
+          _loading = false;
+        });
+      }
+    } catch (_) {
+      if (mounted) setState(() => _loading = false);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    if (_loading) return const SizedBox.shrink();
+
+    final targetAmount = (_target?['target_amount'] as num?)?.toDouble() ?? 0;
+    if (targetAmount <= 0) {
+      // Belum ada target aktif -> tampilkan kartu ajakan pasang target.
+      return Container(
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: AppTheme.borderColor),
+        ),
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+        child: Row(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(8),
+              decoration: BoxDecoration(
+                color: const Color(0xFFEFF6FF),
+                borderRadius: BorderRadius.circular(10),
+              ),
+              child: const Icon(Icons.flag_rounded, color: AppTheme.primaryColor, size: 20),
+            ),
+            const SizedBox(width: 12),
+            const Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Pasang Target Omzet Harian',
+                    style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: AppTheme.textPrimary),
+                  ),
+                  Text(
+                    'Minta AI hitung target realistis toko kamu',
+                    style: TextStyle(fontSize: 11, color: AppTheme.textSecondary),
+                  ),
+                ],
+              ),
+            ),
+            TextButton(
+              onPressed: () {
+                Navigator.push(context, MaterialPageRoute(builder: (_) => const BusinessDoctorScreen()));
+              },
+              child: const Text('Konsultasi', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
+            ),
+          ],
+        ),
+      );
+    }
+
+    final progress = (widget.sales / targetAmount).clamp(0.0, 1.0);
+    final percent = (progress * 100).toInt();
+    final hour = DateTime.now().hour;
+    // Pace Alert: jam 14:00+ tapi capaian di bawah 50%
+    final isPaceAlert = hour >= 14 && progress < 0.50;
+
+    return Container(
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(
+          color: isPaceAlert ? AppTheme.warningColor : AppTheme.borderColor,
+          width: isPaceAlert ? 1.5 : 1,
+        ),
+        boxShadow: const [
+          BoxShadow(color: Color(0x06000000), blurRadius: 6, offset: Offset(0, 2)),
+        ],
+      ),
+      padding: const EdgeInsets.all(16),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              const Icon(Icons.track_changes_rounded, size: 18, color: AppTheme.primaryColor),
+              const SizedBox(width: 8),
+              const Expanded(
+                child: Text(
+                  'Target Omzet Hari Ini',
+                  style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: AppTheme.textPrimary),
+                ),
+              ),
+              if (isPaceAlert)
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFFEF3C7),
+                    borderRadius: BorderRadius.circular(6),
+                  ),
+                  child: const Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(Icons.warning_amber_rounded, size: 12, color: Color(0xFFD97706)),
+                      SizedBox(width: 4),
+                      Text(
+                        'Pace Alert: Laju Lambat',
+                        style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: Color(0xFFD97706)),
+                      ),
+                    ],
+                  ),
+                )
+              else
+                Text(
+                  '$percent%',
+                  style: const TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: AppTheme.primaryColor),
+                ),
+            ],
+          ),
+          const SizedBox(height: 10),
+          ClipRRect(
+            borderRadius: BorderRadius.circular(6),
+            child: LinearProgressIndicator(
+              value: progress,
+              minHeight: 8,
+              backgroundColor: const Color(0xFFF1F5F9),
+              valueColor: AlwaysStoppedAnimation<Color>(
+                isPaceAlert ? AppTheme.warningColor : (progress >= 1.0 ? AppTheme.successColor : AppTheme.primaryColor),
+              ),
+            ),
+          ),
+          const SizedBox(height: 8),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text(
+                'Tercapai: ${Formatters.currency(widget.sales)}',
+                style: const TextStyle(fontSize: 11, color: AppTheme.textSecondary),
+              ),
+              Text(
+                'Target: ${Formatters.currency(targetAmount)}',
+                style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: AppTheme.textPrimary),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _MarketIntelCard extends StatefulWidget {
+  final String outletId;
+  const _MarketIntelCard({required this.outletId});
+
+  @override
+  State<_MarketIntelCard> createState() => _MarketIntelCardState();
+}
+
+class _MarketIntelCardState extends State<_MarketIntelCard> {
+  Map<String, dynamic>? _intel;
+  bool _loading = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadIntel();
+  }
+
+  Future<void> _loadIntel() async {
+    try {
+      final list = await BusinessDoctorService().getMarketIntel(widget.outletId);
+      if (mounted) {
+        setState(() {
+          _intel = list.isNotEmpty ? list.first : null;
+          _loading = false;
+        });
+      }
+    } catch (_) {
+      if (mounted) setState(() => _loading = false);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    if (_loading || _intel == null) return const SizedBox.shrink();
+
+    final title = _intel?['title']?.toString() ?? 'Intelijen Pasar';
+    final content = _intel?['content']?.toString() ?? '';
+    final createdAt = _intel?['created_at']?.toString() ?? '';
+    final dateStr = createdAt.length >= 10 ? createdAt.substring(0, 10) : '';
+
+    return Container(
+      decoration: BoxDecoration(
+        color: const Color(0xFFF0FDF4),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: const Color(0xFFBBF7D0)),
+      ),
+      padding: const EdgeInsets.all(16),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              const Icon(Icons.insights_rounded, size: 18, color: AppTheme.successColor),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Text(
+                  title,
+                  style: const TextStyle(
+                    fontSize: 13,
+                    fontWeight: FontWeight.bold,
+                    color: Color(0xFF166534),
+                  ),
+                ),
+              ),
+              if (dateStr.isNotEmpty)
+                Text(
+                  dateStr,
+                  style: const TextStyle(fontSize: 10, color: Color(0xFF15803D)),
+                ),
+            ],
+          ),
+          if (content.isNotEmpty) ...[
+            const SizedBox(height: 6),
+            Text(
+              content,
+              maxLines: 3,
+              overflow: TextOverflow.ellipsis,
+              style: const TextStyle(fontSize: 12, color: Color(0xFF166534)),
+            ),
+          ],
+          const SizedBox(height: 10),
+          Align(
+            alignment: Alignment.centerRight,
+            child: ElevatedButton.icon(
+              onPressed: () {
+                // Arahkan ke tab Produk (index 1)
+                final state = context.findAncestorStateOfType<_OwnerHomeScreenState>();
+                if (state != null) {
+                  state.setState(() => state._currentIndex = 1);
+                }
+              },
+              icon: const Icon(Icons.sell_rounded, size: 14),
+              label: const Text('Terapkan ke Harga'),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppTheme.successColor,
+                foregroundColor: Colors.white,
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                textStyle: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold),
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }
