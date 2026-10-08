@@ -280,9 +280,12 @@ class _ProductFormScreenState extends ConsumerState<ProductFormScreen> {
                   automaticallyImplyLeading: false,
                   actions: [
                     IconButton(
-                      icon: const Icon(Icons.close),
+                      tooltip: 'Tutup',
+                      icon: const Icon(Icons.close_rounded,
+                          color: AppTheme.textSecondary),
                       onPressed: () => Navigator.pop(dialogContext),
                     ),
+                    const SizedBox(width: 4),
                   ],
                 ),
                 Expanded(

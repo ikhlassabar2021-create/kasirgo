@@ -137,18 +137,50 @@ class _ProductListScreenState extends ConsumerState<ProductListScreen> {
       context: context,
       builder: (ctx) => AlertDialog(
         backgroundColor: AppTheme.surfaceColor,
-        title: const Text('Hapus Produk'),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: Row(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(8),
+              decoration: BoxDecoration(
+                color: AppTheme.errorColor.withValues(alpha: 0.12),
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: const Icon(Icons.delete_outline_rounded,
+                  color: AppTheme.errorColor, size: 20),
+            ),
+            const SizedBox(width: 12),
+            const Expanded(
+              child: Text('Hapus Produk',
+                  style: TextStyle(fontSize: 17, fontWeight: FontWeight.w800)),
+            ),
+            IconButton(
+              tooltip: 'Batal',
+              icon: const Icon(Icons.close_rounded,
+                  color: AppTheme.textSecondary),
+              onPressed: () => Navigator.pop(ctx, false),
+            ),
+          ],
+        ),
         content: Text('Yakin ingin menghapus "${product.name}"?'),
         actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx, false),
-            child: const Icon(Icons.close_rounded, size: 20),
+          SizedBox(
+            width: double.infinity,
+            height: 48,
+            child: ElevatedButton.icon(
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppTheme.errorColor,
+                foregroundColor: Colors.white,
+                shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12)),
+              ),
+              onPressed: () => Navigator.pop(ctx, true),
+              icon: const Icon(Icons.delete_outline_rounded, size: 20),
+              label: const Text('Hapus',
+                  style: TextStyle(fontWeight: FontWeight.w700)),
+            ),
           ),
-          ElevatedButton(
-            style: ElevatedButton.styleFrom(backgroundColor: AppTheme.errorColor),
-            onPressed: () => Navigator.pop(ctx, true),
-            child: const Text('Hapus'),
-          ),
+          const SizedBox(height: 8),
         ],
       ),
     );
@@ -435,24 +467,24 @@ class _ProductListScreenState extends ConsumerState<ProductListScreen> {
                                           top: 4,
                                           right: 4,
                                           child: InkWell(
-                                            onTap: () async {
-                                              final confirm = await _confirmDelete(product);
-                                              if (confirm == true && context.mounted) {
-                                                final success = await SupabaseService().deleteProduct(product.id);
-                                                if (!context.mounted) return;
-                                                ScaffoldMessenger.of(context).showSnackBar(
-                                                  SnackBar(
-                                                    content: Text(
-                                                      success
-                                                          ? '${product.name} berhasil dihapus'
-                                                          : 'Gagal menghapus ${product.name}',
+                                              onTap: () async {
+                                                final confirm = await _confirmDelete(product);
+                                                if (confirm == true && context.mounted) {
+                                                  final success = await SupabaseService().deleteProduct(product.id);
+                                                  if (!context.mounted) return;
+                                                  ScaffoldMessenger.of(context).showSnackBar(
+                                                    SnackBar(
+                                                      content: Text(
+                                                        success
+                                                            ? '${product.name} berhasil dihapus'
+                                                            : 'Gagal menghapus ${product.name}. Coba lagi.',
+                                                      ),
+                                                      backgroundColor: success ? AppTheme.successColor : AppTheme.errorColor,
                                                     ),
-                                                    backgroundColor: success ? AppTheme.surfaceColor : AppTheme.errorColor,
-                                                  ),
-                                                );
-                                                ref.invalidate(productsProvider);
-                                              }
-                                            },
+                                                  );
+                                                  ref.invalidate(productsProvider);
+                                                }
+                                              },
                                             child: Container(
                                               padding: const EdgeInsets.all(5),
                                               decoration: BoxDecoration(
