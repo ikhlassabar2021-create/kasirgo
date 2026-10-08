@@ -7,6 +7,19 @@ const json = (body: unknown, status = 200) =>
     headers: { "Content-Type": "application/json" },
   });
 
+// RCB mengirim expiry sebagai Unix epoch (detik). Kolom payment_orders.expired_at
+// bertipe timestamptz, jadi konversi ke ISO string (atau null bila tak valid).
+const toIsoOrNull = (v: unknown): string | null => {
+  if (v === null || v === undefined || v === "") return null;
+  const n = Number(v);
+  if (Number.isFinite(n) && n > 0) {
+    const ms = n > 1e12 ? n : n * 1000; // dukung detik maupun milidetik
+    return new Date(ms).toISOString();
+  }
+  const d = new Date(String(v));
+  return Number.isNaN(d.getTime()) ? null : d.toISOString();
+};
+
 Deno.serve(async (req: Request) => {
   if (req.method !== "POST") return json({ success: false, message: "Method not allowed" }, 405);
 
@@ -95,7 +108,7 @@ Deno.serve(async (req: Request) => {
     const orderId = String(d.order_id ?? "");
     const totalAmount = Number(d.total_amount ?? amount);
 
-    await admin.from("payment_orders").insert({
+    const { error: insertErr } = await admin.from("payment_orders").insert({
       outlet_id: outletId,
       created_by: userId,
       purpose,
@@ -112,9 +125,15 @@ Deno.serve(async (req: Request) => {
       payment_type: d.payment_type ?? null,
       transaction_id: transactionId,
       supporter_id: supporterId,
-      expired_at: d.expired_time ?? d.expired_at ?? null,
+      expired_at: toIsoOrNull(d.expired_time ?? d.expired_at),
       raw: rcb,
     });
+    if (insertErr) {
+      return json(
+        { success: false, message: `Gagal menyimpan order: ${insertErr.message}` },
+        500,
+      );
+    }
 
     return json({
       success: true,

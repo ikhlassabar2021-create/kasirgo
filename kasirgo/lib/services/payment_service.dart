@@ -171,6 +171,79 @@ class MidtransProvider implements PgProviderClient {
   }
 }
 
+/// Provider RCB Pay (PT Raga Cipta Bersama), zero-custody.
+///
+/// Kredensial (x-api-key) HANYA ada di server (`platform_integrations`).
+/// Pembuatan charge dialihkan ke Edge Function `rcb_create_charge`; status
+/// dicek via `rcb_check_status`; sumber kebenaran tetap webhook `rcb_webhook`.
+class RcbProvider implements PgProviderClient {
+  RcbProvider(this._client);
+
+  final SupabaseClient _client;
+
+  @override
+  String get providerId => 'rcb';
+
+  @override
+  Future<PgPaymentOrder> createQris(PgCreateQrisRequest request) async {
+    final data = await _invokeEf(_client, 'rcb_create_charge', {
+      'outlet_id': request.outletId,
+      'amount': request.amount.round(),
+      'item_name': request.itemName,
+      'external_id': request.externalId,
+      'purpose': request.purpose,
+      'supporter_id': ?request.supporterId,
+      'transaction_id': ?request.transactionId,
+      'callback_url': ?request.callbackUrl,
+    });
+    if (data['success'] != true) {
+      throw Exception(data['message']?.toString() ?? 'Gagal membuat QRIS RCB.');
+    }
+    return PgPaymentOrder.fromApi(data);
+  }
+
+  @override
+  Future<String> checkStatus(String providerOrderId) async {
+    // 1) Status otoritatif dari webhook (tabel payment_orders).
+    try {
+      final row = await _client
+          .from('payment_orders')
+          .select('status')
+          .or('rcb_order_id.eq.$providerOrderId,provider_order_id.eq.$providerOrderId,'
+              'external_id.eq.$providerOrderId')
+          .order('created_at', ascending: false)
+          .limit(1)
+          .maybeSingle();
+      final local = row?['status']?.toString().toUpperCase();
+      if (local == 'PAID' || local == 'EXPIRED' || local == 'FAILED') return local!;
+    } catch (_) {
+      // offline / gagal: lanjut cek server.
+    }
+    // 2) Tanya server (polling bila webhook belum tiba, mis. mode sandbox).
+    try {
+      final data = await _invokeEf(
+          _client, 'rcb_check_status', {'order_id': providerOrderId});
+      final status = data['status']?.toString().toUpperCase();
+      if (status != null && status.isNotEmpty) return status;
+    } catch (_) {}
+    return 'PENDING';
+  }
+
+  @override
+  Future<void> confirmPaid(String providerOrderId, {String status = 'PAID'}) async {
+    // Tandai order PAID + aktivasi langganan (idempoten). Webhook tetap
+    // sumber kebenaran; ini jalur polling bila webhook belum diterima.
+    try {
+      await _client.rpc('confirm_pg_order', params: {
+        'p_rcb_order_id': providerOrderId,
+        'p_status': status,
+      });
+    } catch (_) {
+      // best-effort.
+    }
+  }
+}
+
 /// Facade Payment Gateway. Memilih provider aktif (saat ini Midtrans) dan
 /// menyediakan helper config non-secret untuk UI.
 class PaymentService {
@@ -180,9 +253,41 @@ class PaymentService {
   final SupabaseClient _client;
 
   static const String _cacheKey = 'financial_config_v1';
+  static const String _pgProviderCacheKey = 'pg_provider_v1';
   Map<String, dynamic>? _finCache;
 
-  PgProviderClient _provider() => MidtransProvider(_client);
+  /// Provider aktif ('rcb' | 'midtrans'), dibaca dari Control Plane
+  /// (`platform_integrations.payment_gateway`) via RPC `get_pg_client_config`.
+  /// Fallback aman: 'rcb' (default aplikasi). Bisa diubah superadmin tanpa kode.
+  String _activeProviderId() => _pgProviderCache ?? 'rcb';
+  String? _pgProviderCache;
+
+  /// Muat provider aktif dari server sekali per sesi (cache in-memory + prefs).
+  Future<String> _resolveProviderId() async {
+    if (_pgProviderCache != null) return _pgProviderCache!;
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final cached = prefs.getString(_pgProviderCacheKey);
+      if (cached != null && cached.isNotEmpty) _pgProviderCache = cached;
+    } catch (_) {}
+    try {
+      final res = await _client.rpc('get_pg_client_config');
+      if (res is Map) {
+        final pid = (res['provider']?.toString() ?? '').toLowerCase();
+        if (pid == 'midtrans' || pid == 'rcb') {
+          _pgProviderCache = pid;
+          try {
+            final prefs = await SharedPreferences.getInstance();
+            await prefs.setString(_pgProviderCacheKey, pid);
+          } catch (_) {}
+        }
+      }
+    } catch (_) {}
+    return _activeProviderId();
+  }
+
+  PgProviderClient _providerFor(String providerId) =>
+      providerId == 'midtrans' ? MidtransProvider(_client) : RcbProvider(_client);
 
   /// Buat tagihan QRIS dinamis. Mengembalikan order + data QR.
   Future<PgPaymentOrder> createQris({
@@ -194,9 +299,10 @@ class PaymentService {
     String? supporterId,
     String? transactionId,
     String? callbackUrl,
-  }) {
+  }) async {
     final external = externalId ?? 'KGO-${DateTime.now().millisecondsSinceEpoch}';
-    return _provider().createQris(PgCreateQrisRequest(
+    final provider = _providerFor(await _resolveProviderId());
+    return provider.createQris(PgCreateQrisRequest(
       outletId: outletId,
       amount: amount,
       itemName: itemName,
@@ -209,12 +315,13 @@ class PaymentService {
   }
 
   /// Cek status order (polling). Mengembalikan status huruf besar.
-  Future<String> checkStatus(String providerOrderId) =>
-      _provider().checkStatus(providerOrderId);
+  Future<String> checkStatus(String providerOrderId) async =>
+      _providerFor(await _resolveProviderId()).checkStatus(providerOrderId);
 
   /// Tandai order PAID (best-effort; webhook adalah sumber kebenaran).
-  Future<void> confirmPaid(String providerOrderId, {String status = 'PAID'}) =>
-      _provider().confirmPaid(providerOrderId, status: status);
+  Future<void> confirmPaid(String providerOrderId, {String status = 'PAID'}) async =>
+      _providerFor(await _resolveProviderId())
+          .confirmPaid(providerOrderId, status: status);
 
   /// Simpan kredensial Midtrans outlet. Server Key dikirim ke Edge Function
   /// (disimpan terenkripsi di Vault) dan TIDAK pernah dikembalikan ke klien.
