@@ -141,3 +141,31 @@ Akun: **owner @ Warung Test** + **superadmin**
 | | | | |
 
 Laporan bug: sebutkan **email akun + phase + langkah + screenshot**.
+
+---
+
+## Fix List Pasca-Testing (2026-10-21) — RE-TEST
+Semua item fix list sudah dieksekusi. Checklist re-test:
+
+Owner:
+- [ ] FIX #1: login dengan email belum konfirmasi → pesan "Harap konfirmasi email dulu".
+- [ ] FIX #2: KYC — KTP bukan asli ditolak; selfie beda NIK ditolak; NIK+nama ter-autofill; NIK lahir 1900-an diterima.
+- [ ] FIX #3: setelah checkout sukses muncul dialog sukses + tombol Struk PDF (unduh web berfungsi).
+- [ ] FIX #4: Laporan → Excel (3 sheet: Ringkasan/Penjualan/Per Produk) & PDF (SAK EMKM: identitas, laba rugi, metode bayar, tanda tangan).
+- [ ] FIX #5: pembayaran ada field Nama Pelanggan; isi nomor WA → nama ter-autofill.
+- [ ] FIX #6: setelah checkout, pelanggan otomatis masuk daftar; hapus pelanggan via menu (⋯) berfungsi.
+- [ ] FIX #7: tombol X ujung kanan di dialog Tambah Pelanggan / Hapus Produk / Scan Barcode.
+- [ ] FIX #8: hapus produk yang pernah terjual kini berhasil.
+- [ ] FIX #9: shortcut Peta Ekspansi & Referral tidak ada lagi di beranda.
+- [ ] FIX #10: kartu PPOB/Kulakan B2B/Modal Usaha tidak tampil; tidak ada tulisan "donasi sukarela".
+- [ ] FIX #11: pembayaran QRIS hanya mode statis.
+- [ ] FIX #12: beranda → Afiliasi: kode & link referral (salin), komisi, riwayat closing, simpan rekening.
+- [ ] FIX #13: langkah resep diklik "Jalankan" → membuka fitur terkait & tercentang tercoret.
+- [ ] FIX #14: balasan Dokter Bisnis AI selalu Bahasa Indonesia & tanpa kode program.
+- [ ] FIX #16: QR Meja — Enter pada field menambah meja; hapus meja sukses + snackbar.
+- [ ] FIX #17: Riwayat Kasus — filter Harian/Mingguan/Bulanan; hapus satuan (⋯) & hapus semua (ikon AppBar).
+
+Superadmin:
+- [ ] FIX #12: halaman Affiliates tab Afiliasi Outlet + detail closing; ControlPlane > Afiliasi pengaturan pembayaran komisi.
+- [ ] Hide laporan: Laporan Utama tanpa kartu PPOB & QRIS; Detail Outlet tanpa stat finansial & Riwayat Transaksi.
+- [ ] Setting: ControlPlane > Laporan → 4 toggle visibilitas untuk membuka kembali.

@@ -894,3 +894,56 @@ Migrasi: docs/migrations/2026-10-01-kasirgo-8.sql. Detail: PROGRESS-PHASE8.md.
   tanpa wilayah -> fallback aman + "perlu verifikasi"; `doctor_observe` -> `weekly_report` omzet
   7 hari Rp30.000 & `last_weekly_report_at` terisi; `identity` (fase B, skor 42). `dart analyze` bersih.
 - BLOCKER tetap: pg_cron/pg_net tak terpasang -> jadwal via manual admin/Dashboard; Midtrans prod QRIS.
+
+## Sesi 2026-10-21: Fix List Pasca-Testing Owner + Superadmin (SELESAI)
+Batch perbaikan hasil testing lengkap user (17 item owner + 3 item superadmin).
+Commit berurutan di main; Flutter web + admin dist dideploy ulang.
+- FIX #1 (`7629155`): login `email_not_confirmed` -> pesan khusus "konfirmasi email dulu".
+- FIX #2 (`13e3429`): KYC — migrasi `2026-10-21-kasirgo-fix-kyc-nik-year.sql` (RPC `submit_kyc`
+  dibuat ulang: tahun lahir NIK 2 digit APA PUN valid, hanya tolak = tahun berjalan);
+  klien `ktpTextLooksReal()` (marker KTP asli), selfie-NIK match, autofill OCR, chip status.
+- FIX #3 (`f0a8278`): dialog sukses checkout BARU `checkout_success_dialog.dart` + tombol
+  "Struk PDF"; `receipt_generator.share()` fallback web (conditional import dart:html download).
+- FIX #5/#6 (`de0de01`): field Nama Pelanggan di pembayaran + autofill dari nomor WA;
+  auto-create pelanggan (`upsertCustomerFromPhone`, normalisasi 62<->08) di POS owner & kasir.
+- FIX #6b/#7 (`fb4c3f5`): dialog Tambah Pelanggan diperindah (X ujung kanan) + hapus pelanggan
+  (menu -> konfirmasi -> snackbar).
+- FIX #7b/#8 (`ad43f21`): migrasi `2026-10-21-kasirgo-fix-product-delete.sql` — FK
+  `transaction_items_product_id_fkey` ON DELETE SET NULL (fix gagal hapus produk);
+  dialog hapus produk diperindah; scanner barcode X `close_rounded`.
+- FIX #9 (`55b7ba9`): shortcut Peta Ekspansi & Referral dihapus dari owner home.
+- FIX #10 (`3346b21`): kartu PPOB/Kulakan B2B/Modal Usaha disembunyikan di owner home;
+  subtitle Pendukung "Dukung Pengembangan".
+- FIX #11 (`53451a7`): checkout QRIS statis-only (info bar, mode switch dihapus).
+- FIX #16 (`1cfe625`): QR Meja — tambah via keyboard done + snackbar sukses/gagal;
+  REST verify insert/delete RLS OK.
+- FIX #13 (`52c29d5`): aksi resep — cross_sell membuka Paket Bundling; langkah tanpa fitur
+  (referral disembunyikan) cukup tercoret tanpa spam chat.
+- FIX #17 (`f3aa03d`): Riwayat Kasus — filter Semua/Harian/Mingguan/Bulanan (chip);
+  hapus per item (kasus + memori) & hapus semua per periode; service deleteConversation/
+  deleteMemory (RLS owner ALL, pesan cascade).
+- FIX #14 (`d8eac09`): hardening balasan AI — prompt EF larang jawaban Inggris/kode;
+  `sanitizeReply` post-process (blok kode & jawaban mayoritas Inggris diganti pesan aman);
+  EF `business_doctor_chat` dideploy ulang.
+- FIX #4 (`8b0c258`): laporan Excel & PDF standar keuangan nasional (SAK EMKM):
+  Excel 3 sheet (Ringkasan laba rugi, Penjualan buku kas, Per Produk); PDF MultiPage
+  (Identitas Usaha, Laba Rugi, Penerimaan per metode bayar, Catatan, tanda tangan);
+  unduh web via `ReceiptGenerator.share`.
+- FIX #12 owner (`8e51eea`): migrasi `2026-10-21-kasirgo-fix-owner-affiliate.sql` —
+  tabel `outlet_affiliate_profiles` & `outlet_affiliate_closings`, trigger auto-affiliate
+  (outlet baru otomatis punya kode KGO-XXXXXX, backfill 8 outlet), RPC
+  `affiliate_owner_me`/`affiliate_owner_update`; layar `AffiliateOwnerScreen` (kode+link
+  referral salin, ringkasan komisi, riwayat closing, form rekening, panduan); shortcut
+  Afiliasi di owner home; helper `SupabaseService.rpc()`.
+- FIX #12 superadmin (`d420c83`): migrasi `2026-10-21-kasirgo-fix-superadmin-affiliate.sql`
+  (RPC `platform_affiliate_closings`, `platform_outlet_affiliates`,
+  `platform_outlet_affiliate_closing_add`); halaman Affiliates tab Partner/Outlet + modal
+  detail closing; ControlPlane AffiliateTab + komisi outlet & pengaturan payout
+  (frekuensi/tanggal/mode).
+- Superadmin hide laporan (`a855d2f`): migrasi `2026-10-21-kasirgo-fix-report-visibility.sql`
+  — config 'report' + 4 flag (show_ppob_report/show_pg_report/show_outlet_ppob/
+  show_outlet_hist, default FALSE = disembunyikan), RPC `platform_report_visibility`;
+  MainReport kartu PPOB & QRIS hidden; OutletDetail stat finansial & Riwayat Transaksi
+  hidden; ControlPlane > Laporan 4 toggle untuk membuka kembali.
+- Verifikasi RPC via REST (JWT owner Warung Test & superadmin): affiliate_owner_me OK,
+  affiliate_owner_update OK, platform_report_visibility OK (owner forbidden sesuai desain).
