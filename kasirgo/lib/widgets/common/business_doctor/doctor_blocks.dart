@@ -10,6 +10,8 @@ class DoctorBlocks extends StatelessWidget {
   final void Function(String actionKey, String label)? onAction;
   final void Function(
       Map<String, dynamic> block, Map<String, dynamic> step, int index)? onPrescription;
+  final void Function(Map<String, dynamic> block, int index)?
+      onTogglePrescription;
 
   const DoctorBlocks({
     super.key,
@@ -17,6 +19,7 @@ class DoctorBlocks extends StatelessWidget {
     this.onChoice,
     this.onAction,
     this.onPrescription,
+    this.onTogglePrescription,
   });
 
   @override
@@ -468,42 +471,76 @@ class DoctorBlocks extends StatelessWidget {
                     ),
                   ),
                 ),
-            ],
-          ),
-        ),
-        const SizedBox(width: 8),
-        if (!done)
-          Material(
-            color: accent.withValues(alpha: 0.1),
-            borderRadius: BorderRadius.circular(20),
-            child: InkWell(
-              borderRadius: BorderRadius.circular(20),
-              onTap: onPrescription == null
-                  ? null
-                  : () => onPrescription!(block, step, index),
-              child: Padding(
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
+              // DUA aksi jelas: [Jalankan] membuka fitur, [Tandai] checklist.
+              Padding(
+                padding: const EdgeInsets.only(top: 6),
+                child: Wrap(
+                  spacing: 8,
+                  runSpacing: 6,
                   children: [
-                    Icon(hasFeature ? Icons.play_arrow_rounded : Icons.check_rounded,
-                        size: 14, color: accent),
-                    const SizedBox(width: 2),
-                    Text(
-                      hasFeature ? 'Jalankan' : 'Tandai',
-                      style: GoogleFonts.inter(
-                        fontSize: 11,
-                        fontWeight: FontWeight.w700,
+                    if (hasFeature && !done)
+                      _stepButton(
+                        label: 'Jalankan',
+                        icon: Icons.play_arrow_rounded,
+                        onTap: onPrescription == null
+                            ? null
+                            : () => onPrescription!(block, step, index),
+                        filled: true,
                         color: accent,
                       ),
+                    _stepButton(
+                      label: done ? 'Sudah Dijalankan' : 'Tandai Selesai',
+                      icon: done
+                          ? Icons.check_circle_rounded
+                          : Icons.radio_button_unchecked_rounded,
+                      onTap: done || onTogglePrescription == null
+                          ? null
+                          : () => onTogglePrescription!(block, index),
+                      filled: done,
+                      color: done ? AppTheme.successColor : accent,
                     ),
                   ],
                 ),
               ),
-            ),
+            ],
           ),
+        ),
       ],
+    );
+  }
+
+  Widget _stepButton({
+    required String label,
+    required IconData icon,
+    required VoidCallback? onTap,
+    required bool filled,
+    required Color color,
+  }) {
+    return Material(
+      color: filled ? color : color.withValues(alpha: 0.1),
+      borderRadius: BorderRadius.circular(20),
+      child: InkWell(
+        borderRadius: BorderRadius.circular(20),
+        onTap: onTap,
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(icon, size: 14, color: filled ? Colors.white : color),
+              const SizedBox(width: 4),
+              Text(
+                label,
+                style: GoogleFonts.inter(
+                  fontSize: 11,
+                  fontWeight: FontWeight.w700,
+                  color: filled ? Colors.white : color,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
     );
   }
 

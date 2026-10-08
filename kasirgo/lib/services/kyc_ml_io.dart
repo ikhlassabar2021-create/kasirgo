@@ -26,21 +26,30 @@ Future<KtpOcrResult> ocrKtp(String imagePath) async {
   );
 }
 
-/// Cek apakah teks OCR memuat penanda KTP asli (anti screenshot/gambar asal).
-/// KTP asli hampir selalu memuat salah satu label: PROVINSI, KARTU TANDA
-/// PENDUDUK / KTP, REPUBLIK INDONESIA, GOL.DARAH, atau NIK.
+/// Cek apakah teks OCR memuat banyak penanda KTP asli (anti screenshot/gambar
+/// asal). Diperketat: butuh minimal 2 penanda STRUKTURAL (bukan sekadar kata
+/// "KTP") DAN keberadaan NIK (label "NIK" atau 16 digit yang terbaca). Guna
+/// mencegah gambar asal/screenshot lolos hanya karena memuat satu kata.
 bool ktpTextLooksReal(String text) {
   final up = text.toUpperCase();
-  const markers = [
+  const structural = [
     'PROVINSI',
     'KARTU TANDA PENDUDUK',
-    'KTP',
     'REPUBLIK INDONESIA',
     'GOL.DARAH',
     'GOL DARAH',
-    'NIK',
+    'AGAMA',
+    'STATUS PERKAWINAN',
+    'BERLAKU HINGGA',
+    'TEMPAT/TGL LAHIR',
+    'TEMPAT / TGL LAHIR',
+    'JENIS KELAMIN',
+    'ALAMAT',
   ];
-  return markers.any(up.contains);
+  final hits = structural.where(up.contains).length;
+  final hasNikLabel = up.contains('NIK');
+  final hasNikDigits = extractNikFromText(text) != null;
+  return hits >= 2 && (hasNikLabel || hasNikDigits);
 }
 
 Future<String> _recognize(String imagePath) async {

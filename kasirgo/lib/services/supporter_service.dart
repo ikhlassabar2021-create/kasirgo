@@ -151,6 +151,7 @@ class SupporterService {
     'payment_gateway',
     'auto_bos_report',
     'ad_free',
+    'business_doctor',
   };
 
   static const Map<String, String> featureLabels = {
@@ -170,6 +171,7 @@ class SupporterService {
     'payment_gateway': 'QRIS Dinamis Otomatis (Payment Gateway)',
     'auto_bos_report': 'Laporan Otomatis ke Bos',
     'ad_free': 'Bebas Iklan',
+    'business_doctor': 'Dokter Bisnis AI',
   };
 
   // ---------------------------------------------------------------------------

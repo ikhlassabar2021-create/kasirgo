@@ -372,21 +372,49 @@ class _BusinessDoctorScreenState extends ConsumerState<BusinessDoctorScreen> {
       if (hasScreen) {
         _handleAction(key, items[index]['text']?.toString() ?? '');
       }
-      // Tanpa fitur terkait: langkah cukup ditandai selesai (tercoret).
     }
-    items[index]['done'] = true;
+    // "Jalankan" membuka fitur DAN menandai langkah sudah dijalankan.
+    await _markPrescriptionDone(block, index, true);
+  }
+
+  /// Checklist: tandai langkah selesai / batal selesai (tanpa membuka fitur).
+  Future<void> _togglePrescriptionStep(
+      Map<String, dynamic> block, int index) async {
+    final items = ((block['items'] as List?) ?? const [])
+        .whereType<Map>()
+        .map((e) => Map<String, dynamic>.from(e))
+        .toList();
+    if (index < 0 || index >= items.length) return;
+    final done = items[index]['done'] == true;
+    await _markPrescriptionDone(block, index, !done);
+  }
+
+  Future<void> _markPrescriptionDone(
+      Map<String, dynamic> block, int index, bool done) async {
+    final items = ((block['items'] as List?) ?? const [])
+        .whereType<Map>()
+        .map((e) => Map<String, dynamic>.from(e))
+        .toList();
+    if (index < 0 || index >= items.length) return;
+    items[index]['done'] = done;
     final updated = {...block, 'items': items};
     setState(() => _activePrescription = updated);
     final memoryId = block['memory_id']?.toString();
-    if (memoryId != null && memoryId.isNotEmpty) {
-      final allDone = items.every((e) => e['done'] == true);
-      try {
+    final allDone = items.isNotEmpty && items.every((e) => e['done'] == true);
+    try {
+      if (memoryId != null && memoryId.isNotEmpty) {
         await (widget.service ?? BusinessDoctorService()).savePrescription(
           memoryId: memoryId,
           block: updated,
           status: allDone ? 'achieved' : null,
         );
-      } catch (_) {}
+      } else {
+        await (widget.service ?? BusinessDoctorService())
+            .savePrescription(block: updated);
+      }
+    } catch (_) {}
+    if (allDone && mounted) {
+      _snack('Semua langkah resep selesai. Mantap!');
     }
   }
 
@@ -420,6 +448,7 @@ class _BusinessDoctorScreenState extends ConsumerState<BusinessDoctorScreen> {
           steps: steps,
           onRunStep: (i, step) =>
               _onPrescriptionStep(p, Map<String, dynamic>.from(step), i),
+          onToggleStep: (i, step) => _togglePrescriptionStep(p, i),
           onStart: () => Navigator.pop(context),
           onAsk: () {
             Navigator.pop(context);
@@ -596,6 +625,7 @@ class _BusinessDoctorScreenState extends ConsumerState<BusinessDoctorScreen> {
           DoctorBlocks(
             blocks: [_activePrescription!],
             onPrescription: _onPrescriptionStep,
+            onTogglePrescription: _togglePrescriptionStep,
           ),
           const SizedBox(height: 8),
           SizedBox(
@@ -1329,6 +1359,7 @@ class _BusinessDoctorScreenState extends ConsumerState<BusinessDoctorScreen> {
                     onChoice: _send,
                     onAction: _handleAction,
                     onPrescription: _onPrescriptionStep,
+                    onTogglePrescription: _togglePrescriptionStep,
                   ),
           ),
         ),

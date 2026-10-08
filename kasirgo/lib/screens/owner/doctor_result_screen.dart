@@ -20,6 +20,7 @@ class DoctorResultScreen extends StatelessWidget {
     this.dueDate,
     this.steps = const [],
     this.onRunStep,
+    this.onToggleStep,
     this.onStart,
     this.onShare,
     this.onAsk,
@@ -33,6 +34,7 @@ class DoctorResultScreen extends StatelessWidget {
   final DateTime? dueDate;
   final List<Map<String, dynamic>> steps;
   final void Function(int index, Map<String, dynamic> step)? onRunStep;
+  final void Function(int index, Map<String, dynamic> step)? onToggleStep;
   final VoidCallback? onStart;
   final VoidCallback? onShare;
   final VoidCallback? onAsk;
@@ -359,25 +361,42 @@ class DoctorResultScreen extends StatelessWidget {
                           ),
                         ),
                         const SizedBox(height: 8),
-                        SizedBox(
-                          height: AppTheme.touchTargetMedium,
-                          child: AppButton(
-                            label: done
-                                ? 'Sudah dilakukan'
-                                : (hasAction ? 'Kerjakan' : 'Sudah Saya Lakukan'),
-                            icon: done
-                                ? Icons.check_circle
-                                : (hasAction
-                                    ? Icons.play_arrow_rounded
-                                    : Icons.done),
-                            variant: done
-                                ? AppButtonVariant.outline
-                                : AppButtonVariant.primary,
-                            expanded: false,
-                            onPressed: done || onRunStep == null
-                                ? null
-                                : () => onRunStep!(i, step),
-                          ),
+                        Wrap(
+                          spacing: 8,
+                          runSpacing: 8,
+                          children: [
+                            if (hasAction && !done)
+                              SizedBox(
+                                height: AppTheme.touchTargetMedium,
+                                child: AppButton(
+                                  label: 'Jalankan',
+                                  icon: Icons.play_arrow_rounded,
+                                  expanded: false,
+                                  onPressed: onRunStep == null
+                                      ? null
+                                      : () => onRunStep!(i, step),
+                                ),
+                              ),
+                            SizedBox(
+                              height: AppTheme.touchTargetMedium,
+                              child: AppButton(
+                                label: done
+                                    ? 'Sudah Dijalankan'
+                                    : 'Tandai Selesai',
+                                icon: done
+                                    ? Icons.check_circle
+                                    : Icons.radio_button_unchecked,
+                                variant: done
+                                    ? AppButtonVariant.outline
+                                    : AppButtonVariant.secondary,
+                                expanded: false,
+                                onPressed:
+                                    done || onToggleStep == null
+                                        ? null
+                                        : () => onToggleStep!(i, step),
+                              ),
+                            ),
+                          ],
                         ),
                       ],
                     ),

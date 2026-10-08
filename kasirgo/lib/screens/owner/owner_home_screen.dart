@@ -883,8 +883,9 @@ class _OwnerHomeScreenState extends ConsumerState<OwnerHomeScreen> {
         title: 'Dokter Bisnis AI',
         subtitle: 'Diagnosa & resep',
         color: const Color(0xFF4F46E5),
-        onTap: () => Navigator.push(context,
-            MaterialPageRoute(builder: (_) => const BusinessDoctorScreen())),
+        onTap: () => _pushGated(
+            'business_doctor', const BusinessDoctorScreen(),
+            title: 'Dokter Bisnis AI'),
       ),
     );
 

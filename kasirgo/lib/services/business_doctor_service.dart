@@ -192,10 +192,12 @@ class BusinessDoctorService {
   }
 
   Future<void> savePrescription({
-    required String memoryId,
+    String? memoryId,
     required Map<String, dynamic> block,
     String? status,
   }) async {
+    final id = (memoryId ?? block['memory_id']?.toString() ?? '').trim();
+    if (id.isEmpty) return;
     await _client.from('doctor_memory').update({
       'content': jsonEncode({
         'verdict': block['verdict'] ?? block['title'] ?? '',
@@ -204,7 +206,7 @@ class BusinessDoctorService {
         'steps': block['items'] ?? const [],
       }),
       if (status != null) 'status': status,
-    }).eq('id', memoryId);
+    }).eq('id', id);
   }
 
   // --- ST15-2: Bos Virtual Analitik ---

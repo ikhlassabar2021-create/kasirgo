@@ -10,6 +10,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import '../models/transaction.dart';
 import '../services/supporter_service.dart';
 import 'formatters.dart';
+import 'wa_helper.dart';
 import 'web_download_stub.dart'
     if (dart.library.html) 'web_download_web.dart';
 
@@ -250,6 +251,121 @@ class ReceiptGenerator {
         return 'Transfer Bank';
       default:
         return method.toUpperCase();
+    }
+  }
+
+  /// Struk format TEXT (ringkas) untuk dikirim via WhatsApp.
+  static String buildTextReceipt({
+    required String storeName,
+    required List<TransactionItem> items,
+    required String txId,
+    required DateTime createdAt,
+    required String paymentMethod,
+    required double totalAmount,
+    required double finalAmount,
+    double discountAmount = 0,
+    String? tagline,
+  }) {
+    final b = StringBuffer();
+    b.writeln('*$storeName*');
+    if (tagline != null && tagline.trim().isNotEmpty) {
+      b.writeln(tagline.trim());
+    }
+    b.writeln('--------------------------------');
+    b.writeln('No : ${shortId(txId)}');
+    b.writeln('Tgl: ${Formatters.date(createdAt)}');
+    b.writeln('--------------------------------');
+    for (final it in items) {
+      b.writeln(it.productName);
+      b.writeln(
+          '  ${it.quantity} x ${Formatters.currency(it.price)} = ${Formatters.currency(it.price * it.quantity)}');
+    }
+    b.writeln('--------------------------------');
+    if (discountAmount > 0) {
+      b.writeln('Diskon: -${Formatters.currency(discountAmount)}');
+    }
+    b.writeln('*TOTAL: ${Formatters.currency(finalAmount)}*');
+    b.writeln('Bayar: ${methodLabel(paymentMethod)}');
+    b.writeln('--------------------------------');
+    b.writeln('Terima kasih telah berbelanja!');
+    b.writeln('Struk digital via KasirGo');
+    return b.toString();
+  }
+
+  /// Kirim struk TEXT ke WhatsApp pelanggan (buka chat dengan pesan terisi).
+  static Future<bool> sendTextToWhatsApp({
+    required String phone,
+    required String storeName,
+    required List<TransactionItem> items,
+    required String txId,
+    required DateTime createdAt,
+    required String paymentMethod,
+    required double totalAmount,
+    required double finalAmount,
+    double discountAmount = 0,
+    String? tagline,
+  }) async {
+    final message = buildTextReceipt(
+      storeName: storeName,
+      items: items,
+      txId: txId,
+      createdAt: createdAt,
+      paymentMethod: paymentMethod,
+      totalAmount: totalAmount,
+      finalAmount: finalAmount,
+      discountAmount: discountAmount,
+      tagline: tagline,
+    );
+    return WaHelper.sendWhatsAppMessage(phone: phone, message: message);
+  }
+
+  /// Kirim struk PDF ke WhatsApp pelanggan.
+  /// - Native: buka share sheet (pilih WhatsApp) via Printing.
+  /// - Web: unduh PDF lalu buka chat WA dengan keterangan lampiran.
+  static Future<bool> sendPdfToWhatsApp({
+    required String phone,
+    required String storeName,
+    String? storeAddress,
+    required List<TransactionItem> items,
+    required String txId,
+    required DateTime createdAt,
+    required String paymentMethod,
+    required double totalAmount,
+    required double finalAmount,
+    double discountAmount = 0,
+    String? tagline,
+    String? logoBase64,
+  }) async {
+    final filename = 'Struk_${shortId(txId)}.pdf';
+    try {
+      final bytes = await build(
+        storeName: storeName,
+        storeAddress: storeAddress,
+        items: items,
+        totalAmount: totalAmount,
+        finalAmount: finalAmount,
+        discountAmount: discountAmount,
+        paymentMethod: paymentMethod,
+        txId: txId,
+        createdAt: createdAt,
+        tagline: tagline,
+        logoBase64: logoBase64,
+      );
+      if (kIsWeb) {
+        await webDownload(bytes, filename);
+        if (phone.isNotEmpty) {
+          await WaHelper.sendWhatsAppMessage(
+            phone: phone,
+            message: 'Struk pesanan Anda (PDF) sudah diunduh dari KasirGo. '
+                'Mohon lampirkan berkas *$filename* pada chat ini ya. Terima kasih!',
+          );
+        }
+        return true;
+      }
+      await Printing.sharePdf(bytes: bytes, filename: filename);
+      return true;
+    } catch (_) {
+      return false;
     }
   }
 }

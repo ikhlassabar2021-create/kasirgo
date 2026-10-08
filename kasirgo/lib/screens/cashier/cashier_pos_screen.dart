@@ -283,11 +283,43 @@ class _CashierPosScreenState extends ConsumerState<CashierPosScreen> {
         final changeMsg = result.change > 0
             ? 'Kembalian: Rp ${result.change.toStringAsFixed(0)}'
             : '';
+        final receiptPhone = waPhone ?? '';
+        final cartTotal = cartSnapshot.fold<double>(
+            0, (s, i) => s + i.price * i.quantity);
         await showDialog<void>(
           context: context,
           barrierDismissible: false,
           builder: (_) => CheckoutSuccessDialog(
             message: changeMsg,
+            canSendWhatsApp: receiptPhone.isNotEmpty,
+            onWaText: receiptPhone.isEmpty
+                ? null
+                : () {
+                    ReceiptGenerator.sendTextToWhatsApp(
+                      phone: receiptPhone,
+                      storeName: outletName,
+                      items: cartSnapshot,
+                      txId: created.id,
+                      createdAt: DateTime.now(),
+                      paymentMethod: result.paymentMethod,
+                      totalAmount: cartTotal,
+                      finalAmount: result.amount,
+                    );
+                  },
+            onWaPdf: receiptPhone.isEmpty
+                ? null
+                : () {
+                    ReceiptGenerator.sendPdfToWhatsApp(
+                      phone: receiptPhone,
+                      storeName: outletName,
+                      items: cartSnapshot,
+                      txId: created.id,
+                      createdAt: DateTime.now(),
+                      paymentMethod: result.paymentMethod,
+                      totalAmount: cartTotal,
+                      finalAmount: result.amount,
+                    );
+                  },
             onReceipt: () {
               ReceiptGenerator.shareTransactionReceipt(
                 outletId: outletId,
@@ -296,8 +328,7 @@ class _CashierPosScreenState extends ConsumerState<CashierPosScreen> {
                 txId: created.id,
                 createdAt: DateTime.now(),
                 paymentMethod: result.paymentMethod,
-                totalAmount: cartSnapshot.fold<double>(
-                    0, (s, i) => s + i.price * i.quantity),
+                totalAmount: cartTotal,
                 finalAmount: result.amount,
               );
             },

@@ -53,6 +53,31 @@ class _SupporterScreenState extends ConsumerState<SupporterScreen> {
     }
   }
 
+  Future<void> _startTrial() async {
+    final outletId = ref.read(currentUserProvider)?.outletId;
+    if (outletId == null || outletId.isEmpty) return;
+    setState(() => _busy = true);
+    try {
+      final ent = await SupporterService().ensureTrial(outletId);
+      if (mounted) setState(() => _ent = ent);
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+          content: Text('Trial gratis aktif. Semua fitur premium terbuka.'),
+          backgroundColor: AppTheme.successColor,
+        ));
+      }
+    } catch (_) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+          content: Text('Gagal mengaktifkan trial. Coba lagi.'),
+          backgroundColor: AppTheme.errorColor,
+        ));
+      }
+    } finally {
+      if (mounted) setState(() => _busy = false);
+    }
+  }
+
   Future<void> _support() async {
     final outletId = ref.read(currentUserProvider)?.outletId;
     if (outletId == null || outletId.isEmpty) return;
@@ -370,6 +395,55 @@ class _SupporterScreenState extends ConsumerState<SupporterScreen> {
                   ),
                   const SizedBox(height: 20),
                   if (!hasAccess && _pending != null) _pendingCard(),
+                  if (!hasAccess)
+                    Container(
+                      margin: const EdgeInsets.only(bottom: 16),
+                      padding: const EdgeInsets.all(14),
+                      decoration: BoxDecoration(
+                        color: AppTheme.secondaryColor.withValues(alpha: 0.08),
+                        borderRadius: BorderRadius.circular(14),
+                        border: Border.all(color: AppTheme.secondaryColor),
+                      ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                        children: [
+                          const Row(
+                            children: [
+                              Icon(Icons.rocket_launch_rounded,
+                                  color: AppTheme.secondaryColor, size: 20),
+                              SizedBox(width: 8),
+                              Expanded(
+                                child: Text(
+                                  'Coba dulu gratis, tanpa kartu kredit.',
+                                  style: TextStyle(
+                                      fontSize: 13,
+                                      fontWeight: FontWeight.w600,
+                                      color: AppTheme.textPrimary),
+                                ),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 10),
+                          SizedBox(
+                            height: 46,
+                            child: ElevatedButton.icon(
+                              onPressed: _busy ? null : _startTrial,
+                              icon: const Icon(Icons.rocket_launch_rounded,
+                                  size: 18),
+                              label: const Text('Coba Trial Gratis',
+                                  style:
+                                      TextStyle(fontWeight: FontWeight.bold)),
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: AppTheme.secondaryColor,
+                                foregroundColor: Colors.white,
+                                shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(12)),
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
                   if (hasAccess && !isSupporter) ...[
                     Container(
                       margin: const EdgeInsets.only(bottom: 16),

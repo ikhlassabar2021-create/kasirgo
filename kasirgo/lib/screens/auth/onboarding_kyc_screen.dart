@@ -201,6 +201,17 @@ class _OnboardingKycScreenState extends ConsumerState<OnboardingKycScreen> {
       if (image == null) return;
       final bytes = await _readPreviewBytes(image);
       if (!mounted) return;
+      // Anti-data-palsu: WAJIB berkas gambar asli (magic bytes). Menolak file
+      // yang di-rename (PDF/teks/apk) walau ekstensinya .jpg/.png.
+      if (bytes == null || !isLikelyImageBytes(bytes)) {
+        _snack(
+          isKtp
+              ? 'Berkas bukan gambar. Unggah FOTO KTP asli (JPG/PNG).'
+              : 'Berkas bukan gambar. Unggah foto selfie asli (JPG/PNG).',
+          AppTheme.errorColor,
+        );
+        return;
+      }
       setState(() {
         if (isKtp) {
           _ktpImage = image;

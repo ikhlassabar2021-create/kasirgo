@@ -1,11 +1,21 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:go_router/go_router.dart';
 import '../../config/app_theme.dart';
 import '../../providers/auth_provider.dart';
+import '../../screens/modules/supporter_screen.dart';
 import '../../services/supporter_service.dart';
 
-/// Dialog/bottom-sheet singkat untuk fitur yang terkunci Program Pendukung.
+/// Buka layar Program Pendukung (tempat tombol "Coba Trial Gratis" dan
+/// "Upgrade via QRIS" berada).
+void _openSupporter(BuildContext context) {
+  Navigator.push(
+    context,
+    MaterialPageRoute(builder: (_) => const SupporterScreen()),
+  );
+}
+
+/// Dialog/bottom-sheet fitur yang terkunci Program Pendukung.
+/// Wajib menawarkan DUA pilihan: Coba Trial Gratis & Upgrade ke Pendukung.
 Future<void> showSupporterLockedDialog(
   BuildContext context,
   String featureKey,
@@ -47,8 +57,8 @@ Future<void> showSupporterLockedDialog(
           const SizedBox(height: 14),
           Text(
             '$label tersedia untuk Pendukung KasirGo (Rp50.000/bulan). '
-            'Fitur inti tetap gratis selamanya; pendukung membantu biaya server '
-            'dan pengembangan.',
+            'Fitur inti tetap gratis selamanya. Coba trial gratis dulu bila '
+            'belum pernah, atau langsung upgrade via QRIS otomatis.',
             style: const TextStyle(
                 fontSize: 13, color: AppTheme.textSecondary, height: 1.5),
           ),
@@ -59,10 +69,30 @@ Future<void> showSupporterLockedDialog(
             child: ElevatedButton.icon(
               onPressed: () {
                 Navigator.pop(ctx);
-                context.push('/owner/settings');
+                _openSupporter(context);
+              },
+              icon: const Icon(Icons.rocket_launch_rounded, size: 18),
+              label: const Text('Coba Trial Gratis',
+                  style: TextStyle(fontWeight: FontWeight.bold)),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppTheme.secondaryColor,
+                foregroundColor: Colors.white,
+                shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12)),
+              ),
+            ),
+          ),
+          const SizedBox(height: 10),
+          SizedBox(
+            width: double.infinity,
+            height: 48,
+            child: ElevatedButton.icon(
+              onPressed: () {
+                Navigator.pop(ctx);
+                _openSupporter(context);
               },
               icon: const Icon(Icons.favorite_rounded, size: 18),
-              label: const Text('Lihat Program Pendukung',
+              label: const Text('Upgrade ke Pendukung',
                   style: TextStyle(fontWeight: FontWeight.bold)),
               style: ElevatedButton.styleFrom(
                 backgroundColor: AppTheme.primaryColor,
@@ -151,6 +181,14 @@ class _SupporterFeatureGateState extends ConsumerState<SupporterFeatureGate> {
     }
   }
 
+  Future<void> _startTrial() async {
+    final outletId = ref.read(currentUserProvider)?.outletId;
+    if (outletId == null || outletId.isEmpty) return;
+    setState(() => _loading = true);
+    await SupporterService().ensureTrial(outletId);
+    await _check();
+  }
+
   @override
   Widget build(BuildContext context) {
     if (_loading) {
@@ -166,7 +204,8 @@ class _SupporterFeatureGateState extends ConsumerState<SupporterFeatureGate> {
           SupporterService.featureLabels[widget.featureKey] ??
           'Fitur Pendukung',
       trialDaysLeft: _ent?.trialDaysLeft ?? 0,
-      onUpgrade: () => context.push('/owner/settings'),
+      onTrial: _startTrial,
+      onUpgrade: () => _openSupporter(context),
     );
   }
 }
@@ -175,11 +214,13 @@ class _LockedScaffold extends StatelessWidget {
   const _LockedScaffold({
     required this.title,
     required this.onUpgrade,
+    required this.onTrial,
     this.trialDaysLeft = 0,
   });
 
   final String title;
   final VoidCallback onUpgrade;
+  final VoidCallback onTrial;
   final int trialDaysLeft;
 
   @override
@@ -230,9 +271,26 @@ class _LockedScaffold extends StatelessWidget {
                   width: double.infinity,
                   height: 48,
                   child: ElevatedButton.icon(
+                    onPressed: onTrial,
+                    icon: const Icon(Icons.rocket_launch_rounded, size: 18),
+                    label: const Text('Coba Trial Gratis',
+                        style: TextStyle(fontWeight: FontWeight.bold)),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: AppTheme.secondaryColor,
+                      foregroundColor: Colors.white,
+                      shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12)),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 10),
+                SizedBox(
+                  width: double.infinity,
+                  height: 48,
+                  child: ElevatedButton.icon(
                     onPressed: onUpgrade,
                     icon: const Icon(Icons.favorite_rounded, size: 18),
-                    label: const Text('Dukung KasirGo',
+                    label: const Text('Upgrade ke Pendukung',
                         style: TextStyle(fontWeight: FontWeight.bold)),
                     style: ElevatedButton.styleFrom(
                       backgroundColor: AppTheme.primaryColor,
@@ -244,7 +302,7 @@ class _LockedScaffold extends StatelessWidget {
                 ),
                 const SizedBox(height: 10),
                 TextButton(
-                  onPressed: () => context.pop(),
+                  onPressed: () => Navigator.of(context).maybePop(),
                   child: const Text('Kembali',
                       style: TextStyle(color: AppTheme.textSecondary)),
                 ),
