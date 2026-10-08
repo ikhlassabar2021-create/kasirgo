@@ -169,3 +169,19 @@ Superadmin:
 - [ ] FIX #12: halaman Affiliates tab Afiliasi Outlet + detail closing; ControlPlane > Afiliasi pengaturan pembayaran komisi.
 - [ ] Hide laporan: Laporan Utama tanpa kartu PPOB & QRIS; Detail Outlet tanpa stat finansial & Riwayat Transaksi.
 - [ ] Setting: ControlPlane > Laporan → 4 toggle visibilitas untuk membuka kembali.
+
+---
+
+## BATCH #2 (2026-10-08) — RE-TEST
+Commit `7d57a00` (main) / web gh-pages `680c199`. Fokus: resep, struk WA, KYC, gating Dokter Bisnis, trial.
+
+Owner:
+- [ ] B2-1: Resep punya DUA tombol per langkah: "Jalankan" (buka fitur terkait + otomatis tercoret) & "Tandai Selesai" (centang murni). Semua langkah selesai → snack "Semua langkah resep selesai".
+- [ ] B2-2: Struk WA text — setelah checkout (isi Nama/No WA pelanggan) → tombol "Kirim Struk Text ke WA" membuka wa.me dengan struk terisi.
+- [ ] B2-3: Struk WA PDF — tombol "Kirim Struk PDF ke WA": web unduh PDF + buka chat WA; native share sheet PDF.
+- [ ] B2-4: KYC — NIK 16 digit apa pun diterima (kecuali digit seragam); berkas bukan gambar (PDF di-rename .jpg) ditolak "Berkas bukan gambar"; foto asal/screenshot KTP ditolak (butuh >=2 penanda struktural + NIK).
+- [ ] B2-5: Dokter Bisnis AI ter-gate Program Pendukung — akun tanpa akses (Gerobak Test) → layar kunci dengan tombol Coba Trial / Upgrade.
+- [ ] B2-6: Upgrade Pendukung via QRIS DINAMIS otomatis (Warung Test sandbox). ⚠️ Production QRIS tetap blocker.
+- [ ] B2-7: "Coba Trial Gratis" (di layar kunci/gate maupun di SupporterScreen) → trial aktif, semua fitur premium terbuka.
+
+Catatan gelar: Toko Test & Warung Test masih trial aktif → untuk uji paywall pakai **Gerobak Test** (expired).
