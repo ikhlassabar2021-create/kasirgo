@@ -15,7 +15,6 @@ import 'doctor_intake_screen.dart';
 import 'doctor_promotion_log_screen.dart';
 import 'doctor_result_screen.dart';
 import 'bundle_manager_screen.dart';
-import 'referral_screen.dart';
 import 'health_score_screen.dart';
 import 'multi_outlet_screen.dart';
 import 'online_catalog_screen.dart';
@@ -368,7 +367,12 @@ class _BusinessDoctorScreenState extends ConsumerState<BusinessDoctorScreen> {
     if (index < 0 || index >= items.length) return;
     final key = items[index]['action_key']?.toString() ?? '';
     if (key.isNotEmpty) {
-      _handleAction(key, items[index]['text']?.toString() ?? '');
+      final hasScreen =
+          key == 'upgrade' || key == 'catat_promosi' || _actionScreen(key) != null;
+      if (hasScreen) {
+        _handleAction(key, items[index]['text']?.toString() ?? '');
+      }
+      // Tanpa fitur terkait: langkah cukup ditandai selesai (tercoret).
     }
     items[index]['done'] = true;
     final updated = {...block, 'items': items};
@@ -448,15 +452,13 @@ class _BusinessDoctorScreenState extends ConsumerState<BusinessDoctorScreen> {
       case 'cross_sell':
         return const SupporterFeatureGate(
           featureKey: 'wa_marketing',
-          title: 'Peluang Cross-Sell',
+          title: 'Paket Bundling',
           child: BundleManagerScreen(),
         );
       case 'referral':
-        return const SupporterFeatureGate(
-          featureKey: 'wa_marketing',
-          title: 'Program Referral',
-          child: ReferralScreen(),
-        );
+        // CATATAN (owner): fitur Referral dihapus dari UI -> langkah resep
+        // dengan aksi referral cukup ditandai selesai (tercoret).
+        return null;
       case 'health_score':
         return const SupporterFeatureGate(
           featureKey: 'health_score_pro',
