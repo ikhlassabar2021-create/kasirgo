@@ -943,6 +943,7 @@ ATURAN OUTPUT:
   {"type":"choices","prompt":"...","options":[{"label":"...","value":"..."}]},
   {"type":"action","label":"...","action_key":"sidak_bos|progress_tracker|dynamic_pricing|bundling|cross_sell|wa_marketing|catat_promosi|health_score|online_catalog|qr_table|multi_outlet|recipe|referral"}
 - Bahasa Indonesia sederhana, minim istilah teknis, langkah kecil yang bisa dikerjakan.
+- WAJIB balas 100% dalam Bahasa Indonesia kecuali istilah asing yang sudah umum (QRIS, PDF, ROI). DILARANG KERAS menjawab dalam bahasa Inggris (atau bahasa lain), DILARANG menulis/menempelkan kode program (contoh kode, JSON mentah, SQL, rumus pemrograman) di "reply", dan DILARANG memakai istilah teknis asing tanpa penjelasan bahasa awam. Bila owner bertanya dalam bahasa apa pun, tetap jawab dalam Bahasa Indonesia.
 - Isi "phase" dengan fase saat ini sesuai ALUR FASE di atas.
 - Saat menyusun ATAU memperbarui resep (fase B, atau setiap resep lama gagal), WAJIB panggil tool save_prescription dengan verdict, target_days (mis. 7), dan steps (maks 8). Sistem otomatis menampilkan kartu resep yang bisa diklik "Jalankan". Jangan menulis langkah hanya sebagai teks biasa.
 - Setiap langkah resep WAJIB diisi action_key bila cocok dengan fitur aplikasi, agar owner bisa langsung menekan "Jalankan". Pilih HANYA dari daftar action_key di atas.
@@ -952,6 +953,29 @@ ATURAN OUTPUT:
 - Saat owner bertanya "apakah resep sudah membuahkan hasil" / meminta evaluasi progres: WAJIB panggil observe_progress dulu sebelum menjawab.
 ${netLine}
 - Selalu akhiri dengan disclaimer singkat "saran AI".`;
+}
+
+// Post-process jawaban AI: pastikan selalu Bahasa Indonesia & tanpa kode.
+// - Bila mayoritas kata berbahasa Inggris -> ganti dengan pesan aman.
+// - Bila mengandung blok kode (```, SELECT/INSERT SQL, curl, dsb.) -> buang.
+function sanitizeReply(raw: string): string {
+  const text = String(raw ?? "").trim();
+  if (!text) return text;
+  const lower = text.toLowerCase();
+  const codeMarkers = [
+    "```", "select *", "insert into", "curl ", "npm ", "git ", "import ",
+    "function(", "const ", "console.log", "<?php", "<script", "def ",
+  ];
+  if (codeMarkers.some((m) => lower.includes(m))) {
+    return "Maaf, jawaban saya tadi kurang pas. Bisa diulang dengan pertanyaan yang lebih spesifik? Saya siap bantu dalam Bahasa Indonesia. (Saran AI)";
+  }
+  // Deteksi bahasa Inggris: hitung kata Inggris umum vs kata Indonesia umum.
+  const enWords = (lower.match(/\b(the|and|you|your|for|with|this|that|have|not|are|was|will|can|should|make|need|best|good|increase|revenue|customer|business|sales|money|profit|please|thanks|hello|hi\b)/g) ?? []).length;
+  const idWords = (lower.match(/\b(yang|dan|untuk|dengan|ini|itu|saya|kami|anda|bisa|akan|tidak|jangan|harus|bisnis|usaha|omzet|pelanggan|harga|jualan|toko|produk|resep|langkah|kami\b)/g) ?? []).length;
+  if (enWords >= 3 && enWords > idWords * 2) {
+    return "Mohon maaf, jawaban saya tadi tidak dalam Bahasa Indonesia. Silakan ulangi pertanyaannya dan saya akan menjelaskan kembali dengan bahasa yang mudah dipahami. (Saran AI)";
+  }
+  return text;
 }
 
 function extractJson(text: string): Json | null {
@@ -1302,7 +1326,7 @@ Deno.serve(async (req: Request) => {
       }
     }
 
-    const replyText = String(parsed?.reply ?? parsed?.content ?? "").trim();
+    const replyText = sanitizeReply(String(parsed?.reply ?? parsed?.content ?? ""));
     let blocks: Json[] = Array.isArray(parsed?.blocks) ? parsed.blocks : [];
     if (!blocks.length && replyText) blocks = [{ type: "text", text: replyText }];
     if (fallbackReason) blocks = fallbackBlocks(snap, fallbackReason);
