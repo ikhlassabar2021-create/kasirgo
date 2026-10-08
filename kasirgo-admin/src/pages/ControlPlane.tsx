@@ -2622,11 +2622,15 @@ export function ControlPlanePage() {
           {activeId === 'guide' && <GuideTab />}
           {activeId === 'financial' && <FinancialTab />}
           {activeId === 'doctor' && <DoctorTab />}
-          {activeId === 'report' && <StructuredConfigTab configKey="report" title="Laporan Otomatis" subtitle="Template, jadwal default, kanal, dan batas penerima." fields={[
+          {activeId === 'report' && <StructuredConfigTab configKey="report" title="Laporan Otomatis" subtitle="Template, jadwal default, kanal, batas penerima, dan visibilitas laporan finansial." fields={[
             { key: 'default_period', label: 'Periode Default', type: 'text', options: ['daily', 'weekly', 'monthly'] },
             { key: 'default_time', label: 'Jam Default', type: 'text', placeholder: '21:00' },
             { key: 'max_recipients', label: 'Maks Penerima', type: 'number', hint: 'Jumlah maksimum penerima laporan.' },
             { key: 'channels', label: 'Kanal', type: 'list', placeholder: 'email, wa', hint: 'Pisahkan dengan koma.' },
+            { key: 'show_ppob_report', label: 'Tampilkan Laporan PPOB', type: 'boolean', hint: 'Aktifkan untuk menampilkan kartu PPOB di Laporan Utama.' },
+            { key: 'show_pg_report', label: 'Tampilkan Laporan Payment Gateway (QRIS)', type: 'boolean', hint: 'Aktifkan untuk menampilkan kartu PG/QRIS di Laporan Utama.' },
+            { key: 'show_outlet_ppob', label: 'Tampilkan Stat PPOB/PG/B2B/Modal Usaha di Detail Outlet', type: 'boolean', hint: 'Aktifkan untuk menampilkan statistik fitur finansial di Laporan Outlet.' },
+            { key: 'show_outlet_hist', label: 'Tampilkan Riwayat Transaksi PPOB/PG/B2B/Modal Usaha', type: 'boolean', hint: 'Aktifkan untuk menampilkan panel Riwayat Transaksi di Detail Outlet.' },
           ]} />}
           {activeId === 'kyc' && <StructuredConfigTab configKey="kyc" title="KYC" subtitle="Wajib/tidak, auto-verify, dan daftar field." fields={[
             { key: 'required', label: 'KYC Wajib', type: 'boolean', hint: 'Aplikasi terkunci sampai terverifikasi' },

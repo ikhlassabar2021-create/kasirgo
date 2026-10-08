@@ -265,6 +265,17 @@ export const platformOutletReport = (outletId: string, start: string, end: strin
 export const platformMainReport = (days = 30) =>
   rp<MainReportResult>('platform_main_report', { p_days: days })
 
+// FIX superadmin: visibilitas laporan finansial (bisa di-setting di ControlPlane).
+export type ReportVisibility = {
+  show_ppob_report: boolean
+  show_pg_report: boolean
+  show_outlet_ppob: boolean
+  show_outlet_hist: boolean
+}
+
+export const platformReportVisibility = () =>
+  rp<ReportVisibility>('platform_report_visibility')
+
 // ---------------------------------------------------------------------------
 // Phase 13B: riwayat transaksi per outlet (5 sumber)
 // ---------------------------------------------------------------------------

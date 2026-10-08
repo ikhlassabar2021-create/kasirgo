@@ -3,13 +3,19 @@ import { Link } from 'react-router-dom';
 import {
   BarChart3, Users, Store, TrendingUp, Layers3, PhoneCall, RefreshCw, AlertTriangle,
 } from 'lucide-react';
-import { fmtRp, platformMainReport, type MainReportResult } from '../lib/adminApi';
+import { fmtRp, platformMainReport, platformReportVisibility, type MainReportResult, type ReportVisibility } from '../lib/adminApi';
 
 export function MainReportPage() {
   const [days, setDays] = useState(30);
   const [data, setData] = useState<MainReportResult | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [vis, setVis] = useState<ReportVisibility>({
+    show_ppob_report: false,
+    show_pg_report: false,
+    show_outlet_ppob: false,
+    show_outlet_hist: false,
+  });
 
   const load = async (d: number) => {
     setLoading(true);
@@ -23,7 +29,11 @@ export function MainReportPage() {
     }
   };
 
-  useEffect(() => { load(days); /* eslint-disable-next-line react-hooks/exhaustive-deps */ }, [days]);
+  useEffect(() => {
+    load(days);
+    platformReportVisibility().then(setVis).catch(() => {});
+    /* eslint-disable-next-line react-hooks/exhaustive-deps */
+  }, [days]);
 
   const totalPlans =
     (data?.plans.trial ?? 0) + (data?.plans.free ?? 0) + (data?.plans.pendukung ?? 0);
@@ -102,6 +112,7 @@ export function MainReportPage() {
           </div>
         </section>
 
+        {vis.show_ppob_report && (
         <section className="bg-white rounded-2xl border border-slate-200/80 shadow-sm p-4 sm:p-5">
           <div className="flex items-center gap-2 mb-3">
             <PhoneCall className="w-4 h-4 text-cyan-600" />
@@ -113,8 +124,10 @@ export function MainReportPage() {
             <Stat label="Transaksi" value={String(data?.ppob.count ?? 0)} tone="text-slate-700" />
           </div>
         </section>
+        )}
       </div>
 
+      {vis.show_pg_report && (
       <section className="bg-white rounded-2xl border border-slate-200/80 shadow-sm p-4 sm:p-5">
         <div className="flex items-center gap-2 mb-3">
           <BarChart3 className="w-4 h-4 text-red-500" />
@@ -125,6 +138,7 @@ export function MainReportPage() {
           <Stat label="Transaksi" value={String(data?.pg.count ?? 0)} tone="text-slate-700" />
         </div>
       </section>
+      )}
 
       <section className="bg-white rounded-2xl border border-slate-200/80 shadow-sm p-4 sm:p-5 flex items-center justify-between">
         <div>

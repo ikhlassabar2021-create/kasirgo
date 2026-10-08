@@ -11,6 +11,7 @@ import {
   platformOutletReport, type OutletRow, type OutletStaffRow, type OutletReportResult,
   platformOutletPpobTx, platformOutletPgTx, platformOutletB2bTx,
   platformOutletFintechLeads, type HistoryRow,
+  platformReportVisibility, type ReportVisibility,
 } from '../lib/adminApi';
 import { FeatureToggleList } from '../components/FeatureToggleList';
 
@@ -25,6 +26,16 @@ export function OutletDetailPage() {
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState(false);
   const [msg, setMsg] = useState<{ type: 'ok' | 'err'; text: string } | null>(null);
+  const [vis, setVis] = useState<ReportVisibility>({
+    show_ppob_report: false,
+    show_pg_report: false,
+    show_outlet_ppob: false,
+    show_outlet_hist: false,
+  });
+
+  useEffect(() => {
+    platformReportVisibility().then(setVis).catch(() => {});
+  }, []);
 
   const flash = (type: 'ok' | 'err', text: string) => {
     setMsg({ type, text });
@@ -211,27 +222,36 @@ export function OutletDetailPage() {
               <Stat label="Untung Platform" value={fmtRp(report.untung_total)} tone="text-emerald-600" />
               <Stat label="Jumlah Transaksi" value={String(report.count_total)} tone="text-slate-700" />
             </div>
-            <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-              <Stat label="POS Omzet" value={fmtRp(report.pos.omzet)} tone="text-slate-700" />
-              <Stat label="POS Transaksi" value={String(report.pos.count)} tone="text-slate-500" />
-              <Stat label="PPOB Omzet" value={fmtRp(report.ppob.omzet)} tone="text-cyan-700" />
-              <Stat label="PPOB Untung" value={fmtRp(report.ppob.untung)} tone="text-emerald-600" />
-              <Stat label="PG Untung" value={fmtRp(report.pg.untung)} tone="text-emerald-600" />
-              <Stat label="B2B Komisi" value={fmtRp(report.b2b.komisi)} tone="text-emerald-600" />
-              <Stat label="Modal Usaha" value={fmtRp(report.fintech.pengajuan)} tone="text-indigo-600" />
-              <Stat label="Total Transaksi" value={String(report.count_total)} tone="text-slate-500" />
-            </div>
+            {vis.show_outlet_ppob ? (
+              <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                <Stat label="POS Omzet" value={fmtRp(report.pos.omzet)} tone="text-slate-700" />
+                <Stat label="POS Transaksi" value={String(report.pos.count)} tone="text-slate-500" />
+                <Stat label="PPOB Omzet" value={fmtRp(report.ppob.omzet)} tone="text-cyan-700" />
+                <Stat label="PPOB Untung" value={fmtRp(report.ppob.untung)} tone="text-emerald-600" />
+                <Stat label="PG Untung" value={fmtRp(report.pg.untung)} tone="text-emerald-600" />
+                <Stat label="B2B Komisi" value={fmtRp(report.b2b.komisi)} tone="text-emerald-600" />
+                <Stat label="Modal Usaha" value={fmtRp(report.fintech.pengajuan)} tone="text-indigo-600" />
+                <Stat label="Total Transaksi" value={String(report.count_total)} tone="text-slate-500" />
+              </div>
+            ) : (
+              <div className="grid grid-cols-2 gap-3">
+                <Stat label="POS Omzet" value={fmtRp(report.pos.omzet)} tone="text-slate-700" />
+                <Stat label="POS Transaksi" value={String(report.pos.count)} tone="text-slate-500" />
+              </div>
+            )}
           </>
         )}
       </Card>
 
-      {/* Riwayat transaksi lintas fitur */}
+      {/* Riwayat transaksi lintas fitur (bisa disembunyikan via setting) */}
+      {vis.show_outlet_hist && (
       <Card
         title="Riwayat Transaksi"
         subtitle="Catatan per transaksi: PPOB, Payment Gateway, B2B, modal usaha"
       >
         <HistoryPanel outletId={id} />
       </Card>
+      )}
 
       {/* Staf */}
       <Card title="Kelola Staf" subtitle="Akun admin & kasir pada outlet ini">
