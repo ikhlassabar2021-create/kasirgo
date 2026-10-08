@@ -25,6 +25,7 @@ import {
   ImagePlus,
   X,
   Stethoscope,
+  CalendarClock,
 } from 'lucide-react';
 import {
   loadConfig,
@@ -2126,6 +2127,9 @@ function DoctorTab() {
   const [testMsg, setTestMsg] = useState('Usaha saya sepi, apa yang harus saya lakukan?');
   const [chatBusy, setChatBusy] = useState(false);
   const [chatOut, setChatOut] = useState<string | null>(null);
+  const [observeOutlet, setObserveOutlet] = useState('');
+  const [observeBusy, setObserveBusy] = useState(false);
+  const [observeOut, setObserveOut] = useState<string | null>(null);
   const [aiConfigs, setAiConfigs] = useState<OutletAiConfig[]>([]);
   const [editOutlet, setEditOutlet] = useState('');
   const [aiForm, setAiForm] = useState<Record<string, any>>({});
@@ -2216,6 +2220,19 @@ function DoctorTab() {
       setProbe(`${r.ok ? 'OK' : 'GAGAL'}: ${r.message}${r.sample ? ` (contoh: ${r.sample})` : ''}`);
       show(r.ok ? 'ok' : 'err', r.ok ? 'Provider terhubung.' : 'Provider gagal.');
     } catch (e: any) { setProbe(e.message); show('err', e.message); } finally { setProbing(false); }
+  };
+
+  const runObserve = async () => {
+    setObserveBusy(true);
+    setObserveOut(null);
+    try {
+      const { data, error } = await supabase.functions.invoke('doctor_observe', {
+        body: observeOutlet ? { outlet_id: observeOutlet } : {},
+      });
+      if (error) throw error;
+      setObserveOut(JSON.stringify(data, null, 1));
+      show('ok', 'Observasi selesai.');
+    } catch (e: any) { setObserveOut(e.message); show('err', e.message); } finally { setObserveBusy(false); }
   };
 
   const runChat = async () => {
@@ -2464,6 +2481,27 @@ function DoctorTab() {
             Kirim Uji
           </button>
           {chatOut && <pre className="text-[11px] text-slate-700 bg-slate-50 border border-slate-200 rounded-lg px-3 py-2 whitespace-pre-wrap">{chatOut}</pre>}
+        </div>
+      </Card>
+
+      <Card title="Observasi & Teguran Otomatis" subtitle="Evaluasi resep terbuka vs data nyata (omzet) dan keluarkan teguran bertingkat bila resep tidak dijalankan (anti-spam: maks 1/hari/outlet). Bisa dijadwalkan via Supabase Dashboard (Scheduled Functions).">
+        <div className="max-w-[760px] space-y-3">
+          <div>
+            <label className={labelCls}>Outlet (kosong = semua outlet)</label>
+            <select className={inputCls} value={observeOutlet} onChange={(e) => setObserveOutlet(e.target.value)}>
+              <option value="">Semua outlet</option>
+              {outlets.map((o) => <option key={o.outlet_id} value={o.outlet_id}>{o.outlet_name ?? o.outlet_id}</option>)}
+            </select>
+          </div>
+          <button
+            onClick={runObserve}
+            disabled={observeBusy}
+            className="flex items-center gap-2 px-4 py-2.5 rounded-xl font-semibold text-xs border border-slate-200 bg-white hover:bg-slate-50 text-slate-700 transition"
+          >
+            {observeBusy ? <RefreshCw className="w-4 h-4 animate-spin" /> : <CalendarClock className="w-4 h-4" />}
+            Jalankan Observasi
+          </button>
+          {observeOut && <pre className="text-[11px] text-slate-700 bg-slate-50 border border-slate-200 rounded-lg px-3 py-2 whitespace-pre-wrap">{observeOut}</pre>}
         </div>
       </Card>
     </div>

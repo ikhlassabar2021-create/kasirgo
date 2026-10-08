@@ -119,6 +119,21 @@ class BusinessDoctorService {
     return (res as List).cast<Map<String, dynamic>>();
   }
 
+  /// Teguran terbaru hari ini (kind='reprimand'); null bila tidak ada.
+  Future<Map<String, dynamic>?> getLatestReprimand(String outletId) async {
+    final today = DateTime.now().toUtc().toIso8601String().substring(0, 10);
+    final res = await _client
+        .from('doctor_memory')
+        .select('id, title, content, data, created_at')
+        .eq('outlet_id', outletId)
+        .eq('kind', 'reprimand')
+        .gte('created_at', '${today}T00:00:00Z')
+        .order('created_at', ascending: false)
+        .limit(1)
+        .maybeSingle();
+    return res;
+  }
+
   Future<List<Map<String, dynamic>>> listMessages(String conversationId) async {
     final res = await _client
         .from('doctor_messages')

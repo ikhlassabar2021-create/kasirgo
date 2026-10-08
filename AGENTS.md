@@ -792,6 +792,18 @@ Migrasi: docs/migrations/2026-10-01-kasirgo-8.sql. Detail: PROGRESS-PHASE8.md.
   EF blok `prescription` + verdict/verdict_body/score/score_hint; tombol "Lihat Hasil Diagnosa"
   di `business_doctor_screen.dart` -> `_openResult()`. flutter_animate TIDAK terpasang (pakai
   animasi bawaan). Teruji: blok prescription berisi score 18 + verdict_body; analyze bersih.
+- ST14-11: migrasi `2026-10-17-kasirgo-14e-observe-reprimand.sql` (DITERAPKAN):
+  doctor_action_logs + status/due_date/reminder_count/last_reminded_at; doctor_memory
+  + data/resolved_at + kind reprimand/market/scaling. EF chat tool `observe_progress`
+  (omzet 7d vs 7d -> improving/flat/declining). EF BARU `doctor_observe` (REDEPLOY):
+  evaluasi resep overdue -> achieved (>=80% langkah done)/failed + memori kind result;
+  teguran bertingkat level 1 pengingat / 2 teguran / 3 teguran keras+sidak (anti-spam
+  1/hari/outlet, simpan kind reprimand). App: banner teguran + chip alasan (lupa/waktu/
+  modal/paham) -> kirim ke AI; Admin DoctorTab: kartu "Observasi & Teguran Otomatis"
+  tombol Jalankan Observasi (semua/satu outlet). Teruji E2E: resep due 5 Okt ->
+  eval failed + teguran level 3 tersimpan dgn data {done,total}; re-run idempotent
+  (anti-spam). pg_cron/pg_net TIDAK terpasang -> jalankan via admin/dashboard scheduler.
+  `PROGRESS-PHASE14.md` dibuat (ringkasan ST14-1..12 SELESAI + catatan penundaan).
 
 ## Sesi 2026-10-07: Dokter Bisnis - Resep Kaya + Jalankan (SELESAI)
 - Tujuan: resep bukan sekadar teks, tapi kartu terstruktur + tombol "Jalankan"

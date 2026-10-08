@@ -256,6 +256,14 @@ const TOOLS = [
   {
     type: "function",
     function: {
+      name: "observe_progress",
+      description: "Bandingkan resep terbuka vs data nyata (omzet 7 hari terakhir vs 7 hari sebelumnya). Hasil: improving/flat/declining.",
+      parameters: { type: "object", properties: {} },
+    },
+  },
+  {
+    type: "function",
+    function: {
       name: "escalate_case",
       description: "Naikkan tingkat penanganan kasus saat resep gagal/berulang. level 1=evaluasi ulang (cari akar masalah), 2=lini kedua (ganti pendekatan), 3=kasus bandel (butuh bantuan manusia).",
       parameters: {
@@ -357,6 +365,42 @@ async function execTool(admin: any, outletId: string, name: string, args: Json, 
         .eq("outlet_id", outletId).eq("kind", "prescription").eq("status", "open")
         .order("created_at", { ascending: false }).limit(1).maybeSingle();
       return data ?? { none: true };
+    }
+    case "observe_progress": {
+      // Bandingkan resep open vs data nyata (omzet 7d terakhir vs 7d sebelumnya).
+      const { data: openRx } = await admin
+        .from("doctor_memory")
+        .select("id, title, content, due_at, created_at")
+        .eq("outlet_id", outletId).eq("kind", "prescription").eq("status", "open")
+        .order("created_at", { ascending: false }).limit(1).maybeSingle();
+      if (!openRx) return { none: true };
+      const since = new Date(Date.now() - 14 * 86400000).toISOString();
+      const { data: trx } = await admin
+        .from("transactions")
+        .select("final_amount, payment_status, created_at")
+        .eq("outlet_id", outletId)
+        .eq("payment_status", "paid")
+        .gte("created_at", since);
+      let last7 = 0;
+      let prev7 = 0;
+      const now = Date.now();
+      for (const t of trx ?? []) {
+        const ts = new Date(String(t.created_at ?? 0)).getTime();
+        if (!Number.isFinite(ts)) continue;
+        const amt = Number(t.final_amount ?? 0);
+        if (ts >= now - 7 * 86400000) last7 += amt;
+        else prev7 += amt;
+      }
+      const outcome = last7 > prev7 ? "improving" : last7 === prev7 ? "flat" : "declining";
+      // Contoh penggunaan: bandingkan dgn baseline resep.
+      return {
+        prescription_id: openRx.id,
+        title: openRx.title,
+        due_at: openRx.due_at,
+        last7_revenue: last7,
+        prev7_revenue: prev7,
+        outcome,
+      };
     }
     case "save_prescription": {
       const verdict = String(args?.verdict ?? "").slice(0, 300);
@@ -484,7 +528,8 @@ ATURAN OUTPUT:
 - Setiap langkah resep WAJIB diisi action_key bila cocok dengan fitur aplikasi, agar owner bisa langsung menekan "Jalankan". Pilih HANYA dari daftar action_key di atas.
 - Dasar resep = data LOKAL (snapshot/tren/stok/kas). Bila internet aktif, boleh pakai fetch_url untuk referensi pasar/ide promosi, lalu gabungkan; jangan mengarang sumber.
 - Saat fase C, tampilkan hasil evaluasi sebagai card (tone success bila berhasil) + gauge skor, sebutkan ROI ringkas per aksi, dan beri block action "Catat Hasil Promosi" bila owner belum mencatat.
-- Bila owner menyatakan resep BELUM berhasil: panggil escalate_case, lalu WAJIB buat resep BARU (save_prescription) dengan pendekatan berbeda dan target_days baru.
+- Bila owner menyatakan resep BELUM berhasil: panggil observe_progress untuk melihat tren (improving/flat/declining), lalu escalate_case, lalu WAJIB buat resep BARU (save_prescription) dengan pendekatan berbeda dan target_days baru. JANGAN ulangi resep yang sudah gagal.
+- Saat owner bertanya "apakah resep sudah membuahkan hasil" / meminta evaluasi progres: WAJIB panggil observe_progress dulu sebelum menjawab.
 ${netLine}
 - Selalu akhiri dengan disclaimer singkat "saran AI".`;
 }
@@ -566,7 +611,7 @@ const SKILL_TOOLS: Record<string, string[]> = {
   low_stock: ["get_low_stock"],
   slow_products: ["list_slow_products"],
   cashflow: ["get_cashflow", "get_action_history"],
-  memory: ["recall_memory", "save_memory", "save_prescription", "get_active_prescription"],
+  memory: ["recall_memory", "save_memory", "save_prescription", "get_active_prescription", "observe_progress"],
   internet: ["fetch_url"],
 };
 

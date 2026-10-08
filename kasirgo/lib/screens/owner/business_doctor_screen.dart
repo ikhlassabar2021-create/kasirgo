@@ -77,6 +77,7 @@ class _BusinessDoctorScreenState extends ConsumerState<BusinessDoctorScreen> {
   int _escalationLevel = 0;
   String _caseStatus = 'aktif';
   Map<String, dynamic>? _activePrescription;
+  Map<String, dynamic>? _reprimand;
   bool _overduePrompted = false;
 
   @override
@@ -85,7 +86,19 @@ class _BusinessDoctorScreenState extends ConsumerState<BusinessDoctorScreen> {
     _conversationId = widget.conversationId;
     _loadPhase();
     _loadPrescription();
+    _loadReprimand();
     if (_conversationId != null) _loadHistory();
+  }
+
+  Future<void> _loadReprimand() async {
+    final outletId = ref.read(currentUserProvider)?.outletId;
+    if (outletId == null || outletId.isEmpty) return;
+    try {
+      final r = await (widget.service ?? BusinessDoctorService())
+          .getLatestReprimand(outletId);
+      if (!mounted || r == null) return;
+      setState(() => _reprimand = r);
+    } catch (_) {}
   }
 
   Future<void> _loadPrescription() async {
@@ -476,6 +489,10 @@ class _BusinessDoctorScreenState extends ConsumerState<BusinessDoctorScreen> {
           _buildEscalationBanner(),
           const SizedBox(height: 12),
         ],
+        if (_reprimand != null) ...[
+          _buildReprimandBanner(),
+          const SizedBox(height: 12),
+        ],
         if (_activePrescription != null) ...[
           DoctorBlocks(
             blocks: [_activePrescription!],
@@ -521,6 +538,88 @@ class _BusinessDoctorScreenState extends ConsumerState<BusinessDoctorScreen> {
         ],
         const SizedBox(height: 8),
       ],
+    );
+  }
+
+  Widget _buildReprimandBanner() {
+    final r = _reprimand!;
+    final data = (r['data'] is Map) ? (r['data'] as Map).cast<String, dynamic>() : const {};
+    final level = int.tryParse(data['level']?.toString() ?? '') ?? 1;
+    final color = level >= 3
+        ? AppTheme.errorColor
+        : (level == 2 ? AppTheme.warningColor : AppTheme.primaryColor);
+    final icon = level >= 3
+        ? Icons.gavel
+        : (level == 2 ? Icons.notification_important : Icons.notifications_active);
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.08),
+        borderRadius: BorderRadius.circular(AppTheme.radiusLarge),
+        border: Border.all(color: color.withValues(alpha: 0.4)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(icon, color: color, size: 22),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Text(
+                  r['title']?.toString() ?? 'Pengingat Dokter Bisnis',
+                  style: GoogleFonts.inter(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w800,
+                    color: AppTheme.textPrimary,
+                  ),
+                ),
+              ),
+              IconButton(
+                tooltip: 'Tandai sudah dibaca',
+                icon: const Icon(Icons.close, size: 18),
+                color: AppTheme.textSecondary,
+                onPressed: () => setState(() => _reprimand = null),
+              ),
+            ],
+          ),
+          const SizedBox(height: 6),
+          Text(
+            r['content']?.toString() ?? '',
+            style: GoogleFonts.inter(
+              fontSize: 13,
+              height: 1.45,
+              color: AppTheme.textPrimary,
+            ),
+          ),
+          const SizedBox(height: 10),
+          Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            children: [
+              for (final reason in const ['Lupa', 'Tidak ada waktu', 'Tidak ada modal', 'Tidak paham'])
+                ActionChip(
+                  label: Text(
+                    reason,
+                    style: GoogleFonts.inter(
+                      fontSize: 12,
+                      fontWeight: FontWeight.w600,
+                      color: color,
+                    ),
+                  ),
+                  backgroundColor: AppTheme.surfaceColor,
+                  side: BorderSide(color: color.withValues(alpha: 0.5)),
+                  onPressed: () {
+                    setState(() => _reprimand = null);
+                    _send('Dokter, saya belum menjalankan resep karena: $reason. '
+                        'Tolong bantu sesuaikan langkahnya agar lebih mudah.');
+                  },
+                ),
+            ],
+          ),
+        ],
+      ),
     );
   }
 
