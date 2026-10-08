@@ -66,6 +66,10 @@ class _QrTableScreenState extends ConsumerState<QrTableScreen> {
       return;
     }
     _newTableController.clear();
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+      content: Text('Meja "$name" ditambahkan.'),
+      backgroundColor: AppTheme.successColor,
+    ));
     await _loadTablesSafe();
   }
 
@@ -115,7 +119,14 @@ class _QrTableScreenState extends ConsumerState<QrTableScreen> {
     if (ok != true) return;
     setState(() => _tables.remove(name));
     final removed = await _service.deleteOutletTable(outletId, name);
-    if (!removed && mounted) {
+    if (!mounted) return;
+    if (removed) {
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+        content: Text('Meja "$name" dihapus.'),
+        backgroundColor: AppTheme.successColor,
+      ));
+      await _loadTablesSafe();
+    } else {
       await _loadTablesSafe();
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
@@ -302,6 +313,8 @@ class _QrTableScreenState extends ConsumerState<QrTableScreen> {
                 Expanded(
                   child: TextField(
                     controller: _newTableController,
+                    textInputAction: TextInputAction.done,
+                    onSubmitted: (_) => _isAdding ? null : _addTable(),
                     style: const TextStyle(fontSize: 13, color: AppTheme.textPrimary),
                     decoration: const InputDecoration(
                       labelText: 'Nama / Nomor Meja Baru',
