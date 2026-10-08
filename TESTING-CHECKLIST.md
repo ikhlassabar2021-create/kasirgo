@@ -34,6 +34,18 @@ Semua password akun test: **`sabar2021`**
 - ⚠️ **Data uji lama belum dibersihkan** → akan terlihat sisa resep uji, target, bundle, referral, transaksi `KGO-13A-*`, dst.
 - Tanggal trial mengacu 8 Okt 2026; untuk uji paywall gunakan **Gerobak Test** (expired).
 
+### Link Pelanggan (Katalog & QR Meja)
+Pola: `https://ikhlassabar2021-create.github.io/kasirgo/#/catalog?outlet=<OUTLET_ID>`
+Test: `https://ikhlassabar2021-create.github.io/kasirgo/#/catalog?outlet=229c94d7-ce6d-4be1-98f5-448f600528cc`
+
+| Outlet | Jenis | Outlet ID | Link Katalog Pelanggan |
+|---|---|---|---|
+| Toko Test | Cafe | `229c94d7-ce6d-4be1-98f5-448f600528cc` | https://ikhlassabar2021-create.github.io/kasirgo/#/catalog?outlet=229c94d7-ce6d-4be1-98f5-448f600528cc |
+| Warung Test | Warung Sembako | `5dda8727-2439-432a-91e6-308c824c4f7a` | https://ikhlassabar2021-create.github.io/kasirgo/#/catalog?outlet=5dda8727-2439-432a-91e6-308c824c4f7a |
+
+- **QR Meja** (dine-in cafe/resto): dibuat dari app owner → QR Meja (deep-link `#/customer?outlet=<ID>&table=<NO>`).
+- Outlet uji hanya Toko Test & Warung Test yang punya produk **published** (masing-masing 2 produk).
+
 ---
 
 ## PHASE 1–2: Register & Auth + Offline-first
