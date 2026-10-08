@@ -5,8 +5,8 @@ import 'package:fl_chart/fl_chart.dart';
 import 'package:excel/excel.dart' as xl;
 import 'package:pdf/pdf.dart';
 import 'package:pdf/widgets.dart' as pw;
-import 'package:printing/printing.dart';
 import 'package:url_launcher/url_launcher.dart';
+
 import '../../services/ppob_service.dart';
 import '../../services/b2b_service.dart';
 import '../../config/app_theme.dart';
@@ -15,6 +15,7 @@ import '../../models/transaction.dart';
 import '../../providers/auth_provider.dart';
 import '../../services/supabase_service.dart';
 import '../../utils/formatters.dart';
+import '../../utils/receipt_generator.dart';
 import '../../widgets/common/supporter_gate.dart';
 
 enum ReportPeriod { today, last7Days, last30Days, thisMonth, custom }
@@ -289,63 +290,129 @@ class _ReportScreenState extends ConsumerState<ReportScreen> with SingleTickerPr
     }
 
     try {
+      final user = ref.read(currentUserProvider);
+      final range = _getDateRange();
       final excel = xl.Excel.createExcel();
 
       final summarySheet = excel['Ringkasan'];
       excel.setDefaultSheet('Ringkasan');
 
       final totalOmzet = _transactions.fold<double>(0, (sum, t) => sum + t.finalAmount);
+      final totalBruto = _transactions.fold<double>(0, (sum, t) => sum + t.totalAmount);
+      final totalDiskon =
+          _transactions.fold<double>(0, (sum, t) => sum + (t.discountAmount ?? 0));
+      final totalPajak =
+          _transactions.fold<double>(0, (sum, t) => sum + (t.taxAmount ?? 0));
       final countTx = _transactions.length;
       final avgTx = countTx > 0 ? totalOmzet / countTx : 0.0;
 
-      double totalUntung = 0;
+      double totalHpp = 0;
       for (final tx in _transactions) {
         for (final item in tx.items) {
           final prod = _productMap[item.productId];
           final cost = prod?.costPrice ?? 0.0;
-          totalUntung += (item.price - cost) * item.quantity;
+          totalHpp += cost * item.quantity;
         }
       }
-      if (totalUntung == 0 && totalOmzet > 0) {
-        totalUntung = totalOmzet * 0.25;
+      if (totalHpp == 0 && totalOmzet > 0) {
+        totalHpp = totalOmzet * 0.75;
+      }
+      final labaKotor = totalOmzet - totalHpp;
+
+      // --- Sheet Ringkasan (profil + ringkasan laba rugi) ---
+      summarySheet.appendRow([xl.TextCellValue('LAPORAN KEUANGAN — KASIRGO')]);
+      summarySheet.appendRow([xl.TextCellValue('Periode'), xl.TextCellValue('${Formatters.date(range.start)} s/d ${Formatters.date(range.end)}')]);
+      summarySheet.appendRow([xl.TextCellValue('Nama Merchant'), xl.TextCellValue(user?.email ?? 'KasirGo Merchant')]);
+      summarySheet.appendRow([xl.TextCellValue('Outlet ID'), xl.TextCellValue(user?.outletId ?? '-')]);
+      summarySheet.appendRow([xl.TextCellValue('Tanggal Export'), xl.TextCellValue(Formatters.date(DateTime.now()))]);
+      summarySheet.appendRow([xl.TextCellValue('')]);
+      summarySheet.appendRow([xl.TextCellValue('RINGKASAN LABA RUGI (SAK EMKM)')]);
+      summarySheet.appendRow([xl.TextCellValue('Pos Keuangan'), xl.TextCellValue('Jumlah (Rp)')]);
+      summarySheet.appendRow([xl.TextCellValue('Pendapatan Penjualan (Bruto)'), xl.DoubleCellValue(totalBruto)]);
+      summarySheet.appendRow([xl.TextCellValue('Potongan / Diskon'), xl.DoubleCellValue(-totalDiskon)]);
+      summarySheet.appendRow([xl.TextCellValue('Pendapatan Penjualan (Neto)'), xl.DoubleCellValue(totalOmzet)]);
+      summarySheet.appendRow([xl.TextCellValue('Beban Pokok Penjualan (HPP)'), xl.DoubleCellValue(-totalHpp)]);
+      summarySheet.appendRow([xl.TextCellValue('LABA KOTOR'), xl.DoubleCellValue(labaKotor)]);
+      summarySheet.appendRow([xl.TextCellValue('')]);
+      summarySheet.appendRow([xl.TextCellValue('RINGKASAN AKTIVITAS')]);
+      summarySheet.appendRow([xl.TextCellValue('Jumlah Transaksi'), xl.IntCellValue(countTx)]);
+      summarySheet.appendRow([xl.TextCellValue('Rata-rata per Transaksi'), xl.DoubleCellValue(avgTx)]);
+      if (totalPajak > 0) {
+        summarySheet.appendRow([xl.TextCellValue('Total Pajak/PPN Terkumpul'), xl.DoubleCellValue(totalPajak)]);
       }
 
-      summarySheet.appendRow([xl.TextCellValue('LAPORAN RINGKASAN KASIRGO')]);
-      summarySheet.appendRow([xl.TextCellValue('Periode'), xl.TextCellValue(_selectedPeriod.name)]);
-      summarySheet.appendRow([xl.TextCellValue('Tanggal Export'), xl.TextCellValue(DateTime.now().toIso8601String())]);
-      summarySheet.appendRow([xl.TextCellValue('')]);
-      summarySheet.appendRow([xl.TextCellValue('Indikator'), xl.TextCellValue('Nilai')]);
-      summarySheet.appendRow([xl.TextCellValue('Total Omzet'), xl.DoubleCellValue(totalOmzet)]);
-      summarySheet.appendRow([xl.TextCellValue('Total Untung Bersih'), xl.DoubleCellValue(totalUntung)]);
-      summarySheet.appendRow([xl.TextCellValue('Jumlah Transaksi'), xl.IntCellValue(countTx)]);
-      summarySheet.appendRow([xl.TextCellValue('Rata-rata Transaksi'), xl.DoubleCellValue(avgTx)]);
-
+      // --- Sheet Penjualan (buku kas sederhana) ---
       final salesSheet = excel['Penjualan'];
       salesSheet.appendRow([
-        xl.TextCellValue('ID Transaksi'),
-        xl.TextCellValue('Waktu'),
+        xl.TextCellValue('Tanggal'),
+        xl.TextCellValue('No. Transaksi'),
         xl.TextCellValue('Metode Bayar'),
-        xl.TextCellValue('Jumlah Item'),
-        xl.TextCellValue('Total Bayar'),
+        xl.TextCellValue('Kas Masuk (Rp)'),
+        xl.TextCellValue('Diskon (Rp)'),
+        xl.TextCellValue('Total Neto (Rp)'),
       ]);
-
       for (final tx in _transactions) {
         salesSheet.appendRow([
+          xl.TextCellValue(Formatters.date(tx.createdAt)),
           xl.TextCellValue(tx.id),
-          xl.TextCellValue(tx.createdAt.toIso8601String()),
           xl.TextCellValue(tx.paymentMethod),
-          xl.IntCellValue(tx.items.length),
+          xl.DoubleCellValue(tx.totalAmount),
+          xl.DoubleCellValue(tx.discountAmount ?? 0),
           xl.DoubleCellValue(tx.finalAmount),
         ]);
       }
+      salesSheet.appendRow([xl.TextCellValue('TOTAL'), xl.TextCellValue(''), xl.TextCellValue(''),
+        xl.DoubleCellValue(totalBruto), xl.DoubleCellValue(totalDiskon), xl.DoubleCellValue(totalOmzet)]);
 
-      final fileBytes = excel.save(fileName: 'Laporan_KasirGo_${DateTime.now().millisecondsSinceEpoch}.xlsx');
-      if (fileBytes != null) {
-        await Printing.sharePdf(
-          bytes: Uint8List.fromList(fileBytes),
-          filename: 'Laporan_KasirGo_${DateTime.now().millisecondsSinceEpoch}.xlsx',
-        );
+      // --- Sheet per Produk ---
+      final productSheet = excel['Per Produk'];
+      productSheet.appendRow([
+        xl.TextCellValue('Produk'),
+        xl.TextCellValue('Qty Terjual'),
+        xl.TextCellValue('Omzet (Rp)'),
+        xl.TextCellValue('HPP (Rp)'),
+        xl.TextCellValue('Laba Kotor (Rp)'),
+      ]);
+      final Map<String, ({String name, int qty, double omzet, double hpp})> perProduct = {};
+      for (final tx in _transactions) {
+        for (final item in tx.items) {
+          final prod = _productMap[item.productId];
+          final key = item.productId.isNotEmpty ? item.productId : item.productName;
+          final cur = perProduct[key] ?? (
+            name: item.productName,
+            qty: 0,
+            omzet: 0,
+            hpp: 0,
+          );
+          perProduct[key] = (
+            name: item.productName,
+            qty: cur.qty + item.quantity,
+            omzet: cur.omzet + item.subtotal,
+            hpp: cur.hpp + (prod?.costPrice ?? 0.0) * item.quantity,
+          );
+        }
       }
+      final sortedProducts = perProduct.values.toList()
+        ..sort((a, b) => b.omzet.compareTo(a.omzet));
+      for (final p in sortedProducts) {
+        productSheet.appendRow([
+          xl.TextCellValue(p.name),
+          xl.IntCellValue(p.qty),
+          xl.DoubleCellValue(p.omzet),
+          xl.DoubleCellValue(p.hpp),
+          xl.DoubleCellValue(p.omzet - p.hpp),
+        ]);
+      }
+
+      final fileBytes = excel.save(fileName: 'Laporan_Keuangan_${DateTime.now().millisecondsSinceEpoch}.xlsx');
+      if (fileBytes != null) {
+        final filename = 'Laporan_Keuangan_${Formatters.date(DateTime.now()).replaceAll('/', '-')}.xlsx';
+        await ReceiptGenerator.share(Uint8List.fromList(fileBytes), filename);
+      }
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Laporan Excel berhasil dibuat (3 sheet: Ringkasan, Penjualan, Per Produk)')),
+      );
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -369,6 +436,11 @@ class _ReportScreenState extends ConsumerState<ReportScreen> with SingleTickerPr
       final user = ref.read(currentUserProvider);
       final range = _getDateRange();
       final totalOmzet = _transactions.fold<double>(0, (sum, t) => sum + t.finalAmount);
+      final totalBruto = _transactions.fold<double>(0, (sum, t) => sum + t.totalAmount);
+      final totalDiskon =
+          _transactions.fold<double>(0, (sum, t) => sum + (t.discountAmount ?? 0));
+      final totalPajak =
+          _transactions.fold<double>(0, (sum, t) => sum + (t.taxAmount ?? 0));
       final countTx = _transactions.length;
 
       double totalHpp = 0;
@@ -384,101 +456,174 @@ class _ReportScreenState extends ConsumerState<ReportScreen> with SingleTickerPr
       }
       final labaKotor = totalOmzet - totalHpp;
 
+      // Omzet per metode bayar.
+      final Map<String, double> perMethod = {};
+      for (final tx in _transactions) {
+        perMethod[tx.paymentMethod] = (perMethod[tx.paymentMethod] ?? 0) + tx.finalAmount;
+      }
+
       final doc = pw.Document();
       doc.addPage(
-        pw.Page(
+        pw.MultiPage(
           pageFormat: PdfPageFormat.a4,
-          build: (pw.Context pContext) {
-            return pw.Padding(
-              padding: const pw.EdgeInsets.all(24),
-              child: pw.Column(
-                crossAxisAlignment: pw.CrossAxisAlignment.start,
+          margin: const pw.EdgeInsets.all(32),
+          header: (pw.Context pContext) => pw.Column(
+            crossAxisAlignment: pw.CrossAxisAlignment.start,
+            children: [
+              pw.Row(
+                mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
                 children: [
-                  pw.Row(
-                    mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
+                  pw.Column(
+                    crossAxisAlignment: pw.CrossAxisAlignment.start,
                     children: [
-                      pw.Column(
-                        crossAxisAlignment: pw.CrossAxisAlignment.start,
-                        children: [
-                          pw.Text('LAPORAN KEUANGAN BANK-READY', style: pw.TextStyle(fontSize: 16, fontWeight: pw.FontWeight.bold)),
-                          pw.Text('KasirGo POS System • Bukti Usaha Resmi', style: const pw.TextStyle(fontSize: 10, color: PdfColors.grey700)),
-                        ],
-                      ),
-                      pw.Text(Formatters.date(DateTime.now()), style: const pw.TextStyle(fontSize: 10)),
+                      pw.Text('LAPORAN KEUANGAN', style: pw.TextStyle(fontSize: 16, fontWeight: pw.FontWeight.bold)),
+                      pw.Text('Laporan Laba Rugi Sederhana — Acuan SAK EMKM',
+                          style: const pw.TextStyle(fontSize: 10, color: PdfColors.grey700)),
                     ],
                   ),
-                  pw.Divider(thickness: 1.5),
-                  pw.SizedBox(height: 12),
-                  pw.Text('Profil Usaha', style: pw.TextStyle(fontSize: 12, fontWeight: pw.FontWeight.bold)),
-                  pw.SizedBox(height: 4),
-                  pw.Text('Nama Merchant : ${user?.email ?? "KasirGo Merchant"}'),
-                  pw.Text('Outlet ID      : ${user?.outletId ?? "-"}'),
-                  pw.Text('Periode Laporan: ${Formatters.date(range.start)} s/d ${Formatters.date(range.end)}'),
-                  pw.SizedBox(height: 16),
-                  pw.Text('Ringkasan Laba Rugi (Standar Perbankan)', style: pw.TextStyle(fontSize: 12, fontWeight: pw.FontWeight.bold)),
-                  pw.SizedBox(height: 8),
-                  pw.Table(
-                    border: pw.TableBorder.all(color: PdfColors.grey400, width: 0.5),
+                  pw.Column(
+                    crossAxisAlignment: pw.CrossAxisAlignment.end,
                     children: [
-                      pw.TableRow(
-                        decoration: const pw.BoxDecoration(color: PdfColors.grey200),
-                        children: [
-                          pw.Padding(padding: const pw.EdgeInsets.all(6), child: pw.Text('Pos Keuangan', style: pw.TextStyle(fontWeight: pw.FontWeight.bold))),
-                          pw.Padding(padding: const pw.EdgeInsets.all(6), child: pw.Text('Jumlah', style: pw.TextStyle(fontWeight: pw.FontWeight.bold))),
-                        ],
-                      ),
-                      pw.TableRow(
-                        children: [
-                          pw.Padding(padding: const pw.EdgeInsets.all(6), child: pw.Text('Pendapatan Penjualan (Omzet)')),
-                          pw.Padding(padding: const pw.EdgeInsets.all(6), child: pw.Text(Formatters.currency(totalOmzet))),
-                        ],
-                      ),
-                      pw.TableRow(
-                        children: [
-                          pw.Padding(padding: const pw.EdgeInsets.all(6), child: pw.Text('Harga Pokok Penjualan (HPP)')),
-                          pw.Padding(padding: const pw.EdgeInsets.all(6), child: pw.Text(Formatters.currency(totalHpp))),
-                        ],
-                      ),
-                      pw.TableRow(
-                        decoration: const pw.BoxDecoration(color: PdfColors.grey100),
-                        children: [
-                          pw.Padding(padding: const pw.EdgeInsets.all(6), child: pw.Text('Laba Kotor (Gross Profit)', style: pw.TextStyle(fontWeight: pw.FontWeight.bold))),
-                          pw.Padding(padding: const pw.EdgeInsets.all(6), child: pw.Text(Formatters.currency(labaKotor), style: pw.TextStyle(fontWeight: pw.FontWeight.bold))),
-                        ],
-                      ),
-                      pw.TableRow(
-                        children: [
-                          pw.Padding(padding: const pw.EdgeInsets.all(6), child: pw.Text('Total Volume Transaksi')),
-                          pw.Padding(padding: const pw.EdgeInsets.all(6), child: pw.Text('$countTx transaksi')),
-                        ],
-                      ),
+                      pw.Text('Dicetak: ${Formatters.date(DateTime.now())}', style: const pw.TextStyle(fontSize: 9)),
+                      pw.Text('Dokumen dihasilkan otomatis oleh KasirGo', style: const pw.TextStyle(fontSize: 9, color: PdfColors.grey700)),
                     ],
-                  ),
-                  pw.SizedBox(height: 24),
-                  pw.Text('Catatan Bank:', style: pw.TextStyle(fontSize: 10, fontWeight: pw.FontWeight.bold)),
-                  pw.Text(
-                    'Laporan ini digenerate secara otomatis oleh sistem KasirGo dan merefleksikan catatan penjualan '
-                    'kasir/POS yang tercatat pada database. Valid sebagai lampiran pengajuan kredit UMKM/KUR.',
-                    style: const pw.TextStyle(fontSize: 9, color: PdfColors.grey700),
                   ),
                 ],
               ),
-            );
+              pw.Divider(thickness: 1.5),
+              pw.SizedBox(height: 8),
+            ],
+          ),
+          build: (pw.Context pContext) {
+            return <pw.Widget>[
+              pw.SizedBox(height: 4),
+                pw.Text('A. Identitas Usaha', style: pw.TextStyle(fontSize: 12, fontWeight: pw.FontWeight.bold)),
+                pw.SizedBox(height: 4),
+                pw.Table(
+                  border: pw.TableBorder.all(color: PdfColors.grey400, width: 0.5),
+                  children: [
+                    _pdfRow2('Nama Merchant', user?.email ?? 'KasirGo Merchant'),
+                    _pdfRow2('Outlet ID', user?.outletId ?? '-'),
+                    _pdfRow2('Periode Laporan', '${Formatters.date(range.start)} s/d ${Formatters.date(range.end)}'),
+                    _pdfRow2('Jumlah Transaksi', '$countTx transaksi'),
+                  ],
+                ),
+                pw.SizedBox(height: 16),
+                pw.Text('B. Laporan Laba Rugi', style: pw.TextStyle(fontSize: 12, fontWeight: pw.FontWeight.bold)),
+                pw.SizedBox(height: 4),
+                pw.Table(
+                  border: pw.TableBorder.all(color: PdfColors.grey400, width: 0.5),
+                  children: [
+                    _pdfRowHeader('Pos Keuangan', 'Jumlah'),
+                    _pdfRow2('Pendapatan Penjualan (Bruto)', Formatters.currency(totalBruto)),
+                    if (totalDiskon > 0) _pdfRow2('Potongan Penjualan / Diskon', '- ${Formatters.currency(totalDiskon)}'),
+                    _pdfRow2('Pendapatan Penjualan (Neto)', Formatters.currency(totalOmzet), bold: true),
+                    _pdfRow2('Beban Pokok Penjualan (HPP)', '- ${Formatters.currency(totalHpp)}'),
+                    _pdfRow2('LABA KOTOR', Formatters.currency(labaKotor), bold: true, highlight: true),
+                    if (totalPajak > 0) _pdfRow2('Pajak / PPN Terkumpul (disetor ke negara)', Formatters.currency(totalPajak)),
+                  ],
+                ),
+                pw.SizedBox(height: 16),
+                pw.Text('C. Rincian Penerimaan per Metode Bayar', style: pw.TextStyle(fontSize: 12, fontWeight: pw.FontWeight.bold)),
+                pw.SizedBox(height: 4),
+                pw.Table(
+                  border: pw.TableBorder.all(color: PdfColors.grey400, width: 0.5),
+                  children: [
+                    _pdfRowHeader('Metode Bayar', 'Total Neto'),
+                    for (final e in perMethod.entries.toList()
+                      ..sort((a, b) => b.value.compareTo(a.value)))
+                      _pdfRow2(e.key, Formatters.currency(e.value)),
+                  ],
+                ),
+                pw.SizedBox(height: 24),
+                pw.Text('D. Catatan', style: pw.TextStyle(fontSize: 12, fontWeight: pw.FontWeight.bold)),
+                pw.SizedBox(height: 4),
+                pw.Bullet(
+                  text: 'Laporan ini disusun dari catatan transaksi POS KasirGo dan dapat dilampirkan '
+                      'pada pengajuan kredit usaha (KUR/UMKM) sebagai buku pembukuan sederhana.',
+                  style: const pw.TextStyle(fontSize: 9),
+                ),
+                pw.Bullet(
+                  text: 'Angka HPP dihitung dari harga beli produk; bila harga beli belum dicatat, '
+                      'HPP diestimasi 75% dari penjualan neto.',
+                  style: const pw.TextStyle(fontSize: 9),
+                ),
+                pw.Bullet(
+                  text: 'Bukti transaksi lengkap tersedia pada riwayat transaksi aplikasi KasirGo.',
+                  style: const pw.TextStyle(fontSize: 9),
+                ),
+                pw.SizedBox(height: 32),
+                pw.Row(
+                  mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
+                  children: [
+                    pw.Column(
+                      crossAxisAlignment: pw.CrossAxisAlignment.center,
+                      children: [
+                        pw.Text('Pemilik Usaha,', style: const pw.TextStyle(fontSize: 10)),
+                        pw.SizedBox(height: 48),
+                        pw.Container(width: 160, child: pw.Divider()),
+                        pw.Text('( ................................ )', style: const pw.TextStyle(fontSize: 10)),
+                      ],
+                    ),
+                    pw.Column(
+                      crossAxisAlignment: pw.CrossAxisAlignment.center,
+                      children: [
+                        pw.Text('Mengetahui,', style: const pw.TextStyle(fontSize: 10)),
+                        pw.Text('KasirGo', style: const pw.TextStyle(fontSize: 10)),
+                        pw.SizedBox(height: 44),
+                        pw.Container(width: 160, child: pw.Divider()),
+                        pw.Text('Representatif KasirGo', style: const pw.TextStyle(fontSize: 10)),
+                      ],
+                    ),
+                  ],
+                ),
+            ];
           },
         ),
       );
 
-      await Printing.layoutPdf(
-        onLayout: (PdfPageFormat format) async => doc.save(),
-        name: 'Laporan_Bank_${DateTime.now().millisecondsSinceEpoch}',
+      final bytes = await doc.save();
+      await ReceiptGenerator.share(
+          bytes, 'Laporan_Keuangan_${Formatters.date(DateTime.now()).replaceAll('/', '-')}.pdf');
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Laporan PDF berhasil dibuat (standar SAK EMKM)')),
       );
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Gagal generate PDF Bank: $e')),
+          SnackBar(content: Text('Gagal generate PDF: $e')),
         );
       }
     }
+  }
+
+  pw.TableRow _pdfRowHeader(String left, String right) {
+    return pw.TableRow(
+      decoration: const pw.BoxDecoration(color: PdfColors.grey200),
+      children: [
+        pw.Padding(
+            padding: const pw.EdgeInsets.all(6),
+            child: pw.Text(left, style: pw.TextStyle(fontWeight: pw.FontWeight.bold))),
+        pw.Padding(
+            padding: const pw.EdgeInsets.all(6),
+            child: pw.Text(right, style: pw.TextStyle(fontWeight: pw.FontWeight.bold))),
+      ],
+    );
+  }
+
+  pw.TableRow _pdfRow2(String left, String right, {bool bold = false, bool highlight = false}) {
+    return pw.TableRow(
+      decoration: highlight ? const pw.BoxDecoration(color: PdfColors.grey100) : null,
+      children: [
+        pw.Padding(
+            padding: const pw.EdgeInsets.all(6),
+            child: pw.Text(left, style: pw.TextStyle(fontWeight: bold ? pw.FontWeight.bold : pw.FontWeight.normal))),
+        pw.Padding(
+            padding: const pw.EdgeInsets.all(6),
+            child: pw.Text(right, style: pw.TextStyle(fontWeight: bold ? pw.FontWeight.bold : pw.FontWeight.normal))),
+      ],
+    );
   }
 
   void _showShareDialog() {
