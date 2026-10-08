@@ -31,8 +31,19 @@ Sumber spec: `KASIRGO-WORKFLOW-LENGKAP.md` BAGIAN 13 (13.23-13.26) + BAGIAN 14.3
 - Verifikasi: config live `skills` terisi, `provider_default` tetap (model deepseek-4.1-flash);
   EF chat superadmin -> `fallback:false`, phase B, jawaban nyata; admin build EXIT 0.
 
-## Penutup celah Phase 14 (unlimited token + token_quota) - SELESAI
-ST14-1..12 sudah selesai, namun field `unlimited_tokens` + `token_quota` belum ada:
+### ST14-6 (lanjutan) Layar HASIL Diagnosa penuh (BAGIAN 13.21A) - SELESAI
+- Layar baru `kasirgo/lib/screens/owner/doctor_result_screen.dart`: header + tanggal,
+  gauge Skor Kesehatan Usaha (animasi TweenAnimationBuilder, warna hijau/kuning/merah),
+  kartu VONIS berwarna, Peta Resep (checklist bernomor + tombol Kerjakan/Check),
+  target & timeline, footer "Mulai Jalankan"/"Simpan-Dibagikan"/"Tanya Dokter". Ramah gaptek.
+  (Animasi pakai widget bawaan Flutter; `flutter_animate` TIDAK terpasang & tak boleh install.)
+- EF `business_doctor_chat` (REDEPLOYED): blok `prescription` + `verdict`, `verdict_body`,
+  `score` (0-100), `score_hint`; param tool `save_prescription` diperluas.
+- `business_doctor_screen.dart`: tombol "Lihat Hasil Diagnosa" di bawah kartu resep ->
+  `_openResult()` membuka `DoctorResultScreen`.
+- Teruji E2E: blok prescription berisi score/verdict/verdict_body; `dart analyze` 2 file bersih.
+
+## Penutup celah Phase 14 (unlimited token + token_quota) - SELESAIST14-1..12 sudah selesai, namun field `unlimited_tokens` + `token_quota` belum ada:
 - Migrasi `docs/migrations/2026-10-16-kasirgo-14d-unlimited-token-quota.sql` (DITERAPKAN):
   `ALTER TABLE outlet_ai_configs ADD unlimited_tokens bool default false, token_quota int`;
   RPC list/set diperbarui menyertakan field.

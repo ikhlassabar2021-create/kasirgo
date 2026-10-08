@@ -5,6 +5,7 @@ import 'package:google_fonts/google_fonts.dart';
 import '../../config/app_theme.dart';
 import '../../providers/auth_provider.dart';
 import '../../services/business_doctor_service.dart';
+import '../../widgets/common/app_button.dart';
 import '../../widgets/common/business_doctor/doctor_blocks.dart';
 import '../../widgets/common/centennial_background.dart';
 import '../../widgets/common/supporter_gate.dart';
@@ -12,6 +13,7 @@ import '../modules/supporter_screen.dart';
 import 'doctor_cases_screen.dart';
 import 'doctor_intake_screen.dart';
 import 'doctor_promotion_log_screen.dart';
+import 'doctor_result_screen.dart';
 import 'health_score_screen.dart';
 import 'multi_outlet_screen.dart';
 import 'online_catalog_screen.dart';
@@ -304,6 +306,46 @@ class _BusinessDoctorScreenState extends ConsumerState<BusinessDoctorScreen> {
     }
   }
 
+  void _openResult() {
+    final p = _activePrescription;
+    if (p == null) return;
+    final items = (p['items'] as List?) ?? const [];
+    final steps = items
+        .whereType<Map>()
+        .map((e) => Map<String, dynamic>.from(e))
+        .toList();
+    DateTime? due;
+    final dueRaw = p['due_at']?.toString();
+    if (dueRaw != null && dueRaw.isNotEmpty) {
+      due = DateTime.tryParse(dueRaw)?.toLocal();
+    }
+    final days = int.tryParse(p['target_days']?.toString() ?? '');
+    final scoreRaw = p['score'] ?? p['health_score'];
+    final score = scoreRaw == null ? null : int.tryParse(scoreRaw.toString());
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => DoctorResultScreen(
+          verdictTitle:
+              p['verdict']?.toString() ?? p['title']?.toString() ?? 'Vonis',
+          verdictBody: p['verdict_body']?.toString() ?? '',
+          score: score,
+          scoreHint: p['score_hint']?.toString() ?? '',
+          targetDays: days,
+          dueDate: due,
+          steps: steps,
+          onRunStep: (i, step) =>
+              _onPrescriptionStep(p, Map<String, dynamic>.from(step), i),
+          onStart: () => Navigator.pop(context),
+          onAsk: () {
+            Navigator.pop(context);
+            _scrollDown();
+          },
+        ),
+      ),
+    );
+  }
+
   Widget? _actionScreen(String actionKey) {
     switch (actionKey) {
       case 'wa_marketing':
@@ -438,6 +480,16 @@ class _BusinessDoctorScreenState extends ConsumerState<BusinessDoctorScreen> {
           DoctorBlocks(
             blocks: [_activePrescription!],
             onPrescription: _onPrescriptionStep,
+          ),
+          const SizedBox(height: 8),
+          SizedBox(
+            height: AppTheme.touchTargetMedium,
+            child: AppButton(
+              label: 'Lihat Hasil Diagnosa',
+              icon: Icons.assignment_outlined,
+              variant: AppButtonVariant.outline,
+              onPressed: _openResult,
+            ),
           ),
           const SizedBox(height: 12),
         ],

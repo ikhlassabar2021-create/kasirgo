@@ -221,6 +221,9 @@ const TOOLS = [
         type: "object",
         properties: {
           verdict: { type: "string", description: "Vonis singkat masalah utama." },
+          verdict_body: { type: "string", description: "Penjelasan vonis 2-3 kalimat bahasa awam untuk layar hasil." },
+          score: { type: "integer", description: "Skor Kesehatan Usaha 0-100 (perkiraan dari data)." },
+          score_hint: { type: "string", description: "Penjelasan singkat arti skor." },
           target_days: { type: "integer", description: "Masa target menjalankan resep (hari), default 7." },
           steps: {
             type: "array",
@@ -384,6 +387,10 @@ async function execTool(admin: any, outletId: string, name: string, args: Json, 
       const memoryId = data?.id ?? null;
       sink.prescription = {
         type: "prescription", memory_id: memoryId, title: verdict || "Resep perbaikan",
+        verdict: verdict || "Resep perbaikan",
+        verdict_body: String(args?.verdict_body ?? "").slice(0, 600),
+        score: Number.isFinite(Number(args?.score)) ? Number(args?.score) : null,
+        score_hint: String(args?.score_hint ?? "").slice(0, 300),
         target_days: targetDays, due_at: dueAt, items: steps,
       };
       return { saved: true, id: memoryId, target_days: targetDays, due_at: dueAt, steps: steps.length };

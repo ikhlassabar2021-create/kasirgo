@@ -787,6 +787,11 @@ Migrasi: docs/migrations/2026-10-01-kasirgo-8.sql. Detail: PROGRESS-PHASE8.md.
   menambah `outlet_ai_configs.unlimited_tokens` + `token_quota` + RPC list/set; EF kuota per outlet
   (unlimited ON -> lewati, OFF -> token_quota/global); admin DoctorTab toggle unlimited + kuota +
   kolom Kuota. Teruji E2E (unlimited ON lolos token 255649>200000; token_quota=10 diblokir).
+- ST14-6 lanjutan - Layar HASIL Diagnosa (13.21A): `doctor_result_screen.dart` (header+tanggal,
+  gauge skor animasi, kartu vonis berwarna, peta resep checklist bernomor, target/timeline, footer).
+  EF blok `prescription` + verdict/verdict_body/score/score_hint; tombol "Lihat Hasil Diagnosa"
+  di `business_doctor_screen.dart` -> `_openResult()`. flutter_animate TIDAK terpasang (pakai
+  animasi bawaan). Teruji: blok prescription berisi score 18 + verdict_body; analyze bersih.
 
 ## Sesi 2026-10-07: Dokter Bisnis - Resep Kaya + Jalankan (SELESAI)
 - Tujuan: resep bukan sekadar teks, tapi kartu terstruktur + tombol "Jalankan"
