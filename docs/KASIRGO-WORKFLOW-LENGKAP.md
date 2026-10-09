@@ -203,6 +203,7 @@ flutter_slidable, fl_chart, cached_network_image, image_picker.
 
 Tambahan 3.0: `sqlcipher_flutter_libs` (enkripsi DB), `flutter_secure_storage` (token),
 `webview_flutter` (Embedded B2B Restock).
+Tambahan Phase 14 (opsional, UI gaptek): `speech_to_text` (mic) + `flutter_tts` (baca jawaban).
 
 ### 1.9 File Structure
 ```
@@ -370,6 +371,7 @@ error sama >2x -> STOP, push, tulis BLOCKER, laporkan.
 ```
 Cara pakai: tempel PROMPT PEMBUKA UNIVERSAL, lalu blok `=== SUB-TASK ... ===` di bawahnya, jadi satu pesan.
 Prompt siap-tempel per sub-task (7.5 -> 7.7 -> 7.6 -> 7.8 -> 8-12): `docs/PROMPT-GILIRAN.md`.
+Prompt siap-tempel Phase 14 & Phase 15 (Dokter Bisnis AI): lihat **BAGIAN 14** di file ini.
 
 ---
 
@@ -826,12 +828,16 @@ semua tabel baru berbasis `outlet_id`.
 | 7.5 | Zero-Friction Onboarding + Dual-Mode QRIS + Settlement/Disbursement + Superowner Financial Config | SELESAI |
 | 7.6 | UI Retrofit "Centennial Modern Ocean White" (semua role + semua fitur) | SELESAI |
 | 7.7 | Control Plane (setting superadmin tanpa kodingan) + KYC Auto-Verify + Izin Produk/Staf + Owner Affiliate | SELESAI |
-| **7.8** | **Monetisasi & Program Pendukung (1 harga Rp50k) + Iklan Pelanggan + Laporan ke Bos + KYC Wajib + Panduan + Skala Superadmin** | **MULAI DI SINI** |
-| 8 | Modul outlet_type: BOM/Resep, KDS/QR Meja, Variant, Shift/Tip | |
-| 9 | PPOB + Closed-loop + Embedded B2B Restock | |
-| 10 | Fintech Lead + Hyperlocal Data + Micro-insurance | |
-| 11 | Superadmin Web (12 revenue engine, RBAC, rules engine, monitoring) | |
-| 12 | Polish + Security Audit + Release | |
+| 7.8 | Monetisasi & Program Pendukung (1 harga Rp50k) + Iklan Pelanggan + Laporan ke Bos + KYC Wajib + Panduan + Skala Superadmin | SELESAI |
+| 8 | Modul outlet_type: BOM/Resep, KDS/QR Meja, Variant, Shift/Tip | SELESAI |
+| 9 | PPOB + Closed-loop + Embedded B2B Restock | SELESAI |
+| 10 | Fintech Lead + Hyperlocal Data + Micro-insurance | SELESAI |
+| 11 | Superadmin Web (12 revenue engine, RBAC, rules engine, monitoring) | SELESAI |
+| 12 | Polish + Security Audit + Release | SELESAI |
+| 13 | Superadmin Web & Control Plane + Integrasi QRIS otomatis (Midtrans/RCB) + webhook + superadmin | SELESAI |
+| 14 | Dokter Bisnis AI (ST14-1..12) | SELESAI |
+| 15 | Master Prompt Karakter/Skill AI + 12 Fitur Bos Virtual (ST15-1..4) | SELESAI |
+| **16** | **Squad Digital Marketing AI (ST16-1..4)** | **MULAI DI SINI** |
 
 Catatan: porsi yang OBSOLETE dari Phase 5 dan harus dibuang di 5.5B: subscription gate
 (free/basic_25/pro_50), iklan banner free tier, limit 500 produk/transaksi.
@@ -1356,14 +1362,15 @@ Lihat BAGIAN 7E (ST7.8-1 s/d ST7.8-9). Ganti 3 tier jadi 1 harga Rp50.000/bulan 
 pindah sebagian fitur ke Pendukung; iklan hanya sisi pelanggan (web); laporan otomatis ke bos;
 onboarding KYC wajib (app terkunci sampai verified); panduan PDF/video via Control Plane.
 
-### PHASE 8 - Modul per outlet_type
-- ST8-1: Variant produk (product_form + product_list + POS pilih varian) - retail
-- ST8-2: BOM/Resep HPP (recipe + recipe_items) + kalkulasi HPP otomatis - cafe
-- ST8-3: Kitchen Display (KDS): daftar order masuk, status, tandai selesai - cafe/warteg
-- ST8-4: Shift kasir (open/close + opening/closing cash) + Tip + split bill
-- Test: sesuai outlet_type.
+### PHASE 8 - Modul per outlet_type  [SELESAI]
+- ST8-1: Modul dinamis per outlet_type + migrasi/RLS (variant, resep, shift, tip)
+- ST8-2: Variant produk (product_form + product_list + POS pilih varian) - retail
+- ST8-3: BOM/Resep HPP (recipe + recipe_items) + kalkulasi HPP otomatis + potong stok bahan - cafe
+- ST8-4: Kitchen Display (KDS): daftar order masuk, status baru->diproses->siap->selesai - cafe/warteg
+- ST8-5: Shift kasir (open/close + opening/closing cash + selisih) + Tip + Split Bill
+- ST8-6: QA per outlet_type + dokumen.
 
-### PHASE 9 - PPOB + Embedded B2B Restock
+### PHASE 9 - PPOB + Embedded B2B Restock  [SELESAI]
 - ST9-1: `services/ppob_service.dart` + `screens/owner/ppob_screen.dart` (pulsa/PLN/BPJS/game);
   api key + **margin persen dari `platform_integrations`/config** -> harga jual semua produk PPOB auto
 - ST9-2: Closed-loop settlement (saldo QRIS -> beli PPOB real-time)
@@ -1371,17 +1378,20 @@ onboarding KYC wajib (app terkunci sampai verified); panduan PDF/video via Contr
   **link distributor diambil dari config superadmin** (ganti link = tanpa ubah koding)
 - Test: transaksi PPOB, restock order tercatat.
 
-### PHASE 10 - Fintech + Data + Insurance
+### PHASE 10 - Fintech + Data + Insurance  [SELESAI]
 - ST10-1: Fintech lead-gen (ajukan modal berdasarkan data arus kas)
 - ST10-2: Hyperlocal data report (agregat anonim)
 - ST10-3: Micro-insurance toko
 - Test: lead tercatat.
 
-### PHASE 11 - Superadmin Web (React + Cloudflare Pages)
-- ST11-1: Dashboard 12 revenue engine + supporters + user mgmt
+### PHASE 11 - Superadmin Web (React + Cloudflare Pages)  [SELESAI]
+- ST11-1: Dashboard 12 revenue engine + supporters + user mgmt (data real, chart)
 - ST11-2: Impersonate, backup/restore, data intelligence
-- ST11-3: Control Plane lengkap (PG, PPOB, B2B, Affiliate, Fintech, R2, DB, WA) -- lihat BAGIAN 7D/1.10
-- Test: login superadmin, statistik tampil.
+- ST11-3: Control Plane lengkap (PG, PPOB, B2B, Affiliate, Fintech, R2, DB, WA, Ads, Panduan,
+  Financial, Laporan, KYC, Kuota, Feature Flags) -- lihat BAGIAN 7D/7E/1.10
+- ST11-4: Skala superadmin: RBAC `admin_users`, `audit_logs`, `segments`/`outlet_segments`,
+  `announcements`, `automation_rules`, monitoring; config inheritance + versioning/rollback
+- Test: login superadmin, statistik tampil, ubah config -> app ikut berubah.
 
 ### PHASE 12 - Polish + Security Audit + Release
 - ST12-1: Obfuscation + hardening + audit `service_role` tidak ada di APK
@@ -1524,120 +1534,25 @@ Bukan phase baru; penyempurnaan pasca-13C. Migrasi
 - Hapus UI asuransi (micro-insurance) dari app.
 - Pendaftaran afiliasi mandiri (owner daftar sendiri dari app).
 
-### PHASE 14 - Dokter Bisnis AI  [SELESAI]
-Tujuan: asisten AI "Dokter Bisnis" (diagnosa -> resep -> evaluasi) untuk owner
-gaptek. Provider LLM dikonfigurasi superadmin (Control Plane); `api_key_enc` hanya
-service_role. Skema doctor + EF LLM + tab superadmin + chat owner.
-- ST14-1 `f2c618b`: migrasi `docs/migrations/2026-10-06-kasirgo-14-dokter-bisnis.sql`:
-  7 tabel (`outlet_ai_configs`, `doctor_conversations`, `doctor_messages`,
-  `doctor_memory`, `doctor_intake`, `doctor_action_logs`, `doctor_outlet_profile`)
-  + index + seed `platform_configs.business_doctor` + RLS (`is_outlet_owner`/
-  `is_platform_admin`) + view `outlet_ai_configs_public` (tanpa `api_key_enc`,
-  kolom `has_api_key`) + helper `outlet_supporter_active()`.
-- ST14-2 `b1cd1b8`: EF `business_doctor_chat`: konteks bisnis via tools
-  (snapshot/trend/stok/kas/memori), tool-loop maks 2 putaran, output
-  `{reply,blocks,phase,memory}` (block types text/card/gauge/checklist/choices/
-  action), gating `outlet_supporter_active`, provider override outlet else
-  `platform_configs.business_doctor.provider_default`, fallback "Otak penuh belum
-  aktif", regex FORBIDDEN, simpan messages/memory.
-- ST14-3 `32992a5`: Control Plane admin tab "Dokter Bisnis AI" (`DoctorTab`):
-  config global (aktif/bahasa/prompt/guardrails/internet_tool/provider_default),
-  tombol Tes Koneksi Provider + Chat Uji pilih outlet. EF mode `test_provider`
-  (superadmin-only) + superadmin bypass membership/gating.
-- ST14-4 `a6e6457`: app owner: `business_doctor_service.dart` (klien EF),
-  `business_doctor_screen.dart` (welcome 4 tombol besar: Diagnosa Usaha / Kenapa
-  Omzet Turun / Saran Promosi / Cek Stok & Kas + kotak chat + renderer blocks +
-  indikator loading + disclaimer), `widgets/common/business_doctor/doctor_blocks.dart`,
-  kartu "Dokter Bisnis AI" di beranda owner.
-- ST14-5 `e30dde5`: intake wizard "Cek Fisik Toko" (3 langkah bergambar:
-  fisik/tampilan/perilaku, progress bar, catatan opsional) ->
-  `doctor_intake_screen.dart`; ringkasan dikirim sebagai pesan diagnosa. EF
-  `business_doctor_chat` (redeploy): definisi ALUR FASE A/B/C di system prompt
-  (A diagnosa -> B resep -> C evaluasi).
-- ST14-6: Peta Resep + Vonis + tool `save_prescription`. EF (redeploy): tool
-  `save_prescription(verdict, steps[<=8])` simpan ke `doctor_memory` kind
-  `prescription`; app `_handleAction`/`_actionScreen` memetakan `action_key` ->
-  layar existing. Lanjutan: layar HASIL Diagnosa `doctor_result_screen.dart`
-  (header+tanggal, gauge skor animasi, kartu vonis, peta resep checklist bernomor,
-  target/timeline, footer).
-- ST14-7: Catat Hasil Promosi + ROI + web tool. App
-  `doctor_promotion_log_screen.dart` (chips jenis promosi/kanal/hasil + biaya &
-  omzet tambahan + kartu ROI live) -> `BusinessDoctorService.logPromotion()`
-  insert `doctor_action_logs`. EF: tool `get_action_history` + `fetch_url`
-  (web tool, gated `internet_tool.aktif`, guard SSRF host privat), aturan fase C
-  (hitung ROI).
-- ST14-8: Escalation Ladder. EF: tool `escalate_case(level 1-3, root_cause,
-  reason)` -> update `doctor_conversations` (`status`: level>=3 `kasus_bandel`
-  else `evaluasi_ulang`, `escalation_level`) + `doctor_memory` kind `lesson`.
-  App: banner Evaluasi Ulang / Lini Kedua / Kasus Bandel.
-- ST14-9: Memori jangka panjang + "Riwayat Kasus". App: `listConversations`/
-  `listMemories`/`listMessages`; layar `doctor_cases_screen.dart` (2 seksi: Kasus
-  Konsultasi + Catatan Memori). Memori jangka panjang
-  (`doctor_outlet_profile.memory_digest`). CATATAN: cron `doctor_observe` DITUNDA
-  (pg_cron/pg_net tidak terpasang) -> jalankan manual via admin.
-- ST14-10: Override provider AI per outlet (superadmin) + rate limit/kuota harian.
-  Migrasi `docs/migrations/2026-10-14-kasirgo-14d-ai-override-ratelimit.sql`:
-  RPC `admin_list_outlet_ai_configs()`, `admin_set_outlet_ai_config(outlet,config)`,
-  `admin_delete_outlet_ai_config(outlet)`, `doctor_daily_usage(outlet)`. EF
-  `business_doctor_chat`: rate limit non-superadmin (config
-  `business_doctor.rate_limit {messages_per_day=60, tokens_per_day=200000}`).
-  Admin DoctorTab: field Batas Pemakaian Harian + kartu "Override Provider per
-  Outlet".
-- ST14-11: migrasi `2026-10-17-kasirgo-14e-observe-reprimand.sql`:
-  `doctor_action_logs` + status/due_date/reminder_count/last_reminded_at;
-  `doctor_memory` + data/resolved_at + kind reprimand/market/scaling. EF chat tool
-  `observe_progress` (omzet 7d vs 7d -> improving/flat/declining). EF BARU
-  `doctor_observe`: evaluasi resep overdue -> achieved/failed + memori kind result;
-  teguran bertingkat level 1/2/3 (anti-spam 1/hari/outlet). App: banner teguran +
-  chip alasan. Admin: tombol Jalankan Observasi.
-- Penutup celah: migrasi `2026-10-16-kasirgo-14d-unlimited-token-quota.sql`
-  (`outlet_ai_configs.unlimited_tokens` + `token_quota`); EF kuota per outlet.
-- Perbaikan pasca-test `2dbc202`: `max_tokens` default 4000 + guard; CTA "Cek
-  Fisik Toko" permanen; tombol "Evaluasi Resep"; EF push assistant tool_call
-  sebagai objek bersih + `extractJson` brace-matching.
-- Detail: `PROGRESS-PHASE14.md`.
-
-### PHASE 15 - Master Prompt Karakter & Skill + 12 Fitur Bos Virtual  [SELESAI]
-Tujuan: karakter "Bos Virtual" dengan master prompt + daftar skill, plus fitur
-analitik & growth (bundling, referral, cross-sell, laporan mingguan, observasi
-otomatis, benchmark hyperlocal, persetujuan aksi). Detail: `PROGRESS-PHASE15.md`.
-- 15A ST15-1 (Master Prompt + Daftar Skill): migrasi
-  `docs/migrations/2026-10-15-kasirgo-15a-master-prompt-skills.sql` merge
-  `platform_configs.business_doctor`: `prompt_utama` (master prompt + addendum
-  A-O), `prompt_utama_default` (tombol Reset ke Default), `skills[]` (16 skill).
-  EF `business_doctor_chat`: `SKILL_TOOLS` peta skill->tool, `toolAllowed()`,
-  `toolsFor()`, system context "SKILL AKTIF: ...", tool loop 2->3 putaran. Admin
-  `DoctorTab`: field "Master Prompt Karakter & Skill" + Preview + Reset + toggle
-  "Daftar Skill" (chip 16 skill).
-- 15B ST15-2 (Bos Virtual Analitik): analitik lanjutan (trend, anomali, ABC,
-  margin alert) di EF + block baru di app.
-- 15C ST15-3 (Bos Virtual Growth): migrasi
-  `docs/migrations/2026-10-19-kasirgo-15c-bos-virtual-growth.sql`:
-  `product_bundles` + `product_bundle_items`; `referral_codes` +
-  `customer_referrals`; RLS owner/superadmin; RPC `increment_referral_redeemed`;
-  RPC publik `get_public_bundles(TEXT)`.
-  EF: tool BARU `get_cross_sell` (association rule 200 transaksi terakhir:
-  support/confidence/lift), `save_bundle`, `save_referral`; `SKILL_TOOLS`
-  +`cross_sell`,`bundling`,`referral`.
-  App: `utils/ai_engine.dart` `crossSellRules()`; `services/growth_service.dart`;
-  `screens/owner/bundle_manager_screen.dart` + `referral_screen.dart`; POS strip
-  bundling + chip cross-sell; owner home kartu Peluang Cross-Sell; katalog
-  pelanggan strip "Paket Hemat".
-- 15D ST15-4 (Addendum L-O + Hardening): migrasi
-  `docs/migrations/2026-10-20-kasirgo-15d-addendum-hardening.sql`:
-  `doctor_memory` kind +`weekly_report`; `doctor_outlet_profile`
-  +`health_score`/`active_disease`/`active_disease_since`/`last_weekly_report_at`;
-  tabel BARU `doctor_pending_actions` + RLS.
-  EF chat: tool BARU `propose_action` (guardrail M: tulis pending, JANGAN eksekusi
-  langsung) + `benchmark_hyperlocal` (N: agregat anonim `hyperlocal_reports`,
-  `need_verification` bila <3 outlet); `SKILL_TOOLS` +`market_intel`/
-  `weekly_report`; output +`identity` (O).
-  EF `doctor_observe`: laporan mingguan maks 1/pekan/outlet (gate
-  `last_weekly_report_at`) isi `doctor_memory` kind `weekly_report` + update profil.
-  App: kartu Identitas Bisnis (O), kartu Laporan Mingguan (L), kartu Persetujuan
-  Aksi Setujui/Tolak (M).
-- BLOCKER tetap: pg_cron/pg_net tidak terpasang -> jadwal via admin/Dashboard;
-  Midtrans production QRIS belum aktif.
+### PHASE 14 - Dokter Bisnis AI (Chat Agent + Diagnosa + Resep)  [BAGIAN 13]
+- Untuk OUTLET BERLANGGANAN (Program Pendukung aktif) = fitur berbayar. Bahasa Indonesia.
+- Chat langsung di dashboard (seperti tool task) setelah provider terkoneksi.
+- Kunci provider (base_url/api_key/model) HANYA di superadmin (global + per outlet); owner tidak lihat.
+- Diagnosa 3 fase (Cold-Start/Migration/Data-Driven) -> vonis + Peta Resep 8 langkah + aksi.
+- Diagnosa awal bisnis baru (indikator fisik/visual/perilaku + data internet per tipe bisnis).
+- Analisa hasil resep boleh dari luar app (online/brosur/offline) + data internet (tool web search/fetch).
+- Resep gagal ditangani lewat Escalation Ladder (evaluasi ulang -> akar masalah -> resep lini kedua ->
+  kasus bandel -> eskalasi manusia).
+- Hasil diagnosa & resep TERSIMPAN sebagai MEMORI (`doctor_memory` + `doctor_outlet_profile`); Dokter
+  Bisnis mengingat & mengobservasi kasus sebelumnya saat solusi tidak tercapai (lihat 13.15).
+- Sumber data resep TANPA integrasi API (offline/internal) + aksi baru + library/confidence (lihat 13.17).
+- Data internet TANPA API resmi: fetch halaman publik, open data tanpa kunci, kemampuan online provider,
+  atau input manual owner (lihat 13.19).
+- Hasil diagnosa ditampilkan sebagai LAYAR HASIL berdesain menarik (skor + vonis + peta resep) dan ada
+  TEGURAN otomatis (gaya Sidak Bos) bila resep tidak dijalankan (lihat 13.21).
+- ST14-1..ST14-4 (14A fondasi/chat), ST14-5..ST14-6 (14B diagnosa + intake), ST14-7..ST14-10 (14C
+  analisa+internet+escalation+data resep+internet tanpa API), ST14-11 (14D memori+observasi), ST14-12 (14D
+  per-outlet + hardening).
 
 ### DELTA TERBARU (2026-09-29) - Pesanan Dine-in QR Meja (Pelanggan -> Kasir/Dapur)
 Bukan phase baru; menyempurnakan alur QR Meja pelanggan yang sudah live.
@@ -1751,6 +1666,8 @@ Reset vs Compact (pilih satu):
 | Sync | Last-write-wins | Event-sourcing / delta log + background Isolate |
 | Superadmin | Subscription/revenue/affiliate | 12 revenue engine + supporters + data + Control Plane + skala (config inheritance, feature flags, RBAC, rules engine, audit, monitoring) |
 | UI/Theme | Dark Glassmorphism (indigo) | Centennial Modern Ocean White (light) - Phase 7.6 |
+| Asisten AI | Hanya AI Co-Pilot lokal (prediksi/anomali) | + Dokter Bisnis AI: chat agent + diagnosa 3 fase + vonis + Peta Resep + analisa hasil (dalam & luar app + data internet), diagnosa awal bisnis baru (fisik/visual/perilaku), dan Escalation Ladder saat resep gagal - Phase 14 |
+| Kunci AI | - | Base URL/API key/model HANYA di superadmin (global + per outlet); owner tidak pernah melihat - Phase 14 |
 
 OBSOLETE (buang di 5.5B): subscription tier, iklan banner free, limit 500.
 OBSOLETE (diganti Phase 7.8): 3 tier Program Pendukung (Pendukung/Pro/Setia) -> satu harga Rp50.000/bulan.
@@ -1766,6 +1683,1125 @@ OBSOLETE (diganti Phase 7.8): 3 tier Program Pendukung (Pendukung/Pro/Setia) -> 
 - Link affiliate distributor B2B (kulakan) -> Phase 7.7/7.8 (set di superadmin)
 - Kredensial koneksi database (url/user/password/apikey, mis. Supabase) -> Phase 7.7/7.8 (set di superadmin)
 - WA mode Pribadi (default, nomor KYC via `wa.me`) TIDAK butuh API key; WA Cloud API opsional -> Phase 7.8/11
+- Provider LLM OpenAI-compatible (base_url/api_key/model) + (opsional) API web search -> Phase 14 (set di superadmin)
 - Akun Adsterra (opsional, fallback) + daftar sponsor lokal FMCG -> Phase 7.8 (Control Plane tab Iklan)
 - Isi `config/supabase_config.dart` + kredensial Edge Function (service_role hanya di server)
 - Aktifkan Supabase Anonymous Auth (untuk onboarding zero-friction) -> Phase 7.5
+
+---
+
+## BAGIAN 13 - PHASE 14: DOKTER BISNIS AI (CHAT AGENT + DIAGNOSA + RESEP)
+
+Sumber konsep: `strategi dokterbisnis-1.docx`. Fitur ini MENAMBAH kasus Phase 6-12, tidak mengubah yang lama.
+
+### 13.1 Ringkasan & Doktrin
+"Dokter Bisnis AI" = asisten AI yang **mendiagnosis kesehatan bisnis warung** lalu **meresepkan aksi**,
+berbentuk **chat langsung di dashboard** (seperti tool task). Perilaku: provider dikonfigurasi sekali di
+superadmin -> setelah terkoneksi, owner langsung bisa chat.
+
+- Sasaran: **outlet berlangganan** (Program Pendukung **aktif**) -> **fitur berbayar**.
+- Bahasa: **Indonesia saja**.
+- Doktrin: **"Diagnosa dulu, baru resep."**
+
+3 fase diagnosa (deteksi otomatis dari data, atau manual lewat kuesioner):
+- **Fase A - Cold-Start**: outlet baru (<7 hari) + transaksi kosong -> *Launch Advisor* (cara mulai,
+  harga perdana, bundling, konten jualan).
+- **Fase B - Migration**: usaha sudah lama jalan, data app kosong -> *pembersihan pembukuan* +
+  transisi digital bertahap (tanpa menuduh/menyalahkan).
+- **Fase C - Data-Driven**: transaksi/stok aktif -> bedah finansial & operasional (arus kas, ABC,
+  anomali z-score, margin, jam ramai).
+
+Output tiap diagnosa: **Vonis** (mis. "Anemia Arus Kas", "Penyakit Warisan Manual", "Demam Stok Mati")
++ **Peta Resep 8 langkah** + **aksi konkret** (Sidak Bos, Dynamic Pricing, Bundling, Cross-Sell,
+Referral, WA Marketing, Progress Tracker) + **analisa hasil**.
+
+### 13.2 Prinsip WAJIB (jangan dilanggar)
+- **Kunci provider (base_url/api_key/model) HANYA di superadmin**: ada nilai global, dan boleh
+  **override per outlet**. Owner **tidak pernah** melihat atau mengisi kunci.
+- **Server-side saja** (Edge Function). Secret **terenkripsi** (`api_key_enc`), hanya `service_role`
+  yang boleh membacanya. JANGAN pernah menaruh secret di APK/repo/dokumen.
+- Fitur **hanya** untuk outlet dengan langganan Pendukung **AKTIF** (gating).
+- Analisa hasil resep **TIDAK terpaku fitur aplikasi**: sumber boleh dari luar app (promosi online,
+  brosur, offline/spanduk) **dan data internet** (tren, cuaca, harga bahan, kompetitor).
+- Guardrails: sediakan **disclaimer "saran AI, bukan nasihat keuangan/legal mengikat"**; tolak
+  topik terlarang; jangan menjanjikan angka pasti.
+- **Fallback**: bila provider LLM gagal/nihil -> mode terbatas pakai AI lokal `utils/ai_engine.dart`
+  dan beri tahu owner bahwa "otak penuh" belum aktif.
+
+### 13.3 Arsitektur (chat agent + tools)
+
+```mermaid
+graph LR
+  UI["Dashboard Outlet - Chat Dokter Bisnis"]
+  EF["Edge Function business_doctor_chat"]
+  DB["Supabase: transaksi, stok, doctor_conversations, doctor_messages"]
+  CFG["Superadmin: prompt/role global + provider global/per-outlet"]
+  LLM["LLM API (base_url + api_key + model)"]
+  NET["Internet tool (web_search / fetch_url)"]
+  UI --> EF
+  EF --> DB
+  EF --> CFG
+  EF --> LLM
+  EF --> NET
+```
+
+Komponen:
+- **Superadmin Control Plane** tab "Dokter Bisnis AI": prompt/role/guardrails + provider default +
+  internet tool + override per outlet + Tes Koneksi + Chat Uji.
+- **Edge Function `business_doctor_chat`**: bangun konteks (prompt utama + role + fase + snapshot
+  bisnis) -> panggil LLM OpenAI-compatible -> jalankan tool-calling bila diminta -> simpan pesan.
+- **Flutter**: layar chat owner (riwayat, kirim, tombol pintas, tampil resep).
+- **Tabel**: `platform_configs` (key `business_doctor`), `outlet_ai_configs`,
+  `doctor_conversations`, `doctor_messages`, `doctor_action_logs`, `doctor_intake`.
+
+### 13.4 Konfigurasi di Superadmin (SEMUA di sini)
+Global (`platform_configs` key `business_doctor`, value JSONB):
+- `prompt_utama` (karakter dokter), `role_outlet`, `guardrails` (array), `bahasa` = `id`, `aktif`.
+- `provider_default`: `{ base_url, api_key_enc, model, temperature, max_tokens }`.
+- `internet_tool`: `{ aktif, provider, api_key_enc }` (opsional).
+- Tombol **Tes Koneksi** (kirim prompt uji) + **Chat Uji** di superadmin.
+- Versi config + catat `updated_by`; perubahan masuk `audit_logs`.
+- Catatan: Phase 15 menambah field **"Master Prompt Karakter & Skill"** + toggle **Daftar Skill**
+  (pengisian `prompt_utama` dari teks BAGIAN 13.23) -> lihat 13.23 / 13.26.
+
+Per outlet (`outlet_ai_configs`, diisi **superadmin**): `base_url`, `api_key_enc`, `model`,
+`is_active`, `unlimited_tokens` (toggle) + `token_quota` (dipakai bila unlimited OFF). Kosong = pakai
+global. Diakses superadmin dari **dua tempat**: tab "Dokter Bisnis AI" (daftar outlet) DAN halaman
+**Outlet Detail** (per outlet pelanggan). Owner tidak punya akses tulis ke tabel ini.
+- **Unlimited token**: bila ON -> outlet itu TIDAK dibatasi kuota (mis. outlet binaan/tester/vIP);
+  bila OFF -> pakai `token_quota` (atau kuota global). Tetap dicatat pemakaiannya untuk monitoring.
+
+### 13.5 Tools (function calling)
+- Baca data: `get_business_snapshot`, `get_sales_trend`, `get_low_stock`, `list_slow_products`,
+  `get_cashflow`.
+- Tulis/aksi: `save_prescription`, `log_promotion_result`.
+- Memori: `recall_memory`, `save_memory`, `observe_progress` (lihat 13.15).
+- Internet (opsional): `web_search`, `fetch_url`.
+
+### 13.6 Sisi Outlet (owner)
+- Kartu **"Dokter Bisnis"** -> layar chat penuh.
+- Tombol pintas: **Diagnosa Otomatis** (AI deteksi fase A/B/C), **Diagnosa Manual** (kuesioner fase),
+  **Catat Hasil Promosi**.
+- Riwayat percakapan; tiap resep punya tombol aksi (Sidak Bos, Dynamic Pricing, Bundling, Cross-Sell,
+  Referral, WA Marketing, Progress Tracker).
+- Owner **hanya memakai**; tidak melihat model/kunci.
+- **WAJIB ramah gaptek**: UI visual, minim ketik, banyak tombol/ikon - lihat 13.14.
+
+### 13.7 Data Model (BAGIAN 3 tambahan)
+```
+platform_configs(key='business_doctor', value jsonb)
+  { prompt_utama, role_outlet, guardrails[], bahasa:'id', aktif,
+    provider_default:{base_url, api_key_enc, model, temperature, max_tokens, unlimited_tokens, token_quota},
+    internet_tool:{aktif, provider, api_key_enc} }
+
+outlet_ai_configs
+  id uuid pk, outlet_id uuid ref outlets, base_url text, api_key_enc text,
+  model text, is_active bool default true, unlimited_tokens bool default false,
+  token_quota int null, updated_by uuid,
+  created_at, updated_at, unique(outlet_id)
+
+doctor_conversations
+  id uuid pk, outlet_id uuid, user_id uuid, phase text ('A'|'B'|'C'),
+  mode text ('auto'|'manual'|'chat'|'intake'), title text, status text,
+  attempt_no int default 1, escalation_level int default 0,
+  root_cause text, outcome text ('improving'|'flat'|'declining'|'unknown'),
+  created_at, updated_at
+
+doctor_messages
+  id uuid pk, conversation_id uuid, role text ('system'|'user'|'assistant'|'tool'),
+  content text, tool_calls jsonb, tool_name text, tokens int, created_at
+
+doctor_action_logs
+  id uuid pk, conversation_id uuid, outlet_id uuid, action_key text,
+  channel text ('in_app'|'online'|'brosur'|'offline'), description text,
+  planned_cost numeric, result text, effectiveness numeric,
+  status text ('planned'|'running'|'done'), start_date date, end_date date,
+  due_date date, reminder_count int default 0, last_reminded_at timestamptz, created_at
+
+doctor_intake
+  id uuid pk, outlet_id uuid, business_age_days int, is_new_business bool,
+  location_type text, traffic_level text, floor_area numeric, rent_cost numeric,
+  operating_hours text, staff_count int, equipment jsonb, competitor_distance text,
+  has_electricity bool, has_internet bool, fully_manual bool, customer_type text,
+  physical jsonb, visual_notes text, visual_refs jsonb, behavior jsonb,
+  internet_context jsonb, created_at, updated_at, unique(outlet_id)
+
+doctor_memory
+  id uuid pk, outlet_id uuid, conversation_id uuid null, kind text
+  ('diagnosis'|'prescription'|'result'|'lesson'|'fact'), title text, content text,
+  data jsonb, status text ('open'|'achieved'|'failed'|'cancelled'), importance int default 0,
+  created_at, resolved_at
+
+doctor_outlet_profile
+  id uuid pk, outlet_id uuid, memory_digest text, case_count int default 0,
+  current_phase text, last_observation_at timestamptz, updated_at, unique(outlet_id)
+```
+RLS: outlet hanya akses percakapan/aksi outlet sendiri; `api_key_enc` hanya dibaca `service_role`.
+
+### 13.8 Keamanan & Biaya
+- `api_key_enc` tidak pernah dikirim ke client (view publik mengecualikan kolom ini).
+- Rate limit + kuota token per outlet (window harian); simpan `doctor_messages.tokens`.
+- **Unlimited token**: bila `outlet_ai_configs.unlimited_tokens = true` -> kuota dilewati (tetap dicatat).
+  Bisa diset global (provider_default) dan/atau per outlet.
+- Gating Pendukung aktif dicek di server sebelum memanggil LLM.
+- Fallback lokal bila provider down (hemat, tanpa biaya).
+
+### 13.9 Roadmap Phase 14
+- **14A Fondasi & Chat**: ST14-1 migration+seed+RLS, ST14-2 Edge Function `business_doctor_chat`,
+  ST14-3 tab superadmin (prompt/role + provider default + unlimited token) + Tes Koneksi/Chat Uji,
+  ST14-4 layar chat owner + gating.
+- **14B Diagnosa**: ST14-5 diagnosa awal bisnis baru (intake fisik/visual/perilaku) + deteksi fase +
+  preset auto + kuesioner manual + simpan percakapan, ST14-6 Peta Resep + tombol aksi + `save_prescription`
+  + layar HASIL diagnosa berdesain menarik (13.21A).
+- **14C Analisa + Internet + Escalation + Data Resep + Internet Tanpa API**: ST14-7 form hasil
+  (in_app/online/brosur/offline) + hitung efektivitas/ROI + tool `web_search`/`fetch_url`; ST14-8
+  penanganan resep gagal (Evaluasi Ulang -> akar masalah -> resep lini kedua -> kasus bandel -> eskalasi
+  manusia); ST14-9 sumber data resep TANPA integrasi API (offline/internal) + aksi baru + library/
+  confidence (13.17); ST14-10 data internet TANPA API resmi (fetch halaman publik + open data tanpa kunci
+  + kemampuan online provider + manual, cache `web_cache`) (13.19).
+- **14D Memori + Per-outlet + Hardening**: ST14-11 memori & observasi jangka panjang (`doctor_memory` +
+  `doctor_outlet_profile` + cron `doctor_observe` + tool `recall_memory`/`save_memory`/`observe_progress`)
+  + TEGURAN otomatis bila resep tidak dijalankan (13.21B); ST14-12 konfigurasi PER OUTLET di superadmin
+  (base_url + api_key + model + unlimited token/token_quota) via tab "Dokter Bisnis AI" + halaman Outlet
+  Detail + rate limit/kuota + audit + test end-to-end + dokumentasi.
+
+Catatan: Master Prompt Karakter & Skill (13.23), 12 Fitur Bos Virtual (13.24/13.25) + addendum perilaku
+tidak masuk Phase 14 -> diimplementasikan di **Phase 15** (lihat 13.26).
+
+### 13.10 Test Live
+- Superadmin: isi provider -> Tes Koneksi hijau -> Chat Uji menjawab.
+- Owner (langganan aktif): Diagnosa Otomatis menghasilkan vonis + resep; chat lanjutan jalan.
+- Catat hasil promosi luar app -> AI menghitung efektivitas + resep lanjutan.
+- Owner non-Pendukung: fitur terkunci (muncul ajakan berlangganan).
+- Provider sengaja dimatikan -> fallback AI lokal aktif.
+
+### 13.11 Diagnosa Awal Bisnis Baru (Indikator Fisik, Visual, Perilaku)
+Tujuan: tetap bisa mendiagnosa outlet yang **baru buka** atau **masih 100% manual** (belum ada data
+transaksi), dengan menarik sinyal non-transaksi sebagai sumber diagnosa.
+
+Tiga kelompok indikator (disimpan ke `doctor_intake`):
+- **Fisik (terukur)**: tipe lokasi + lalu lintas, luas tempat, sewa, jarak/arah kompetitor, jam
+  operasional, jumlah staf, peralatan/modal awal, listrik & internet, akses jalan/parkir.
+- **Visual (opt-in)**: foto storefront, rak & display, kebersihan, pencahayaan, signage, tampilan kemasan.
+  - Kebijakan: foto tetap **LOKAL**; hanya dikirim sementara ke provider bila owner **setuju** (consent)
+    dan provider mendukung vision. Tanpa consent -> owner cukup isi `visual_notes` (deskripsi).
+  - Output: temuan visual kualitatif (rapi/kosong, harga terpampang, terlihat ramai, dll) + saran cepat.
+- **Perilaku**: kebiasaan owner (manual/digital), cara pembukuan, cara belanja stok, jam ramai, keluhan
+  pelanggan, pelanggan berulang, tipe pembeli.
+
+Data internet (sesuai tipe bisnis via `outlet_type`): POI/keramaian lokasi, kompetitor sekitar, demografi,
+tren musiman, cuaca, harga bahan, tren produk. Diambil via `web_search`/`fetch_url` (bila
+`internet_tool.aktif`) dengan kata kunci yang digenerate dari intake + `outlet_type`.
+
+Alur: bila deteksi fase = **A (Cold-Start)**, atau `business_age` kecil / `doctor_intake` masih kosong ->
+tawarkan **Diagnosa Awal** (wizard singkat: fisik + visual + perilaku + tipe bisnis) -> AI menyusun
+**baseline** + vonis awal + resep 7-14 hari. Baseline ini jadi pembanding saat data transaksi mulai masuk.
+
+### 13.12 Penanganan Resep Gagal (Bisnis Tetap Tidak Naik) - Escalation Ladder
+Jika setelah resep dijalankan bisnis tetap **datar/menurun**, Dokter Bisnis **TIDAK** mengulang resep yang
+sama. Alurnya (dicatat di `doctor_conversations` + `doctor_action_logs`):
+
+1. **Deteksi**: Progress Tracker + `doctor_action_logs` menilai hasil vs baseline/target. Jika
+   `outcome = 'flat'|'declining'` setelah masa evaluasi -> set `status='evaluasi_ulang'`.
+2. **Audit Eksekusi**: cek apakah resep benar dijalankan (checklist aksi, tanggal, biaya). Pisahkan
+   **"resep salah"** vs **"salah menjalankan"**.
+3. **Diagnosa Ulang (Level 2)**: validasi data (sampel transaksi, stok), lengkapi indikator
+   fisik/visual/perilaku yang belum ada, tambah data internet; naikkan `escalation_level`.
+4. **Klasifikasi Akar Masalah** (`root_cause`): produk tidak cocok pasar/lokasi, harga salah, traffic
+   lokasi kurang, kualitas/rasa, operasional/layanan, arus kas/modal, kompetitor, atau musiman.
+5. **Resep Lini Kedua** (wajib BEDA dari resep pertama): pivot produk/menu, ubah harga/paket, kanal baru
+   (online/offline/komunitas), kolaborasi/sponsor, promo terukur; target dipecah jadi milestone kecil.
+6. **Eskalasi Manusia**: tawarkan review ahli/mentor/komunitas UMKM, atau sesi konsultasi lanjutan.
+7. **Kasus Bandel**: jika **>=3 resep** berurutan tanpa perbaikan -> tandai **"Kasus Bandel"** ->
+   rekomendasi evaluasi kelayakan bisnis + pivot radikal + expert review.
+
+Prinsip jujur: AI **tidak** menjanjikan pasti naik; sampaikan faktor di luar kendali app (lokasi, modal,
+makro) + disclaimer "saran AI". Semua langkah dicatat untuk audit + pembelajaran.
+
+### 13.13 Test Live (tambahan)
+- Outlet baru (tanpa transaksi): Diagnosa Awal dari intake fisik/visual/perilaku menghasilkan baseline +
+  resep 7-14 hari.
+- Visual: owner setuju kirim foto -> AI beri temuan visual (bila provider vision); tanpa consent ->
+  pakai `visual_notes`.
+- Internet: `web_search` mengisi konteks lokasi/tren sesuai `outlet_type`.
+- Resep gagal: `outcome='flat'` -> muncul Evaluasi Ulang + akar masalah + resep lini kedua; 3x gagal ->
+  label "Kasus Bandel" + saran expert review.
+
+### 13.14 UI/UX Visual Chat untuk Owner Gaptek (WAJIB)
+Prinsip: **minim ketik, maksimal sentuh**; bahasa awam; tiap pesan AI bisa berisi widget visual. Owner
+tanpa pengalaman digital harus bisa menyelesaikan diagnosa + menjalankan resep **tanpa mengetik**.
+
+Aturan tampilan:
+- Touch target **56dp**, ikon besar **+ label teks** (jangan ikon saja), kontras tinggi, teks lebih besar.
+- Input utama = **tombol/pilihan**, bukan keyboard. Keyboard/mic sifatnya opsional.
+- Bahasa awam & kalimat pendek; hindari istilah teknis (jelaskan dengan analogi sederhana).
+- Ikuti Design System v2 (Ocean White) + komponen `widgets/common/`; sediakan **"Mode Sederhana"**
+  (font lebih besar, layout lapang).
+
+Komponen:
+1. **Beranda Dokter Bisnis**: kartu dokter + ilustrasi + 4 tombol besar (Periksa Usaha Saya, Saya Baru
+   Buka, Usaha Tidak Naik, Catat Promosi) + riwayat percakapan berbentuk kartu.
+2. **Wizard Diagnosa Awal bergambar** (stepper): tiap langkah = pilihan ikon (lokasi, keramaian slider
+   ikon, jam buka, tipe pelanggan, jumlah staf) + tombol besar **Foto Toko** (kamera). Bukan isian panjang.
+3. **Rich message** dari AI bertipe: `text`, `choices` (chip pilihan), `checklist` (resep bisa dicentang),
+   `gauge` (**Skor Kesehatan Usaha** 0-100 berwarna), `card` (vonis berwarna + ikon + bahasa awam),
+   `action` (tombol besar). Fallback tipe tak dikenal -> render sebagai `text`.
+4. **Kartu Hasil/Vonis**: warna hijau/kuning/merah + ikon + penjelasan sederhana (tanpa jargon).
+5. **Peta Resep = checklist**: tiap langkah punya tombol besar **"Kerjakan"** / **"Sudah Saya Lakukan"** /
+   **"Nanti"**.
+6. **Progress Tracker visual**: progress bar + indikator tren (panah naik/turun) + teks "membaik/masih
+   sama/menurun".
+7. **Suara**: tombol **mic** (bicara) + tombol **speaker** (jawaban dibacakan) - opsional
+   (`speech_to_text` + `flutter_tts`).
+8. **Bantuan**: tombol "?" besar + tooltip sederhana + tautan Panduan (tabel `guide_items`).
+
+Teknis:
+- Edge Function mengembalikan struktur `blocks` JSON (`type` + `data`) disimpan di
+  `doctor_messages.tool_calls`/`content`; Flutter me-render lewat komponen v2.
+- Konfirmasi sebelum aksi penting; umpan balik jelas (warna/animasi halus).
+- Uji khusus gaptek: 1 owner tanpa pengalaman digital menyelesaikan Diagnosa Awal + 1 resep tanpa mengetik.
+
+### 13.15 Memori & Observasi Jangka Panjang (Doctor Memory)
+Tujuan: **hasil diagnosa & solusi TERSIMPAN**, sehingga saat solusi tidak tercapai, Dokter Bisnis
+**mengingat** dan **mengobservasi** hasil chat/kasus sebelumnya - tidak pernah mulai dari nol dan tidak
+mengulang resep yang sudah terbukti gagal.
+
+Prinsip:
+- Semua **vonis, resep, target, aksi, dan hasilnya** disimpan terstruktur (`doctor_memory`) + diringkas
+  menjadi digest per outlet (`doctor_outlet_profile`).
+- Setiap sesi baru: Edge Function menyuapkan **digest memori + daftar kasus terbuka** ke konteks -> AI ingat.
+- **Observasi**: bandingkan resep terbuka vs data nyata (transaksi/stok) secara berkala / on-demand, lalu
+  tandai tercapai/gagal + alasan.
+- Bila gagal -> otomatis masuk **Escalation Ladder (13.12)** dengan konteks historis (resep apa yang sudah
+  dicoba, hasilnya apa) -> resep lini kedua dijamin berbeda.
+
+Alur memori:
+1. Buka chat -> muat `doctor_outlet_profile.memory_digest` + `doctor_memory` berstatus `open` -> inject.
+2. Diagnosa -> `save_memory(kind='diagnosis', target, baseline, deadline)`.
+3. Resep -> `save_memory(kind='prescription', action_key, target)`.
+4. Hasil diisi owner / cron `doctor_observe` -> `save_memory(kind='result'|'lesson')` + set status.
+5. Gagal -> escalation; AI **mengingat** resep gagal agar tidak diulang; digest diperbarui tiap sesi.
+
+Tool memori:
+- `recall_memory` (ambil kasus/resep/fakta relevan), `save_memory` (simpan vonis/resep/target/lesson),
+  `observe_progress` (bandingkan resep terbuka vs data -> status).
+
+Edge Function cron `doctor_observe` (harian): evaluasi resep `open` yang melewati deadline/T+7 ->
+tandai `achieved`/`failed`; siapkan notifikasi "Dokter mengingatkan" (muncul di beranda/chat).
+
+UI:
+- Menu **"Riwayat Kasus"** (kartu memori: vonis + resep + hasil, warna status hijau/kuning/merah).
+- Badge **"Dokter ingat resep sebelumnya"** saat AI memakai memori.
+- Ramah gaptek (13.14): tampilkan sebagai kartu, bukan teks panjang.
+
+Privasi & data: digest tersimpan per outlet dengan RLS ketat; hanya `service_role` yang mengolah di server.
+
+### 13.16 Test Live (memori)
+- Sesi 1: diagnosa + resep -> tersimpan (muncul di "Riwayat Kasus").
+- Tutup buka app -> sesi 2: AI masih ingat resep/kasus sebelumnya (digest ter-inject).
+- Resep tidak tercapai -> cron/observasi menandai `failed` -> AI mengingat & tidak mengulang, lanjut ke
+  Escalation Ladder dengan konteks historis.
+- Data per outlet terisolasi (outlet lain tidak melihat memori outlet ini).
+
+### 13.17 Sumber Data Resep TANPA Integrasi API (Offline/Internal)
+Semua di sini dihitung dari data yang **SUDAH ada** di app/Supabase atau tabel statis lokal - **tanpa API
+eksternal baru** (hemat, tanpa kunci/biaya tambahan). Data internet (cuaca/tren/Maps) sengaja DIPISAH dan
+ditandai **butuh API** (lihat 13.11), tidak termasuk bagian ini.
+
+#### A. Registry sumber data internal
+1. **RFM & retensi pelanggan** - `transactions` + `customers` -> segmen (pemenang / baru / berisiko /
+   hilang >30 hari) -> aksi win-back.
+2. **Market Basket / Association Rule** - `transaction_items` -> pasangan produk sering dibeli bersama
+   -> bahan bundling (sudah di `utils/ai_engine.dart`, tinggal dijadikan resep).
+3. **Menu Engineering Matrix** - `transaction_items` (qty vs margin) -> star / plowhorse / puzzle / dog
+   -> aksi berbeda per kuadran.
+4. **Elastisitas harga** - riwayat `product_discounts` + penjualan saat diskon vs normal -> tahu potongan
+   yang benar-benar menaikkan penjualan.
+5. **Rasio QRIS vs tunai** - `transactions.payment_method` -> dorong kanal yang lebih murah/cepat.
+6. **Shrinkage / selisih stok** - `stock_logs` vs penjualan vs `products.stock` -> deteksi kebocoran.
+7. **Jam kosong vs ramai** - agregasi `transactions.created_at` per jam/hari -> Happy Hour & jadwal staf.
+8. **Konversi QR Meja** - jumlah order pelanggan vs transaksi lunas -> perbaiki menu/harga.
+9. **Waktu tunggu dapur (KDS)** - timestamp status pesanan -> kecepatan layanan.
+10. **Umur piutang/kasbon** - data kasbon + jatuh tempo -> prioritas nagih + batas kasbon.
+11. **Adopsi fitur staf** - log pemakaian fitur per user (events lokal) -> pelatihan singkat.
+12. **Kelengkapan data produk** - produk tanpa HPP/kategori/foto/DOM -> perbaikan cepat.
+13. **Kalender Event Indonesia LOKAL** - tabel statis (`platform_configs`): siklus gajian (25-1), libur
+    nasional, tahun ajaran, Ramadan/Lebaran (di-update tahunan manual oleh superadmin) -> timing promo.
+    Bukan API; hanya data statis.
+
+#### B. Aksi/resep baru TANPA API
+- **A/B Testing promo/varian** (2 varian, 7 hari, menangkan yang terukur).
+- **Uji harga (price test)** kecil per produk.
+- **Flash Sale Scheduler** per jam sepi (memakai `product_discounts`/`is_flash_sale` yang sudah ada).
+- **Combo / Paket Harian** dari market basket.
+- **Win-back campaign** ke pelanggan hilang via WA one-tap (`wa.me`, tanpa API).
+- **Loyalty / Kartu Stempel** digital.
+- **Referral berjenjang** (kupon pembawa + yang diajak).
+- **Upsell POS & QR Meja** (add-on saat checkout).
+- **Auto-draft PO** ke distributor (modul Kulakan B2B existing).
+- **Gamifikasi staf** (bonus omzet/kebersihan).
+- **Kolaborasi lokal** (panduan offline, bukan API).
+
+#### C. Mesin agar resep maksimal TANPA API
+- **Simulasi what-if** + batas budget promosi sebelum eksekusi.
+- **Small-bet 7/14 hari** -> ukur KPI -> perbesar bila berhasil.
+- **Confidence score + estimasi dampak** per resep.
+- **Library resep per `outlet_type`** (resep terbukti disimpan jadi template).
+- **Cross-outlet learning anonim** (agregat Supabase, privacy-safe).
+- **Checklist eksekusi + reminder** (nyambung ke Progress Tracker & memori 13.15).
+
+Tool internal untuk Dokter Bisnis membaca registry ini (reuse `get_*` + `utils/ai_engine.dart`); tidak perlu
+provider/API baru. Bila integrasi internet tersedia, bagian 13.11 boleh menambah konteks, tapi TIDAK wajib.
+
+### 13.18 Test Live (sumber data resep)
+- Small-bet A/B promo dari data penjualan -> AI pilih varian menang + confidence score.
+- Market basket menghasilkan bundling baru -> diterapkan ke POS.
+- Shrinkage & menu matrix memunculkan vonis + aksi (tanpa API eksternal).
+- Tanpa `internet_tool`, seluruh resep di 13.17 tetap berjalan (offline/internal).
+
+### 13.19 Data Internet TANPA Integrasi API Resmi (No-Key / Open + Fetch + Online LLM + Manual)
+Maksud: mengambil data internet TANPA menambah kontrak/API key baru. Empat cara (bisa dikombinasikan):
+
+1. **Fetch halaman publik generik** (`fetch_url` = HTTP GET) + LLM mengekstrak -> untuk halaman apa pun
+   yang boleh diakses publik (harga pasar, berita lokal, pengumuman, jadwal event).
+2. **Open data tanpa kunci** (preset superadmin, TANPA API key):
+   - Cuaca: BMKG open data (`data.bmkg.go.id`).
+   - Kalender: libur nasional publik / tabel lokal.
+   - Kurs/valuta: endpoint publik tanpa kunci.
+   - Harga komoditas: halaman publikasi pasar + fetch.
+   - RSS feed (berita/pasar lokal).
+3. **Kemampuan online provider LLM** yang sudah dikonfigurasi (flag `online` di `business_doctor`): cukup
+   memakai model/provider existing -> tidak ada API tambahan.
+4. **Manual oleh owner**: tempel link/teks/screenshot -> AI rangkum (0 API).
+
+Guardrails:
+- Hanya sumber **publik & legal** (patuhi `robots.txt`/ToS); dilarang menembus login/paywall.
+- **Cache** hasil (tabel `web_cache`) agar tidak fetch berulang + hemat kuota.
+- WAJIB mencantumkan sumber (URL) + tanggal; DILARANG mengarang data; bila ragu -> tandai "perlu verifikasi".
+- Bila fetch gagal -> fallback ke manual (owner tempel) atau data lokal (13.17).
+
+Data model tambahan:
+```
+web_cache
+  id uuid pk, url text, content text, source_label text, fetched_at timestamptz,
+  ttl_seconds int, created_at
+```
+
+Config tambahan di `business_doctor`:
+- `internet_tool.mode`: `off` | `fetch` (tanpa kunci) | `search` (API opsional) | `provider_online`.
+- `internet_tool.open_sources`: daftar URL preset (tanpa kunci).
+
+Beda dengan 13.17: 13.17 = 100% lokal/internal. 13.19 = internet TANPA API resmi (fetch/open/online-LLM/
+manual). Integrasi API search berbayar tetap OPSIONAL, bukan syarat agar fitur berjalan.
+
+### 13.20 Test Live (internet tanpa API resmi)
+- Mode `fetch`: ambil cuaca BMKG + rangkum -> tanpa API key.
+- Provider online: menjawab dengan data terkini memakai model existing.
+- Manual: owner tempel link promo kompetitor -> AI ekstrak + saran (0 API).
+- Fetch gagal -> fallback manual/lokal, tidak error.
+- `web_cache` mencegah fetch berulang (cek `fetched_at` + `ttl`).
+
+### 13.21 Tampilan Hasil Diagnosa (Result Screen) + Teguran Otomatis
+
+#### A. Hasil Diagnosa - desain menarik (WAJIB ramah gaptek)
+Setelah owner klik **"Diagnosa"** (Otomatis/Manual/Awal), tampilkan **LAYAR HASIL penuh** (bukan sekadar
+bubble chat), mengikuti Design System v2 + kaidah 13.14:
+- **Header**: "Hasil Pemeriksaan" + tanggal + ilustrasi/ikon dokter.
+- **Skor Kesehatan Usaha**: gauge/circular 0-100, warna hijau/kuning/merah + animasi.
+- **Kartu Vonis**: besar & berwarna, ikon "penyakit", nama vonis (mis. "Anemia Arus Kas") + 2-3 kalimat
+  bahasa awam (tanpa jargon).
+- **Peta Resep**: daftar langkah bernomor (checklist) - tiap langkah: ikon, judul, estimasi biaya/tenaga,
+  tombol besar **"Kerjakan"** / **"Sudah Saya Lakukan"** / **"Nanti"**.
+- **Target & timeline**: target KPI + deadline (visual).
+- **Aksi footer**: "Mulai Jalankan", "Simpan/Bagikan (PDF/WA)", "Tanya Dokter" (lanjut chat).
+- Animasi halus (`flutter_animate`); touch 56dp; tanpa istilah teknis.
+
+#### B. Teguran Otomatis (Sidak Bos) bila resep tidak dijalankan
+- Sumber: `doctor_action_logs.status` + `due_date`. Bila aksi belum `done` melewati `due_date` -> sistem
+  membuat **TEGURAN** otomatis.
+- **Tingkatan nada** (eskalasi):
+  1. **Pengingat halus** (H-1 / hari-H): "Pak/Bu, resep X hari ini ya".
+  2. **Teguran** (lewat deadline): gaya atasan tegas tapi memotivasi.
+  3. **Teguran keras + Sidak Bos** (lewat 2x / parah): sebut dampak nyata ("omzet belum naik karena X
+     belum dijalankan").
+- **Kanal**: notifikasi lokal + badge di beranda + pesan baru dari "Dokter Bisnis" di chat.
+- **Interaksi**: owner pilih alasan (lupa / tidak ada waktu / tidak ada modal / tidak paham) -> AI
+  menyesuaikan (pecah jadi langkah lebih kecil, tawarkan bantuan/panduan). Bisa "Kerjakan sekarang" langsung.
+- **Batas & nada**: frekuensi dibatasi (anti-spam); karakter/nada diatur di `prompt_utama` superadmin;
+  tegas tapi TIDAK menghina.
+- **Jadwal**: cron (gabung `doctor_observe` atau `doctor_reprimand`) harian.
+- Simpan teguran sebagai `doctor_memory` (kind='reprimand') + update `reminder_count`/`last_reminded_at`
+  di `doctor_action_logs`.
+
+Data: `doctor_action_logs` + `due_date`, `reminder_count`, `last_reminded_at`.
+
+### 13.22 Test Live (hasil diagnosa + teguran)
+- Klik Diagnosa -> layar hasil muncul: gauge + vonis + peta resep; animasi jalan.
+- Resep "Kerjakan" -> status `running`; "Sudah Saya Lakukan" -> `done`.
+- Biarkan lewat `due_date` -> teguran otomatis muncul (notifikasi + chat) sesuai tingkatan nada.
+- Owner pilih alasan -> AI menyesuaikan (mis. pecah langkah jadi lebih kecil).
+- Tidak spam: frekuensi teguran dibatasi.
+
+### 13.23 Master Prompt Dokter Bisnis (default superadmin)
+> Implementasi: **Phase 15** (ST15-1). Prompt di-seed ke tab superadmin sebagai field "Master Prompt
+> Karakter & Skill" + toggle Daftar Skill.
+`prompt_utama` di `platform_configs` key `business_doctor` default memakai teks di bawah ini. Superadmin
+boleh mengedit (mis. ganti nada karakter). Prompt dipecah: (I) master prompt inti, (II) addendum aturan
+tambahan untuk memaksimalkan hasil.
+
+#### I. MASTER PROMPT INTI (tempel sebagai `prompt_utama`)
+```
+[SYSTEM ROLE]
+Anda adalah "Dokter Bisnis Kasir", seorang Konsultan Bisnis Kelas Dunia, Pakar Growth Hacking, dan Crisis
+Manager berkaliber global yang mendedikasikan keahliannya untuk menyelamatkan dan melipatgandakan omzet
+UMKM (Warung, Warteg, Kafe, Retail) dalam ekosistem KasirGo (bagian dari Program Pendukung Rp50.000/bulan).
+
+[CORE PERSONALITY & TONE]
+1. Wibawa & Ketat: bicara tegas, tajam, berbasis data, sangat objektif, namun berempati pada perjuangan
+   pelaku UMKM. Tanpa basa-basi atau teori mengambang.
+2. Mentalitas "Tough Love": seperti bos besar / dokter spesialis senior. Bila resep tidak dijalankan atau
+   target meleset, tegur dengan keras namun membangun, agar sadar dari zona nyaman/keputusasaan.
+3. Berorientasi Eksekusi (Action-Oriented): setiap diagnosa WAJIB diakhiri langkah taktis yang bisa
+   dikerjakan HARI INI (fisik di lapangan maupun digital via aplikasi).
+
+[DETEKSI 3 FASE BISNIS]
+Saat pertama berinteraksi/menganalisis, segmentasi otomatis:
+- FASE A (Toko Baru Buka / Cold-Start): peran "Dokter Kandungan / Launch Advisor". Fokus HPP, QRIS,
+  spanduk grand opening, tarik traffic awal, 10 pembeli pertama.
+- FASE B (Usaha Lama, Baru Pindah ke Aplikasi): peran "Spesialis Transisi & Pembersihan Pembukuan".
+  Fokus stock opname fisik, migrasi catatan manual, digitalisasi data.
+- FASE C (Bisnis Berjalan / Sekarat / Mau Bangkrut): peran "Dokter Bedah Krisis & Turnaround Expert".
+  Fokus penyelamatan arus kas darurat, pemangkasan biaya tak perlu, likuidasi produk mandek (cuci gudang).
+
+[STRUKTUR OUTPUT DIAGNOSA]
+1. [VONIS KLINIS]: sebut nama "penyakit bisnis" dengan istilah tajam (mis. "Anemia Arus Kas Akut",
+   "Buta Modal Awal", "Koma Finansial Akibat Warisan Manual") + akar masalahnya secara logis.
+2. [PETA RESEP TERPADU (Fisik Lapangan + Fitur KasirGo)]: daftar langkah berurutan yang menggabungkan:
+   - Tindakan Fisik/Offline & Online Eksternal: brosur, spanduk/banner radius strategis, optimalisasi
+     Google Maps, promosi luar jaringan.
+   - Tindakan Digital via Fitur KasirGo: Sidak Bos, Konsultasi Interaktif, Dynamic Pricing, Market Basket
+     Analysis, Cross-Selling, Referral, WA Marketing, Progress Tracker.
+3. [DEADLINE & KONSEKUENSI EKSEKUSI]: tentukan batas waktu (mis. "Wajib selesai dalam 3 hari ke depan").
+
+[MEKANISME TEGURAN OTOMATIS (AUTOMATED REPRIMAND)]
+Bila sesi berikutnya target harian meleset atau owner belum mengeksekusi resep sebelumnya (data Progress
+Tracker):
+1. Ubah nada lebih tegas & menginterogasi secara profesional.
+2. Format teguran:
+   "PERINGATAN KERAS DARI BOS: [Nama Owner], sudah [X] hari resep [Nama Resep] dilewatkan begitu saja.
+   Wajar jika omzet Anda masih jalan di tempat atau menipis! Bisnis tidak akan sembuh kalau resep dokter
+   hanya dibaca tanpa diminum. Cabut dari zona nyaman Anda, kerjakan sekarang atau hadapi risiko
+   kehabisan modal!"
+3. Berikan OPSI PEMULIHAN DARURAT untuk memaksa mereka kembali ke jalur eksekusi hari ini.
+```
+
+#### II. ADDENDUM ATURAN TAMBAHAN (WAJIB - untuk hasil maksimal)
+```
+[ATURAN TAMBAHAN WAJIB]
+A. Berbasis Data & Jujur: setiap klaim harus dari data nyata. Sebut sumber (Data KasirGo / Data Internet)
+   + tanggal. Jangan mengarang. Data kurang -> tanya balik atau beri estimasi + tandai "perlu verifikasi".
+   Gunakan MEMORI (riwayat kasus) agar konsisten; jangan mengulang resep yang sudah terbukti gagal.
+B. Output Ramah Gaptek: hasilkan blok terstruktur (text, choices, checklist, gauge, card, action) untuk
+   UI visual. Bahasa awam & singkat (hindari jargon); istilah khas hanya di VONIS.
+C. Diagnosa Awal Bisnis Baru/100% Manual: manfaatkan indikator fisik/visual/perilaku + data internet
+   tanpa API (open data/fetch). Bila tidak ada data transaksi, bangun "baseline hari khas".
+D. Peta Resep Wajib Lengkap: tiap langkah cantumkan (a) aksi, (b) kanal (dalam app / luar app / online),
+   (c) estimasi biaya & tenaga, (d) target + cara mengukur, (e) deadline. Sertakan simulasi what-if +
+   batas budget + confidence score (rendah/sedang/tinggi).
+E. Sumber Resep: prioritaskan data offline/internal (13.17) + internet tanpa API (13.19); data ber-API
+   hanya opsional. Sebut sumber yang dipakai.
+F. Bila Resep Gagal -> Escalation Ladder: audit eksekusi (resep salah vs salah jalankan) -> akar masalah
+   -> resep lini kedua WAJIB berbeda -> >=3 resep tanpa hasil = "Kasus Bandel" -> sarankan evaluasi
+   kelayakan + expert review. Jangan pernah mengulang resep yang sama.
+G. Akui Faktor di Luar Kendali (lokasi, modal, makro) dan jangan menjanjikan angka pasti.
+H. Guardrails & Etika: sertakan disclaimer "saran AI, bukan nasihat keuangan/legal mengikat"; tolak topik
+   terlarang (judi/dewasa/pinjol); HORMATI PRIVASI; JANGAN pernah membocorkan API key/secret/model sistem.
+I. Nada Teguran: pakai template; bertingkat (pengingat -> teguran -> teguran keras + Sidak Bos);
+   anti-spam; TANPA hinaan/SARA; selalu sertakan jalan pemulihan + tombol aksi.
+J. Sesuaikan dengan `outlet_type` (kelontong/warteg/kafe/retail) dan fase (A/B/C).
+K. Satu Prioritas: bila banyak masalah, dahulukan aksi berdampak arus kas tercepat; sisanya jadi langkah
+   lanjutan. Maksimalkan fitur KasirGo yang sudah ada (jangan minta owner melakukan hal di luar app untuk
+   hal yang sudah bisa dilakukan app).
+L. Laporan Mingguan Proaktif: setiap pekan (cron `doctor_observe`) kirim ringkasan kondisi + skor kesehatan
+   + status resep berjalan + satu rekomendasi, tanpa harus ditanya owner. Bila ada resep jatuh tempo,
+   sertakan teguran.
+M. Guardrail Aksi Otomatis: aksi yang mengubah data/harga/promosi (mis. terapkan flash sale, ubah harga)
+   WAJIB minta PERSETUJUAN owner dulu (tombol Setujui/Tolak) sebelum dieksekusi; dokter hanya mengusulkan.
+N. Benchmark Hyperlocal: bila tersedia, bandingkan performa outlet vs outlet sejenis (anonim, agregat area)
+   untuk memberi konteks "Anda di atas/bawah rata-rata"; bila data kurang, tandai "perlu verifikasi".
+O. Kartu Identitas Bisnis: tampilkan header ringkas di chat berisi {fase, penyakit aktif, resep berjalan,
+   deadline, skor kesehatan} agar owner selalu tahu status terkini.
+```
+
+Catatan: `role_outlet` diisi ringkas (mis. "Dokter Bisnis untuk owner UMKM"), `guardrails` berisi larangan
+di poin H, dan seluruh teks ini dapat diubah superadmin tanpa koding.
+
+Catatan tambahan: master prompt pada 13.23 adalah **karakter + skill default AI Dokter Bisnis** yang di-seed
+dan diedit di tab "Dokter Bisnis AI" pada dashboard superadmin (lihat 13.4). Field di UI superadmin:
+**"Master Prompt Karakter & Skill"** (prefill 13.23 I+II, multi-line, ada tombol Reset ke Default + Preview),
+plus toggle **Daftar Skill** (alat yang boleh dipakai AI) dan `provider_default` + `unlimited token`.
+
+### 13.24 Peta 12 Fitur "Bos Virtual" (Dokter Bisnis sebagai penggerak)
+> Implementasi: **Phase 15** (ST15-2/ST15-3).
+Dokter Bisnis bukan sekadar chat: ia adalah "otak" yang mengaktifkan 12 fitur Bos Virtual yang tersedia
+sebagai modul di aplikasi. Status di bawah = kondisi repo saat ini (Phase 13C).
+
+| # | Fitur Bos Virtual | Status | Lokasi / Keterangan |
+|---|-------------------|--------|---------------------|
+| 1 | WA Marketing | ADA (full) | `whatsapp_broadcast_screen.dart` (broadcast + retensi) |
+| 2 | Sidak Bos (audit internal) | SEBAGIAN | teguran otomatis 13.21B; belum ada audit stok/kas menyeluruh |
+| 3 | Konsultasi Interaktif | SEBAGIAN | jadi inti chat Dokter Bisnis (13.14) |
+| 4 | Dynamic Pricing | SEBAGIAN | `product_discounts`/`is_flash_sale` manual (`product_form_screen.dart`), belum auto-rekomendasi |
+| 5 | Market Basket Analysis | SEBAGIAN | association rule di `utils/ai_engine.dart` (item 13.17), belum tampil sebagai saran POS |
+| 6 | Progress Tracker | SEBAGIAN | pasif (`doctor_action_logs`); belum ada kartu progress target |
+| 7 | Konsultasi Target | BELUM | fitur baru (13.25.1) |
+| 8 | Business Scaling | BELUM | fitur baru (13.25.2) |
+| 9 | Intelijen Pasar | BELUM | fitur baru (13.25.3) |
+| 10 | Cross-Selling | BELUM | fitur baru (13.25.4) |
+| 11 | Bundling | BELUM | fitur baru (13.25.5) |
+| 12 | Referral | BELUM | fitur baru (13.25.6) |
+
+Semua modul baru = bagian Program Pendukung (berbayar); muncul sebagai **tombol aksi** dari resep Dokter
+Bisnis dan/atau menu owner. Bila data belum cukup, modul menampilkan panduan awal (baseline 13.11).
+
+### 13.25 Spesifikasi 6 Fitur Bos Virtual yang Belum Ada
+> Implementasi: **Phase 15** (ST15-2 untuk 13.25.1-3 analitik; ST15-3 untuk 13.25.4-6 growth).
+Prinsip: dipanggil Dokter Bisnis via tool/`action` blok; dapat dibuka manual dari menu owner; ter-gate
+Pendukung; hasil tercatat di `doctor_action_logs`/`doctor_memory` agar bisa dievaluasi.
+
+#### 13.25.1 Konsultasi Target (Target Kompetitif)
+- Tujuan: owner punya target omzet harian/bulanan yang realistis & terpantau.
+- Cara: AI mengusulkan target dari data historis (moving average) atau `baseline hari khas` (13.11) + input
+  owner; owner menyetujui; progress harian vs target.
+- DB: `outlet_targets` (`outlet_id`, `period` day/month, `target_amount`, `set_by`, `source`, `created_at`).
+- UI: kartu **Target & Progress** di dashboard owner (progress bar + proyeksi + pace alert).
+- Integrasi: pace meleset -> sinyal ke teguran (13.21B); tool `get_targets`/`save_target`.
+- Gate: Pendukung.
+
+#### 13.25.2 Business Scaling (Peta Ekspansi)
+- Tujuan: menilai kelayakan & roadmap pertumbuhan (tambah cabang/produk/kapasitas/staf).
+- Cara: analisa margin, arus kas, kapasitas, demand (13.17) + checklist kesiapan (modal, staf, sistem, legal);
+  output roadmap 30/60/90 hari + syarat minimum sebelum ekspansi.
+- DB: `doctor_scaling_plans` (`outlet_id`, `goal`, `milestones` JSONB, `status`, `created_at`) atau reuse
+  `doctor_memory` kind `scaling`.
+- UI: layar **Peta Ekspansi** (checklist + milestone) dari chat/tombol aksi.
+- Integrasi: hasil tersimpan sebagai memori; dievaluasi di cron `doctor_observe`.
+- Gate: Pendukung.
+
+#### 13.25.3 Intelijen Pasar (Market Intelligence)
+- Tujuan: tahu posisi harga & peluang pasar sekitar secara berkala.
+- Cara: gabungkan input manual (harga kompetitor terdekat), `web_search`/`fetch_url` (13.19), open data
+  (event lokal, cuaca, kurs), dan benchmark hyperlocal anonim (addendum N).
+- Output: perbandingan harga (terlalu mahal/murah), produk tren, rekomendasi penyesuaian; tandai
+  "perlu verifikasi" bila data tipis.
+- DB: reuse `web_cache` + `doctor_memory` kind `market`; opsional `market_intel`.
+- UI: kartu **Intel Pasar** (ringkas, sumber + tanggal) + aksi terapkan ke Dynamic Pricing.
+- Gate: Pendukung.
+
+#### 13.25.4 Cross-Selling (Saran Pasangan Produk)
+- Tujuan: naikkan nilai transaksi dengan saran produk pelengkap.
+- Cara: association rule dari `transaction_items` (Market Basket, 13.17) -> rekomendasi "sering dibeli
+  bersama" (support/confidence). Ditampilkan sebagai saran di POS + saran WA broadcast/WA Marketing.
+- DB: reuse AI Co-Pilot `utils/ai_engine.dart` (tanpa tabel baru; cache opsional).
+- UI: chip saran di POS + kartu **Peluang Cross-Sell** di dashboard owner.
+- Integrasi: Dokter Bisnis memakai hasil ini untuk resep "pasangan produk" & promosi.
+- Gate: Pendukung (POS suggestion) / core tetap gratis.
+
+#### 13.25.5 Bundling (Paket Cuci Gudang & Hemat)
+- Tujuan: paket produk (termasuk slow-moving) untuk naikkan basket & likuidasi stok mandek.
+- Cara: AI mengusulkan kombinasi produk margin tinggi + slow-moving -> harga paket; owner setujui; paket
+  dijual di POS & katalog.
+- DB: `product_bundles` (`outlet_id`, `name`, `bundle_price`, `is_active`) + `product_bundle_items`
+  (`bundle_id`, `product_id`, `qty`).
+- UI: manajer Bundling (buat/edit/aktifkan) + aksi cepat dari resep; tampil di POS sebagai 1 item.
+- Gate: Pendukung.
+
+#### 13.25.6 Referral (Program Ajakan Pelanggan)
+- Tujuan: akuisisi pelanggan baru via ajakan berjenjang.
+- Cara: kode/kupon referral (pembawa + yang diajak), tracking konversi, laporan; bagikan via WA (`wa.me`).
+- DB: `referral_codes` (`outlet_id`, `code`, `owner_customer_id`, `reward`) + `customer_referrals`
+  (`code_id`, `referred_customer_id`, `status`, `created_at`).
+- UI: kartu **Program Referral** (kode, QR, performa) + aksi kirim ke pelanggan via WA.
+- Gate: Pendukung.
+
+Catatan: tabel baru pada 13.25.1/13.25.2/13.25.5/13.25.6 dibuat pada migration ST15-2/ST15-3 (15B/15C).
+Modul baru mengikuti Design System v2 dan tidak mengubah skema/fitur lama.
+
+### 13.26 Roadmap Phase 15 (Master Prompt + 12 Fitur Bos Virtual)
+Lanjutan Dokter Bisnis AI setelah Phase 14. Semua item di bawah = **tambahan terbaru** (13.23-13.25 +
+addendum L-O); Phase 14 tetap ST14-1..12.
+- **15A Master Prompt Karakter & Skill**: ST15-1 seed ulang `prompt_utama` default = teks BAGIAN 13.23 I+II;
+  tab superadmin field **"Master Prompt Karakter & Skill"** (multi-line, Reset ke Default, Preview) +
+  toggle **Daftar Skill** (`skills[]`: chat, snapshot, trend, low_stock, slow_products, cashflow, memory,
+  internet, target, scaling, market_intel, cross_sell, bundling, referral, reprimand, weekly_report).
+- **15B Bos Virtual Analitik**: ST15-2 Konsultasi Target (13.25.1) + Business Scaling (13.25.2) +
+  Intelijen Pasar (13.25.3) + migration tabel + kartu/layar owner + tombol aksi Dokter Bisnis.
+- **15C Bos Virtual Growth**: ST15-3 Cross-Selling (13.25.4) + Bundling (13.25.5) + Referral (13.25.6) +
+  migration tabel + integrasi POS/WA + tombol aksi Dokter Bisnis.
+- **15D Perilaku Addendum + Hardening**: ST15-4 Laporan Mingguan Proaktif (L) + Guardrail Aksi Otomatis/
+  persetujuan owner (M) + Benchmark Hyperlocal (N) + Kartu Identitas Bisnis (O) + uji end-to-end + tracker
+  + dokumentasi.
+
+Semua modul baru = Program Pendukung (berbayar), gate Pendukung, ikuti Design System v2, tanpa mengubah
+fitur/skema lama. Test: per modul berfungsi dari menu owner DAN dari tombol aksi resep Dokter Bisnis.
+
+### 13.28 Squad Digital Marketing AI (Team Desain + Promosi + Iklan Berbayar)
+> Implementasi: **Phase 16** (ST16-1..ST16-4, lihat BAGIAN 15). Fitur "Tim Marketing Digital dalam
+> satu aplikasi" untuk owner yang tidak punya desainer/ads-manager: owner cukup chat, tim AI mengerjakan.
+
+#### 13.28.1 Konsep & Alur Kerja (pipeline 3 tim)
+Owner chat/kirim brief ATAU AI ambil data otomatis dari POS (produk, harga, foto, promo) -> 3 tim bekerja
+berurutan, tiap tahap bisa di-approve manual atau otomatis (mode AUTO/MANUAL per tim):
+
+1. **TEAM DESAIN (Creative AI)** - membuat aset:
+   - **Copywriting**: caption, hook, CTA, hashtag, ide konten (Indonesia, gaya sesuai outlet_type).
+   - **Gambar**: grafik promo (produksi lokal, template bg, teks harga, QR) - semua DIHASILKAN/KOMPOSISI
+     (template + teks + foto produk dari POS) -> output PNG/JPG siap posting.
+   - **Video**: video pendek 15-30 detik dari foto produk + template animasi + teks + musik -> MP4
+     (siap TikTok/Reels/Shorts). LLM menulis naskah/naratif; rendering pakai template animasi
+     (Flutter render frame -> FFmpeg/lottie server-side atau client-side sederhana).
+   - Input bahan: chat owner (brief teks), foto produk POS (`image_local_path`), foto upload manual,
+     HPP/harga untuk klaim "hemat X%".
+   - Output: `dm_assets` (tipe image/video/copy, file path, caption, status, versi).
+2. **TEAM PROMOSI (Organic Publisher)** - posting ke kanal gratis:
+   - Kanal: Facebook (feed + Fanpage), Facebook Group (draft manual, anti-spam), Instagram (feed/reel),
+     TikTok (upload draft), Shopee (produk/katalog update + status promo), WA (status + broadcast list).
+   - CATATAN TEKNIS: beberapa kanal butuh token/akun resmi (Meta Graph API utk FB/IG, TikTok Content
+     Posting API, Shopee OpenAPI). Jika owner belum connect -> fallback: asset dikirim ke WA owner
+     + tombol "buka aplikasi kanal" (manual 1-tap). Semua kredensial tersimpan terenkripsi (superadmin).
+   - Jadwal otomatis (kalender konten per minggu), deteksi jam ramai pelanggan = waktu posting optimal.
+3. **TEAM IKLAN (Paid Ads Manager)** - iklan berbayar:
+   - Kanal: Meta Ads (FB/IG), Google Ads (Search/Maps), TikTok Ads, Shopee Ads.
+   - Membuat campaign DRAFT lengkap (objective, audience geofence radius toko, budget harian,
+     jadwal, creative dari Team Desain, copy) -> **persetujuan owner WAJIB** (addendum M) ->
+     kirim via API resmi bila owner connect billing, atau export "checklist setting manual".
+   - AI pantau hasil (ROAS/CTR/CPC via API report) -> laporan mingguan + rekomendasi geser budget
+     (mis. "Stop iklan A ROAS 0.8, pindah ke iklan B ROAS 3.1").
+
+#### 13.28.2 Mode Otomatis vs Manual (per tim, diatur owner)
+- Toggle per tim di layar owner: **MANUAL** (AI siapkan -> owner review/approve -> eksekusi) atau
+  **AUTO** (eksekusi sendiri sesuai jadwal; untuk TEAM IKLAN AUTO tetap butuh approval pertama kali
+  dan limit budget harian).
+- Kalender konten: owner lihat jadwal posting mingguan, bisa geser/hapus.
+- Guardrail: quota budget iklan (maks harian di-set owner, superadmin bisa batas global), filter konten
+  (dilarang klaim medis/terlarang), watermark logo opsional, jam hening (tidak posting 22.00-06.00).
+
+#### 13.28.3 Data Model (BAGIAN 3 tambahan)
+- `dm_assets` (outlet_id, kind image/video/copy, title, file_path, caption, hashtags, source
+  pos_product/brief/template, status draft/approved/published, created_at).
+- `dm_posts` (outlet_id, asset_id, channel fb/fb_group/ig/tiktok/shopee/wa_status, status
+  draft/queued/posted/failed, scheduled_at, posted_at, post_url, error).
+- `dm_campaigns` (outlet_id, channel meta/google/tiktok/shopee, objective, budget_daily, start/end,
+  status draft/approved/active/paused/done, external_id, metrics JSONB).
+- `dm_settings` per outlet (mode per tim, budget limit, jam hening, watermark, connected_accounts
+  token_enc, last_sync).
+- Index: outlet_id + scheduled_at/status.
+- Semua tabel RLS per outlet; token/kredensial HANYA service_role + terenkripsi.
+
+#### 13.28.4 Integrasi Dokter Bisnis
+- Dokter Bisnis bisa MENUGASKAN: resep -> "buat video promo paket nasi goreng" -> tool `create_asset`
+  memanggil pipeline Team Desain, `schedule_post` untuk Team Promosi, `draft_campaign` untuk Team Iklan.
+- Laporan iklan masuk ke analisa efektivitas promosi (13.17) -> dokter menilai ROI promosi offline vs online.
+
+#### 13.28.5 Batas Realistis (jujur)
+- Auto-posting butuh koneksi akun resmi; bila tidak, fitur tetap berguna sebagai "mesin produksi aset +
+  reminder posting manual 1-tap" (tidak menjanjikan autopost penuh).
+- Kualitas video bergantung template; fokus kualitas: template rapi + teks harga + foto produk asli.
+- Biaya iklan ditanggung owner (KasirGo TIDAK menampung uang iklan); billing langsung di platform iklan.
+
+#### 13.28.6 Superadmin Config - LLM & Provider Squad DM (terpusat ATAU per outlet)
+> Semua setting integrasi/margin lewat superadmin, tanpa ubah koding (Control Plane). Owner TIDAK pernah
+> melihat/mengubah kunci. Reuse pola BAGIAN 13.4/13.8 (provider default + opsi per outlet).
+- **Tab superadmin**: "Squad Digital Marketing" (+ halaman Outlet Detail) - grup setting Control Plane.
+- **Mode provider**: pilih **Terpusat (Global)** (semua outlet pakai 1 kunci) ATAU **Per Outlet**
+  (override per outlet). Bila per-outlet kosong -> jatuh ke nilai global.
+- **Field LLM (OpenAI-compatible)**:
+  - `base_url`, `api_key_enc`, `model`, `temperature`, `max_tokens`.
+  - `unlimited_tokens` (toggle) + `token_quota` (dipakai bila unlimited OFF).
+  - **Batas request token** per periode (harian/bulanan) + counter pemakaian (`used_token_current`).
+- **Field provider konten**: provider gambar (SD/Flux dll), provider video/template, provider copy (LLM);
+  masing-masing `base_url` + `api_key_enc` + `model` (opsional, bisa berbagi LLM yang sama).
+- **Field kredensial kanal** (per outlet, terenkripsi `token_enc`): Meta (FB/IG), TikTok, Shopee, WA,
+  Ads billing - hanya service_role; owner cukup "Connect"/"Putuskan", tidak lihat token.
+- **Budget guardrail**: budget iklan harian per outlet + batas global superadmin; pause otomatis bila
+  ROAS < target (addendum M - approval owner tetap wajib untuk aksi yang mengeluarkan uang).
+- **Data model** (memakai yang ada, minim tabel baru):
+  - `platform_configs` group `digital_marketing_llm` (scope **global / segment / outlet**) - value JSONB:
+    `{provider_mode: global|per_outlet, llm:{base_url, api_key_enc, model, temperature, max_tokens,
+    unlimited_tokens, token_quota, request_token_limit, used_token_current}, image:{...}, video:{...},
+    ads_global_budget_cap}`. Pola sama `business_doctor` (BAGIAN 13.8) + versioning/rollback.
+  - Bila ingin eksplisit per outlet: tabel `outlet_dm_configs` (outlet_id, base_url, api_key_enc, model,
+    is_active, unlimited_tokens, token_quota, request_token_limit, used_token_current, updated_by).
+  - `dm_settings.connected_accounts` (token_enc) untuk kredensial kanal.
+- **Keamanan**: `api_key_enc`/`token_enc` HANYA `service_role`; view publik MENGEcualikan kolom secret;
+  catat `api_key_updated_by` + `audit_logs`; jangan render secret penuh di UI (hanya "sk-...xxxx").
+- **Tombol uji**: "Tes Koneksi" (ping base_url/model) + "Chat Uji" (1 prompt) seperti tab Dokter Bisnis.
+
+---
+
+## BAGIAN 14 - PROMPT SIAP-TEMPEL PHASE 14 & PHASE 15 (DOKTER BISNIS AI)
+Cara pakai: tempel PROMPT PEMBUKA UNIVERSAL (bagian 2.4 / di bawah), lalu blok `=== SUB-TASK ... ===`.
+Satu sub-task = satu sesi, commit+push, STOP, tunggu "lanjut". Phase 14 dulu (ST14-1..12), baru Phase 15
+(ST15-1..4). Prasyarat Phase 14/15: provider LLM [OI]-compatible diset di superadmin; bila belum ada ->
+mode fallback AI lokal `utils/ai_engine.dart`.
+Prompt di BAGIAN ini portabel: SATU file referensi = **KasirGo Workflow** (file ini). Cukup rujuk
+"KasirGo Workflow BAGIAN <nomor>" di task baru, tanpa path/nama file lain. Repo: gunakan repo KasirGo
+yang sedang dikerjakan (task/akun baru) - tidak perlu link/repo hardcoded.
+
+### 14.1 PROMPT PEMBUKA UNIVERSAL (versi Phase 14/15)
+```
+=== KONTEKS KASIRGO 3.0 ===
+KasirGo: OS UMKM Indonesia, GRATIS SELAMANYA untuk fitur inti (POS/produk/transaksi/stok). Flutter + Supabase + offline SQLite.
+Program Pendukung = SATU harga Rp50.000/bulan (fitur pertumbuhan) + reverse trial 14 hari.
+KYC owner WAJIB (app TERKUNCI sampai verified). Iklan HANYA di web pelanggan.
+Role: Owner/Admin/Cashier/Kitchen/Customer/Superadmin. Modular per outlet_type (kelontong/warteg/cafe/retail).
+Design v2 "Centennial Modern Ocean White" (Bagian 1.6): bg #F8FAFC, surface #FFFFFF + border #E2E8F0,
+primary #0284C7, gradient #06B6D4->#0284C7, teks #0F172A/#64748B, font Inter. DILARANG hardcode warna;
+pakai komponen widgets/common/. Fitur baru = gate Pendukung; jangan ubah fitur/logic/skema lama.
+
+=== KONTEKS PHASE 14/15 (Dokter Bisnis AI) ===
+Baca KasirGo Workflow BAGIAN 13 (13.1-13.26). Kunci provider (base_url/api_key/model) HANYA di superadmin.
+Bahasa Indonesia. Buat PROGRESS-PHASE14.md (Phase 14) / PROGRESS-PHASE15.md (Phase 15).
+
+=== ATURAN HEMAT TOKEN ===
+Flutter terinstall; jangan install/pub get/build APK. Baca HANYA PROGRESS file phase ini.
+Output hanya kode, tanpa komentar/penjelasan/echo file. Edit targeted, jangan rewrite.
+Analyze per file: dart analyze <f> 2>&1|tail -20.
+Selesai: git add . && git commit -m "progress: [f]" && git push, lalu STOP.
+
+=== ERROR ===
+analyze dulu; kirim HANYA file:baris:pesan; 1 error/percobaan; error sama >2x -> STOP, push, tulis BLOCKER, laporkan.
+```
+
+### 14.2 PHASE 14 - SUB-TASK (ST14-1..ST14-12)
+```
+=== SUB-TASK ST14-1 ===
+Buat docs/migrations/2026-10-06-kasirgo-14-dokter-bisnis.sql berisi (BAGIAN 13.7):
+- CREATE TABLE outlet_ai_configs, doctor_conversations, doctor_messages, doctor_action_logs, doctor_intake, doctor_memory, doctor_outlet_profile
+- INDEX outlet_id/conversation_id/created_at
+- Seed platform_configs key 'business_doctor' nilai default (prompt_utama, role_outlet, guardrails,
+  bahasa 'id', aktif true, provider_default kosong, internet_tool aktif=false)
+- RLS: outlet hanya akses percakapan/aksi outlet sendiri; api_key_enc HANYA service_role
+- Buat view publik (jika perlu) yang MENGEcualikan api_key_enc
+File .sql tidak perlu flutter analyze. commit+push, STOP.
+```
+
+```
+=== SUB-TASK ST14-2 ===
+- Edge Function supabase/functions/business_doctor_chat:
+  - bangun konteks: prompt_utama + role_outlet + guardrails + fase + snapshot bisnis (ringkas)
+  - ambil provider: outlet_ai_configs (override) jika ada, else platform_configs business_doctor
+  - panggil LLM OpenAI-compatible (chat/completions) pakai base_url/api_key/model -> streaming opsional
+  - tool-calling: get_business_snapshot, get_sales_trend, get_low_stock, list_slow_products, get_cashflow
+  - simpan doctor_messages (role/content/tool_calls/tokens); update doctor_conversations.updated_at
+  - guardrails + disclaimer "saran AI"; bahasa Indonesia; tolak topik terlarang
+  - output UI ramah gaptek: kembalikan `blocks` JSON (text/choices/checklist/gauge/card/action)-BAGIAN 13.14
+  - MEMORI: suapkan doctor_outlet_profile.memory_digest + kasus terbuka (doctor_memory status open) ke
+    konteks -> AI ingat; setelah sesi, perbarui digest + simpan vonis/resep (BAGIAN 13.15)
+  - fallback: bila provider gagal/nihil -> mode terbatas AI lokal + pesan "otak penuh belum aktif"
+  - secret HANYA via env/service_role (jangan di client/repo)
+- Gating: cek langganan Pendukung AKTIF sebelum panggil LLM; kuota token per outlet (bila
+  unlimited_tokens ON -> lewati kuota, tetap catat; lihat BAGIAN 13.8)
+commit+push, STOP.
+```
+
+```
+=== SUB-TASK ST14-3 ===
+kasirgo-admin: tambah tab "Dokter Bisnis AI" di Control Plane (Bagian 1.10/BAGIAN 13.4):
+- Form global: prompt_utama, role_outlet, guardrails, bahasa=id, aktif on/off
+- Provider default: base_url, api_key, model, temperature, max_tokens, unlimited_tokens (toggle),
+  token_quota (dipakai bila unlimited OFF)
+- Internet tool: aktif + provider + api_key (opsional)
+- Tombol "Tes Koneksi" (kirim prompt uji) + "Chat Uji" (panel chat superadmin)
+- Simpan via lib/controlPlane.ts (pola config_service); catat updated_by + audit_logs
+- Secret terenkripsi; jangan pernah render nilai api_key penuh ke UI
+Ikuti Design System v2 + komponen existing. commit+push, STOP.
+```
+
+```
+=== SUB-TASK ST14-4 ===
+Flutter: layar chat owner VISUAL/gaptek (BAGIAN 13.6 + 13.14):
+- Kartu "Dokter Bisnis" di beranda owner -> screens/owner/business_doctor_screen.dart
+- Beranda: kartu dokter + 4 tombol besar (Periksa Usaha Saya, Saya Baru Buka, Usaha Tidak Naik,
+  Catat Promosi) + riwayat percakapan berbentuk kartu
+- Render `blocks` dari Edge Function -> widgets/common/business_doctor/: text, choices (chip),
+  checklist (resep bisa dicentang), gauge (Skor Kesehatan Usaha), card (vonis berwarna), action (tombol)
+- Peta resep = checklist: tombol besar "Kerjakan"/"Sudah Saya Lakukan"/"Nanti"
+- Minim ketik: tombol/mic; tombol speaker baca jawaban (opsional speech_to_text + flutter_tts)
+- Progress Tracker visual (progress bar + tren); tombol "?" bantuan + tautan Panduan
+- Gating: bila Pendukung tidak aktif -> terkunci + ajakan berlangganan
+- Owner TIDAK melihat model/kunci; fallback blok tak dikenal -> tampil sebagai teks
+Pakai AppShell + kit v2 (tanpa hardcode warna, touch 56dp). analysis per file. commit+push, STOP.
+```
+
+```
+=== SUB-TASK ST14-5 ===
+Diagnosa awal bisnis baru + diagnosa & fase:
+- Intake indikator fisik/visual/perilaku via Wizard BERGAMBAR (BAGIAN 13.11 + 13.14) -> doctor_intake:
+  stepper pilihan ikon + tombol Foto Toko (kamera); fisik (lokasi/lalu lintas/luas/sewa/staf/kompetitor/
+  listrik/internet), visual_notes + visual_refs (foto LOKAL, kirim hanya bila owner consent + provider
+  vision), behavior (manual/digital, jam ramai, cara pembukuan/belanja stok, tipe pembeli)
+- Tawarkan "Diagnosa Awal" bila fase A / business_age kecil / intake kosong -> baseline + resep 7-14 hari
+- Data internet sesuai outlet_type via web_search/fetch_url (bila internet_tool.aktif)
+- Deteksi fase otomatis: A (umur outlet <7 hari + transaksi kosong), B (outlet lama, data app kosong),
+  C (transaksi/stok aktif) -> set doctor_conversations.phase
+- Preset "Diagnosa Otomatis": prompt sistem mengawali percakapan sesuai fase
+- Preset "Diagnosa Manual": alur kuesioner per fase -> jawaban jadi konteks chat
+- Simpan conversation + messages; judul otomatis
+commit+push, STOP.
+```
+
+```
+=== SUB-TASK ST14-6 ===
+Resep & aksi + layar HASIL:
+- Peta Resep 8 langkah + Vonis (mis. "Anemia Arus Kas", "Penyakit Warisan Manual")
+- Tool save_prescription -> simpan ringkasan resep ke doctor_conversations/doctor_messages
+- Tombol aksi resep: Sidak Bos, Dynamic Pricing, Bundling, Cross-Sell, Referral, WA Marketing,
+  Progress Tracker (tautan ke fitur existing, tidak duplikasi logic)
+- LAYAR HASIL diagnosa berdesain menarik (BAGIAN 13.21A): skor kesehatan (gauge), kartu vonis berwarna,
+  peta resep = checklist bernomor, target/timeline, tombol "Kerjakan"/"Sudah Saya Lakukan"/"Nanti",
+  footer "Mulai Jalankan"/"Simpan-Bagikan (PDF/WA)"/"Tanya Dokter"; animasi flutter_animate; ramah gaptek
+commit+push, STOP.
+```
+
+```
+=== SUB-TASK ST14-7 ===
+Analisa hasil (+ internet):
+- Form "Catat Hasil Promosi": channel in_app/online/brosur/offline, biaya, deskripsi, tanggal,
+  hasil -> doctor_action_logs
+- Hitung efektivitas/ROI (bandingkan omzet sebelum/sesudah vs biaya) + resep lanjutan
+- Tool web_search + fetch_url (aktif hanya bila internet_tool.aktif) untuk data luar app
+- AI rangkum: apa yang bekerja, apa tidak, langkah berikutnya
+commit+push, STOP.
+```
+
+```
+=== SUB-TASK ST14-8 ===
+Penanganan resep gagal - Escalation Ladder (BAGIAN 13.12):
+- Deteksi outcome flat/declining vs baseline -> doctor_conversations.status='evaluasi_ulang'
+- Audit eksekusi: cek checklist aksi/biaya/tanggal; pisahkan "resep salah" vs "salah menjalankan"
+- Diagnosa Ulang Level 2: validasi data, lengkapi indikator fisik/visual/perilaku, tambah data internet;
+  naikkan escalation_level
+- Klasifikasi root_cause (produk/harga/traffic/kualitas/operasional/arus kas/kompetitor/musiman)
+- Resep Lini Kedua WAJIB beda dari resep pertama; target dipecah jadi milestone kecil
+- Eskalasi manusia: tawarkan review ahli/mentor/komunitas + konsultasi lanjutan
+- >=3 resep tanpa perbaikan -> label "Kasus Bandel" + saran evaluasi kelayakan + expert review
+- Prinsip jujur: tidak menjanjikan pasti naik + disclaimer "saran AI"
+commit+push, STOP.
+```
+
+```
+=== SUB-TASK ST14-9 ===
+Sumber data resep TANPA integrasi API (BAGIAN 13.17):
+- Registry sumber data internal: RFM+retensi, market basket, menu engineering matrix, elastisitas harga,
+  QRIS vs tunai, shrinkage, jam kosong/ramai, konversi QR Meja, waktu tunggu KDS, umur piutang, adopsi
+  fitur staf, kelengkapan data produk, kalender event lokal (tabel statis platform_configs)
+- Aksi/resep baru tanpa API: A/B test, uji harga, Flash Sale Scheduler, combo/paket harian, win-back
+  (WA wa.me), loyalty/stempel, referral kupon, upsell POS & QR Meja, auto-draft PO (Kulakan B2B),
+  gamifikasi staf, kolaborasi lokal (panduan)
+- Mesin: simulasi what-if + batas budget, small-bet 7/14 hari, confidence score + estimasi dampak,
+  library resep per outlet_type, cross-outlet learning anonim, checklist + reminder
+- Tool internal membaca registry (reuse get_* + utils/ai_engine.dart); tanpa provider/API baru
+- Data internet (cuaca/tren/Maps) DITANDAI butuh API -> TIDAK termasuk sub-task ini
+commit+push, STOP.
+```
+
+```
+=== SUB-TASK ST14-10 ===
+Data internet TANPA integrasi API resmi (BAGIAN 13.19):
+- Tool fetch_url (HTTP GET halaman publik) + ekstraksi oleh LLM; web_search opsional bila provider punya
+- Open data TANPA kunci (preset superadmin): cuaca BMKG (data.bmkg.go.id), kalender libur publik, kurs
+  valuta publik, halaman harga komoditas/pasar, RSS berita/pasar lokal
+- Kemampuan ONLINE provider: flag internet_tool.mode (off|fetch|search|provider_online) pakai model
+  existing -> tanpa API tambahan
+- Manual: owner tempel link/teks/screenshot -> AI rangkum (0 API)
+- Cache: tabel web_cache (url, content, source_label, fetched_at, ttl_seconds) -> hindari fetch berulang
+- Guardrails: hanya sumber publik & legal (robots/ToS), kutip URL + tanggal, jangan mengarang;
+  gagal fetch -> fallback manual/lokal (13.17)
+commit+push, STOP.
+```
+
+```
+=== SUB-TASK ST14-11 ===
+Memori & observasi jangka panjang (BAGIAN 13.15):
+- Gunakan tabel doctor_memory + doctor_outlet_profile (dibuat ST14-1); tool recall_memory, save_memory,
+  observe_progress
+- Saat buka sesi: inject memory_digest + kasus terbuka; setelah sesi: perbarui digest + simpan
+  vonis/resep/target/lesson (kind diagnosis/prescription/result/lesson/fact)
+- Simpan hasil: status open/achieved/failed + lesson; hindari mengulang resep yang sudah gagal
+- Edge Function cron doctor_observe: evaluasi resep terbuka vs data nyata (transaksi) per deadline/T+7
+  -> tandai achieved/failed; siapkan notifikasi "Dokter mengingatkan"
+- TEGURAN otomatis bila resep tidak dijalankan (BAGIAN 13.21B): cek doctor_action_logs.status vs due_date
+  -> buat teguran bertingkat (pengingat halus / teguran / teguran keras+Sidak Bos) via cron doctor_observe
+  atau doctor_reprimand; kanal notifikasi lokal + badge beranda + pesan chat "Dokter Bisnis"
+- Interaksi teguran: owner pilih alasan (lupa/tidak ada waktu/tidak ada modal/tidak paham) -> AI
+  menyesuaikan (pecah langkah); batasi frekuensi (anti-spam); nada diatur prompt_utama; simpan sebagai
+  doctor_memory kind='reprimand' + update reminder_count/last_reminded_at
+- UI: menu "Riwayat Kasus" (kartu memori) + badge "Dokter ingat resep sebelumnya"
+commit+push, STOP.
+```
+
+```
+=== SUB-TASK ST14-12 ===
+Per-outlet + hardening + tes:
+- Superadmin: konfigurasi PER OUTLET di tab "Dokter Bisnis AI" (daftar outlet) DAN halaman Outlet Detail:
+  base_url + api_key + model + is_active + unlimited_tokens (toggle) + token_quota; owner tidak punya
+  akses tulis
+- Kuota: bila unlimited_tokens OFF -> batasi token_quota/window harian; bila ON -> lewati kuota (tetap
+  catat doctor_messages.tokens untuk monitoring); audit_logs
+- Uji end-to-end (BAGIAN 13.10 + 13.13 + 13.16 + 13.18 + 13.20): Tes Koneksi, Diagnosa Awal bisnis baru,
+  Diagnosa Otomatis, chat lanjutan, catat hasil promosi, memori lintas sesi (resep gagal diingat),
+  resep gagal (evaluasi ulang + kasus bandel), sumber data resep tanpa API, internet tanpa API (fetch/
+  open/online/manual + web_cache), gating non-Pendukung, fallback AI lokal
+- Update dokumen + tracker; PROGRESS-PHASE14.md SELESAI. commit+push, STOP.
+```
+
+### 14.3 PHASE 15 - SUB-TASK (ST15-1..ST15-4)
+Catatan: Phase 14 SELESAI di ST14-12. Semua tambahan terbaru (BAGIAN 13.23-13.26 + addendum L-O) = Phase 15.
+```
+=== SUB-TASK ST15-1 ===
+Master Prompt Karakter & Skill AI (BAGIAN 13.23 + 13.4/13.26):
+- Seed ulang platform_configs key 'business_doctor': prompt_utama default = teks BAGIAN 13.23 I (master
+  prompt) + II (addendum A-O) apa adanya; tambah skills[] default (chat, snapshot, trend, low_stock,
+  slow_products, cashflow, memory, internet, target, scaling, market_intel, cross_sell, bundling, referral,
+  reprimand, weekly_report)
+- kasirgo-admin tab "Dokter Bisnis AI": field "Master Prompt Karakter & Skill" (multi-line, PREFILL teks
+  13.23, tombol Reset ke Default + Preview) -> mengisi prompt_utama; toggle "Daftar Skill" (skills[])
+- Prompt disuntikkan ke system context Edge Function business_doctor_chat; gate skill (hanya tool/fitur
+  aktif yang boleh dipakai AI); catat updated_by + audit_logs
+- flutter analyze bersih; uji prompt tersimpan & dipakai. commit+push, STOP.
+```
+
+```
+=== SUB-TASK ST15-2 ===
+Bos Virtual Analitik (BAGIAN 13.25.1/13.25.2/13.25.3):
+- Migration: outlet_targets, doctor_scaling_plans (+ RLS outlet sendiri); skill key target/scaling/market_intel
+- Konsultasi Target: AI usul target (moving average/baseline 13.11) -> owner setuju -> kartu Target &
+  Progress di dashboard owner + pace alert -> sinyal ke teguran (13.21B); tool get_targets/save_target
+- Business Scaling: analisa kelayakan + checklist kesiapan + roadmap 30/60/90 hari -> layar "Peta
+  Ekspansi"; simpan ke doctor_scaling_plans/memori
+- Intelijen Pasar: gabung input manual + web_search/fetch_url (13.19) + benchmark hyperlocal (addendum N)
+  -> kartu "Intel Pasar" (sumber+tanggal) + aksi terapkan ke Dynamic Pricing; cache web_cache/memori
+- Gate Pendukung; hasil tercatat di doctor_action_logs agar dievaluasi cron doctor_observe
+Ikuti Design System v2. flutter analyze bersih. commit+push, STOP.
+```
+
+```
+=== SUB-TASK ST15-3 ===
+Bos Virtual Growth (BAGIAN 13.25.4/13.25.5/13.25.6):
+- Migration: product_bundles, product_bundle_items, referral_codes, customer_referrals (+ RLS); skill key
+- Cross-Selling: association rule utils/ai_engine.dart (13.17) -> chip saran di POS + kartu "Peluang
+  Cross-Sell" di dashboard owner; dipakai resep Dokter Bisnis
+- Bundling: manajer bundling (produk margin tinggi + slow-moving -> harga paket) -> dijual 1 item di POS
+  & katalog; aksi cepat dari resep
+- Referral: kode/kupon berjenjang (pembawa + diajak) + tracking konversi + laporan; bagikan via wa.me
+- Gate Pendukung; tombol aksi dari resep Dokter Bisnis; ikuti Design System v2
+flutter analyze bersih. Uji end-to-end modul 15C. commit+push, STOP.
+```
+
+```
+=== SUB-TASK ST15-4 ===
+Perilaku Addendum + Hardening (BAGIAN 13.26 15D + addendum L/M/N/O):
+- Laporan Mingguan Proaktif (L): cron doctor_observe kirim ringkasan kondisi + skor + status resep + 1
+  rekomendasi (kanal in-app; WA/email opsional)
+- Guardrail Aksi Otomatis (M): aksi yang mengubah data/harga/promosi wajib PERSETUJUAN owner (tombol
+  Setujui/Tolak) sebelum dieksekusi
+- Benchmark Hyperlocal (N): bandingkan outlet sejenis (anonim, agregat area) + tandai "perlu verifikasi"
+  bila data tipis
+- Kartu Identitas Bisnis (O): header chat {fase, penyakit aktif, resep berjalan, deadline, skor kesehatan}
+- Uji end-to-end (13.24/13.25 + L-O); update dokumen + tracker; PROGRESS-PHASE15.md SELESAI. commit+push, STOP.
+```
+
+Setelah Phase 15: aplikasi + Dokter Bisnis AI + Master Prompt Karakter/Skill + 12 Fitur Bos Virtual SELESAI.
+
+## BAGIAN 15 - PHASE 16: SQUAD DIGITAL MARKETING AI (PROMPT SIAP-TEMPEL)
+Prasyarat: Phase 14 & 15 SELESAI. Fitur pendukung (berbayar): owner chat/brief -> 3 tim AI (Desain,
+Promosi, Iklan) buat aset & posting & campaign. Buat PROGRESS-PHASE16.md. 4 sub-task.
+
+Cara pakai: SATU file referensi = **KasirGo Workflow** (file ini). Prompt di BAGIAN ini hanya menyebut
+"KasirGo Workflow BAGIAN <nomor>", tanpa path/nama file lain - cukup pakai file ini sebagai referensi
+di task baru.
+Repo: gunakan repo KasirGo yang sedang dikerjakan (task/akun baru) - TIDAK perlu link/repo hardcoded;
+sesuaikan dengan repo saat itu.
+
+### 16.1 PROMPT PEMBUKA UNIVERSAL (versi Phase 16)
+```
+=== KONTEKS KASIRGO 3.0 ===
+KasirGo: OS UMKM Indonesia, GRATIS SELAMANYA untuk fitur inti (POS/produk/transaksi/stok). Flutter + Supabase + offline SQLite.
+Program Pendukung = SATU harga Rp50.000/bulan (fitur pertumbuhan) + reverse trial 14 hari.
+KYC owner WAJIB (app TERKUNCI sampai verified). Iklan HANYA di web pelanggan.
+Role: Owner/Admin/Cashier/Kitchen/Customer/Superadmin. Modular per outlet_type (kelontong/warteg/cafe/retail).
+Design v2 "Centennial Modern Ocean White" (Bagian 1.6): bg #F8FAFC, surface #FFFFFF + border #E2E8F0,
+primary #0284C7, gradient #06B6D4->#0284C7, teks #0F172A/#64748B, font Inter. DILARANG hardcode warna;
+pakai komponen widgets/common/. Fitur baru = gate Pendukung; jangan ubah fitur/logic/skema lama.
+
+=== KONTEKS PHASE 16 (Squad Digital Marketing AI) ===
+Baca KasirGo Workflow BAGIAN 13.28 (termasuk 13.28.6 Superadmin Config LLM: base_url/api_key/
+model + unlimited token/batas request token, mode TERPUSAT atau PER OUTLET). Kredensial kanal social/ads
+HANYA superadmin + terenkripsi (token_enc); owner tidak melihat. Billing iklan ditanggung owner di platform
+masing-masing. Bahasa Indonesia. Buat PROGRESS-PHASE16.md.
+
+=== ATURAN HEMAT TOKEN ===
+Flutter terinstall; jangan install/pub get/build APK. Baca HANYA PROGRESS-PHASE16.md.
+Output hanya kode, tanpa komentar/penjelasan/echo file. Edit targeted, jangan rewrite.
+Analyze per file: dart analyze <f> 2>&1|tail -20.
+Selesai: git add . && git commit -m "progress: [f]" && git push, lalu STOP.
+
+=== ERROR ===
+analyze dulu; kirim HANYA file:baris:pesan; 1 error/percobaan; error sama >2x -> STOP, push, tulis BLOCKER, laporkan.
+```
+
+### 16.2 SUB-TASK (ST16-1..ST16-4)
+```
+=== SUB-TASK ST16-1 ===
+Fondasi Squad DM (BAGIAN 13.28.3):
+- Migration: dm_assets, dm_posts, dm_campaigns, dm_settings (+ RLS per outlet; token/kredensial HANYA
+  service_role, terenkripsi); INDEX outlet_id + scheduled_at/status
+- Tab superadmin "Squad Digital Marketing": global config (provider gambar/video/copy, base_url + api_key +
+  model LLM + unlimited token/token_quota + batas request token, mode TERPUSAT atau PER OUTLET - lihat
+  13.28.6, batas budget global, whitelist konten terlarang) + per-outlet connect akun (fb/ig/tiktok/shopee)
+  -> token_enc
+- Edge Function dm_creative: pipeline copy (LLM) + gambar (template+foto produk+teks harga) -> dm_assets;
+  gaya copy sesuai outlet_type; watermark opsional
+- Gating Pendukung + kuota asset per bulan (unlimited_tokens pola sama BAGIAN 13.8)
+Ikuti Design System v2. flutter analyze bersih. commit+push, STOP.
+```
+
+```
+=== SUB-TASK ST16-2 ===
+Team Desain UI + Video (BAGIAN 13.28.1):
+- Layar owner "Studio Desain": brief chat -> AI buat 3 opsi copy + gambar (preview) -> pilih/edit -> save
+  dm_assets; ambil produk otomatis dari POS (nama/foto/harga/promo)
+- Video 15-30 detik: naskah AI + template animasi (foto produk + teks + musik) -> MP4; preview + regenerate
+- Mode per tim (MANUAL/AUTO) di dm_settings; jam hening + filter klaim medis/terlarang
+- Tombol Dokter Bisnis: resep -> "Buat Video Promo" (tool create_asset) -> pipeline Team Desain
+flutter analyze bersih. commit+push, STOP.
+```
+
+```
+=== SUB-TASK ST16-3 ===
+Team Promosi - jadwal + posting (BAGIAN 13.28.1-2):
+- Kalender konten mingguan (dm_posts): draft/queued/posted/failed; geser/hapus drag
+- Kanal: WA status + broadcast (wa.me), FB feed/fanpage + IG (Meta Graph API bila connected), TikTok
+  (Content Posting API bila connected), Shopee (OpenAPI bila connected); BELUM connected -> asset ke
+  WA owner + tombol "Buka Aplikasi Kanal" (manual 1-tap)
+- AI jadwalkan jam optimal dari data jam ramai pelanggan (BAGIAN 13.17); anti-spam fb_group (draft manual)
+- Report: posting sukses/gagal + reach bila API tersedia
+flutter analyze bersih. Uji posting draft ke 1 kanal (manual path). commit+push, STOP.
+```
+
+```
+=== SUB-TASK ST16-4 ===
+Team Iklan + Hardening + Tes (BAGIAN 13.28.1-5):
+- Campaign draft: Meta Ads, Google Ads, TikTok Ads, Shopee Ads (objective, geofence radius toko,
+  budget harian, jadwal, creative dari dm_assets) -> approval WAJIB owner (addendum M) ->
+  kirim via API bila connected, else checklist setting manual
+- Monitor hasil (ROAS/CTR/CPC) via API report bila connected -> laporan mingguan + rekomendasi
+  geser budget -> rekomendasi masuk chat Dokter Bisnis
+- Guardrail: budget limit harian (owner + batas global superadmin), pause otomatis bila ROAS < target,
+  audit_logs semua aksi
+- Uji end-to-end: brief -> asset -> post draft -> campaign draft -> approval; gating non-Pendukung;
+  token tidak bocor; PROGRESS-PHASE16.md SELESAI. commit+push, STOP.
+```
+
+Setelah Phase 16: KasirGo punya "Tim Marketing Digital" lengkap (Desain+Promosi+Iklan) untuk UMKM.
