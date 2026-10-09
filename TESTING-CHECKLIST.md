@@ -198,3 +198,15 @@ Owner:
 - [ ] B3-4: resep → "Tandai Selesai" langsung mencoret langkah (kartu aktif, gelembung chat, layar Hasil Diagnosa).
 - [ ] B3-5: resep langkah cross_sell → "Jalankan" membuka POS (chip saran upsell), bukan Paket Bundling.
 - [ ] B3-6: pembayaran produk di POS tetap memakai QRIS Statis manual (sesuai kebijakan bisnis). QRIS Dinamis otomatis digunakan saat Owner/pengguna upgrade ke Program Pendukung di SupporterScreen (`hasDynamicQr` -> pop up dynamic QRIS payment).
+
+---
+
+## BATCH #4 (2026-10-08) — RE-TEST
+Commit `731fb3b` (main) / web gh-pages `d0e66bf`. Fokus: CORS EF payment gateway, sembunyikan menu QRIS dinamis/konfigurasi platform, hapus outlet.
+
+Owner:
+- [ ] B4-1: Pengaturan tidak lagi menampilkan menu "Hubungkan Midtrans (QRIS Dinamis)" dan kartu "Konfigurasi Platform".
+- [ ] B4-2: Upgrade Program Pendukung menampilkan QRIS DINAMIS otomatis (bukan fallback statis). Root cause diperbaiki: CORS EF (`rcb_create_charge` dll) sehingga preflight browser berhasil; polling status `rcb_check_status` jalan.
+- [ ] B4-3: Multi-outlet → tombol hapus (ikon tong sampah) pada outlet non-aktif. Konfirmasi → outlet terhapus. Outlet terakhir TIDAK bisa dihapus ("Minimal harus ada 1 outlet").
+
+Catatan: CORS sudah diperbaiki di 5 EF (`rcb_create_charge`, `rcb_check_status`, `create_payment`, `save_payment_config`, `test_payment_connection`) dan ter-deploy (live tanpa rebuild app).

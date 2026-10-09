@@ -1021,3 +1021,27 @@ Commit `672286b` (main) + deploy web gh-pages `6a7acb2` (live md5
   dipakai saat Owner/pengguna upgrade ke Program Pendukung (`SupporterScreen` /
   `SupporterService.checkout` -> dynamic QRIS via RCB gateway).
 - Verifikasi: `dart analyze` bersih; build web sukses; live md5 cocok.
+
+## Sesi 2026-10-08 (4): BATCH #4 Perbaikan Owner (SELESAI)
+Commit `731fb3b` (main) + deploy web gh-pages `d0e66bf`.
+- CORS EF PAYMENT GATEWAY (root cause Upgrade Pendukung "QRIS dinamis tidak muncul"):
+  preflight browser (OPTIONS) ke EF `rcb_create_charge` GAGAL ("No
+  'Access-Control-Allow-Origin'") -> `createQris` throw -> app diam-diam fallback ke
+  QRIS Statis. curl (server-side) berhasil, jadi tak terlihat sebelumnya.
+  Ditambah CORS ke 5 EF: `rcb_create_charge`, `rcb_check_status`, `create_payment`,
+  `save_payment_config`, `test_payment_connection` (pola sama `business_doctor_chat`).
+  Kelimanya SUDAH DI-DEPLOY (perbaikan live tanpa rebuild app).
+- SETTINGS (`settings_screen.dart`): menu "Hubungkan Midtrans (QRIS Dinamis)" dan
+  kartu "Konfigurasi Platform" (`_buildFinancialConfigCard`) DIHAPUS dari UI owner.
+  Import `midtrans_connect_screen.dart` + `settlement_service.dart` dibuang.
+- HAPUS OUTLET (multi-outlet): migrasi
+  `docs/migrations/2026-10-23-kasirgo-fix-delete-owner-outlet.sql` (DITERAPKAN).
+  RPC `delete_owner_outlet(p_outlet UUID)` SECURITY DEFINER: validasi owner/admin,
+  tolak outlet terakhir ("Minimal harus ada 1 outlet"), lepas FK
+  `affiliate_referrals.outlet_id` (NO ACTION -> SET NULL) lalu DELETE outlet
+  (sisanya CASCADE). `SupabaseService.deleteOwnerOutlet` + tombol hapus
+  (konfirmasi) di `multi_outlet_screen.dart` (hanya outlet non-aktif, bila >1).
+  Verifikasi REST: buat outlet `__DEL_TEST__` -> RPC hapus sukses -> baris hilang;
+  guard outlet terakhir balas `{success:false,"Minimal harus ada 1 outlet"}`.
+- Verifikasi: `flutter analyze` (3 file) bersih (hanya info pre-existing);
+  build web sukses; live md5 cocok.
