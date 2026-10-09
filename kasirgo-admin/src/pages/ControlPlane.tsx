@@ -2732,6 +2732,10 @@ function SquadDmTab() {
               <label className={labelCls}>Batas Budget Iklan Global / Hari</label>
               <input className={inputCls} type="number" value={v.budget_global_daily ?? ''} placeholder="0" onChange={(e) => set('budget_global_daily', Number(e.target.value))} />
             </div>
+            <div>
+              <label className={labelCls}>Target ROAS (pause otomatis bila di bawah)</label>
+              <input className={inputCls} type="number" step="0.1" value={v.roas_target ?? ''} placeholder="3" onChange={(e) => set('roas_target', Number(e.target.value))} />
+            </div>
             <div className="sm:col-span-2">
               <label className={labelCls}>Kata Terlarang (dipisah koma)</label>
               <input className={inputCls} value={(v.blocked_words ?? []).join(', ')} placeholder="judi, obat terlarang" onChange={(e) => set('blocked_words', e.target.value.split(',').map((s: string) => s.trim()).filter(Boolean))} />

@@ -1,6 +1,6 @@
 # PROGRESS PHASE 16 - Squad Digital Marketing AI
 
-STATUS: ST16-3 SELESAI. Berikutnya ST16-4.
+STATUS: ST16-4 SELESAI. PHASE 16 TUNTAS.
 Sumber spec: `KASIRGO-WORKFLOW-LENGKAP.md` BAGIAN 13.28 (+ 13.28.6 Superadmin Config LLM) + BAGIAN 15.
 
 ## Prinsip (WAJIB)
@@ -124,7 +124,7 @@ CATATAN ST16-3 (2026-10-26):
   PATCH -> `posted` 200, DELETE 204 (data uji dibersihkan). `dart analyze` 3 file bersih
   (info pre-existing saja).
 
-### ST16-4 Team Iklan + Hardening + Tes - BELUM
+### ST16-4 Team Iklan + Hardening + Tes - SELESAI
 - Campaign draft: Meta Ads, Google Ads, TikTok Ads, Shopee Ads (objective, geofence radius
   toko, budget harian, jadwal, creative dari `dm_assets`) -> approval WAJIB owner
   (addendum M) -> kirim via API bila connected, else checklist setting manual.
@@ -134,6 +134,54 @@ CATATAN ST16-3 (2026-10-26):
   ROAS < target, `audit_logs` semua aksi.
 - Uji end-to-end: brief -> asset -> post draft -> campaign draft -> approval; gating
   non-Pendukung; token tidak bocor; PROGRESS-PHASE16.md SELESAI. commit+push, STOP.
+
+CATATAN ST16-4 (2026-10-27):
+- Migrasi `docs/migrations/2026-10-27-kasirgo-16d-ads.sql` DITERAPKAN ke DB live:
+  - `dm_campaigns` +kolom `radius_km`, `approved_at`, `approved_by`, `paused_reason`.
+  - Config `digital_marketing_llm` +`roas_target` (default 3).
+  - RPC owner (SECURITY DEFINER): `dm_owner_guardrails(outlet)` (owner_daily_limit +
+    global_daily_cap + roas_target + committed_daily_budget; tanpa rahasia),
+    `dm_channel_status(outlet)` (status koneksi kanal TANPA token),
+    `dm_log_action(outlet, action, meta)` (tulis `audit_logs`, actor_role=owner).
+  - **HARDENING (token tidak bocor)**: policy `platform_configs` client SELECT kini
+    `USING (key NOT IN ('business_doctor','digital_marketing_llm'))`. Kredensial LLM
+    hanya dibaca service_role (EF) + superadmin. Verifikasi anon/owner: 2 kunci = 0 baris;
+    kunci non-rahasia (ads dll) tetap terbaca; `outlet_dm_configs`/`dm_channel_accounts`/
+    `audit_logs` owner = 0 baris.
+- App Flutter:
+  - `dm_service.dart`: `listCampaigns`, `saveCampaign`, `updateCampaign`,
+    `deleteCampaign`, `getGuardrails` (rpc), `getChannelStatus` (rpc), `logAction` (rpc).
+  - File BARU `screens/owner/ads_studio_screen.dart` (`AdsStudioScreen`): kartu Batas Aman
+    Iklan (budget owner/global/terpakai/ROAS target), mode tim Manual/Otomatis, tombol
+    "Buat Kampanye Iklan" (bottom sheet: platform/tujuan/kreatif/budget/radius slider/
+    jadwal), kartu kampanye (badge status DRAF/DISETUJUI/AKTIF/DIJEDA, chip ROAS/CTR/CPC/
+    belanja), aksi Setujui (approval wajib owner + cek guardrail budget) -> Aktifkan
+    (API bila kanal terhubung, else checklist setting manual + buka platform) -> Jeda/
+    Lanjutkan/Hapus + "Input Hasil" (form impressions/clicks/spend/revenue -> CTR/CPC/
+    ROAS auto; **pause otomatis** bila ROAS < target, semua aksi tercatat `audit_logs`).
+    Laporan iklan mingguan (belanja/omzet/ROAS + rekomendasi geser ~20% budget ke kanal
+    ROAS terbaik) + tombol "Tanya Dokter Bisnis".
+  - `business_doctor_screen.dart`: param baru `initialMessage` (auto-kirim saat dibuka) ->
+    rekomendasi iklan masuk ke chat Dokter Bisnis untuk analisa ROI online vs offline.
+  - Owner home: kartu "Studio Iklan" (`_pushGated('digital_marketing')`).
+- Admin: `ControlPlane.tsx` `SquadDmTab` + field "Target ROAS". `tsc -b && vite build`
+  sukses; dist dideploy ke gh-pages `/admin/`.
+- Verifikasi:
+  - Unit test `test/ads_metrics_test.dart` (computeAdMetrics) 3 test LULUS.
+  - `flutter analyze lib` 0 error (hanya info pre-existing).
+  - E2E REST (owner Warung Test): `dm_owner_guardrails` -> `{forbidden:false, roas_target:3, ...}`;
+    `dm_channel_status` -> `{accounts:[]}`; insert draf campaign 201 -> approve PATCH 204 ->
+    set metrics 204 -> `dm_log_action` success; baca balik status=approved + metrics tersimpan;
+    `audit_logs` berisi `dm.campaign.autopause` actor_role=owner. Non-owner -> `{forbidden:true}`.
+    Data uji (campaign) dibersihkan (204).
+  - Token tidak bocor (anon + owner): `business_doctor`/`digital_marketing_llm` = 0 baris;
+    `outlet_dm_configs`/`dm_channel_accounts`/`audit_logs` = 0 baris untuk owner.
+- Deploy: web gh-pages root + admin `/admin/` (push gh-pages `cd79287`).
+- BLOCKER eksisting (bukan kode): Channel QRIS Midtrans production belum aktif; beberapa
+  kanal social/ads belum terhubung -> jalur iklan otomatis memakai checklist manual
+  (jujur sesuai BAGIAN 13.28.5; billing ditanggung owner di platform iklan).
+- **PHASE 16 TUNTAS** (ST16-1 s.d. ST16-4). KasirGo kini punya "Tim Marketing Digital"
+  lengkap: Desain + Promosi + Iklan.
 
 ## CATATAN
 - Prasyarat: Phase 14 & 15 SELESAI.

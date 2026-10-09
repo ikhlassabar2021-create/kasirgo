@@ -202,6 +202,88 @@ class DmService {
     await _client.from('dm_posts').delete().eq('id', id);
   }
 
+  Future<List<Map<String, dynamic>>> listCampaigns(
+    String outletId, {
+    int limit = 100,
+  }) async {
+    final res = await _client
+        .from('dm_campaigns')
+        .select(
+            'id, outlet_id, asset_id, channel, objective, budget_daily, radius_km, start_date, end_date, status, external_id, metrics, paused_reason, created_at, dm_assets(title, kind, file_path)')
+        .eq('outlet_id', outletId)
+        .order('created_at', ascending: false)
+        .limit(limit);
+    return (res as List).cast<Map<String, dynamic>>();
+  }
+
+  Future<void> saveCampaign({
+    required String outletId,
+    required String channel,
+    String? assetId,
+    String? objective,
+    num budgetDaily = 0,
+    num radiusKm = 5,
+    DateTime? startDate,
+    DateTime? endDate,
+  }) async {
+    await _client.from('dm_campaigns').insert({
+      'outlet_id': outletId,
+      'channel': channel,
+      'asset_id': assetId,
+      'objective': objective,
+      'budget_daily': budgetDaily,
+      'radius_km': radiusKm,
+      'start_date': startDate?.toIso8601String().split('T').first,
+      'end_date': endDate?.toIso8601String().split('T').first,
+      'status': 'draft',
+      'metrics': <String, dynamic>{},
+    });
+  }
+
+  Future<void> updateCampaign(String id, Map<String, dynamic> patch) async {
+    await _client.from('dm_campaigns').update({
+      ...patch,
+      'updated_at': DateTime.now().toIso8601String(),
+    }).eq('id', id);
+  }
+
+  Future<void> deleteCampaign(String id) async {
+    await _client.from('dm_campaigns').delete().eq('id', id);
+  }
+
+  /// Guardrail iklan: batas budget owner + batas global + target ROAS.
+  Future<Map<String, dynamic>> getGuardrails(String outletId) async {
+    final res =
+        await _client.rpc('dm_owner_guardrails', params: {'p_outlet': outletId});
+    if (res is Map) return res.cast<String, dynamic>();
+    return <String, dynamic>{};
+  }
+
+  /// Status koneksi kanal (tanpa token).
+  Future<List<Map<String, dynamic>>> getChannelStatus(String outletId) async {
+    final res =
+        await _client.rpc('dm_channel_status', params: {'p_outlet': outletId});
+    if (res is Map && res['accounts'] is List) {
+      return (res['accounts'] as List).cast<Map<String, dynamic>>();
+    }
+    return const [];
+  }
+
+  /// Catat aksi iklan ke audit_logs (via RPC SECURITY DEFINER).
+  Future<void> logAction(
+    String outletId,
+    String action,
+    Map<String, dynamic> meta,
+  ) async {
+    try {
+      await _client.rpc('dm_log_action', params: {
+        'p_outlet': outletId,
+        'p_action': action,
+        'p_meta': meta,
+      });
+    } catch (_) {}
+  }
+
   Future<List<int>> suggestBestHours(String outletId) async {
     try {
       final txs = await SupabaseService().getTransactions(outletId, limit: 200);

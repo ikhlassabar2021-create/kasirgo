@@ -278,6 +278,15 @@ Status: SELESAI. Project Supabase sudah dibuat dan schema terpasang serta diuji.
   (15A ST15-1 Master Prompt + Daftar Skill SELESAI; 15B ST15-2 Bos Virtual Analitik SELESAI;
   15C ST15-3 Bos Virtual Growth SELESAI; 15D ST15-4 Addendum L-O + Hardening SELESAI.
   PHASE 15 SELESAI. Detail: `PROGRESS-PHASE15.md`.)
+- [x] Phase 16: Squad Digital Marketing AI (Team Desain + Promosi + Iklan)
+  (ST16-1 fondasi (7 tabel dm_* + RPC admin + EF `dm_creative` + tab superadmin);
+  ST16-2 Studio Desain (copy/gambar/video); ST16-3 Studio Promosi (kalender + posting);
+  ST16-4 Studio Iklan (campaign draft Meta/Google/TikTok/Shopee -> approval owner ->
+  ROAS/CTR/CPC + pause otomatis ROAS<target + audit_logs + rekomendasi ke Dokter Bisnis)
+  + HARDENING: `platform_configs` client SELECT tidak lagi memaparkan kredensial LLM
+  (`business_doctor`/`digital_marketing_llm`) - hanya service_role + superadmin.
+  Migrasi `docs/migrations/2026-10-27-kasirgo-16d-ads.sql`. PHASE 16 SELESAI.
+  Detail: `PROGRESS-PHASE16.md`.)
 
 Catatan: Phase 7.6 adalah redesign visual menyeluruh (semua dashboard + fitur Produk/Pelanggan/
 Karyawan/Laporan/Pengaturan) tanpa mengubah fitur/logic. Spec: workflow Bagian 1.6 & 7C.

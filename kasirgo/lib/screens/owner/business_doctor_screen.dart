@@ -27,10 +27,15 @@ import 'report_screen.dart';
 import 'whatsapp_broadcast_screen.dart';
 
 class BusinessDoctorScreen extends ConsumerStatefulWidget {
-  const BusinessDoctorScreen({super.key, this.service, this.conversationId});
+  const BusinessDoctorScreen(
+      {super.key, this.service, this.conversationId, this.initialMessage});
 
   final BusinessDoctorService? service;
   final String? conversationId;
+
+  /// Bila diisi, pesan otomatis dikirim saat layar dibuka (mis. rekomendasi
+  /// iklan dari Studio Iklan).
+  final String? initialMessage;
 
   @override
   ConsumerState<BusinessDoctorScreen> createState() =>
@@ -97,6 +102,10 @@ class _BusinessDoctorScreenState extends ConsumerState<BusinessDoctorScreen> {
     _loadWeeklyReport();
     _loadPendingActions();
     if (_conversationId != null) _loadHistory();
+    final initial = widget.initialMessage?.trim();
+    if (initial != null && initial.isNotEmpty) {
+      WidgetsBinding.instance.addPostFrameCallback((_) => _send(initial));
+    }
   }
 
   Future<void> _loadIdentity() async {

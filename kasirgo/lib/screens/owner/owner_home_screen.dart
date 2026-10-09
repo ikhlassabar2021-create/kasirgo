@@ -27,6 +27,7 @@ import 'affiliate_owner_screen.dart';
 import 'health_score_screen.dart';
 import 'business_doctor_screen.dart';
 import 'bundle_manager_screen.dart';
+import 'ads_studio_screen.dart';
 import 'design_studio_screen.dart';
 import 'promotion_screen.dart';
 import '../../services/business_doctor_service.dart';
@@ -912,6 +913,18 @@ class _OwnerHomeScreenState extends ConsumerState<OwnerHomeScreen> {
         onTap: () => _pushGated(
             'digital_marketing', const PromotionScreen(),
             title: 'Studio Promosi'),
+      ),
+    );
+
+    quickActionItems.add(
+      _ModuleCard(
+        icon: Icons.ads_click_rounded,
+        title: 'Studio Iklan',
+        subtitle: 'Iklan berbayar & ROAS',
+        color: const Color(0xFF0EA5E9),
+        onTap: () => _pushGated(
+            'digital_marketing', const AdsStudioScreen(),
+            title: 'Studio Iklan'),
       ),
     );
 
