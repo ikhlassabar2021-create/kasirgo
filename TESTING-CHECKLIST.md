@@ -185,3 +185,16 @@ Owner:
 - [ ] B2-7: "Coba Trial Gratis" (di layar kunci/gate maupun di SupporterScreen) → trial aktif, semua fitur premium terbuka.
 
 Catatan gelar: Toko Test & Warung Test masih trial aktif → untuk uji paywall pakai **Gerobak Test** (expired).
+
+---
+
+## BATCH #3 (2026-10-08) — RE-TEST
+Commit `672286b` (main) / web gh-pages `6a7acb2`. Fokus: KYC submit, login wording, X hapus produk, resep, QRIS dinamis otomatis.
+
+Owner:
+- [ ] B3-1: submit KYC outlet baru (belum verified) → BERHASIL (`status=verified`, `auto_verified=true`); tidak lagi "Verifikasi gagal".
+- [ ] B3-2: login email belum dikonfirmasi → pesan "Email harus dikonfirmasi dulu. Silakan cek email Anda (kotak masuk / folder spam) untuk tautan konfirmasi."
+- [ ] B3-3: dialog Hapus Produk → tombol X di ujung kanan.
+- [ ] B3-4: resep → "Tandai Selesai" langsung mencoret langkah (kartu aktif, gelembung chat, layar Hasil Diagnosa).
+- [ ] B3-5: resep langkah cross_sell → "Jalankan" membuka POS (chip saran upsell), bukan Paket Bundling.
+- [ ] B3-6: checkout QRIS outlet Pendukung/trial → otomatis mode Dinamis (banner "QRIS Dinamis aktif"); outlet tanpa akses → Statis.

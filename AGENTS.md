@@ -989,3 +989,35 @@ Commit `7d57a00` (main) + deploy web gh-pages `680c199`.
   DINAMIS otomatis (`SupporterService.checkout` -> `PaymentService.createQris`).
 - Verifikasi: `dart analyze lib` 0 error (hanya info pre-existing); bundle web memuat
   string fitur baru; live: https://ikhlassabar2021-create.github.io/kasirgo/
+
+## Sesi 2026-10-08 (3): BATCH #3 Perbaikan Owner (SELESAI)
+Commit `672286b` (main) + deploy web gh-pages `6a7acb2` (live md5
+`ce1470a11106657969c09c21a2f18c9d`).
+- KYC "VERIFIKASI GAGAL" (BACKEND, root cause): migrasi
+  `2026-10-22-kasirgo-fix-submit-kyc-columns.sql` (DITERAPKAN). `submit_kyc()` dari
+  migrasi `2026-10-21-kasirgo-fix-kyc-nik-year.sql` menulis kolom yang TIDAK ADA di
+  `outlet_kyc` (`phone_digits` + `submitted_at`) -> setiap submit outlet non-verified
+  melempar `42703 undefined_column` = "Gagal mengirim verifikasi". Fungsi ditulis ulang
+  memakai kolom benar (`phone`, `auto_verified`, `verified_at`) + AUTO-VERIFY
+  (`v_all_ok -> status 'verified' & auto_verified=true`), perbaikan NIK 2-digit
+  dipertahankan. E2E REST (owner affiliate) LULUS: `{status:verified, auto_verified:true}`
+  + baris tersimpan. Data uji dibersihkan.
+- LOGIN (`login_screen.dart`): wording email belum dikonfirmasi diperjelas
+  ("Email harus dikonfirmasi dulu. Silakan cek email Anda (kotak masuk / folder spam)
+  untuk tautan konfirmasi.").
+- DIALOG HAPUS PRODUK (`product_list_screen.dart`): `titlePadding` kanan 8 + tooltip
+  "Tutup" -> tombol X di ujung kanan (mengikuti dialog Tambah Pelanggan).
+- RESEP "TANDAI SELESAI" (`business_doctor_screen.dart`/`doctor_result_screen.dart`):
+  - `_markPrescriptionDone` kini sinkronkan kartu resep di gelembung chat (match
+    `memory_id`/referensi) agar langkah langsung tercoret, bukan hanya kartu atas.
+  - `DoctorResultScreen` StatelessWidget -> Stateful; salin `_steps` lokal, tombol
+    Jalankan/Tandai Selesai memutasi state lokal (langsung strikethrough) lalu panggil
+    callback parent.
+- RESEP "JALANKAN" cross_sell (`business_doctor_screen.dart`): action_key `cross_sell`
+  kini membuka `PosScreen` (chip saran upsell saat bayar), bukan `BundleManagerScreen`
+  (bundling sudah punya action_key sendiri).
+- QRIS DINAMIS OTOMATIS (`checkout_dialog.dart`): setelah FIX #11 (dinamis disembunyikan
+  dari semua login), `_loadQrisConfig` kini resolve `_qrisMode` dari
+  `hasFeature('payment_gateway')` -> outlet Pendukung/trial otomatis mode `dynamic`
+  (charge QRIS terverifikasi webhook); tanpa akses tetap `static`. Banner mode informatif.
+- Verifikasi: `dart analyze` 5 file bersih; build web sukses; live md5 cocok.
