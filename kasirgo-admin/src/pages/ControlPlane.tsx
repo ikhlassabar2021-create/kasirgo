@@ -53,6 +53,13 @@ import {
   listOutletAiConfigs,
   setOutletAiConfig,
   deleteOutletAiConfig,
+  listOutletDmConfigs,
+  setOutletDmConfig,
+  deleteOutletDmConfig,
+  testDmProvider,
+  listDmChannelAccounts,
+  setDmChannelAccount,
+  deleteDmChannelAccount,
 } from '../lib/controlPlane';
 import type {
   ConfigKey,
@@ -63,6 +70,8 @@ import type {
   PendingSupporter,
   OutletPgConfig,
   OutletAiConfig,
+  OutletDmConfig,
+  DmChannelAccount,
 } from '../lib/controlPlane';
 import { supabase } from '../config/supabase';
 import { rp as supabaseRpc, platformOutletsList, UsersListResult } from '../lib/adminApi';
@@ -72,6 +81,7 @@ type TabId =
   | 'guide'
   | 'financial'
   | 'doctor'
+  | 'squad_dm'
   | 'ppob'
   | 'b2b'
   | 'modal_usaha'
@@ -93,6 +103,7 @@ const TABS: { id: TabId; name: string; icon: any }[] = [
   { id: 'guide', name: 'Panduan', icon: BookOpen },
   { id: 'financial', name: 'Payment Gateway', icon: Coins },
   { id: 'doctor', name: 'Dokter Bisnis AI', icon: Stethoscope },
+  { id: 'squad_dm', name: 'Squad Digital Marketing', icon: ImagePlus },
   { id: 'ppob', name: 'PPOB', icon: Wallet },
   { id: 'b2b', name: 'B2B Kulakan', icon: Truck },
   { id: 'modal_usaha', name: 'Modal Usaha', icon: Store },
@@ -2564,6 +2575,407 @@ function DoctorTab() {
 }
 
 // ===========================================================================
+const DM_CHANNELS: { key: string; label: string }[] = [
+  { key: 'fb', label: 'Facebook Page' },
+  { key: 'fb_group', label: 'Grup Facebook' },
+  { key: 'ig', label: 'Instagram' },
+  { key: 'tiktok', label: 'TikTok' },
+  { key: 'shopee', label: 'Shopee' },
+  { key: 'meta_ads', label: 'Meta Ads' },
+  { key: 'google_ads', label: 'Google Ads' },
+  { key: 'tiktok_ads', label: 'TikTok Ads' },
+  { key: 'shopee_ads', label: 'Shopee Ads' },
+];
+
+function SquadDmTab() {
+  const [v, setV] = useState<any>({});
+  const [loading, setLoading] = useState(false);
+  const [probing, setProbing] = useState(false);
+  const [probe, setProbe] = useState<string | null>(null);
+  const [outlets, setOutlets] = useState<{ outlet_id: string; outlet_name: string | null }[]>([]);
+  const [dmConfigs, setDmConfigs] = useState<OutletDmConfig[]>([]);
+  const [editOutlet, setEditOutlet] = useState('');
+  const [dmForm, setDmForm] = useState<Record<string, any>>({});
+  const [dmBusy, setDmBusy] = useState(false);
+  const [accounts, setAccounts] = useState<DmChannelAccount[]>([]);
+  const [accOutlet, setAccOutlet] = useState('');
+  const [accChannel, setAccChannel] = useState('fb');
+  const [accName, setAccName] = useState('');
+  const [accExternal, setAccExternal] = useState('');
+  const [accToken, setAccToken] = useState('');
+  const [accBusy, setAccBusy] = useState(false);
+  const { msg, show } = useToast();
+
+  useEffect(() => {
+    loadConfig('digital_marketing_llm').then((d) => setV(d ?? {})).catch(() => {});
+    platformOutletsList({ p_kyc: 'all', p_plan: 'all', p_limit: 200, p_offset: 0 })
+      .then((r) => {
+        const rows = (r?.rows ?? []).map((o) => ({ outlet_id: o.outlet_id, outlet_name: o.outlet_name }));
+        setOutlets(rows);
+        if (rows[0]) { setEditOutlet(''); setAccOutlet(rows[0].outlet_id); }
+      })
+      .catch(() => {});
+    listOutletDmConfigs().then(setDmConfigs).catch(() => {});
+    listDmChannelAccounts().then(setAccounts).catch(() => {});
+  }, []);
+
+  const refreshDmConfigs = () => listOutletDmConfigs().then(setDmConfigs).catch(() => {});
+  const refreshAccounts = () => listDmChannelAccounts().then(setAccounts).catch(() => {});
+
+  const set = (k: string, val: any) => setV((prev: any) => ({ ...prev, [k]: val }));
+  const pd = v.provider_default ?? {};
+  const setPd = (k: string, val: any) => set('provider_default', { ...pd, [k]: val });
+  const rl = v.rate_limit ?? {};
+  const setRl = (k: string, val: any) => set('rate_limit', { ...rl, [k]: val });
+
+  const save = async () => {
+    setLoading(true);
+    try {
+      await saveConfig('digital_marketing_llm', v);
+      show('ok', 'Konfigurasi Squad Digital Marketing disimpan.');
+    } catch (e: any) { show('err', e.message); } finally { setLoading(false); }
+  };
+
+  const probeProvider = async () => {
+    setProbing(true);
+    setProbe(null);
+    try {
+      const r = await testDmProvider(pd);
+      setProbe(`${r.ok ? 'OK' : 'GAGAL'}: ${r.message}${r.sample ? ` (contoh: ${r.sample})` : ''}`);
+      show(r.ok ? 'ok' : 'err', r.ok ? 'Provider terhubung.' : 'Provider gagal.');
+    } catch (e: any) { setProbe(e.message); show('err', e.message); } finally { setProbing(false); }
+  };
+
+  const openDmEdit = (o: OutletDmConfig) => {
+    setEditOutlet(o.outlet_id);
+    setDmForm({
+      provider: o.provider ?? '',
+      base_url: o.base_url ?? '',
+      model: o.model ?? '',
+      temperature: o.temperature ?? 0.7,
+      max_tokens: o.max_tokens ?? 4000,
+      is_active: o.is_active,
+      unlimited_tokens: o.unlimited_tokens ?? false,
+      token_quota: o.token_quota ?? '',
+      api_key: '',
+    });
+  };
+
+  const saveDm = async () => {
+    if (!editOutlet) { show('err', 'Pilih outlet dulu.'); return; }
+    setDmBusy(true);
+    try {
+      await setOutletDmConfig(editOutlet, dmForm);
+      await refreshDmConfigs();
+      show('ok', 'Override provider DM disimpan.');
+      setEditOutlet('');
+    } catch (e: any) { show('err', e.message); } finally { setDmBusy(false); }
+  };
+
+  const clearDm = async (outletId: string) => {
+    setDmBusy(true);
+    try {
+      await deleteOutletDmConfig(outletId);
+      await refreshDmConfigs();
+      show('ok', 'Override dihapus (kembali ke provider global).');
+    } catch (e: any) { show('err', e.message); } finally { setDmBusy(false); }
+  };
+
+  const saveAccount = async () => {
+    if (!accOutlet) { show('err', 'Pilih outlet dulu.'); return; }
+    setAccBusy(true);
+    try {
+      await setDmChannelAccount(accOutlet, accChannel, {
+        account_name: accName || null,
+        external_id: accExternal || null,
+        token: accToken || null,
+        connected: true,
+      });
+      await refreshAccounts();
+      setAccName(''); setAccExternal(''); setAccToken('');
+      show('ok', 'Akun kanal tersimpan (token terenkripsi di server).');
+    } catch (e: any) { show('err', e.message); } finally { setAccBusy(false); }
+  };
+
+  const clearAccount = async (outletId: string, channel: string) => {
+    setAccBusy(true);
+    try {
+      await deleteDmChannelAccount(outletId, channel);
+      await refreshAccounts();
+      show('ok', 'Akun kanal dihapus.');
+    } catch (e: any) { show('err', e.message); } finally { setAccBusy(false); }
+  };
+
+  const channelLabel = (k: string) => DM_CHANNELS.find((c) => c.key === k)?.label ?? k;
+
+  return (
+    <div className="space-y-3.5">
+      <Card title="Squad Digital Marketing AI" subtitle="Otak AI global untuk tim Desain, Promosi & Iklan. Semua tanpa ubah koding.">
+        <div className="max-w-[760px] space-y-3.5">
+          <label className="flex items-center gap-2 text-xs font-semibold text-slate-600">
+            <input type="checkbox" checked={!!v.aktif} onChange={(e) => set('aktif', e.target.checked)} />
+            Aktifkan Squad Digital Marketing AI untuk semua outlet
+          </label>
+          <div>
+            <label className={labelCls}>Mode Konfigurasi</label>
+            <select className={inputCls} value={v.mode ?? 'central'} onChange={(e) => set('mode', e.target.value)}>
+              <option value="central">Terpusat (satu provider untuk semua)</option>
+              <option value="per_outlet">Per Outlet (override per outlet)</option>
+            </select>
+          </div>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div>
+              <label className={labelCls}>Kuota Aset / Bulan (per outlet)</label>
+              <input className={inputCls} type="number" value={v.asset_quota_per_month ?? ''} placeholder="60" onChange={(e) => set('asset_quota_per_month', Number(e.target.value))} />
+            </div>
+            <div>
+              <label className={labelCls}>Batas Budget Iklan Global / Hari</label>
+              <input className={inputCls} type="number" value={v.budget_global_daily ?? ''} placeholder="0" onChange={(e) => set('budget_global_daily', Number(e.target.value))} />
+            </div>
+            <div className="sm:col-span-2">
+              <label className={labelCls}>Kata Terlarang (dipisah koma)</label>
+              <input className={inputCls} value={(v.blocked_words ?? []).join(', ')} placeholder="judi, obat terlarang" onChange={(e) => set('blocked_words', e.target.value.split(',').map((s: string) => s.trim()).filter(Boolean))} />
+            </div>
+            <div className="sm:col-span-2">
+              <label className={labelCls}>Watermark Default</label>
+              <input className={inputCls} value={v.watermark_default ?? ''} placeholder="Nama toko / logo" onChange={(e) => set('watermark_default', e.target.value)} />
+            </div>
+          </div>
+
+          <div className="pt-2 border-t border-slate-100">
+            <p className="text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-2">Batas Pemakaian Harian (per outlet)</p>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div>
+                <label className={labelCls}>Maks Aset / Hari</label>
+                <input className={inputCls} type="number" value={rl.assets_per_day ?? ''} placeholder="20" onChange={(e) => setRl('assets_per_day', Number(e.target.value))} />
+              </div>
+              <div>
+                <label className={labelCls}>Maks Token / Hari</label>
+                <input className={inputCls} type="number" value={rl.tokens_per_day ?? ''} placeholder="150000" onChange={(e) => setRl('tokens_per_day', Number(e.target.value))} />
+              </div>
+            </div>
+          </div>
+
+          <div className="pt-2 border-t border-slate-100">
+            <p className="text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-2">Provider Default</p>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div className="sm:col-span-2">
+                <label className={labelCls}>Base URL</label>
+                <input className={inputCls} value={pd.base_url ?? ''} placeholder="https://api.deepseek.com/v1" onChange={(e) => setPd('base_url', e.target.value)} />
+              </div>
+              <div className="sm:col-span-2">
+                <label className={labelCls}>API Key</label>
+                <input className={inputCls} type="password" value={pd.api_key ?? ''} placeholder="sk-..." onChange={(e) => setPd('api_key', e.target.value)} />
+                <p className="text-[11px] text-slate-400 mt-1">Hanya disimpan di server (Edge Function). Tidak pernah dikirim ke aplikasi.</p>
+              </div>
+              <div>
+                <label className={labelCls}>Model</label>
+                <input className={inputCls} value={pd.model ?? ''} placeholder="deepseek-chat" onChange={(e) => setPd('model', e.target.value)} />
+              </div>
+              <div>
+                <label className={labelCls}>Temperature</label>
+                <input className={inputCls} type="number" step="0.1" value={pd.temperature ?? ''} onChange={(e) => setPd('temperature', Number(e.target.value))} />
+              </div>
+              <div>
+                <label className={labelCls}>Maks Token</label>
+                <input className={inputCls} type="number" value={pd.max_tokens ?? ''} onChange={(e) => setPd('max_tokens', Number(e.target.value))} />
+              </div>
+            </div>
+          </div>
+
+          <div className="flex flex-wrap items-center gap-2">
+            <SaveButton loading={loading} onClick={save} />
+            <button
+              onClick={probeProvider}
+              disabled={probing}
+              className="flex items-center gap-2 px-4 py-2.5 rounded-xl font-semibold text-xs border border-slate-200 bg-white hover:bg-slate-50 text-slate-700 transition"
+            >
+              {probing ? <RefreshCw className="w-4 h-4 animate-spin" /> : <Zap className="w-4 h-4" />}
+              Tes Koneksi Provider
+            </button>
+          </div>
+          {probe && <p className="text-[11px] text-slate-600 bg-slate-50 border border-slate-200 rounded-lg px-3 py-2">{probe}</p>}
+        </div>
+        <Toast msg={msg} />
+      </Card>
+
+      <Card title="Override Provider per Outlet" subtitle="Ganti provider LLM untuk outlet tertentu. Kunci hanya disimpan di server, tidak pernah ditampilkan kembali.">
+        <div className="space-y-3">
+          <div className="overflow-x-auto">
+            <table className="w-full text-xs">
+              <thead>
+                <tr className="text-left text-slate-500 border-b border-slate-200">
+                  <th className="py-2 pr-3 font-semibold">Outlet</th>
+                  <th className="py-2 pr-3 font-semibold">Override</th>
+                  <th className="py-2 pr-3 font-semibold">Status</th>
+                  <th className="py-2 pr-3 font-semibold">Kunci</th>
+                  <th className="py-2 pr-3 font-semibold">Kuota</th>
+                  <th className="py-2 font-semibold">Aksi</th>
+                </tr>
+              </thead>
+              <tbody>
+                {dmConfigs.map((o) => (
+                  <tr key={o.outlet_id} className="border-b border-slate-100">
+                    <td className="py-2 pr-3 text-slate-800">{o.outlet_name ?? o.outlet_id}</td>
+                    <td className="py-2 pr-3 text-slate-600">{o.has_config ? (o.model ?? o.provider ?? '-') : '-'}</td>
+                    <td className="py-2 pr-3">
+                      {o.has_config ? (
+                        <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${o.is_active ? 'bg-emerald-50 text-emerald-700 border border-emerald-200' : 'bg-slate-100 text-slate-500 border border-slate-200'}`}>
+                          {o.is_active ? 'Aktif' : 'Nonaktif'}
+                        </span>
+                      ) : <span className="text-slate-400">Global</span>}
+                    </td>
+                    <td className="py-2 pr-3 text-slate-500">{o.has_api_key ? 'Tersimpan' : '-'}</td>
+                    <td className="py-2 pr-3 text-slate-500">
+                      {o.unlimited_tokens ? 'Unlimited' : (o.token_quota ? o.token_quota.toLocaleString('id-ID') : 'Global')}
+                    </td>
+                    <td className="py-2">
+                      <div className="flex gap-2">
+                        <button onClick={() => openDmEdit(o)} className="px-2.5 py-1 rounded-lg text-[11px] font-semibold border border-slate-200 bg-white hover:bg-slate-50 text-slate-700">Atur</button>
+                        {o.has_config && (
+                          <button onClick={() => clearDm(o.outlet_id)} disabled={dmBusy} className="px-2.5 py-1 rounded-lg text-[11px] font-semibold border border-red-200 bg-red-50 hover:bg-red-100 text-red-600">Hapus</button>
+                        )}
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+                {dmConfigs.length === 0 && (
+                  <tr><td colSpan={6} className="py-3 text-center text-slate-400">Memuat data outlet...</td></tr>
+                )}
+              </tbody>
+            </table>
+          </div>
+
+          {editOutlet && (
+            <div className="pt-2 border-t border-slate-100 max-w-[760px] space-y-3">
+              <p className="text-[11px] font-bold text-slate-500 uppercase tracking-wider">
+                Atur Override: {dmConfigs.find((o) => o.outlet_id === editOutlet)?.outlet_name ?? editOutlet}
+              </p>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div className="sm:col-span-2">
+                  <label className={labelCls}>Base URL</label>
+                  <input className={inputCls} value={dmForm.base_url ?? ''} placeholder="https://api.deepseek.com/v1" onChange={(e) => setDmForm({ ...dmForm, base_url: e.target.value })} />
+                </div>
+                <div className="sm:col-span-2">
+                  <label className={labelCls}>API Key</label>
+                  <input className={inputCls} type="password" value={dmForm.api_key ?? ''} placeholder="Kosongkan bila tidak diubah" onChange={(e) => setDmForm({ ...dmForm, api_key: e.target.value })} />
+                </div>
+                <div>
+                  <label className={labelCls}>Model</label>
+                  <input className={inputCls} value={dmForm.model ?? ''} placeholder="deepseek-chat" onChange={(e) => setDmForm({ ...dmForm, model: e.target.value })} />
+                </div>
+                <div>
+                  <label className={labelCls}>Maks Token</label>
+                  <input className={inputCls} type="number" value={dmForm.max_tokens ?? ''} onChange={(e) => setDmForm({ ...dmForm, max_tokens: Number(e.target.value) })} />
+                </div>
+              </div>
+              <label className="flex items-center gap-2 text-xs font-semibold text-slate-600">
+                <input type="checkbox" checked={!!dmForm.is_active} onChange={(e) => setDmForm({ ...dmForm, is_active: e.target.checked })} />
+                Gunakan override ini untuk outlet tersebut
+              </label>
+              <label className="flex items-center gap-2 text-xs font-semibold text-slate-600">
+                <input type="checkbox" checked={!!dmForm.unlimited_tokens} onChange={(e) => setDmForm({ ...dmForm, unlimited_tokens: e.target.checked })} />
+                Unlimited token (lewati kuota; tetap dicatat)
+              </label>
+              {!dmForm.unlimited_tokens && (
+                <div className="max-w-[240px]">
+                  <label className={labelCls}>Kuota Token / Hari (kosong = global)</label>
+                  <input className={inputCls} type="number" value={dmForm.token_quota ?? ''} placeholder="mis. 150000" onChange={(e) => setDmForm({ ...dmForm, token_quota: e.target.value })} />
+                </div>
+              )}
+              <div className="flex flex-wrap gap-2">
+                <button onClick={saveDm} disabled={dmBusy} className="flex items-center gap-2 px-4 py-2.5 rounded-xl font-semibold text-xs bg-gradient-to-r from-cyan-500 to-sky-600 hover:from-cyan-600 hover:to-sky-700 text-white shadow-md shadow-sky-500/25 transition active:scale-95">
+                  {dmBusy ? <RefreshCw className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
+                  Simpan Override
+                </button>
+                <button onClick={() => setEditOutlet('')} className="px-4 py-2.5 rounded-xl font-semibold text-xs border border-slate-200 bg-white hover:bg-slate-50 text-slate-700">Batal</button>
+              </div>
+            </div>
+          )}
+        </div>
+      </Card>
+
+      <Card title="Akun Kanal Sosial & Iklan" subtitle="Hubungkan akun Facebook/Instagram/TikTok/Shopee/Ads per outlet. Token akses disimpan terenkripsi di server dan tidak pernah ditampilkan kembali.">
+        <div className="space-y-3">
+          <div className="overflow-x-auto">
+            <table className="w-full text-xs">
+              <thead>
+                <tr className="text-left text-slate-500 border-b border-slate-200">
+                  <th className="py-2 pr-3 font-semibold">Outlet</th>
+                  <th className="py-2 pr-3 font-semibold">Kanal</th>
+                  <th className="py-2 pr-3 font-semibold">Akun</th>
+                  <th className="py-2 pr-3 font-semibold">ID Eksternal</th>
+                  <th className="py-2 pr-3 font-semibold">Token</th>
+                  <th className="py-2 pr-3 font-semibold">Status</th>
+                  <th className="py-2 font-semibold">Aksi</th>
+                </tr>
+              </thead>
+              <tbody>
+                {accounts.map((a) => (
+                  <tr key={`${a.outlet_id}-${a.channel}`} className="border-b border-slate-100">
+                    <td className="py-2 pr-3 text-slate-800">{a.outlet_name ?? a.outlet_id}</td>
+                    <td className="py-2 pr-3 text-slate-600">{channelLabel(a.channel)}</td>
+                    <td className="py-2 pr-3 text-slate-600">{a.account_name ?? '-'}</td>
+                    <td className="py-2 pr-3 text-slate-500">{a.external_id ?? '-'}</td>
+                    <td className="py-2 pr-3 text-slate-500">{a.has_token ? 'Tersimpan' : '-'}</td>
+                    <td className="py-2 pr-3">
+                      <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${a.is_connected ? 'bg-emerald-50 text-emerald-700 border border-emerald-200' : 'bg-slate-100 text-slate-500 border border-slate-200'}`}>
+                        {a.is_connected ? 'Terhubung' : 'Terputus'}
+                      </span>
+                    </td>
+                    <td className="py-2">
+                      <button onClick={() => clearAccount(a.outlet_id, a.channel)} disabled={accBusy} className="px-2.5 py-1 rounded-lg text-[11px] font-semibold border border-red-200 bg-red-50 hover:bg-red-100 text-red-600">Hapus</button>
+                    </td>
+                  </tr>
+                ))}
+                {accounts.length === 0 && (
+                  <tr><td colSpan={7} className="py-3 text-center text-slate-400">Belum ada akun kanal terhubung.</td></tr>
+                )}
+              </tbody>
+            </table>
+          </div>
+
+          <div className="pt-2 border-t border-slate-100 max-w-[760px] space-y-3">
+            <p className="text-[11px] font-bold text-slate-500 uppercase tracking-wider">Hubungkan Akun Kanal</p>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div>
+                <label className={labelCls}>Outlet</label>
+                <select className={inputCls} value={accOutlet} onChange={(e) => setAccOutlet(e.target.value)}>
+                  {outlets.map((o) => <option key={o.outlet_id} value={o.outlet_id}>{o.outlet_name ?? o.outlet_id}</option>)}
+                </select>
+              </div>
+              <div>
+                <label className={labelCls}>Kanal</label>
+                <select className={inputCls} value={accChannel} onChange={(e) => setAccChannel(e.target.value)}>
+                  {DM_CHANNELS.map((c) => <option key={c.key} value={c.key}>{c.label}</option>)}
+                </select>
+              </div>
+              <div>
+                <label className={labelCls}>Nama Akun</label>
+                <input className={inputCls} value={accName} placeholder="mis. Toko Test Official" onChange={(e) => setAccName(e.target.value)} />
+              </div>
+              <div>
+                <label className={labelCls}>ID Eksternal</label>
+                <input className={inputCls} value={accExternal} placeholder="Page ID / Ad Account ID" onChange={(e) => setAccExternal(e.target.value)} />
+              </div>
+              <div className="sm:col-span-2">
+                <label className={labelCls}>Token Akses</label>
+                <input className={inputCls} type="password" value={accToken} placeholder="Kosongkan bila tidak diubah" onChange={(e) => setAccToken(e.target.value)} />
+                <p className="text-[11px] text-slate-400 mt-1">Token hanya disimpan di server (terenkripsi). Owner tidak dapat melihatnya.</p>
+              </div>
+            </div>
+            <button onClick={saveAccount} disabled={accBusy} className="flex items-center gap-2 px-4 py-2.5 rounded-xl font-semibold text-xs bg-gradient-to-r from-cyan-500 to-sky-600 hover:from-cyan-600 hover:to-sky-700 text-white shadow-md shadow-sky-500/25 transition active:scale-95">
+              {accBusy ? <RefreshCw className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
+              Simpan Akun Kanal
+            </button>
+          </div>
+        </div>
+      </Card>
+    </div>
+  );
+}
+
+// ===========================================================================
 export function ControlPlanePage() {
   const [activeId, setActiveId] = useState<TabId>('ads');
   const [warning] = useState<string | null>(null);
@@ -2622,6 +3034,7 @@ export function ControlPlanePage() {
           {activeId === 'guide' && <GuideTab />}
           {activeId === 'financial' && <FinancialTab />}
           {activeId === 'doctor' && <DoctorTab />}
+          {activeId === 'squad_dm' && <SquadDmTab />}
           {activeId === 'report' && <StructuredConfigTab configKey="report" title="Laporan Otomatis" subtitle="Template, jadwal default, kanal, batas penerima, dan visibilitas laporan finansial." fields={[
             { key: 'default_period', label: 'Periode Default', type: 'text', options: ['daily', 'weekly', 'monthly'] },
             { key: 'default_time', label: 'Jam Default', type: 'text', placeholder: '21:00' },

@@ -14,6 +14,7 @@ export type ConfigKey =
   | 'affiliate'
   | 'system'
   | 'business_doctor'
+  | 'digital_marketing_llm'
 
 export interface PlatformConfig {
   id?: string
@@ -472,6 +473,104 @@ export async function setOutletAiConfig(outletId: string, config: Record<string,
 export async function deleteOutletAiConfig(outletId: string) {
   const { data, error } = await supabase.rpc('admin_delete_outlet_ai_config', {
     p_outlet: outletId,
+  })
+  if (error) throw error
+  if (data?.forbidden) throw new Error('Akses ditolak.')
+  return data
+}
+
+// ---------------------------------------------------------------------------
+// Squad Digital Marketing AI (ST16-1): config LLM + akun kanal
+// ---------------------------------------------------------------------------
+export interface OutletDmConfig {
+  outlet_id: string
+  outlet_name: string | null
+  has_config: boolean
+  is_active: boolean
+  provider: string | null
+  base_url: string | null
+  model: string | null
+  temperature: number | null
+  max_tokens: number | null
+  unlimited_tokens: boolean
+  token_quota: number | null
+  has_api_key: boolean
+  last_tested_at: string | null
+  last_test_result: string | null
+}
+
+export async function listOutletDmConfigs(): Promise<OutletDmConfig[]> {
+  const { data, error } = await supabase.rpc('admin_list_outlet_dm_configs')
+  if (error) throw error
+  return (data ?? []) as OutletDmConfig[]
+}
+
+export async function setOutletDmConfig(outletId: string, config: Record<string, any>) {
+  const { data, error } = await supabase.rpc('admin_set_outlet_dm_config', {
+    p_outlet: outletId,
+    p_config: config,
+  })
+  if (error) throw error
+  if (data?.forbidden) throw new Error('Akses ditolak.')
+  return data
+}
+
+export async function deleteOutletDmConfig(outletId: string) {
+  const { data, error } = await supabase.rpc('admin_delete_outlet_dm_config', {
+    p_outlet: outletId,
+  })
+  if (error) throw error
+  if (data?.forbidden) throw new Error('Akses ditolak.')
+  return data
+}
+
+export async function testDmProvider(provider: Record<string, any>): Promise<DoctorProviderProbe> {
+  const { data, error } = await supabase.functions.invoke('dm_creative', {
+    body: { mode: 'test_provider', provider },
+  })
+  if (error) throw error
+  return data as DoctorProviderProbe
+}
+
+export interface DmChannelAccount {
+  outlet_id: string
+  outlet_name: string | null
+  channel: string
+  account_name: string | null
+  external_id: string | null
+  is_connected: boolean
+  has_token: boolean
+  last_sync: string | null
+}
+
+export async function listDmChannelAccounts(): Promise<DmChannelAccount[]> {
+  const { data, error } = await supabase.rpc('admin_list_dm_channel_accounts')
+  if (error) throw error
+  return (data ?? []) as DmChannelAccount[]
+}
+
+export async function setDmChannelAccount(
+  outletId: string,
+  channel: string,
+  payload: { account_name?: string | null; external_id?: string | null; token?: string | null; connected?: boolean },
+) {
+  const { data, error } = await supabase.rpc('admin_set_dm_channel_account', {
+    p_outlet: outletId,
+    p_channel: channel,
+    p_account_name: payload.account_name ?? null,
+    p_external_id: payload.external_id ?? null,
+    p_token: payload.token ?? null,
+    p_connected: payload.connected ?? true,
+  })
+  if (error) throw error
+  if (data?.forbidden) throw new Error('Akses ditolak.')
+  return data
+}
+
+export async function deleteDmChannelAccount(outletId: string, channel: string) {
+  const { data, error } = await supabase.rpc('admin_delete_dm_channel_account', {
+    p_outlet: outletId,
+    p_channel: channel,
   })
   if (error) throw error
   if (data?.forbidden) throw new Error('Akses ditolak.')

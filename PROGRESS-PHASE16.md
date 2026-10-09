@@ -1,6 +1,6 @@
 # PROGRESS PHASE 16 - Squad Digital Marketing AI
 
-STATUS: BELUM DIMULAI. Menunggu ST16-1.
+STATUS: ST16-1 SELESAI. Berikutnya ST16-2.
 Sumber spec: `KASIRGO-WORKFLOW-LENGKAP.md` BAGIAN 13.28 (+ 13.28.6 Superadmin Config LLM) + BAGIAN 15.
 
 ## Prinsip (WAJIB)
@@ -31,7 +31,7 @@ Sumber spec: `KASIRGO-WORKFLOW-LENGKAP.md` BAGIAN 13.28 (+ 13.28.6 Superadmin Co
 
 ## Subtask
 
-### ST16-1 Fondasi Squad DM - BELUM
+### ST16-1 Fondasi Squad DM - SELESAI
 - Migration: `dm_assets`, `dm_posts`, `dm_campaigns`, `dm_settings` (+ RLS per outlet;
   token/kredensial HANYA service_role, terenkripsi); INDEX outlet_id + scheduled_at/status.
 - Tab superadmin "Squad Digital Marketing": global config (provider gambar/video/copy,
@@ -42,6 +42,26 @@ Sumber spec: `KASIRGO-WORKFLOW-LENGKAP.md` BAGIAN 13.28 (+ 13.28.6 Superadmin Co
   teks harga) -> `dm_assets`; gaya copy sesuai outlet_type; watermark opsional.
 - Gating Pendukung + kuota asset per bulan (pola BAGIAN 13.8).
 - Ikuti Design System v2. `flutter analyze` bersih. commit+push, STOP.
+
+CATATAN ST16-1 (2026-10-24):
+- Migrasi `docs/migrations/2026-10-24-kasirgo-16a-squad-dm.sql` DITERAPKAN ke DB live:
+  7 tabel (`dm_assets`,`dm_posts`,`dm_campaigns`,`dm_settings`,`dm_channel_accounts`,
+  `outlet_dm_configs`,`dm_usage`) + RPC admin (`admin_list_outlet_dm_configs`,
+  `admin_set_outlet_dm_config`, `admin_delete_outlet_dm_config`,
+  `admin_list_dm_channel_accounts`, `admin_set_dm_channel_account`,
+  `admin_delete_dm_channel_account`, `dm_usage_today`) + seed `platform_configs`
+  key `digital_marketing_llm`.
+- EF `supabase/functions/dm_creative/index.ts` DEPLOYED & TESTED: no-auth -> 401;
+  provider unset -> fallback; setelah provider_default diisi (copy dari business_doctor,
+  model `deepseek-4.1-flash`) -> E2E sukses (2 `dm_assets`, 2269 token, 1 request);
+  data uji dibersihkan. Mode `generate` + `test_provider`.
+- Admin: tab "Squad Digital Marketing" di `ControlPlane.tsx` (`SquadDmTab`) = config LLM
+  global + override provider per outlet + connect akun kanal (token_enc). Helper di
+  `controlPlane.ts` (`ConfigKey` +`digital_marketing_llm`, `OutletDmConfig`/`DmChannelAccount`
+  + list/set/delete + `testDmProvider`). `tsc -b && vite build` sukses; dist dideploy.
+- App: feature key `digital_marketing` di `supporter_service.dart`
+  (`premiumFeatures` + `featureLabels`); gating kuota di EF `dm_creative`
+  (`outlet_supporter_active` + `dm_usage_today`). `dart analyze` bersih.
 
 ### ST16-2 Team Desain UI + Video - BELUM
 - Layar owner "Studio Desain": brief chat -> AI buat 3 opsi copy + gambar (preview) ->

@@ -152,6 +152,7 @@ class SupporterService {
     'auto_bos_report',
     'ad_free',
     'business_doctor',
+    'digital_marketing',
   };
 
   static const Map<String, String> featureLabels = {
@@ -172,6 +173,7 @@ class SupporterService {
     'auto_bos_report': 'Laporan Otomatis ke Bos',
     'ad_free': 'Bebas Iklan',
     'business_doctor': 'Dokter Bisnis AI',
+    'digital_marketing': 'Squad Digital Marketing AI',
   };
 
   // ---------------------------------------------------------------------------
