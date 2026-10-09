@@ -210,3 +210,13 @@ Owner:
 - [ ] B4-3: Multi-outlet → tombol hapus (ikon tong sampah) pada outlet non-aktif. Konfirmasi → outlet terhapus. Outlet terakhir TIDAK bisa dihapus ("Minimal harus ada 1 outlet").
 
 Catatan: CORS sudah diperbaiki di 5 EF (`rcb_create_charge`, `rcb_check_status`, `create_payment`, `save_payment_config`, `test_payment_connection`) dan ter-deploy (live tanpa rebuild app).
+
+## BATCH #5 (2026-10-08) — RE-TEST
+Commit `ff04bb3` (main) / web gh-pages `050051c`. Fokus: QRIS dinamis muncul di alur dukung Program Pendukung DARI HALAMAN PENGATURAN.
+
+Owner:
+- [ ] B5-1: Pengaturan → kartu Program Pendukung → "Dukung KasirGo Sekarang" / "Perpanjang Dukungan" → dialog konfirmasi → "Dukung/Perpanjang Sekarang" → sheet "Pembayaran QRIS" TAMPIL (QR asli + "Menunggu pembayaran…" + tombol "Buka Halaman Bayar").
+- [ ] B5-2: Polling status otomatis (`rcb_check_status` tiap 5 dtk); saat PAID sheet berubah "Pembayaran Berhasil".
+- [ ] B5-3: Jalur yang sama via kartu "Pendukung KasirGo" di Dashboard tetap menampilkan QRIS dinamis (regresi).
+
+Catatan: root cause = `settings_screen._handleSupport` membuang hasil QR (hanya SnackBar). Fix: widget bersama `widgets/common/dynamic_qris_sheet.dart` dipakai kedua jalur. Verifikasi live Playwright `#/owner/settings` LULUS (`rcb_create_charge` 200 + `rcb_check_status` PENDING).

@@ -1045,3 +1045,24 @@ Commit `731fb3b` (main) + deploy web gh-pages `d0e66bf`.
   guard outlet terakhir balas `{success:false,"Minimal harus ada 1 outlet"}`.
 - Verifikasi: `flutter analyze` (3 file) bersih (hanya info pre-existing);
   build web sukses; live md5 cocok.
+
+## Sesi 2026-10-08 (5): Fix QRIS Dinamis di Alur Dukung dari Pengaturan (SELESAI)
+Commit `ff04bb3` (main) + deploy web gh-pages `050051c` (live md5
+`44c74f7cc23397040ec9033acb39e633`).
+- ROOT CAUSE laporan "klik Dukung KasirGo -> Perpanjang Sekarang -> QRIS tidak
+  tampil -> langsung pesanan berhasil": `settings_screen.dart` `_handleSupport`
+  memanggil `SupporterService().checkout(...)` lalu HANYA menampilkan SnackBar
+  sukses; hasil QR dinamis (`qrisString`/`qrisUrl`/`paymentUrl`) dibuang sehingga
+  QR tidak pernah dirender. (Jalur `SupporterScreen` sudah benar.)
+- FIX: ekstrak sheet QRIS dinamis + polling status ke widget bersama
+  `kasirgo/lib/widgets/common/dynamic_qris_sheet.dart` (`DynamicQrisSheet`),
+  dipakai `supporter_screen.dart` (ganti kelas privat `_DynamicQrisSheet`) DAN
+  `settings_screen.dart` (`_handleSupport` kini `showModalBottomSheet` bila
+  `result.hasDynamicQr`; fallback statis tetap SnackBar).
+- CATATAN: `checkout(qrisType:...)` sebenarnya selalu mencoba `createQris` lalu
+  fallback statis saat catch; param `qrisType` tidak menentukan. Masalahnya murni
+  hasil QR tidak ditampilkan.
+- Verifikasi live Playwright (Gerobak Test, route `#/owner/settings`): klik
+  "Dukung KasirGo Sekarang" -> "Dukung Sekarang" -> sheet "Pembayaran QRIS"
+  TAMPIL + EF `rcb_create_charge` 200 + polling `rcb_check_status` PENDING.
+  `flutter analyze` 3 file bersih.
