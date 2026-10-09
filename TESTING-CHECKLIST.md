@@ -197,4 +197,4 @@ Owner:
 - [ ] B3-3: dialog Hapus Produk → tombol X di ujung kanan.
 - [ ] B3-4: resep → "Tandai Selesai" langsung mencoret langkah (kartu aktif, gelembung chat, layar Hasil Diagnosa).
 - [ ] B3-5: resep langkah cross_sell → "Jalankan" membuka POS (chip saran upsell), bukan Paket Bundling.
-- [ ] B3-6: checkout QRIS outlet Pendukung/trial → otomatis mode Dinamis (banner "QRIS Dinamis aktif"); outlet tanpa akses → Statis.
+- [ ] B3-6: pembayaran produk di POS tetap memakai QRIS Statis manual (sesuai kebijakan bisnis). QRIS Dinamis otomatis digunakan saat Owner/pengguna upgrade ke Program Pendukung di SupporterScreen (`hasDynamicQr` -> pop up dynamic QRIS payment).

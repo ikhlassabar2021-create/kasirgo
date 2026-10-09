@@ -1016,8 +1016,8 @@ Commit `672286b` (main) + deploy web gh-pages `6a7acb2` (live md5
 - RESEP "JALANKAN" cross_sell (`business_doctor_screen.dart`): action_key `cross_sell`
   kini membuka `PosScreen` (chip saran upsell saat bayar), bukan `BundleManagerScreen`
   (bundling sudah punya action_key sendiri).
-- QRIS DINAMIS OTOMATIS (`checkout_dialog.dart`): setelah FIX #11 (dinamis disembunyikan
-  dari semua login), `_loadQrisConfig` kini resolve `_qrisMode` dari
-  `hasFeature('payment_gateway')` -> outlet Pendukung/trial otomatis mode `dynamic`
-  (charge QRIS terverifikasi webhook); tanpa akses tetap `static`. Banner mode informatif.
-- Verifikasi: `dart analyze` 5 file bersih; build web sukses; live md5 cocok.
+- QRIS STATIS PRODUK VS DINAMIS PENDUKUNG: pembayaran produk di POS tetap
+  memakai QRIS Statis manual (sesuai kebijakan bisnis UMKM). QRIS Dinamis otomatis
+  dipakai saat Owner/pengguna upgrade ke Program Pendukung (`SupporterScreen` /
+  `SupporterService.checkout` -> dynamic QRIS via RCB gateway).
+- Verifikasi: `dart analyze` bersih; build web sukses; live md5 cocok.
