@@ -97,6 +97,37 @@ function buildPrompt(
   ];
 }
 
+function buildVideoPrompt(
+  outlet: Json,
+  brief: string,
+  tone: string,
+  goal: string,
+  duration: number,
+  products: Json[],
+) {
+  const list = products
+    .map((p) => `- ${p.name} | Rp${Number(p.base_price ?? 0)}`)
+    .join("\n");
+  return [
+    {
+      role: "system",
+      content:
+        `Kamu sutradara iklan pendek UMKM Indonesia. Buat naskah video promosi ${duration} detik.\n` +
+        `Toko: ${outlet?.name ?? "-"} (${outlet?.type ?? "-"}).\n` +
+        `Balas HANYA JSON valid: {"title":"...","voiceover":"...","scenes":[{"text":"...","duration":4}],"music":"...","tips":"..."}.\n` +
+        `Buat 3-6 scene, tiap scene teks singkat maks 60 karakter. Bahasa Indonesia ramah & jujur, tanpa klaim medis/berlebihan. Jangan bahas politik/agama/SARA/judi/pinjol.`,
+    },
+    {
+      role: "user",
+      content:
+        `Brief: ${brief || "promo produk unggulan"}\n` +
+        `Tujuan: ${goal || "menaikkan penjualan"}\n` +
+        `Gaya: ${tone || "ramah"}\n` +
+        (list ? `Produk:\n${list}` : ""),
+    },
+  ];
+}
+
 Deno.serve(async (req: Request) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: CORS });
   if (req.method !== "POST") return json({ success: false, message: "Method not allowed" }, 405);
@@ -268,6 +299,86 @@ Deno.serve(async (req: Request) => {
         }],
         disclaimer: DISCLAIMER,
       });
+    }
+
+    const kind = String(body.kind ?? "copy");
+    if (kind === "video") {
+      const duration = Number(body.duration ?? 20);
+      let vparsed: Json | null = null;
+      let vtokens = 0;
+      try {
+        const data = await callLlm(
+          provider,
+          buildVideoPrompt(outlet ?? {}, brief, tone, goal, duration, products),
+        );
+        vtokens = Number(data?.usage?.total_tokens ?? 0);
+        vparsed = extractJson(String(data?.choices?.[0]?.message?.content ?? ""));
+      } catch (e) {
+        return json({
+          success: true,
+          fallback: true,
+          blocks: [{
+            type: "card",
+            tone: "warning",
+            title: "AI sedang tidak bisa dihubungi",
+            body: String((e as Error)?.message ?? e).slice(0, 200),
+          }],
+          disclaimer: DISCLAIMER,
+        });
+      }
+      const scenes: Json[] = Array.isArray(vparsed?.scenes) ? vparsed.scenes.slice(0, 8) : [];
+      if (!scenes.length) {
+        return json({
+          success: true,
+          fallback: true,
+          blocks: [{
+            type: "card",
+            tone: "warning",
+            title: "Naskah video belum siap",
+            body: "Coba lagi dengan brief yang lebih spesifik ya.",
+          }],
+          disclaimer: DISCLAIMER,
+        });
+      }
+      const voiceover = sanitize(String(vparsed?.voiceover ?? vparsed?.narration ?? ""));
+      const title = String(vparsed?.title ?? "").trim() || (brief.slice(0, 60) || "Video Promo");
+      const { data: asset } = await admin.from("dm_assets").insert({
+        outlet_id: outletId,
+        kind: "video",
+        title: title.slice(0, 120),
+        content: voiceover,
+        caption: voiceover,
+        hashtags: "",
+        source: productIds.length ? "product" : "brief",
+        status: "draft",
+        meta: {
+          scenes: scenes.map((s) => ({ text: String(s?.text ?? ""), duration: Number(s?.duration ?? 4) })),
+          music: String(vparsed?.music ?? "upbeat"),
+          duration,
+          tone,
+          goal,
+          generated_by: "dm_creative",
+        },
+      }).select("id, title, content, kind, status").maybeSingle();
+      await admin.from("dm_usage").upsert({
+        outlet_id: outletId,
+        day: new Date().toISOString().slice(0, 10),
+        assets: usedAssets + 1,
+        tokens: usedTokens + vtokens,
+        requests: Number(usage?.requests ?? 0) + 1,
+      }, { onConflict: "outlet_id,day" });
+      const blocks: Json[] = [];
+      if (vparsed?.tips) blocks.push({ type: "text", text: sanitize(String(vparsed.tips)) });
+      blocks.push({
+        type: "video",
+        title: title.slice(0, 120),
+        duration,
+        music: String(vparsed?.music ?? "upbeat"),
+        voiceover,
+        scenes: scenes.map((s) => ({ text: String(s?.text ?? ""), duration: Number(s?.duration ?? 4) })),
+        asset_id: asset?.id ?? null,
+      });
+      return json({ success: true, asset, blocks, tokens: vtokens, disclaimer: DISCLAIMER });
     }
 
     let parsed: Json | null = null;

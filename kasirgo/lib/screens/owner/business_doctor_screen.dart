@@ -15,6 +15,7 @@ import 'doctor_intake_screen.dart';
 import 'doctor_promotion_log_screen.dart';
 import 'doctor_result_screen.dart';
 import 'bundle_manager_screen.dart';
+import 'design_studio_screen.dart';
 import 'health_score_screen.dart';
 import 'multi_outlet_screen.dart';
 import 'online_catalog_screen.dart';
@@ -541,6 +542,12 @@ class _BusinessDoctorScreenState extends ConsumerState<BusinessDoctorScreen> {
         );
       case 'recipe':
         return const RecipeScreen();
+      case 'create_asset':
+        return const SupporterFeatureGate(
+          featureKey: 'digital_marketing',
+          title: 'Studio Desain',
+          child: DesignStudioScreen(initialTab: 1),
+        );
       default:
         return null;
     }

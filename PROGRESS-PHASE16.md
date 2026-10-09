@@ -1,6 +1,6 @@
 # PROGRESS PHASE 16 - Squad Digital Marketing AI
 
-STATUS: ST16-1 SELESAI. Berikutnya ST16-2.
+STATUS: ST16-2 SELESAI. Berikutnya ST16-3.
 Sumber spec: `KASIRGO-WORKFLOW-LENGKAP.md` BAGIAN 13.28 (+ 13.28.6 Superadmin Config LLM) + BAGIAN 15.
 
 ## Prinsip (WAJIB)
@@ -63,7 +63,7 @@ CATATAN ST16-1 (2026-10-24):
   (`premiumFeatures` + `featureLabels`); gating kuota di EF `dm_creative`
   (`outlet_supporter_active` + `dm_usage_today`). `dart analyze` bersih.
 
-### ST16-2 Team Desain UI + Video - BELUM
+### ST16-2 Team Desain UI + Video - SELESAI
 - Layar owner "Studio Desain": brief chat -> AI buat 3 opsi copy + gambar (preview) ->
   pilih/edit -> save `dm_assets`; ambil produk otomatis dari POS (nama/foto/harga/promo).
 - Video 15-30 detik: naskah AI + template animasi (foto produk + teks + musik) -> MP4;
@@ -71,6 +71,28 @@ CATATAN ST16-1 (2026-10-24):
 - Mode per tim (MANUAL/AUTO) di `dm_settings`; jam hening + filter klaim medis/terlarang.
 - Tombol Dokter Bisnis: resep -> "Buat Video Promo" (tool `create_asset`) -> pipeline Team Desain.
 - `flutter analyze` bersih. commit+push, STOP.
+
+CATATAN ST16-2 (2026-10-25):
+- EF `dm_creative` (REDEPLOYED): cabang `kind:'video'` + `buildVideoPrompt` -> naskah
+  JSON `{title,voiceover,scenes[],music,tips}` (3-6 scene, filter SARA/judi/pinjol/klaim
+  medis via `sanitize`); simpan `dm_assets` kind `video` + `dm_usage`; balas blok
+  `{type:'video',title,duration,music,voiceover,scenes,asset_id}`. E2E (Warung Test,
+  20 dtk) LULUS: 5 scene + asset tersimpan (data uji dibersihkan).
+- File BARU `kasirgo/lib/services/dm_service.dart` (`DmService`): `generateCopy`,
+  `generateVideo`, `listAssets`, `saveAsset`, `updateAsset`, `deleteAsset`,
+  `getSettings`, `saveSettings`, `getProducts`.
+- File BARU `kasirgo/lib/screens/owner/design_studio_screen.dart` (`DesignStudioScreen`,
+  param `initialTab`): 3 tab (Copy & Gambar / Video / Aset); brief + tujuan + gaya +
+  pilih produk; slider durasi 15-30; preview gambar (gradient + `Image.file` produk);
+  storyboard scene + voice over + Regenerate; mode tim Manual/Otomatis (simpan
+  `dm_settings`); kelola aset (hapus). Design System v2.
+- Integrasi: kartu "Studio Desain" di `owner_home_screen.dart`
+  (`_pushGated('digital_marketing')`); aksi resep `create_asset` di
+  `business_doctor_screen.dart` -> Studio Desain tab Video (di gate Pendukung);
+  EF `business_doctor_chat` (REDEPLOYED) enum + prompt action_key +`create_asset`.
+- CATATAN: MP4 nyata belum di-render (tanpa paket video/ffmpeg sesuai kebijakan
+  hemat dependensi); output = naskah + storyboard scene yang siap dirender/diposting
+  (sesuai batas realistis BAGIAN 13.28). `dart analyze` bersih (info pre-existing saja).
 
 ### ST16-3 Team Promosi - jadwal + posting - BELUM
 - Kalender konten mingguan (`dm_posts`): draft/queued/posted/failed; geser/hapus.

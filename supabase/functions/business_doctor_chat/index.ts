@@ -234,7 +234,7 @@ const TOOLS = [
                 text: { type: "string" },
                 action_key: {
                   type: "string",
-                  enum: ["sidak_bos", "progress_tracker", "dynamic_pricing", "bundling", "cross_sell", "wa_marketing", "catat_promosi", "health_score", "online_catalog", "qr_table", "multi_outlet", "recipe", "referral"],
+                  enum: ["sidak_bos", "progress_tracker", "dynamic_pricing", "bundling", "cross_sell", "wa_marketing", "catat_promosi", "health_score", "online_catalog", "qr_table", "multi_outlet", "recipe", "referral", "create_asset"],
                 },
               },
               required: ["text"],
@@ -941,7 +941,7 @@ ATURAN OUTPUT:
   {"type":"gauge","label":"Skor Kesehatan Usaha","value":0-100,"hint":"..."},
   {"type":"checklist","title":"Peta Resep","items":[{"text":"...","done":false}]},
   {"type":"choices","prompt":"...","options":[{"label":"...","value":"..."}]},
-  {"type":"action","label":"...","action_key":"sidak_bos|progress_tracker|dynamic_pricing|bundling|cross_sell|wa_marketing|catat_promosi|health_score|online_catalog|qr_table|multi_outlet|recipe|referral"}
+  {"type":"action","label":"...","action_key":"sidak_bos|progress_tracker|dynamic_pricing|bundling|cross_sell|wa_marketing|catat_promosi|health_score|online_catalog|qr_table|multi_outlet|recipe|referral|create_asset"}
 - Bahasa Indonesia sederhana, minim istilah teknis, langkah kecil yang bisa dikerjakan.
 - WAJIB balas 100% dalam Bahasa Indonesia kecuali istilah asing yang sudah umum (QRIS, PDF, ROI). DILARANG KERAS menjawab dalam bahasa Inggris (atau bahasa lain), DILARANG menulis/menempelkan kode program (contoh kode, JSON mentah, SQL, rumus pemrograman) di "reply", dan DILARANG memakai istilah teknis asing tanpa penjelasan bahasa awam. Bila owner bertanya dalam bahasa apa pun, tetap jawab dalam Bahasa Indonesia.
 - Isi "phase" dengan fase saat ini sesuai ALUR FASE di atas.

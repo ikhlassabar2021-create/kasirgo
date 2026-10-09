@@ -27,6 +27,7 @@ import 'affiliate_owner_screen.dart';
 import 'health_score_screen.dart';
 import 'business_doctor_screen.dart';
 import 'bundle_manager_screen.dart';
+import 'design_studio_screen.dart';
 import '../../services/business_doctor_service.dart';
 import '../modules/kitchen_display_screen.dart';
 import 'shift_screen.dart';
@@ -886,6 +887,18 @@ class _OwnerHomeScreenState extends ConsumerState<OwnerHomeScreen> {
         onTap: () => _pushGated(
             'business_doctor', const BusinessDoctorScreen(),
             title: 'Dokter Bisnis AI'),
+      ),
+    );
+
+    quickActionItems.add(
+      _ModuleCard(
+        icon: Icons.palette_rounded,
+        title: 'Studio Desain',
+        subtitle: 'Konten & video AI',
+        color: AppTheme.accentColor,
+        onTap: () => _pushGated(
+            'digital_marketing', const DesignStudioScreen(),
+            title: 'Studio Desain'),
       ),
     );
 
