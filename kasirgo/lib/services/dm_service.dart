@@ -1,5 +1,8 @@
 import 'package:supabase_flutter/supabase_flutter.dart';
 
+import '../utils/ai_engine.dart';
+import 'supabase_service.dart';
+
 class DmService {
   DmService({SupabaseClient? client})
       : _client = client ?? Supabase.instance.client;
@@ -150,5 +153,63 @@ class DmService {
         .order('name', ascending: true)
         .limit(200);
     return (res as List).cast<Map<String, dynamic>>();
+  }
+
+  Future<List<Map<String, dynamic>>> listPosts(
+    String outletId, {
+    DateTime? start,
+    DateTime? end,
+    int limit = 150,
+  }) async {
+    var query = _client
+        .from('dm_posts')
+        .select(
+            'id, outlet_id, asset_id, channel, status, caption, scheduled_at, posted_at, post_url, error, created_at, dm_assets(title, kind, file_path)')
+        .eq('outlet_id', outletId);
+    if (start != null) {
+      query = query.gte('scheduled_at', start.toIso8601String());
+    }
+    if (end != null) {
+      query = query.lte('scheduled_at', end.toIso8601String());
+    }
+    final res = await query.order('scheduled_at', ascending: true).limit(limit);
+    return (res as List).cast<Map<String, dynamic>>();
+  }
+
+  Future<void> savePost({
+    required String outletId,
+    required String channel,
+    String? assetId,
+    String? caption,
+    DateTime? scheduledAt,
+    String status = 'draft',
+  }) async {
+    await _client.from('dm_posts').insert({
+      'outlet_id': outletId,
+      'asset_id': assetId,
+      'channel': channel,
+      'caption': caption,
+      'status': status,
+      'scheduled_at': scheduledAt?.toIso8601String(),
+    });
+  }
+
+  Future<void> updatePost(String id, Map<String, dynamic> patch) async {
+    await _client.from('dm_posts').update(patch).eq('id', id);
+  }
+
+  Future<void> deletePost(String id) async {
+    await _client.from('dm_posts').delete().eq('id', id);
+  }
+
+  Future<List<int>> suggestBestHours(String outletId) async {
+    try {
+      final txs = await SupabaseService().getTransactions(outletId, limit: 200);
+      if (txs.isEmpty) return const [];
+      final res = AIEngine().bestTimeToSell(txs);
+      return ((res['bestHours'] as List?) ?? const []).cast<int>();
+    } catch (_) {
+      return const [];
+    }
   }
 }

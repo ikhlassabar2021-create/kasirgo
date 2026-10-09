@@ -1,6 +1,6 @@
 # PROGRESS PHASE 16 - Squad Digital Marketing AI
 
-STATUS: ST16-2 SELESAI. Berikutnya ST16-3.
+STATUS: ST16-3 SELESAI. Berikutnya ST16-4.
 Sumber spec: `KASIRGO-WORKFLOW-LENGKAP.md` BAGIAN 13.28 (+ 13.28.6 Superadmin Config LLM) + BAGIAN 15.
 
 ## Prinsip (WAJIB)
@@ -94,7 +94,7 @@ CATATAN ST16-2 (2026-10-25):
   hemat dependensi); output = naskah + storyboard scene yang siap dirender/diposting
   (sesuai batas realistis BAGIAN 13.28). `dart analyze` bersih (info pre-existing saja).
 
-### ST16-3 Team Promosi - jadwal + posting - BELUM
+### ST16-3 Team Promosi - jadwal + posting - SELESAI
 - Kalender konten mingguan (`dm_posts`): draft/queued/posted/failed; geser/hapus.
 - Kanal: WA status + broadcast (wa.me), FB feed/fanpage + IG (Meta Graph API bila connected),
   TikTok (Content Posting API bila connected), Shopee (OpenAPI bila connected);
@@ -103,6 +103,26 @@ CATATAN ST16-2 (2026-10-25):
   anti-spam fb_group (draft manual).
 - Report: posting sukses/gagal + reach bila API tersedia.
 - Uji posting draft ke 1 kanal (manual path). `flutter analyze` bersih. commit+push, STOP.
+
+CATATAN ST16-3 (2026-10-26):
+- `dm_service.dart` DITAMBAH: `listPosts(outletId,{start,end,limit})` (embed
+  `dm_assets(title,kind,file_path)`), `savePost`, `updatePost`, `deletePost`,
+  `suggestBestHours(outletId)` -> `List<int>` via `AIEngine().bestTimeToSell(txs)['bestHours']`
+  (guard try/catch -> `[]`).
+- File BARU `kasirgo/lib/screens/owner/promotion_screen.dart` (`PromotionScreen`):
+  kalender konten (group per tanggal) + kartu post (badge status/kanal, jadwal, caption);
+  aksi geser jadwal (H-1/H+1), tandai posted/failed, hapus; mode tim Manual/Otomatis
+  (`dm_settings.mode_promo`); bottom sheet `_NewPostSheet` (pilih aset + kanal + caption +
+  jadwal); `_autoSchedule` pakai jam optimal AI (channel `wa_status`); `_publish`:
+  kanal WA (`wa_status`/`wa_broadcast`) -> `WaHelper.sendWhatsAppMessage` ke `Outlet.phone`
+  dgn `formatBroadcastPromo`; kanal lain -> copy caption + `_openChannel` (buka URL platform
+  via `url_launcher`, fallback manual 1-tap karena kredensial kanal belum diintegrasikan).
+  `fb_group` disimpan `draft` (anti-spam). 7 kanal `_PromotionChannels.all`.
+- Integrasi: kartu "Studio Promosi" di `owner_home_screen.dart`
+  (`_pushGated('digital_marketing')`).
+- E2E REST (Warung Test, owner): INSERT `dm_posts` 201, SELECT + embed `dm_assets` 200,
+  PATCH -> `posted` 200, DELETE 204 (data uji dibersihkan). `dart analyze` 3 file bersih
+  (info pre-existing saja).
 
 ### ST16-4 Team Iklan + Hardening + Tes - BELUM
 - Campaign draft: Meta Ads, Google Ads, TikTok Ads, Shopee Ads (objective, geofence radius
