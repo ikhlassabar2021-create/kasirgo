@@ -11,6 +11,7 @@ import '../../services/auth_service.dart';
 import '../../services/supporter_service.dart';
 import '../../services/supabase_service.dart';
 import '../../widgets/common/supporter_gate.dart';
+import '../../widgets/common/dynamic_qris_sheet.dart';
 import '../../screens/auth/onboarding_kyc_screen.dart';
 import '../../utils/formatters.dart';
 import '../../utils/qris_config.dart';
@@ -143,6 +144,28 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
             backgroundColor: AppTheme.errorColor,
           ),
         );
+        return;
+      }
+      if (result.hasDynamicQr) {
+        await showModalBottomSheet<bool>(
+          context: context,
+          isScrollControlled: true,
+          backgroundColor: AppTheme.surfaceColor,
+          shape: const RoundedRectangleBorder(
+            borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+          ),
+          builder: (_) => DynamicQrisSheet(result: result),
+        );
+        await _loadData();
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text(
+                  'Terima kasih! Dukungan Anda sedang diverifikasi otomatis.'),
+              backgroundColor: AppTheme.successColor,
+            ),
+          );
+        }
         return;
       }
       await _loadData();
