@@ -1494,6 +1494,151 @@ Tujuan: superadmin mengelola status Payment Gateway tiap outlet dari Control Pla
     otomatis (tanpa webhook); tetap tersedia sebagai fallback gratis. QRIS otomatis
     memerlukan channel QRIS API (dinamis) di provider PJP.
 
+### PAYMENT GATEWAY RCB - Provider-aware + zero-custody  [SELESAI]
+Tujuan: aplikasi memilih provider Payment Gateway otomatis dari config superadmin
+(TANPA ubah kode); semua charge/poll lewat Edge Function (zero-custody).
+- Provider dibaca dari RPC `get_pg_client_config` (cache prefs):
+  `RcbProvider` (default) atau `MidtransProvider`, dari
+  `platform_integrations.payment_gateway.provider`.
+- Superadmin dapat mengganti provider (RCB/Midtrans) + mode (sandbox/production)
+  via Control Plane tab Payment Gateway tanpa ubah kode.
+- Zero-custody: `api_key` TIDAK lagi dikembalikan `get_pg_client_config`;
+  semua charge/poll RCB lewat Edge Function.
+- FIX EF `rcb_create_charge`: `expired_time` epoch (int) dikonversi ke ISO -> kolom
+  `expired_at` timestamptz (sebelumnya insert gagal senyap -> webhook "Order tidak
+  ditemukan"); ditambah cek error insert.
+- Migrasi `2026-10-08-kasirgo-rcb-provider-normalize.sql` (config -> provider rcb +
+  mode sandbox_server).
+- E2E LULUS: `create_supporter_checkout` -> `rcb_create_charge` (subscription) ->
+  webhook SHA256 PAID -> `supporters` active +30 hari; `confirm_pg_order` (polling
+  fallback) OK. Default = RCB sandbox.
+- Catatan mode `sandbox_direct` (API key di klien) = HANYA untuk tes; wajib pindah ke
+  Edge Function (`sandbox_server`/`live_server`) sebelum produksi.
+
+### PHASE 13C (tambahan) - QR Meja food-only + Laporan kasir + backup bulanan + afiliasi mandiri  [SELESAI]
+Bukan phase baru; penyempurnaan pasca-13C. Migrasi
+`2026-10-06-kasirgo-13c-fixes.sql`.
+- QR Meja (pelanggan) hanya untuk outlet food (cafe/resto/warteg); non-food pakai
+  katalog biasa.
+- Laporan kasir (rekap shift) + backup bulanan.
+- Hapus UI asuransi (micro-insurance) dari app.
+- Pendaftaran afiliasi mandiri (owner daftar sendiri dari app).
+
+### PHASE 14 - Dokter Bisnis AI  [SELESAI]
+Tujuan: asisten AI "Dokter Bisnis" (diagnosa -> resep -> evaluasi) untuk owner
+gaptek. Provider LLM dikonfigurasi superadmin (Control Plane); `api_key_enc` hanya
+service_role. Skema doctor + EF LLM + tab superadmin + chat owner.
+- ST14-1 `f2c618b`: migrasi `docs/migrations/2026-10-06-kasirgo-14-dokter-bisnis.sql`:
+  7 tabel (`outlet_ai_configs`, `doctor_conversations`, `doctor_messages`,
+  `doctor_memory`, `doctor_intake`, `doctor_action_logs`, `doctor_outlet_profile`)
+  + index + seed `platform_configs.business_doctor` + RLS (`is_outlet_owner`/
+  `is_platform_admin`) + view `outlet_ai_configs_public` (tanpa `api_key_enc`,
+  kolom `has_api_key`) + helper `outlet_supporter_active()`.
+- ST14-2 `b1cd1b8`: EF `business_doctor_chat`: konteks bisnis via tools
+  (snapshot/trend/stok/kas/memori), tool-loop maks 2 putaran, output
+  `{reply,blocks,phase,memory}` (block types text/card/gauge/checklist/choices/
+  action), gating `outlet_supporter_active`, provider override outlet else
+  `platform_configs.business_doctor.provider_default`, fallback "Otak penuh belum
+  aktif", regex FORBIDDEN, simpan messages/memory.
+- ST14-3 `32992a5`: Control Plane admin tab "Dokter Bisnis AI" (`DoctorTab`):
+  config global (aktif/bahasa/prompt/guardrails/internet_tool/provider_default),
+  tombol Tes Koneksi Provider + Chat Uji pilih outlet. EF mode `test_provider`
+  (superadmin-only) + superadmin bypass membership/gating.
+- ST14-4 `a6e6457`: app owner: `business_doctor_service.dart` (klien EF),
+  `business_doctor_screen.dart` (welcome 4 tombol besar: Diagnosa Usaha / Kenapa
+  Omzet Turun / Saran Promosi / Cek Stok & Kas + kotak chat + renderer blocks +
+  indikator loading + disclaimer), `widgets/common/business_doctor/doctor_blocks.dart`,
+  kartu "Dokter Bisnis AI" di beranda owner.
+- ST14-5 `e30dde5`: intake wizard "Cek Fisik Toko" (3 langkah bergambar:
+  fisik/tampilan/perilaku, progress bar, catatan opsional) ->
+  `doctor_intake_screen.dart`; ringkasan dikirim sebagai pesan diagnosa. EF
+  `business_doctor_chat` (redeploy): definisi ALUR FASE A/B/C di system prompt
+  (A diagnosa -> B resep -> C evaluasi).
+- ST14-6: Peta Resep + Vonis + tool `save_prescription`. EF (redeploy): tool
+  `save_prescription(verdict, steps[<=8])` simpan ke `doctor_memory` kind
+  `prescription`; app `_handleAction`/`_actionScreen` memetakan `action_key` ->
+  layar existing. Lanjutan: layar HASIL Diagnosa `doctor_result_screen.dart`
+  (header+tanggal, gauge skor animasi, kartu vonis, peta resep checklist bernomor,
+  target/timeline, footer).
+- ST14-7: Catat Hasil Promosi + ROI + web tool. App
+  `doctor_promotion_log_screen.dart` (chips jenis promosi/kanal/hasil + biaya &
+  omzet tambahan + kartu ROI live) -> `BusinessDoctorService.logPromotion()`
+  insert `doctor_action_logs`. EF: tool `get_action_history` + `fetch_url`
+  (web tool, gated `internet_tool.aktif`, guard SSRF host privat), aturan fase C
+  (hitung ROI).
+- ST14-8: Escalation Ladder. EF: tool `escalate_case(level 1-3, root_cause,
+  reason)` -> update `doctor_conversations` (`status`: level>=3 `kasus_bandel`
+  else `evaluasi_ulang`, `escalation_level`) + `doctor_memory` kind `lesson`.
+  App: banner Evaluasi Ulang / Lini Kedua / Kasus Bandel.
+- ST14-9: Memori jangka panjang + "Riwayat Kasus". App: `listConversations`/
+  `listMemories`/`listMessages`; layar `doctor_cases_screen.dart` (2 seksi: Kasus
+  Konsultasi + Catatan Memori). Memori jangka panjang
+  (`doctor_outlet_profile.memory_digest`). CATATAN: cron `doctor_observe` DITUNDA
+  (pg_cron/pg_net tidak terpasang) -> jalankan manual via admin.
+- ST14-10: Override provider AI per outlet (superadmin) + rate limit/kuota harian.
+  Migrasi `docs/migrations/2026-10-14-kasirgo-14d-ai-override-ratelimit.sql`:
+  RPC `admin_list_outlet_ai_configs()`, `admin_set_outlet_ai_config(outlet,config)`,
+  `admin_delete_outlet_ai_config(outlet)`, `doctor_daily_usage(outlet)`. EF
+  `business_doctor_chat`: rate limit non-superadmin (config
+  `business_doctor.rate_limit {messages_per_day=60, tokens_per_day=200000}`).
+  Admin DoctorTab: field Batas Pemakaian Harian + kartu "Override Provider per
+  Outlet".
+- ST14-11: migrasi `2026-10-17-kasirgo-14e-observe-reprimand.sql`:
+  `doctor_action_logs` + status/due_date/reminder_count/last_reminded_at;
+  `doctor_memory` + data/resolved_at + kind reprimand/market/scaling. EF chat tool
+  `observe_progress` (omzet 7d vs 7d -> improving/flat/declining). EF BARU
+  `doctor_observe`: evaluasi resep overdue -> achieved/failed + memori kind result;
+  teguran bertingkat level 1/2/3 (anti-spam 1/hari/outlet). App: banner teguran +
+  chip alasan. Admin: tombol Jalankan Observasi.
+- Penutup celah: migrasi `2026-10-16-kasirgo-14d-unlimited-token-quota.sql`
+  (`outlet_ai_configs.unlimited_tokens` + `token_quota`); EF kuota per outlet.
+- Perbaikan pasca-test `2dbc202`: `max_tokens` default 4000 + guard; CTA "Cek
+  Fisik Toko" permanen; tombol "Evaluasi Resep"; EF push assistant tool_call
+  sebagai objek bersih + `extractJson` brace-matching.
+- Detail: `PROGRESS-PHASE14.md`.
+
+### PHASE 15 - Master Prompt Karakter & Skill + 12 Fitur Bos Virtual  [SELESAI]
+Tujuan: karakter "Bos Virtual" dengan master prompt + daftar skill, plus fitur
+analitik & growth (bundling, referral, cross-sell, laporan mingguan, observasi
+otomatis, benchmark hyperlocal, persetujuan aksi). Detail: `PROGRESS-PHASE15.md`.
+- 15A ST15-1 (Master Prompt + Daftar Skill): migrasi
+  `docs/migrations/2026-10-15-kasirgo-15a-master-prompt-skills.sql` merge
+  `platform_configs.business_doctor`: `prompt_utama` (master prompt + addendum
+  A-O), `prompt_utama_default` (tombol Reset ke Default), `skills[]` (16 skill).
+  EF `business_doctor_chat`: `SKILL_TOOLS` peta skill->tool, `toolAllowed()`,
+  `toolsFor()`, system context "SKILL AKTIF: ...", tool loop 2->3 putaran. Admin
+  `DoctorTab`: field "Master Prompt Karakter & Skill" + Preview + Reset + toggle
+  "Daftar Skill" (chip 16 skill).
+- 15B ST15-2 (Bos Virtual Analitik): analitik lanjutan (trend, anomali, ABC,
+  margin alert) di EF + block baru di app.
+- 15C ST15-3 (Bos Virtual Growth): migrasi
+  `docs/migrations/2026-10-19-kasirgo-15c-bos-virtual-growth.sql`:
+  `product_bundles` + `product_bundle_items`; `referral_codes` +
+  `customer_referrals`; RLS owner/superadmin; RPC `increment_referral_redeemed`;
+  RPC publik `get_public_bundles(TEXT)`.
+  EF: tool BARU `get_cross_sell` (association rule 200 transaksi terakhir:
+  support/confidence/lift), `save_bundle`, `save_referral`; `SKILL_TOOLS`
+  +`cross_sell`,`bundling`,`referral`.
+  App: `utils/ai_engine.dart` `crossSellRules()`; `services/growth_service.dart`;
+  `screens/owner/bundle_manager_screen.dart` + `referral_screen.dart`; POS strip
+  bundling + chip cross-sell; owner home kartu Peluang Cross-Sell; katalog
+  pelanggan strip "Paket Hemat".
+- 15D ST15-4 (Addendum L-O + Hardening): migrasi
+  `docs/migrations/2026-10-20-kasirgo-15d-addendum-hardening.sql`:
+  `doctor_memory` kind +`weekly_report`; `doctor_outlet_profile`
+  +`health_score`/`active_disease`/`active_disease_since`/`last_weekly_report_at`;
+  tabel BARU `doctor_pending_actions` + RLS.
+  EF chat: tool BARU `propose_action` (guardrail M: tulis pending, JANGAN eksekusi
+  langsung) + `benchmark_hyperlocal` (N: agregat anonim `hyperlocal_reports`,
+  `need_verification` bila <3 outlet); `SKILL_TOOLS` +`market_intel`/
+  `weekly_report`; output +`identity` (O).
+  EF `doctor_observe`: laporan mingguan maks 1/pekan/outlet (gate
+  `last_weekly_report_at`) isi `doctor_memory` kind `weekly_report` + update profil.
+  App: kartu Identitas Bisnis (O), kartu Laporan Mingguan (L), kartu Persetujuan
+  Aksi Setujui/Tolak (M).
+- BLOCKER tetap: pg_cron/pg_net tidak terpasang -> jadwal via admin/Dashboard;
+  Midtrans production QRIS belum aktif.
+
 ### DELTA TERBARU (2026-09-29) - Pesanan Dine-in QR Meja (Pelanggan -> Kasir/Dapur)
 Bukan phase baru; menyempurnakan alur QR Meja pelanggan yang sudah live.
 - Pelanggan: katalog + keranjang gaya POS (`CartContent`), checkout **bayar di meja**
@@ -1510,6 +1655,39 @@ Bukan phase baru; menyempurnakan alur QR Meja pelanggan yang sudah live.
 - Catatan platform: di WEB, SQLite = no-op stub, jadi data (termasuk `customers`) langsung ke Supabase
   (teks/angka, biaya sangat kecil). Di APK, produk/transaksi/`customers` ada di SQLite lokal + sync;
   `customers` tidak ikut antrean sync. Foto produk selalu LOKAL (tidak pernah diunggah).
+
+### DELTA PASCA-PHASE - BATCH Perbaikan Owner & Superadmin (#1 - #5)  [SELESAI]
+Bukan phase baru; batch bugfix hasil testing user. Detail: `AGENTS.md` + `TESTING-CHECKLIST.md`.
+- BATCH #1 (FIX #1-#17, commit `7629155`..`d420c83`): login email belum dikonfirmasi;
+  KYC NIK tahun lahir 2 digit + marker KTP; dialog sukses checkout baru +
+  Struk PDF; field Nama Pelanggan + auto-create pelanggan dari nomor WA; dialog
+  tambah/hapus pelanggan diperindah; FK `transaction_items` ON DELETE SET NULL
+  (fix hapus produk); PPOB/Kulakan/Modal Usaha disembunyikan; checkout QRIS
+  statis-only; QR Meja tambah via keyboard; Riwayat Kasus filter + hapus;
+  hardening balasan AI; laporan Excel/PDF SAK EMKM; affiliate owner + superadmin
+  (`outlet_affiliate_profiles`/`outlet_affiliate_closings`); sembunyikan laporan
+  PPOB/PG dari superadmin.
+- BATCH #2 `7d57a00`: resep 2 tombol (Jalankan + Tandai Selesai); kirim struk
+  Text/PDF ke WA; KYC hardening (NIK 16 digit, magic bytes gambar); gating Dokter
+  Bisnis AI; trial/upgrade jalur dua (Trial + QRIS Dinamis Pendukung).
+- BATCH #3 `672286b`: fix `submit_kyc` kolom salah (`phone`/`auto_verified`/
+  `verified_at`) + auto-verify -> migrasi
+  `2026-10-22-kasirgo-fix-submit-kyc-columns.sql`; wording login; tombol X dialog
+  hapus produk; sinkron kartu resep saat Tandai Selesai; `cross_sell` buka POS.
+- BATCH #4 `731fb3b`: CORS di 5 EF (`rcb_create_charge`, `rcb_check_status`,
+  `create_payment`, `save_payment_config`, `test_payment_connection`) -> fix QRIS
+  dinamis gagal diam-diam di browser; hapus menu "Hubungkan Midtrans" + kartu
+  Konfigurasi Platform dari Pengaturan owner; hapus outlet via RPC
+  `delete_owner_outlet` (migrasi
+  `2026-10-23-kasirgo-fix-delete-owner-outlet.sql`).
+- BATCH #5 `ff04bb3`: fix QRIS Dinamis tak muncul saat "Dukung KasirGo" dari
+  Pengaturan. Root cause: `settings_screen.dart` `_handleSupport` hanya SnackBar,
+  hasil QR dibuang. Fix: widget bersama BARU
+  `kasirgo/lib/widgets/common/dynamic_qris_sheet.dart` (`DynamicQrisSheet`, QR +
+  polling `rcb_check_status`), dipakai `SupporterScreen` DAN `settings_screen.dart`.
+- KEBIJAKAN QRIS: pembayaran PRODUK di POS = QRIS Statis manual
+  (`checkout_dialog.dart` static-only); QRIS Dinamis otomatis HANYA di alur
+  upgrade Program Pendukung.
 
 ---
 
