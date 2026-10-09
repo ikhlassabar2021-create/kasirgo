@@ -161,6 +161,70 @@ class _MultiOutletScreenState extends ConsumerState<MultiOutletScreen> {
     Navigator.pop(context);
   }
 
+  Future<void> _deleteOutlet(Map<String, dynamic> outlet) async {
+    final id = outlet['id']?.toString() ?? '';
+    final name = outlet['name']?.toString() ?? '-';
+    if (id.isEmpty) return;
+
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (dialogCtx) => AlertDialog(
+        backgroundColor: AppTheme.surfaceColor,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: Row(
+          children: [
+            const Expanded(
+              child: Text('Hapus Outlet',
+                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+            ),
+            AppCloseButton(onTap: () => Navigator.pop(dialogCtx, false)),
+          ],
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text('Hapus outlet "$name"?',
+                style: const TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w700,
+                    color: AppTheme.textPrimary)),
+            const SizedBox(height: 8),
+            const Text(
+              'Semua data outlet ini (produk, transaksi, pelanggan, karyawan) '
+              'akan dihapus permanen dan tidak bisa dikembalikan.',
+              style: TextStyle(fontSize: 12.5, color: AppTheme.textSecondary),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialogCtx, false),
+            child: const Text('Batal'),
+          ),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(
+                backgroundColor: AppTheme.errorColor,
+                foregroundColor: Colors.white),
+            onPressed: () => Navigator.pop(dialogCtx, true),
+            child: const Text('Hapus'),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true || !mounted) return;
+
+    final messenger = ScaffoldMessenger.of(context);
+    final result = await _svc.deleteOwnerOutlet(id);
+    if (!mounted) return;
+    messenger.showSnackBar(SnackBar(
+      content: Text(result.message),
+      backgroundColor:
+          result.success ? AppTheme.successColor : AppTheme.errorColor,
+    ));
+    if (result.success) _load();
+  }
+
   @override
   Widget build(BuildContext context) {
     final user = ref.watch(currentUserProvider);
@@ -262,8 +326,21 @@ class _MultiOutletScreenState extends ConsumerState<MultiOutletScreen> {
                           trailing: isActive
                               ? const Icon(Icons.check_circle_rounded,
                                   color: AppTheme.successColor)
-                              : const Icon(Icons.chevron_right,
-                                  color: AppTheme.textSecondary),
+                              : Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    if (_outlets.length > 1)
+                                      IconButton(
+                                        tooltip: 'Hapus outlet',
+                                        icon: const Icon(
+                                            Icons.delete_outline_rounded,
+                                            color: AppTheme.errorColor),
+                                        onPressed: () => _deleteOutlet(o),
+                                      ),
+                                    const Icon(Icons.chevron_right,
+                                        color: AppTheme.textSecondary),
+                                  ],
+                                ),
                           onTap: () => _switchOutlet(o),
                         ),
                       );

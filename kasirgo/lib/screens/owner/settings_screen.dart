@@ -8,7 +8,6 @@ import 'package:image_picker/image_picker.dart';
 import '../../config/app_theme.dart';
 import '../../providers/auth_provider.dart';
 import '../../services/auth_service.dart';
-import '../../services/settlement_service.dart';
 import '../../services/supporter_service.dart';
 import '../../services/supabase_service.dart';
 import '../../widgets/common/supporter_gate.dart';
@@ -17,7 +16,6 @@ import '../../utils/formatters.dart';
 import '../../utils/qris_config.dart';
 import 'report_schedule_screen.dart';
 import 'guide_screen.dart';
-import 'midtrans_connect_screen.dart';
 import 'multi_outlet_screen.dart';
 import '../../utils/receipt_generator.dart';
 
@@ -40,7 +38,6 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
   int? _staffQuotaMax;
   bool _staffQuotaExtra = false;
   String? _kycStatus;
-  Map<String, dynamic>? _financialConfig;
 
   @override
   void initState() {
@@ -56,7 +53,6 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
 
       if (outletId != null && outletId.isNotEmpty) {
         final client = Supabase.instance.client;
-        final settlementService = SettlementService();
 
         // Load outlet data
         final outletRes = await client
@@ -117,8 +113,6 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
           _staffQuotaExtra = quotaRes['extra_from_supporter'] == true;
         }
 
-        // Load financial config
-        _financialConfig = await settlementService.getFinancialConfig(int.parse(outletId.toString()));
       }
     } catch (_) {} finally {
       if (mounted) setState(() => _isLoading = false);
@@ -312,8 +306,6 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                         _buildStaffQuotaCard(),
                         const SizedBox(height: 16),
                         _buildBusinessProfileCard(user),
-                        const SizedBox(height: 16),
-                        _buildFinancialConfigCard(),
                         const SizedBox(height: 16),
                         _buildAccountMenuCard(),
                       const SizedBox(height: 24),
@@ -942,12 +934,6 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
           _buildMenuRow(Icons.person_outline, 'Edit Profil', () {
             final currentUser = ref.read(currentUserProvider);
             _showEditProfileDialog(currentUser);
-          }),
-          _buildMenuRow(Icons.account_balance_rounded, 'Hubungkan Midtrans (QRIS Dinamis)', () {
-            Navigator.push(
-              context,
-              MaterialPageRoute(builder: (_) => const MidtransConnectScreen()),
-            );
           }),
           _buildMenuRow(Icons.qr_code_2_rounded, 'QRIS Toko (Manual / Statis)', () {
             _showQrisConfigDialog();
@@ -1722,40 +1708,4 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     );
   }
 
-  Widget _buildFinancialConfigCard() {
-    final mdrRate = (_financialConfig?['platform_margin_rate'] as num?)?.toDouble() ?? 0.02;
-    final instantFee = (_financialConfig?['instant_withdrawal_fee'] as num?)?.toDouble() ?? 0.005;
-    final minWithdrawal = (_financialConfig?['min_withdrawal'] as num?)?.toDouble() ?? 50000;
-
-    return Container(
-      padding: const EdgeInsets.all(20),
-      decoration: BoxDecoration(
-        color: AppTheme.surfaceColor.withValues(alpha: 0.8),
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: AppTheme.borderColor.withValues(alpha: 0.5)),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          const Text(
-            'Konfigurasi Platform',
-            style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: AppTheme.textPrimary),
-          ),
-          const SizedBox(height: 12),
-          _buildInfoRow(Icons.payment, 'MDR Base (QRIS)', '2% per transaksi'),
-          const SizedBox(height: 8),
-          _buildInfoRow(Icons.category, 'Margin Platform', '${(mdrRate * 100).toStringAsFixed(0)}%'),
-          const SizedBox(height: 8),
-          _buildInfoRow(Icons.swap_horiz, 'Tarik Kilat Fee', '${(instantFee * 100).toStringAsFixed(1)}%'),
-          const SizedBox(height: 8),
-          _buildInfoRow(Icons.attach_money, 'Min Withdrawal', Formatters.currency(minWithdrawal)),
-          const SizedBox(height: 8),
-          const Text(
-            'Konfigurasi ini dikelola oleh Superadmin via Control Plane.',
-            style: TextStyle(fontSize: 11, fontStyle: FontStyle.italic, color: AppTheme.textSecondary),
-          ),
-        ],
-      ),
-    );
-  }
 }

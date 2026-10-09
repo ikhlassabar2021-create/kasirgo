@@ -1829,6 +1829,26 @@ class SupabaseService {
     }
   }
 
+  /// Hapus outlet milik owner aktif (multi-outlet — Pendukung).
+  /// Validasi kewenangan + minimal 1 outlet dilakukan di RPC `delete_owner_outlet`.
+  Future<({bool success, String message})> deleteOwnerOutlet(String outletId) async {
+    try {
+      final res = await _client.rpc('delete_owner_outlet', params: {
+        'p_outlet': outletId,
+      });
+      final map = (res is Map)
+          ? Map<String, dynamic>.from(res)
+          : <String, dynamic>{};
+      return (
+        success: map['success'] == true,
+        message: map['message']?.toString() ?? 'Gagal menghapus outlet',
+      );
+    } catch (e) {
+      debugPrint('deleteOwnerOutlet error: $e');
+      return (success: false, message: 'Gagal menghapus outlet');
+    }
+  }
+
   /// Status pesanan dine-in utk pelanggan (anon) via polling per meja.
   /// Mengembalikan pesanan hari ini untuk meja tersebut (terbaru dulu).
   Future<List<Map<String, dynamic>>> getPublicOrderStatus(
