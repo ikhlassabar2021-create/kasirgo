@@ -1,0 +1,37 @@
+project_id = "lmvjecdvfzsmrowwwpck"
+
+[functions.dm_creative]
+verify_jwt = false
+
+[functions.business_doctor_chat]
+verify_jwt = true
+
+[functions.doctor_observe]
+verify_jwt = true
+
+[functions.create_payment]
+verify_jwt = true
+
+[functions.save_payment_config]
+verify_jwt = true
+
+[functions.test_payment_connection]
+verify_jwt = true
+
+[functions.midtrans_webhook]
+verify_jwt = false
+
+[functions.rcb_create_charge]
+verify_jwt = true
+
+[functions.rcb_check_status]
+verify_jwt = true
+
+[functions.rcb_webhook]
+verify_jwt = false
+
+[functions.create_staff]
+verify_jwt = true
+
+[functions.onboard_merchant]
+verify_jwt = true

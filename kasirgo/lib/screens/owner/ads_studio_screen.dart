@@ -139,6 +139,7 @@ class _AdsStudioScreenState extends ConsumerState<AdsStudioScreen> {
         assets: _assets,
         channels: _adsChannels,
         objectives: _objectives,
+        connected: _adsChannels.keys.where(_isConnected).toSet(),
       ),
     );
     if (result == null) return;
@@ -850,11 +851,13 @@ class _NewCampaignSheet extends StatefulWidget {
     required this.assets,
     required this.channels,
     required this.objectives,
+    this.connected = const <String>{},
   });
 
   final List<Map<String, dynamic>> assets;
   final Map<String, String> channels;
   final Map<String, String> objectives;
+  final Set<String> connected;
 
   @override
   State<_NewCampaignSheet> createState() => _NewCampaignSheetState();
@@ -868,6 +871,8 @@ class _NewCampaignSheetState extends State<_NewCampaignSheet> {
   double _radius = 5;
   DateTime _start = DateTime.now();
   DateTime _end = DateTime.now().add(const Duration(days: 7));
+
+  bool get _channelConnected => widget.connected.contains(_channel);
 
   @override
   void dispose() {
@@ -906,17 +911,102 @@ class _NewCampaignSheetState extends State<_NewCampaignSheet> {
             Text('Buat Kampanye Iklan',
                 style: GoogleFonts.inter(
                     fontWeight: FontWeight.w700, color: AppTheme.textPrimary)),
+            const SizedBox(height: 4),
+            Card(
+              margin: const EdgeInsets.only(bottom: 16),
+              child: Padding(
+                padding: const EdgeInsets.all(12),
+                child: Row(
+                  children: [
+                    Icon(Icons.info_outline, color: AppTheme.primaryColor, size: 28),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text('Panduan Penghubungan Akun',
+                              style: GoogleFonts.inter(
+                                  fontWeight: FontWeight.w600, color: AppTheme.primaryColor)),
+                          const SizedBox(height: 4),
+                          Text(
+                            'Pilih platform iklan di bawah. Jika akun platform belum terhubung, '
+                            'kampanye tetap bisa dibuat sebagai draf dan dijalankan manual di '
+                            'dashboard platform (KasirGo tidak menampung uang iklan).',
+                            style: GoogleFonts.inter(fontSize: 12, color: AppTheme.textSecondary),
+                          ),
+                          const SizedBox(height: 2),
+                          Text(
+                            'Untuk pengelolaan OTOMATIS (monitoring ROAS/CTR/CPC), minta superadmin '
+                            'menghubungkan akun di Control Panel → Squad Digital Marketing.',
+                            style: GoogleFonts.inter(fontSize: 12, color: AppTheme.textSecondary),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
             const SizedBox(height: 12),
             DropdownButtonFormField<String>(
               initialValue: _channel,
               decoration: const InputDecoration(
                   labelText: 'Platform', border: OutlineInputBorder()),
               items: widget.channels.entries
-                  .map((e) =>
-                      DropdownMenuItem(value: e.key, child: Text(e.value)))
+                  .map((e) => DropdownMenuItem(
+                        value: e.key,
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Text(e.value),
+                            const SizedBox(width: 6),
+                            Icon(
+                              widget.connected.contains(e.key)
+                                  ? Icons.check_circle_rounded
+                                  : Icons.link_off_rounded,
+                              size: 14,
+                              color: widget.connected.contains(e.key)
+                                  ? AppTheme.successColor
+                                  : AppTheme.textSecondary,
+                            ),
+                          ],
+                        ),
+                      ))
                   .toList(),
               onChanged: (v) => setState(() => _channel = v ?? 'meta'),
             ),
+            if (!_channelConnected) ...[
+              const SizedBox(height: 8),
+              Card(
+                color: AppTheme.warningColor.withValues(alpha: 0.08),
+                child: Padding(
+                  padding: const EdgeInsets.all(10),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        children: [
+                          Icon(Icons.info_outline, color: AppTheme.warningColor, size: 18),
+                          const SizedBox(width: 6),
+                          Text('Akun belum terhubung',
+                              style: GoogleFonts.inter(
+                                  fontWeight: FontWeight.w600,
+                                  fontSize: 13,
+                                  color: AppTheme.warningColor)),
+                        ],
+                      ),
+                      const SizedBox(height: 6),
+                      Text(
+                        'Akun ${widget.channels[_channel] ?? _channel} belum terhubung ke KasirGo. '
+                        'Kampanye akan disimpan sebagai draf. Hubungi superadmin KasirGo untuk '
+                        'menghubungkan akun agar kampanye bisa dikelola otomatis.',
+                        style: GoogleFonts.inter(fontSize: 12, color: AppTheme.textPrimary),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ],
             const SizedBox(height: 12),
             DropdownButtonFormField<String>(
               initialValue: _objective,
@@ -985,7 +1075,7 @@ class _NewCampaignSheetState extends State<_NewCampaignSheet> {
             ),
             const SizedBox(height: 16),
             AppButton(
-              label: 'Simpan Draf',
+              label: _channelConnected ? 'Simpan Draf' : 'Simpan Draf (Manual)',
               icon: Icons.save_rounded,
               variant: AppButtonVariant.secondary,
               onPressed: () {

@@ -66,6 +66,20 @@ class DmService {
     });
   }
 
+  Future<Map<String, dynamic>> generateImage({
+    required String outletId,
+    required String brief,
+    String tone = 'ramah',
+  }) {
+    return _invoke({
+      'mode': 'generate',
+      'kind': 'image',
+      'outlet_id': outletId,
+      'brief': brief,
+      'tone': tone,
+    });
+  }
+
   Future<List<Map<String, dynamic>>> listAssets(
     String outletId, {
     String? kind,

@@ -38,6 +38,31 @@ async function callLlm(cfg: Json, messages: Json[]) {
   return data;
 }
 
+async function callImages(cfg: Json, outletName: string, prompt: string) {
+  const base = String(cfg.base_url ?? "").replace(/\/+$/, "");
+  const url = `${base}/images/generations`;
+  const body: Json = {
+    model: cfg.image_model || "dall-e-3",
+    prompt: `Iklan promosi UMKM toko "${outletName}": ${prompt}. Foto produk profesional, cerah, menarik untuk media sosial.`,
+    n: 1,
+    size: "512x512",
+  };
+  const resp = await fetch(url, {
+    method: "POST",
+    headers: { "Content-Type": "application/json", Authorization: `Bearer ${cfg.api_key}` },
+    body: JSON.stringify(body),
+  });
+  const data = await resp.json().catch(() => ({}));
+  if (!resp.ok) throw new Error(data?.error?.message ?? data?.message ?? `Image API HTTP ${resp.status}`);
+  return data;
+}
+
+function extractImage(imgData: Json): { url: string; b64: string } {
+  const url = imgData?.data?.[0]?.url || imgData?.url || "";
+  const b64 = imgData?.data?.[0]?.b64_json || imgData?.b64_json || "";
+  return { url, b64 };
+}
+
 function extractJson(text: string): Json | null {
   if (!text) return null;
   const start = text.indexOf("{");
@@ -381,6 +406,69 @@ Deno.serve(async (req: Request) => {
       return json({ success: true, asset, blocks, tokens: vtokens, disclaimer: DISCLAIMER });
     }
 
+    if (kind === "image") {
+      try {
+        const imgData = await callImages(provider, outlet?.name ?? "Toko", brief);
+        const { url, b64 } = extractImage(imgData);
+        if (!url && !b64) {
+          return json({
+            success: true,
+            fallback: true,
+            blocks: [{
+              type: "card",
+              tone: "info",
+              title: "Generator Gambar AI",
+              body: "Provider gambar AI belum mengembalikan hasil. Silakan upload gambar manual dari galeri.",
+            }],
+            disclaimer: DISCLAIMER,
+          });
+        }
+        const { data: imgAsset } = await admin.from("dm_assets").insert({
+          outlet_id: outletId,
+          kind: "image",
+          title: `Gambar AI: ${brief.slice(0, 40) || "Promo"}`,
+          content: url,
+          filePath: url,
+          source: "ai_generated",
+          status: "draft",
+          meta: { provider_image: true, brief, generated_at: new Date().toISOString() },
+        }).select("id, title, kind, status, meta").maybeSingle();
+        await admin.from("dm_usage").upsert({
+          outlet_id: outletId,
+          day: new Date().toISOString().slice(0, 10),
+          assets: usedAssets + 1,
+          tokens: usedTokens,
+          requests: Number(usage?.requests ?? 0) + 1,
+        }, { onConflict: "outlet_id,day" });
+        return json({
+          success: true,
+          asset: imgAsset,
+          blocks: [{
+            type: "image",
+            title: `Gambar AI: ${brief.slice(0, 40) || "Promo"}`,
+            image_url: url,
+            image_b64: b64,
+            asset_id: imgAsset?.id ?? null,
+          }],
+          tokens: 0,
+          disclaimer: DISCLAIMER,
+        });
+      } catch (e) {
+        return json({
+          success: true,
+          fallback: true,
+          blocks: [{
+            type: "card",
+            tone: "warning",
+            title: "Gambar AI tidak tersedia",
+            body: String((e as Error)?.message ?? e).slice(0, 200) +
+              ". Provider mungkin belum mendukung gambar. Kamu bisa upload gambar manual.",
+          }],
+          disclaimer: DISCLAIMER,
+        });
+      }
+    }
+
     let parsed: Json | null = null;
     let tokens = 0;
     try {
@@ -437,10 +525,39 @@ Deno.serve(async (req: Request) => {
     const blocks: Json[] = [];
     if (parsed?.tips) blocks.push({ type: "text", text: sanitize(String(parsed.tips)) });
     blocks.push({
-      type: "assets",
+      type: "assets" as const,
       title: `Konten dibuat (${saved.length})`,
       items: saved.map((a) => ({ id: a.id, title: a.title, caption: a.caption, hashtags: a.hashtags, kind: a.kind, status: a.status })),
     });
+
+    // Also try generating an image alongside the copy
+    try {
+      const imgData = await callImages(provider, outlet?.name ?? "Toko", brief);
+      const { url, b64 } = extractImage(imgData);
+      if (url || b64) {
+        const { data: imgAsset } = await admin.from("dm_assets").insert({
+          outlet_id: outletId,
+          kind: "image",
+          title: `Gambar AI: ${brief.slice(0, 40) || "Promo"}`,
+          content: url,
+          filePath: url,
+          source: "ai_generated",
+          status: "draft",
+          meta: { provider_image: true, brief, generated_by: "dm_creative" },
+        }).select("id, title, kind, status").maybeSingle();
+        if (imgAsset) {
+          blocks.push({
+            type: "image",
+            title: `Gambar AI: ${brief.slice(0, 40) || "Promo"}`,
+            image_url: url,
+            image_b64: b64,
+            asset_id: imgAsset.id,
+          });
+        }
+      }
+    } catch (_) {
+      // Image generation is optional; don't fail copy request
+    }
 
     return json({ success: true, assets: saved, blocks, tokens, disclaimer: DISCLAIMER });
   } catch (e) {

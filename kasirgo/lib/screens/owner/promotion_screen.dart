@@ -32,6 +32,7 @@ class _PromotionScreenState extends ConsumerState<PromotionScreen> {
   Map<String, dynamic> _settings = {};
   List<int> _bestHours = [];
   String _modePromo = 'manual';
+  List<Map<String, dynamic>> _channelStatus = [];
 
   static const _channels = <String, String>{
     'wa_status': 'WhatsApp Status',
@@ -66,6 +67,7 @@ class _PromotionScreenState extends ConsumerState<PromotionScreen> {
         _service.listAssets(outletId, limit: 60),
         _service.getSettings(outletId),
         _service.suggestBestHours(outletId),
+        _service.getChannelStatus(outletId).catchError((_) => <Map<String, dynamic>>[]),
       ]);
       if (!mounted) return;
       setState(() {
@@ -74,6 +76,7 @@ class _PromotionScreenState extends ConsumerState<PromotionScreen> {
         _settings = results[2] as Map<String, dynamic>;
         _modePromo = (_settings['mode_promo'] ?? 'manual').toString();
         _bestHours = results[3] as List<int>;
+        _channelStatus = results[4] as List<Map<String, dynamic>>;
       });
     } catch (_) {}
     if (mounted) setState(() => _loading = false);
@@ -112,6 +115,7 @@ class _PromotionScreenState extends ConsumerState<PromotionScreen> {
       builder: (_) => _NewPostSheet(
         assets: _assets,
         bestHours: _bestHours,
+        channelStatus: _channelStatus,
       ),
     );
     if (result == null) return;
@@ -292,17 +296,76 @@ class _PromotionScreenState extends ConsumerState<PromotionScreen> {
             ? const Center(child: CircularProgressIndicator())
             : RefreshIndicator(
                 onRefresh: _load,
-                child: ListView(
-                  padding: const EdgeInsets.all(16),
-                  children: [
-                    _buildSummary(),
-                    const SizedBox(height: 12),
-                    _buildControls(),
-                    const SizedBox(height: 16),
-                    ..._buildCalendar(),
-                  ],
+                child: Padding(
+                  padding: const EdgeInsets.only(top: 80),
+                  child: Column(
+                    children: [
+                      _buildConnectionGuide(),
+                      _buildSummary(),
+                      const SizedBox(height: 12),
+                      _buildControls(),
+                      const SizedBox(height: 16),
+                      ..._buildCalendar(),
+                    ],
+                  ),
                 ),
               ),
+      ),
+    );
+  }
+
+  Widget _buildConnectionGuide() {
+    final connected = _channelStatus.where((c) => c['is_connected'] == true).length;
+    final total = _channels.length;
+    return Card(
+      margin: const EdgeInsets.all(16),
+      child: Padding(
+        padding: const EdgeInsets.all(12),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Icon(Icons.hub_rounded, color: AppTheme.primaryColor, size: 28),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Text('Koneksi Akun Kanal ($connected/$total terhubung)',
+                      style: GoogleFonts.inter(fontWeight: FontWeight.w600, color: AppTheme.primaryColor)),
+                ),
+              ],
+            ),
+            const SizedBox(height: 8),
+            // Channel status chips
+            Wrap(
+              spacing: 6,
+              runSpacing: 4,
+              children: _channels.entries.map((e) {
+                final isConnected = _channelStatus
+                    .any((c) => c['channel'] == e.key && c['is_connected'] == true);
+                return Chip(
+                  avatar: Icon(
+                    isConnected ? Icons.check_circle_rounded : Icons.link_off_rounded,
+                    size: 16,
+                    color: isConnected ? AppTheme.successColor : AppTheme.textSecondary,
+                  ),
+                  label: Text(e.value, style: const TextStyle(fontSize: 12)),
+                  backgroundColor: isConnected
+                      ? AppTheme.successColor.withValues(alpha: 0.1)
+                      : Colors.grey.withValues(alpha: 0.08),
+                  side: BorderSide(
+                    color: isConnected ? AppTheme.successColor : Colors.grey.shade300,
+                  ),
+                );
+              }).toList(),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              'Posting manual (salin caption + buka WhatsApp/Website) SELALU bisa tanpa koneksi akun. '
+              'Koneksi akun diperlukan untuk posting OTOMATIS - hubungi superadmin untuk mengaktifkan.',
+              style: GoogleFonts.inter(fontSize: 12, color: AppTheme.textSecondary),
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -574,10 +637,11 @@ class _PromotionScreenState extends ConsumerState<PromotionScreen> {
 }
 
 class _NewPostSheet extends StatefulWidget {
-  const _NewPostSheet({required this.assets, required this.bestHours});
+  const _NewPostSheet({required this.assets, required this.bestHours, this.channelStatus = const []});
 
   final List<Map<String, dynamic>> assets;
   final List<int> bestHours;
+  final List<Map<String, dynamic>> channelStatus;
 
   @override
   State<_NewPostSheet> createState() => _NewPostSheetState();
@@ -588,6 +652,19 @@ class _NewPostSheetState extends State<_NewPostSheet> {
   String? _assetId;
   final TextEditingController _caption = TextEditingController();
   DateTime _when = DateTime.now().add(const Duration(hours: 1));
+
+  bool _isChannelConnected(String channel) {
+    return widget.channelStatus
+        .any((c) => c['channel'] == channel && c['is_connected'] == true);
+  }
+
+  String _channelLabel(String channel) {
+    return _PromotionChannels.all
+            .where((e) => e.key == channel)
+            .map((e) => e.value)
+            .firstOrNull ??
+        channel;
+  }
 
   @override
   void dispose() {
@@ -640,11 +717,60 @@ class _NewPostSheetState extends State<_NewPostSheet> {
               items: _PromotionChannels.all
                   .map((e) => DropdownMenuItem(
                         value: e.key,
-                        child: Text(e.value),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Text(e.value),
+                            const SizedBox(width: 6),
+                            Icon(
+                              _isChannelConnected(e.key)
+                                  ? Icons.check_circle_rounded
+                                  : Icons.link_off_rounded,
+                              size: 14,
+                              color: _isChannelConnected(e.key)
+                                  ? AppTheme.successColor
+                                  : AppTheme.textSecondary,
+                            ),
+                          ],
+                        ),
                       ))
                   .toList(),
               onChanged: (v) => setState(() => _channel = v ?? 'wa_status'),
             ),
+            // Connection guide for selected channel
+            if (!_isChannelConnected(_channel)) ...[
+              const SizedBox(height: 8),
+              Card(
+                color: AppTheme.warningColor.withValues(alpha: 0.08),
+                child: Padding(
+                  padding: const EdgeInsets.all(10),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        children: [
+                          Icon(Icons.info_outline, color: AppTheme.warningColor, size: 18),
+                          const SizedBox(width: 6),
+                          Text('Kanal belum terhubung',
+                              style: GoogleFonts.inter(
+                                  fontWeight: FontWeight.w600,
+                                  fontSize: 13,
+                                  color: AppTheme.warningColor)),
+                        ],
+                      ),
+                      const SizedBox(height: 6),
+                      Text(
+                        'Kanal ini belum terhubung ke akun Anda. Posting manual tetap bisa: '
+                        'isi caption, lalu aplikasi akan membuka ${_channelLabel(_channel)} '
+                        'untuk Anda posting sendiri.\n\n'
+                        'Untuk posting OTOMATIS, hubungi superadmin KasirGo untuk mengaktifkan koneksi akun.',
+                        style: GoogleFonts.inter(fontSize: 12, color: AppTheme.textPrimary),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ],
             const SizedBox(height: 12),
             DropdownButtonFormField<String>(
               initialValue: _assetId,
