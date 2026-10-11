@@ -98,6 +98,7 @@ class NearbyOutlet {
   final double distanceKm;
   final int queueCount;
   final bool hasDelivery;
+  final bool serviceQueueEnabled;
 
   const NearbyOutlet({
     required this.id,
@@ -112,6 +113,7 @@ class NearbyOutlet {
     this.distanceKm = 0,
     this.queueCount = 0,
     this.hasDelivery = false,
+    this.serviceQueueEnabled = false,
   });
 
   factory NearbyOutlet.fromJson(Map<String, dynamic> json) {
@@ -134,6 +136,7 @@ class NearbyOutlet {
           ? (json['queue_count'] as num).toInt()
           : 0,
       hasDelivery: json['has_delivery'] == true,
+      serviceQueueEnabled: json['service_queue_enabled'] == true,
     );
   }
 

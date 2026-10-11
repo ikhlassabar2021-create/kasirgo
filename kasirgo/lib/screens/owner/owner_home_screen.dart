@@ -27,6 +27,7 @@ import 'affiliate_owner_screen.dart';
 import 'health_score_screen.dart';
 import 'business_doctor_screen.dart';
 import 'bundle_manager_screen.dart';
+import 'lapak_live_screen.dart';
 import 'ads_studio_screen.dart';
 import 'design_studio_screen.dart';
 import 'promotion_screen.dart';
@@ -936,6 +937,17 @@ class _OwnerHomeScreenState extends ConsumerState<OwnerHomeScreen> {
         color: const Color(0xFF7C3AED),
         onTap: () => Navigator.push(context,
             MaterialPageRoute(builder: (_) => const BundleManagerScreen())),
+      ),
+    );
+
+    quickActionItems.add(
+      _ModuleCard(
+        icon: Icons.location_on_rounded,
+        title: 'Lapak Live',
+        subtitle: 'Buka lapak & antrean',
+        color: const Color(0xFF0D9488),
+        onTap: () => Navigator.push(context,
+            MaterialPageRoute(builder: (_) => const LapakLiveScreen())),
       ),
     );
 

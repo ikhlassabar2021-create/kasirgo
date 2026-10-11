@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
@@ -51,10 +52,22 @@ class _BuyerHomeTabState extends ConsumerState<BuyerHomeTab> {
   bool _loadingCatalog = false;
   List<Product> _catalog = const [];
 
+  StreamSubscription<OutletLocation>? _liveSub;
+  OutletLocation? _livePosition;
+
+  ServiceQueueEntry? _myQueue;
+  bool _takingQueue = false;
+
   @override
   void initState() {
     super.initState();
     _init();
+  }
+
+  @override
+  void dispose() {
+    _liveSub?.cancel();
+    super.dispose();
   }
 
   Future<void> _init() async {
@@ -175,12 +188,130 @@ class _BuyerHomeTabState extends ConsumerState<BuyerHomeTab> {
       _loadingCatalog = true;
       _catalog = const [];
     });
+    _startLiveWatch(outlet.id);
     final products = await _supabase.getPublicCatalog(outlet.id);
     if (!mounted) return;
     setState(() {
       _catalog = products;
       _loadingCatalog = false;
     });
+  }
+
+  /// ST17-7: pantau posisi live gerobak/warung yang sedang dilihat pembeli.
+  void _startLiveWatch(String outletId) {
+    _liveSub?.cancel();
+    _livePosition = null;
+    _liveSub = _locationService.watchOutletLocation(outletId).listen((loc) {
+      if (!mounted) return;
+      setState(() => _livePosition = loc);
+    });
+  }
+
+  void _stopLiveWatch() {
+    _liveSub?.cancel();
+    _liveSub = null;
+    _livePosition = null;
+  }
+
+  Future<void> _takeQueue(NearbyOutlet outlet) async {
+    setState(() => _takingQueue = true);
+    final entry = await _locationService.takeQueueNumber(outlet.id);
+    if (!mounted) return;
+    setState(() {
+      _takingQueue = false;
+      _myQueue = entry;
+    });
+    final messenger = ScaffoldMessenger.of(context);
+    messenger.hideCurrentSnackBar();
+    messenger.showSnackBar(
+      SnackBar(
+        content: Text(entry == null
+            ? 'Gagal mengambil nomor antrean. Coba lagi.'
+            : 'Nomor antreanmu: ${entry.number}'),
+        duration: const Duration(seconds: 3),
+      ),
+    );
+  }
+
+  Widget _buildLiveSection(NearbyOutlet o) {
+    final live = _livePosition;
+    final hasLive = live != null && (live.latitude != 0 || live.longitude != 0);
+    return AppCard(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              const Icon(Icons.my_location_rounded,
+                  size: 18, color: AppTheme.primaryColor),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Text(
+                  'Posisi Live',
+                  style: GoogleFonts.inter(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w700,
+                    color: AppTheme.textPrimary,
+                  ),
+                ),
+              ),
+              if (o.isMobile)
+                const _MetaChip(
+                    icon: Icons.directions_bike_rounded, label: 'Keliling'),
+            ],
+          ),
+          const SizedBox(height: 8),
+          if (hasLive)
+            Text(
+              'Lat ${live.latitude.toStringAsFixed(5)}, '
+              'Lng ${live.longitude.toStringAsFixed(5)}'
+              '${live.updatedAt != null ? '\nDiperbarui ${Formatters.dateTime(live.updatedAt!)}' : ''}',
+              style: GoogleFonts.inter(
+                fontSize: 12.5,
+                color: AppTheme.textSecondary,
+              ),
+            )
+          else
+            Text(
+              o.isMobile
+                  ? 'Penjual belum membagikan posisi terkini.'
+                  : 'Posisi toko belum dibagikan.',
+              style: GoogleFonts.inter(
+                fontSize: 12.5,
+                color: AppTheme.textSecondary,
+              ),
+            ),
+          if (o.serviceQueueEnabled) ...[
+            const SizedBox(height: 12),
+            if (_myQueue != null)
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: AppTheme.primaryColor.withValues(alpha: 0.08),
+                  borderRadius: BorderRadius.circular(AppTheme.radiusMedium),
+                ),
+                child: Text(
+                  'Nomor antreanmu: ${_myQueue!.number} (${_myQueue!.status})',
+                  style: GoogleFonts.inter(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w700,
+                    color: AppTheme.primaryColor,
+                  ),
+                ),
+              )
+            else
+              AppButton(
+                label: 'Ambil Nomor Antrean',
+                icon: Icons.confirmation_number_rounded,
+                variant: AppButtonVariant.secondary,
+                isLoading: _takingQueue,
+                onPressed: () => _takeQueue(o),
+              ),
+          ],
+        ],
+      ),
+    );
   }
 
   void _addToCart(NearbyOutlet outlet, Product product) {
@@ -556,6 +687,7 @@ class _BuyerHomeTabState extends ConsumerState<BuyerHomeTab> {
             onPressed: () => setState(() {
               _selected = null;
               _catalog = const [];
+              _stopLiveWatch();
             }),
             icon: const Icon(Icons.arrow_back_rounded),
             tooltip: 'Kembali ke radar',
@@ -587,6 +719,10 @@ class _BuyerHomeTabState extends ConsumerState<BuyerHomeTab> {
         ],
       ),
       const SizedBox(height: 12),
+      if (o.isMobile || o.serviceQueueEnabled) ...[
+        _buildLiveSection(o),
+        const SizedBox(height: 12),
+      ],
       SponsorAdSlot(outletId: o.id, compact: true),
       const SizedBox(height: 12),
       if (_loadingCatalog)

@@ -136,7 +136,29 @@ class LocationService {
   }
 
   /// Ambil nomor antrean berikutnya (pembeli).
+  ///
+  /// Memakai RPC atomik `take_queue_number` (SECURITY DEFINER) agar nomor unik
+  /// walau banyak pembeli memanggil bersamaan; fallback ke insert langsung.
   Future<ServiceQueueEntry?> takeQueueNumber(String outletId) async {
+    try {
+      final res = await _client
+          .rpc('take_queue_number', params: {'p_outlet': outletId});
+      if (res is Map && res['success'] == true) {
+        return ServiceQueueEntry(
+          id: res['id']?.toString() ?? '',
+          outletId: outletId,
+          number: (res['number'] as num?)?.toInt() ?? 0,
+          status: 'menunggu',
+        );
+      }
+      if (res is Map && res['error'] != null) {
+        debugPrint('LocationService.takeQueueNumber: ${res['error']}');
+        return null;
+      }
+    } catch (e) {
+      debugPrint('LocationService.takeQueueNumber RPC error: $e');
+    }
+
     try {
       final existing = await listQueue(outletId);
       final nextNumber = existing.isEmpty

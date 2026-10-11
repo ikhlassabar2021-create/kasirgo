@@ -287,6 +287,17 @@ Status: SELESAI. Project Supabase sudah dibuat dan schema terpasang serta diuji.
   (`business_doctor`/`digital_marketing_llm`) - hanya service_role + superadmin.
   Migrasi `docs/migrations/2026-10-27-kasirgo-16d-ads.sql`. PHASE 16 SELESAI.
   Detail: `PROGRESS-PHASE16.md`.)
+- [x] Phase 17: Ekosistem Hyper-Local
+  (ST17-1 fondasi (PostGIS, orders, app_customers, outlet_locations, service_queue,
+  RPC nearby_outlets/submit_order/validate_order_payment/complete_order, RLS, Realtime) -
+  migrasi `2026-10-31-kasirgo-17a-hyperlocal.sql`; ST17-2 pesanan online masuk (akses
+  owner+kasir/admin via `is_outlet_member`, realtime, notifikasi) - `2026-11-01-kasirgo-17b`; 
+  ST17-3 laporan omzet produk vs titipan ongkir; ST17-4 mode ganda Penjual/Pembeli +
+  anonymous auth + consent UU PDP; ST17-5 app Pembeli radar `nearby_outlets` + katalog
+  publik + keranjang (1 toko/transaksi) + iklan sisi pelanggan; ST17-6 checkout + tracking
+  realtime + bukti transfer LOKAL; ST17-7 gerobak live tracking + antrean jasa + hardening
+  (rate limit order trigger, RPC take_queue_number, nearby_outlets +service_queue_enabled) -
+  `2026-11-02-kasirgo-17c-hardening.sql`. PHASE 17 SELESAI. Detail: `PROGRESS-PHASE17.md`.)
 
 Catatan: Phase 7.6 adalah redesign visual menyeluruh (semua dashboard + fitur Produk/Pelanggan/
 Karyawan/Laporan/Pengaturan) tanpa mengubah fitur/logic. Spec: workflow Bagian 1.6 & 7C.

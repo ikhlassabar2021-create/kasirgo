@@ -1726,6 +1726,59 @@ class SupabaseService {
     }
   }
 
+  /// ST17-7: baca konfigurasi live outlet (gerobak/antrean jasa).
+  Future<Map<String, dynamic>?> getOutletLiveConfig(String outletId) async {
+    try {
+      final response = await _client
+          .from('outlets')
+          .select(
+              'id, is_open, is_mobile, service_queue_enabled, latitude, longitude, delivery_rules')
+          .eq('id', outletId)
+          .maybeSingle();
+      return response == null ? null : Map<String, dynamic>.from(response);
+    } catch (e) {
+      return null;
+    }
+  }
+
+  /// ST17-7: ubah flag live outlet (buka lapak / keliling / antrean jasa).
+  Future<bool> setOutletLiveFlags({
+    required String outletId,
+    bool? isOpen,
+    bool? isMobile,
+    bool? serviceQueueEnabled,
+  }) async {
+    try {
+      final data = <String, dynamic>{};
+      if (isOpen != null) data['is_open'] = isOpen;
+      if (isMobile != null) data['is_mobile'] = isMobile;
+      if (serviceQueueEnabled != null) {
+        data['service_queue_enabled'] = serviceQueueEnabled;
+      }
+      if (data.isEmpty) return true;
+      await _client.from('outlets').update(data).eq('id', outletId);
+      return true;
+    } catch (e) {
+      return false;
+    }
+  }
+
+  /// ST17-7: simpan koordinat tetap outlet (gerobak keliling).
+  Future<bool> setOutletCoordinates({
+    required String outletId,
+    required double lat,
+    required double lng,
+  }) async {
+    try {
+      await _client
+          .from('outlets')
+          .update({'latitude': lat, 'longitude': lng}).eq('id', outletId);
+      return true;
+    } catch (e) {
+      return false;
+    }
+  }
+
   /// Menu publik untuk pelanggan QR meja (tanpa login).
   Future<List<Product>> getPublicMenu(String outletId) async {
     try {
