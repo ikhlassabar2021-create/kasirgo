@@ -15,6 +15,7 @@ import '../../utils/formatters.dart';
 import '../../utils/receipt_generator.dart';
 import '../../widgets/common/centennial_background.dart';
 import '../owner/product_list_screen.dart';
+import '../cashier/online_orders_screen.dart';
 import '../../widgets/pos/product_grid.dart';
 import '../../models/shift.dart';
 import '../../widgets/pos/cart_panel.dart';
@@ -592,7 +593,23 @@ class _PosScreenState extends ConsumerState<PosScreen> {
             alignment: Alignment.centerRight,
             child: Padding(
               padding: const EdgeInsets.fromLTRB(12, 8, 12, 0),
-              child: _buildChannelSelector(),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.end,
+                children: [
+                  IconButton(
+                    tooltip: 'Pesanan Online',
+                    icon: const Icon(Icons.delivery_dining_rounded,
+                        color: AppTheme.primaryColor),
+                    onPressed: () => Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                          builder: (_) => const OnlineOrdersScreen()),
+                    ),
+                  ),
+                  const SizedBox(width: 4),
+                  _buildChannelSelector(),
+                ],
+              ),
             ),
           ),
           Expanded(child: body),
@@ -611,6 +628,15 @@ class _PosScreenState extends ConsumerState<PosScreen> {
           style: GoogleFonts.inter(fontSize: 18, fontWeight: FontWeight.w800, color: AppTheme.textPrimary),
         ),
         actions: [
+          IconButton(
+            tooltip: 'Pesanan Online',
+            icon: const Icon(Icons.delivery_dining_rounded,
+                color: AppTheme.primaryColor),
+            onPressed: () => Navigator.push(
+              context,
+              MaterialPageRoute(builder: (_) => const OnlineOrdersScreen()),
+            ),
+          ),
           _buildChannelSelector(),
           const SizedBox(width: 12),
         ],

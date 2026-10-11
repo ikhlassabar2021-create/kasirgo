@@ -8,6 +8,7 @@ import '../../models/transaction.dart';
 import '../../providers/auth_provider.dart';
 import '../../services/supabase_service.dart';
 import '../../utils/formatters.dart';
+import 'online_orders_screen.dart';
 
 class IncomingOrdersScreen extends ConsumerStatefulWidget {
   const IncomingOrdersScreen({super.key});
@@ -17,17 +18,23 @@ class IncomingOrdersScreen extends ConsumerStatefulWidget {
       _IncomingOrdersScreenState();
 }
 
-class _IncomingOrdersScreenState extends ConsumerState<IncomingOrdersScreen> {
+class _IncomingOrdersScreenState extends ConsumerState<IncomingOrdersScreen>
+    with SingleTickerProviderStateMixin {
   final _service = SupabaseService();
   List<Transaction> _orders = [];
   bool _isLoading = true;
   String _filter = 'aktif';
   sb.RealtimeChannel? _channel;
   final Set<String> _seen = {};
+  late final TabController _tab;
 
   @override
   void initState() {
     super.initState();
+    _tab = TabController(length: 2, vsync: this);
+    _tab.addListener(() {
+      if (mounted) setState(() {});
+    });
     WidgetsBinding.instance.addPostFrameCallback((_) => _init());
   }
 
@@ -94,6 +101,7 @@ class _IncomingOrdersScreenState extends ConsumerState<IncomingOrdersScreen> {
 
   @override
   void dispose() {
+    _tab.dispose();
     _channel?.unsubscribe();
     super.dispose();
   }
@@ -168,7 +176,6 @@ class _IncomingOrdersScreenState extends ConsumerState<IncomingOrdersScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final filtered = _filtered;
     return Scaffold(
       backgroundColor: AppTheme.backgroundColor,
       appBar: AppBar(
@@ -193,11 +200,23 @@ class _IncomingOrdersScreenState extends ConsumerState<IncomingOrdersScreen> {
                       color: AppTheme.successColor, shape: BoxShape.circle),
                 ),
                 const SizedBox(width: 6),
-                Text('Live - $_activeCount pesanan aktif',
+                Text('Live - pantau pesanan masuk',
                     style: GoogleFonts.inter(
                         fontSize: 11, color: AppTheme.textSecondary)),
               ],
             ),
+          ],
+        ),
+        bottom: TabBar(
+          controller: _tab,
+          labelColor: AppTheme.primaryColor,
+          unselectedLabelColor: AppTheme.textSecondary,
+          indicatorColor: AppTheme.primaryColor,
+          labelStyle:
+              GoogleFonts.inter(fontWeight: FontWeight.w700, fontSize: 13),
+          tabs: const [
+            Tab(text: 'Dine-in'),
+            Tab(text: 'Online'),
           ],
         ),
         actions: [
@@ -208,7 +227,19 @@ class _IncomingOrdersScreenState extends ConsumerState<IncomingOrdersScreen> {
           ),
         ],
       ),
-      body: Column(
+      body: TabBarView(
+        controller: _tab,
+        children: [
+          _dineInBody(),
+          const OnlineOrdersView(),
+        ],
+      ),
+    );
+  }
+
+  Widget _dineInBody() {
+    final filtered = _filtered;
+    return Column(
         children: [
           SizedBox(
             height: 50,
@@ -260,8 +291,7 @@ class _IncomingOrdersScreenState extends ConsumerState<IncomingOrdersScreen> {
                       ),
           ),
         ],
-      ),
-    );
+      );
   }
 
   Widget _chip(String label, String value) {

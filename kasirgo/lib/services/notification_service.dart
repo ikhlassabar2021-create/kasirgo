@@ -15,6 +15,11 @@ class NotificationService {
   static const String reportChannelId = 'kasirgo_report';
   static const String reportChannelName = 'Laporan Otomatis';
 
+  // ST17-2 (Phase 17): notifikasi pesanan online masuk (owner/kasir).
+  static const int orderNotificationId = 78101;
+  static const String orderChannelId = 'kasirgo_orders';
+  static const String orderChannelName = 'Pesanan Online';
+
   final FlutterLocalNotificationsPlugin _plugin =
       FlutterLocalNotificationsPlugin();
   bool _ready = false;
@@ -113,5 +118,37 @@ class NotificationService {
     try {
       await _plugin.cancel(id: reportNotificationId);
     } catch (_) {}
+  }
+
+  /// ST17-2: tampilkan notifikasi + bunyi saat ada pesanan online baru.
+  /// [payload] opsional (mis. `order:<outletId>`).
+  Future<void> showOrderNotification({
+    required String title,
+    required String body,
+    String? payload,
+  }) async {
+    if (!_ready) return;
+    try {
+      await _plugin.show(
+        id: orderNotificationId,
+        title: title,
+        body: body,
+        notificationDetails: const NotificationDetails(
+          android: AndroidNotificationDetails(
+            orderChannelId,
+            orderChannelName,
+            channelDescription: 'Notifikasi pesanan online masuk',
+            importance: Importance.max,
+            priority: Priority.high,
+            playSound: true,
+            enableVibration: true,
+          ),
+          iOS: DarwinNotificationDetails(presentSound: true),
+        ),
+        payload: payload,
+      );
+    } catch (e) {
+      debugPrint('Gagal menampilkan notifikasi pesanan: $e');
+    }
   }
 }
