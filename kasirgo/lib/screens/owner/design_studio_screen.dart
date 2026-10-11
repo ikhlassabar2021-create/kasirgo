@@ -415,20 +415,15 @@ class _DesignStudioScreenState extends ConsumerState<DesignStudioScreen>
                 ? Icons.image_rounded
                 : Icons.notes_rounded;
         final filePath = a['file_path']?.toString() ?? a['filePath']?.toString() ?? '';
-        final hasLocalFile = filePath.isNotEmpty && !kIsWeb && File(filePath).existsSync();
+        final thumb = kind == 'image' ? _mediaThumb(filePath) : null;
         return AppCard(
           child: Row(
             children: [
-              // Thumbnail for image/video
-              if (hasLocalFile && kind == 'image')
+              // Thumbnail for image (video: icon)
+              if (thumb != null)
                 ClipRRect(
                   borderRadius: BorderRadius.circular(AppTheme.radiusMedium),
-                  child: Image.file(File(filePath), width: 56, height: 56, fit: BoxFit.cover),
-                )
-              else if (hasLocalFile && kind == 'video')
-                ClipRRect(
-                  borderRadius: BorderRadius.circular(AppTheme.radiusMedium),
-                  child: Image.file(File(filePath), width: 56, height: 56, fit: BoxFit.cover),
+                  child: thumb,
                 )
               else
                 CircleAvatar(
@@ -666,18 +661,21 @@ class _DesignStudioScreenState extends ConsumerState<DesignStudioScreen>
   }
 
   Future<void> _pickImage() async {
-    final XFile? picked = await ImagePicker().pickImage(source: ImageSource.gallery);
+    final XFile? picked = await ImagePicker().pickImage(
+      source: ImageSource.gallery,
+      maxWidth: 1280,
+      imageQuality: 85,
+    );
     if (picked == null) return;
     try {
       final outletId = _outletId;
       if (outletId == null) return;
-      // Copy to local Documents for persistence
-      final localPath = await _copyToDocuments(picked.path, 'img');
+      final stored = await _persistPicked(picked, 'img');
       final res = await _service.saveAsset(
         outletId: outletId,
         kind: 'image',
-        title: picked.path.split('/').last,
-        filePath: localPath,
+        title: _fileName(picked),
+        filePath: stored,
         source: 'upload',
       );
       if (res != null) {
@@ -697,12 +695,12 @@ class _DesignStudioScreenState extends ConsumerState<DesignStudioScreen>
     try {
       final outletId = _outletId;
       if (outletId == null) return;
-      final localPath = await _copyToDocuments(picked.path, 'vid');
+      final stored = await _persistPicked(picked, 'vid');
       final res = await _service.saveAsset(
         outletId: outletId,
         kind: 'video',
-        title: picked.path.split('/').last,
-        filePath: localPath,
+        title: _fileName(picked),
+        filePath: stored,
         source: 'upload',
       );
       if (res != null) {
@@ -716,12 +714,61 @@ class _DesignStudioScreenState extends ConsumerState<DesignStudioScreen>
     }
   }
 
+  String _fileName(XFile picked) {
+    final name = picked.name.trim();
+    if (name.isNotEmpty) return name;
+    final parts = picked.path.split('/');
+    return parts.isNotEmpty ? parts.last : 'media';
+  }
+
+  /// Simpan berkas terpilih. Di HP: salin ke Documents (path lokal, sesuai
+  /// kebijakan foto lokal). Di web (tanpa filesystem): simpan sebagai data URL
+  /// base64 di kolom teks `dm_assets.file_path`.
+  Future<String> _persistPicked(XFile picked, String prefix) async {
+    if (kIsWeb) {
+      final bytes = await picked.readAsBytes();
+      final mime = _mimeFor(picked.name.isNotEmpty ? picked.name : picked.path);
+      return 'data:$mime;base64,${base64Encode(bytes)}';
+    }
+    return _copyToDocuments(picked.path, prefix);
+  }
+
+  String _mimeFor(String nameOrPath) {
+    final lower = nameOrPath.toLowerCase();
+    if (lower.endsWith('.png')) return 'image/png';
+    if (lower.endsWith('.webp')) return 'image/webp';
+    if (lower.endsWith('.gif')) return 'image/gif';
+    if (lower.endsWith('.jpg') || lower.endsWith('.jpeg')) return 'image/jpeg';
+    if (lower.endsWith('.mp4')) return 'video/mp4';
+    if (lower.endsWith('.mov')) return 'video/quicktime';
+    if (lower.endsWith('.webm')) return 'video/webm';
+    return 'application/octet-stream';
+  }
+
   Future<String> _copyToDocuments(String sourcePath, String prefix) async {
     final dir = await getApplicationDocumentsDirectory();
     final ext = sourcePath.contains('.') ? '.${sourcePath.split('.').last}' : '';
     final dest = File('${dir.path}/${prefix}_${DateTime.now().millisecondsSinceEpoch}$ext');
     await File(sourcePath).copy(dest.path);
     return dest.path;
+  }
+
+  /// Pratinjau media tersimpan: data URL (web) atau file lokal (HP).
+  Widget? _mediaThumb(String stored, {double size = 56}) {
+    if (stored.isEmpty) return null;
+    if (stored.startsWith('data:')) {
+      try {
+        final b64 = stored.substring(stored.indexOf(',') + 1);
+        return Image.memory(base64Decode(b64),
+            width: size, height: size, fit: BoxFit.cover);
+      } catch (_) {
+        return null;
+      }
+    }
+    if (!kIsWeb && File(stored).existsSync()) {
+      return Image.file(File(stored), width: size, height: size, fit: BoxFit.cover);
+    }
+    return null;
   }
 
   Future<String?> _downloadImageToLocal({String url = '', String b64 = ''}) async {
@@ -938,12 +985,17 @@ class _DesignStudioScreenState extends ConsumerState<DesignStudioScreen>
             child: _generatedImageLocalPath != null && !kIsWeb && File(_generatedImageLocalPath!).existsSync()
                 ? Image.file(File(_generatedImageLocalPath!),
                     width: double.infinity, height: 240, fit: BoxFit.cover)
-                : _generatedImage?['image_url'] != null &&
-                        _generatedImage!['image_url'].toString().isNotEmpty
-                    ? Image.network(_generatedImage!['image_url'].toString(),
+                : (_generatedImage?['image_b64']?.toString().isNotEmpty ?? false)
+                    ? Image.memory(
+                        base64Decode(_generatedImage!['image_b64'].toString()),
                         width: double.infinity, height: 240, fit: BoxFit.cover,
                         errorBuilder: (_, _, _) => _imagePlaceholder())
-                    : _imagePlaceholder(),
+                    : _generatedImage?['image_url'] != null &&
+                            _generatedImage!['image_url'].toString().isNotEmpty
+                        ? Image.network(_generatedImage!['image_url'].toString(),
+                            width: double.infinity, height: 240, fit: BoxFit.cover,
+                            errorBuilder: (_, _, _) => _imagePlaceholder())
+                        : _imagePlaceholder(),
           ),
           const SizedBox(height: 12),
           Row(
@@ -956,7 +1008,9 @@ class _DesignStudioScreenState extends ConsumerState<DesignStudioScreen>
                   style: GoogleFonts.inter(fontSize: 13, color: AppTheme.textSecondary),
                 ),
               ),
-              if (_generatedImageLocalPath != null)
+              if (_generatedImageLocalPath != null ||
+                  (_generatedImage?['image_b64']?.toString().isNotEmpty ?? false) ||
+                  (_generatedImage?['image_url']?.toString().isNotEmpty ?? false))
                 IconButton(
                   icon: const Icon(Icons.save_rounded, size: 20, color: AppTheme.primaryColor),
                   tooltip: 'Simpan ke Aset',
@@ -981,14 +1035,24 @@ class _DesignStudioScreenState extends ConsumerState<DesignStudioScreen>
 
   Future<void> _saveGeneratedImage() async {
     final outletId = _outletId;
-    final path = _generatedImageLocalPath;
-    if (outletId == null || path == null) return;
+    if (outletId == null) return;
+    String? stored = _generatedImageLocalPath;
+    if (stored == null) {
+      final b64 = _generatedImage?['image_b64']?.toString() ?? '';
+      final url = _generatedImage?['image_url']?.toString() ?? '';
+      if (b64.isNotEmpty) {
+        stored = 'data:image/png;base64,$b64';
+      } else if (url.isNotEmpty) {
+        stored = url;
+      }
+    }
+    if (stored == null || stored.isEmpty) return;
     try {
       final res = await _service.saveAsset(
         outletId: outletId,
         kind: 'image',
         title: _generatedImage?['title']?.toString() ?? 'Gambar AI',
-        filePath: path,
+        filePath: stored,
         source: 'ai_generated',
       );
       if (res != null) {

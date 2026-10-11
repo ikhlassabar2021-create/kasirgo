@@ -3,6 +3,9 @@ project_id = "lmvjecdvfzsmrowwwpck"
 [functions.dm_creative]
 verify_jwt = false
 
+[functions.dm_oauth]
+verify_jwt = false
+
 [functions.business_doctor_chat]
 verify_jwt = true
 

@@ -251,6 +251,7 @@ Deno.serve(async (req: Request) => {
         model: override.model,
         temperature: override.temperature,
         max_tokens: override.max_tokens,
+        image_model: globalCfg?.provider_default?.image_model,
       }
       : {
         base_url: globalCfg?.provider_default?.base_url,
@@ -258,6 +259,7 @@ Deno.serve(async (req: Request) => {
         model: globalCfg?.provider_default?.model,
         temperature: globalCfg?.provider_default?.temperature,
         max_tokens: globalCfg?.provider_default?.max_tokens,
+        image_model: globalCfg?.provider_default?.image_model,
       };
 
     const rl = (globalCfg?.rate_limit ?? {}) as Json;
@@ -417,18 +419,23 @@ Deno.serve(async (req: Request) => {
             blocks: [{
               type: "card",
               tone: "info",
-              title: "Generator Gambar AI",
-              body: "Provider gambar AI belum mengembalikan hasil. Silakan upload gambar manual dari galeri.",
+              title: "Generator Gambar AI belum aktif",
+              body:
+                "Provider AI saat ini belum mendukung pembuatan gambar. Superadmin dapat mengaktifkannya di " +
+                "Control Plane > Squad DM dengan mengisi Model Gambar (mis. dall-e-3, gpt-image-1, " +
+                "flux-schnell, atau stable-diffusion). Sementara itu, kamu bisa upload gambar dari galeri " +
+                "atau pakai foto produk yang sudah ada.",
             }],
             disclaimer: DISCLAIMER,
           });
         }
+        const storedPath = url || (b64 ? `data:image/png;base64,${b64}` : "");
         const { data: imgAsset } = await admin.from("dm_assets").insert({
           outlet_id: outletId,
           kind: "image",
           title: `Gambar AI: ${brief.slice(0, 40) || "Promo"}`,
-          content: url,
-          filePath: url,
+          content: url || "",
+          file_path: storedPath,
           source: "ai_generated",
           status: "draft",
           meta: { provider_image: true, brief, generated_at: new Date().toISOString() },
@@ -457,13 +464,15 @@ Deno.serve(async (req: Request) => {
         return json({
           success: true,
           fallback: true,
-          blocks: [{
-            type: "card",
-            tone: "warning",
-            title: "Gambar AI tidak tersedia",
-            body: String((e as Error)?.message ?? e).slice(0, 200) +
-              ". Provider mungkin belum mendukung gambar. Kamu bisa upload gambar manual.",
-          }],
+            blocks: [{
+              type: "card",
+              tone: "warning",
+              title: "Gambar AI tidak tersedia",
+              body: String((e as Error)?.message ?? e).slice(0, 200) +
+                " - Provider AI belum mendukung pembuatan gambar. Superadmin dapat mengaktifkannya di " +
+                "Control Plane > Squad DM dengan mengisi Model Gambar (mis. dall-e-3, gpt-image-1, " +
+                "flux-schnell). Untuk sekarang, silakan upload gambar dari galeri.",
+            }],
           disclaimer: DISCLAIMER,
         });
       }

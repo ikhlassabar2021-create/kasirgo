@@ -283,6 +283,78 @@ class DmService {
     return const [];
   }
 
+  /// Owner menghubungkan akun kanal miliknya sendiri (token tidak pernah dibaca kembali).
+  Future<Map<String, dynamic>> connectChannelAccount({
+    required String outletId,
+    required String channel,
+    String? accountName,
+    String? externalId,
+    String? token,
+    bool connected = true,
+  }) async {
+    final res = await _client.rpc('dm_set_own_channel_account', params: {
+      'p_outlet': outletId,
+      'p_channel': channel,
+      'p_account_name': accountName,
+      'p_external_id': externalId,
+      'p_token': token,
+      'p_connected': connected,
+    });
+    if (res is Map) return res.cast<String, dynamic>();
+    return <String, dynamic>{};
+  }
+
+  /// Kanal yang mendukung koneksi OTOMATIS (OAuth resmi platform).
+  static const Set<String> oauthChannels = {
+    'fb',
+    'fb_group',
+    'meta_ads',
+    'ig',
+    'tiktok',
+    'tiktok_ads',
+    'shopee',
+    'shopee_ads',
+    'google_ads',
+  };
+
+  bool supportsOauth(String channel) => oauthChannels.contains(channel);
+
+  /// Memulai koneksi otomatis (OAuth). Mengembalikan `{configured, auth_url}`.
+  /// Bila `configured=false`, superadmin belum mengisi kredensial app OAuth
+  /// dan owner dapat memakai form manual.
+  Future<Map<String, dynamic>> startOauthConnect({
+    required String outletId,
+    required String channel,
+    String? redirectTo,
+  }) async {
+    try {
+      final res = await _client.functions.invoke('dm_oauth', body: {
+        'mode': 'start',
+        'outlet_id': outletId,
+        'channel': channel,
+        'redirect_to': redirectTo,
+      });
+      if (res.data is Map) return (res.data as Map).cast<String, dynamic>();
+      return <String, dynamic>{};
+    } on FunctionException catch (e) {
+      throw Exception(
+          _message(e.details) ?? 'Gagal memulai koneksi otomatis.');
+    }
+  }
+
+  /// Owner memutuskan akun kanal miliknya sendiri.
+  Future<Map<String, dynamic>> disconnectChannelAccount(
+    String outletId,
+    String channel,
+  ) async {
+    final res = await _client.rpc('dm_delete_own_channel_account', params: {
+      'p_outlet': outletId,
+      'p_channel': channel,
+    });
+    if (res is Map) return res.cast<String, dynamic>();
+    return <String, dynamic>{};
+  }
+
   /// Catat aksi iklan ke audit_logs (via RPC SECURITY DEFINER).
   Future<void> logAction(
     String outletId,

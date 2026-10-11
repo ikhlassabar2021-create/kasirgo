@@ -2627,6 +2627,9 @@ function SquadDmTab() {
   const setPd = (k: string, val: any) => set('provider_default', { ...pd, [k]: val });
   const rl = v.rate_limit ?? {};
   const setRl = (k: string, val: any) => set('rate_limit', { ...rl, [k]: val });
+  const oauth = v.oauth ?? {};
+  const setOauth = (provider: string, k: string, val: any) =>
+    set('oauth', { ...oauth, [provider]: { ...(oauth[provider] ?? {}), [k]: val } });
 
   const save = async () => {
     setLoading(true);
@@ -2784,6 +2787,70 @@ function SquadDmTab() {
                 <label className={labelCls}>Maks Token</label>
                 <input className={inputCls} type="number" value={pd.max_tokens ?? ''} onChange={(e) => setPd('max_tokens', Number(e.target.value))} />
               </div>
+              <div>
+                <label className={labelCls}>Model Gambar (opsional)</label>
+                <input className={inputCls} value={pd.image_model ?? ''} placeholder="dall-e-3 / gpt-image-1 / flux-schnell" onChange={(e) => setPd('image_model', e.target.value)} />
+                <p className="text-[11px] text-slate-400 mt-1">Isi bila provider mendukung <span className="font-semibold">/images/generations</span>. Kosongkan bila tidak.</p>
+              </div>
+              <div className="sm:col-span-2">
+                <label className={labelCls}>Model Video (opsional)</label>
+                <input className={inputCls} value={pd.video_model ?? ''} placeholder="mis. sora-1 / kling / runway" onChange={(e) => setPd('video_model', e.target.value)} />
+                <p className="text-[11px] text-slate-400 mt-1">Dipakai generator video bila provider mendukung. Bila kosong, video dibuat sebagai GIF animasi dari gambar.</p>
+              </div>
+            </div>
+          </div>
+
+          <div className="pt-2 border-t border-slate-100">
+            <p className="text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-1">Koneksi Otomatis Kanal (OAuth)</p>
+            <p className="text-[11px] text-slate-400 mb-3">Isi kredensial aplikasi OAuth platform agar owner dapat menekan "Hubungkan Otomatis" di aplikasi. Kredensial HANYA tersimpan di server (service_role). Kosongkan bila belum ada - form manual owner tetap berfungsi.</p>
+            <div className="space-y-3">
+              {[
+                { key: 'facebook', label: 'Facebook Page / Meta Ads', hint: 'developers.facebook.com' },
+                { key: 'instagram', label: 'Instagram', hint: 'ikut Facebook bila dibiarkan kosong' },
+                { key: 'tiktok', label: 'TikTok / TikTok Ads', hint: 'developers.tiktok.com' },
+                { key: 'shopee', label: 'Shopee', hint: 'open.shopee.com' },
+                { key: 'google', label: 'Google Ads', hint: 'console.cloud.google.com' },
+              ].map((p) => {
+                const cfg = oauth[p.key] ?? {};
+                return (
+                  <div key={p.key} className="rounded-xl border border-slate-200 p-3">
+                    <div className="flex items-center justify-between mb-2">
+                      <span className="text-xs font-bold text-slate-700">{p.label}</span>
+                      <span className="text-[10px] text-slate-400">{p.hint}</span>
+                    </div>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                      <div>
+                        <label className={labelCls}>App / Client ID</label>
+                        <input className={inputCls} value={cfg.app_id ?? ''} onChange={(e) => setOauth(p.key, 'app_id', e.target.value)} />
+                      </div>
+                      <div>
+                        <label className={labelCls}>App Secret</label>
+                        <input className={inputCls} type="password" value={cfg.app_secret ?? ''} onChange={(e) => setOauth(p.key, 'app_secret', e.target.value)} />
+                      </div>
+                      <div className="sm:col-span-2">
+                        <label className={labelCls}>Authorize URL</label>
+                        <input className={inputCls} value={cfg.authorize_url ?? ''} placeholder="https://..." onChange={(e) => setOauth(p.key, 'authorize_url', e.target.value)} />
+                      </div>
+                      <div className="sm:col-span-2">
+                        <label className={labelCls}>Token URL</label>
+                        <input className={inputCls} value={cfg.token_url ?? ''} placeholder="https://..." onChange={(e) => setOauth(p.key, 'token_url', e.target.value)} />
+                      </div>
+                      <div className="sm:col-span-2">
+                        <label className={labelCls}>Redirect URI (opsional)</label>
+                        <input className={inputCls} value={cfg.redirect_uri ?? ''} placeholder="https://<project>.supabase.co/functions/v1/dm_oauth?action=callback" onChange={(e) => setOauth(p.key, 'redirect_uri', e.target.value)} />
+                      </div>
+                      <div className="sm:col-span-2">
+                        <label className={labelCls}>Scope (dipisah spasi)</label>
+                        <input className={inputCls} value={(cfg.scopes ?? []).join(' ')} placeholder="pages_show_list pages_manage_posts" onChange={(e) => setOauth(p.key, 'scopes', e.target.value.split(/\s+/).map((s: string) => s.trim()).filter(Boolean))} />
+                      </div>
+                      <div className="sm:col-span-2">
+                        <label className={labelCls}>Account Info URL (opsional)</label>
+                        <input className={inputCls} value={cfg.account_url ?? ''} placeholder="untuk mengambil nama akun setelah login" onChange={(e) => setOauth(p.key, 'account_url', e.target.value)} />
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
             </div>
           </div>
 

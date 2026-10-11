@@ -183,6 +183,50 @@ CATATAN ST16-4 (2026-10-27):
 - **PHASE 16 TUNTAS** (ST16-1 s.d. ST16-4). KasirGo kini punya "Tim Marketing Digital"
   lengkap: Desain + Promosi + Iklan.
 
+### ST16-5 Studio Promosi + Kalender + Iklan (SELESAI, commit `6dc01e8`)
+- Layar owner "Studio Promosi" (`promotion_screen.dart`): kalender konten, jadwal posting,
+  checklist posting manual 1-tap per kanal, integrasi `dm_posts`.
+- `design_studio_screen.dart`: fix upload gambar (`_persistPicked` lokal, thumbnail,
+  `_saveGeneratedImage` fallback base64/url, preview `Image.memory`).
+- EF `dm_creative` fix: kolom insert `file_path` + `image_model` dibaca dari
+  `provider_default`. Admin `SquadDmTab` +field "Model Gambar"/"Model Video".
+
+### ST16E Self-service Koneksi Kanal Owner (SELESAI)
+- Migrasi `docs/migrations/2026-10-28-kasirgo-16e-owner-channel.sql` DITERAPKAN:
+  RPC `dm_set_own_channel_account`/`dm_delete_own_channel_account` (SECURITY DEFINER,
+  token ditulis server-side ke `dm_channel_accounts.token_enc`; owner tak pernah lihat token).
+- App: `dm_service.dart` +`connectChannelAccount`/`disconnectChannelAccount`;
+  widget `dm_channel_connect_sheet.dart`; self-service di `promotion_screen.dart` &
+  `ads_studio_screen.dart`.
+
+### ST16F Koneksi Otomatis Kanal (OAuth) - ADITIF (SELESAI)
+- Tujuan: owner bisa "Hubungkan Otomatis" akun kanal (OAuth) SELAIN tetap bisa isi
+  form manual (nama akun + token). Form manual TIDAK dihapus.
+- Migrasi `docs/migrations/2026-10-29-kasirgo-16f-channel-oauth.sql` DITERAPKAN:
+  tabel `dm_oauth_states` (anti-CSRF, sekali pakai, kedaluwarsa 15 menit, service_role
+  only) + seed kunci `oauth` di `platform_configs.digital_marketing_llm`.
+- EF BARU `supabase/functions/dm_oauth/index.ts` DEPLOYED (`--no-verify-jwt`):
+  mode `start` (POST + validasi JWT owner manual) -> bangun `auth_url` provider;
+  mode `callback` (GET) -> tukar `code` jadi token, ambil nama akun, upsert
+  `dm_channel_accounts` (onConflict `outlet_id,channel`), redirect `?dm_oauth=connected|error`.
+  Pemetaan kanal: fb/fb_group/meta_ads->facebook, ig->instagram (fallback cfg facebook),
+  tiktok/tiktok_ads->tiktok, shopee/shopee_ads->shopee, google_ads->google.
+  Bila `oauth` belum diisi -> `{configured:false}` (owner pakai manual).
+- App `dm_service.dart` +`oauthChannels`/`supportsOauth`/`startOauthConnect`.
+  `dm_channel_connect_sheet.dart`: tombol "Hubungkan Otomatis (Login <label>)" +
+  pemisah "atau isi manual"; `_startOauth` (launch `auth_url` + snackbar) &
+  `_pollUntilConnected` (40x/3 dtk) auto-detect koneksi.
+- Admin `ControlPlane.tsx` `SquadDmTab`: panel "Koneksi Otomatis Kanal (OAuth)" -
+  App ID/Secret/Authorize URL/Token URL/Redirect URI/Scope/Account URL per provider
+  (facebook/instagram/tiktok/shopee/google) di `digital_marketing_llm.oauth`.
+  Kredensial HANYA tersimpan di server (service_role).
+- Verifikasi EF: `start` (JWT owner) -> `{success:true,configured:false,...}`; tanpa JWT
+  -> 401; callback state bogus -> 400. `flutter analyze` 2 file bersih; admin build sukses.
+- CATATAN JUJUR: OAuth paling realistis = Facebook Page + Instagram (owner buat System
+  User token); TikTok/Shopee/Ads API butuh App Review/partner. Auto-post & Ads API BELUM
+  dipanggil EF (token tersimpan, posting/iklan saat ini MANUAL). Login pihak ketiga TIDAK
+  memakai user+password (platform pakai OAuth token; menyimpan password melanggar ToS).
+
 ## CATATAN
 - Prasyarat: Phase 14 & 15 SELESAI.
 - Auto-posting butuh koneksi akun resmi; bila belum -> fallback "mesin produksi aset +

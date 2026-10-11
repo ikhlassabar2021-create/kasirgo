@@ -10,6 +10,7 @@ import '../../utils/formatters.dart';
 import '../../widgets/common/app_button.dart';
 import '../../widgets/common/app_card.dart';
 import '../../widgets/common/centennial_background.dart';
+import '../../widgets/common/dm_channel_connect_sheet.dart';
 import 'business_doctor_screen.dart';
 
 /// ST16-4 (13.28): Studio Iklan - Team Iklan AI.
@@ -113,6 +114,31 @@ class _AdsStudioScreenState extends ConsumerState<AdsStudioScreen> {
         (c) => c['channel'] == acc && c['is_connected'] == true);
   }
 
+  static const _adsAccountLabels = <String, String>{
+    'meta_ads': 'Meta Ads (FB/IG)',
+    'google_ads': 'Google Ads',
+    'tiktok_ads': 'TikTok Ads',
+    'shopee_ads': 'Shopee Ads',
+  };
+
+  Future<void> _openChannelConnect() async {
+    final outletId = _outletId;
+    if (outletId == null) return;
+    await showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (_) => DmChannelConnectSheet(
+        outletId: outletId,
+        channels: _adsAccountLabels,
+        service: _service,
+        initialStatus: _channels,
+        title: 'Hubungkan Akun Iklan',
+      ),
+    );
+    await _load();
+  }
+
   Future<void> _saveMode() async {
     final outletId = _outletId;
     if (outletId == null) return;
@@ -140,6 +166,10 @@ class _AdsStudioScreenState extends ConsumerState<AdsStudioScreen> {
         channels: _adsChannels,
         objectives: _objectives,
         connected: _adsChannels.keys.where(_isConnected).toSet(),
+        outletId: outletId,
+        service: _service,
+        accountLabels: _adsAccountLabels,
+        channelToAccount: _channelToAccount,
       ),
     );
     if (result == null) return;
@@ -442,7 +472,20 @@ class _AdsStudioScreenState extends ConsumerState<AdsStudioScreen> {
             _checklistRow('Radius area toko: ${_num(c['radius_km']).toInt()} km'),
             _checklistRow('Kreatif: aset dari Studio Desain'),
             _checklistRow('Biaya ditanggung di platform iklan (bukan di KasirGo)'),
-            const SizedBox(height: 16),
+            const SizedBox(height: 12),
+            OutlinedButton.icon(
+              onPressed: () {
+                Navigator.pop(ctx, false);
+                _openChannelConnect();
+              },
+              icon: const Icon(Icons.link_rounded, size: 18),
+              label: Text(
+                  'Hubungkan Akun ${_adsChannels[channel] ?? channel} Sekarang'),
+              style: OutlinedButton.styleFrom(
+                minimumSize: const Size(double.infinity, AppTheme.touchTargetMedium),
+              ),
+            ),
+            const SizedBox(height: 12),
             Row(
               children: [
                 Expanded(
@@ -510,6 +553,8 @@ class _AdsStudioScreenState extends ConsumerState<AdsStudioScreen> {
                   children: [
                     _buildGuardrail(),
                     const SizedBox(height: 12),
+                    _buildChannelConnectCard(),
+                    const SizedBox(height: 12),
                     _buildControls(),
                     const SizedBox(height: 12),
                     _buildWeeklyReport(),
@@ -518,6 +563,74 @@ class _AdsStudioScreenState extends ConsumerState<AdsStudioScreen> {
                   ],
                 ),
               ),
+      ),
+    );
+  }
+
+  Widget _buildChannelConnectCard() {
+    final connected =
+        _adsChannels.keys.where(_isConnected).length;
+    final total = _adsChannels.length;
+    final allConnected = connected == total;
+    return AppCard(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(
+                allConnected
+                    ? Icons.check_circle_rounded
+                    : Icons.link_rounded,
+                color: allConnected
+                    ? AppTheme.successColor
+                    : AppTheme.primaryColor,
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Text('Akun Platform Iklan',
+                    style: GoogleFonts.inter(
+                        fontWeight: FontWeight.w700,
+                        color: AppTheme.textPrimary)),
+              ),
+              Container(
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                decoration: BoxDecoration(
+                  color: (allConnected
+                          ? AppTheme.successColor
+                          : AppTheme.warningColor)
+                      .withValues(alpha: 0.14),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Text('$connected/$total terhubung',
+                    style: GoogleFonts.inter(
+                        fontSize: 11,
+                        fontWeight: FontWeight.w700,
+                        color: allConnected
+                            ? AppTheme.successColor
+                            : AppTheme.warningColor)),
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          Text(
+            'Hubungkan akun iklan kamu sendiri agar kampanye bisa dipantau '
+            'otomatis (ROAS/CTR/CPC). Tanpa koneksi, kampanye tetap bisa '
+            'dibuat sebagai draf dan dijalankan manual di platform iklan.',
+            style: GoogleFonts.inter(
+                fontSize: 13, color: AppTheme.textSecondary, height: 1.5),
+          ),
+          const SizedBox(height: 10),
+          AppButton(
+            label: allConnected
+                ? 'Kelola Akun Kanal'
+                : 'Hubungkan Akun Kanal',
+            icon: Icons.link_rounded,
+            variant: AppButtonVariant.secondary,
+            onPressed: _busy ? null : _openChannelConnect,
+          ),
+        ],
       ),
     );
   }
@@ -851,12 +964,20 @@ class _NewCampaignSheet extends StatefulWidget {
     required this.assets,
     required this.channels,
     required this.objectives,
+    required this.outletId,
+    required this.service,
+    required this.accountLabels,
+    required this.channelToAccount,
     this.connected = const <String>{},
   });
 
   final List<Map<String, dynamic>> assets;
   final Map<String, String> channels;
   final Map<String, String> objectives;
+  final String outletId;
+  final DmService service;
+  final Map<String, String> accountLabels;
+  final Map<String, String> channelToAccount;
   final Set<String> connected;
 
   @override
@@ -871,8 +992,34 @@ class _NewCampaignSheetState extends State<_NewCampaignSheet> {
   double _radius = 5;
   DateTime _start = DateTime.now();
   DateTime _end = DateTime.now().add(const Duration(days: 7));
+  late Set<String> _connected = {...widget.connected};
 
-  bool get _channelConnected => widget.connected.contains(_channel);
+  bool get _channelConnected => _connected.contains(_channel);
+
+  Future<void> _openConnect() async {
+    await showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (_) => DmChannelConnectSheet(
+        outletId: widget.outletId,
+        channels: widget.accountLabels,
+        service: widget.service,
+        title: 'Hubungkan Akun Iklan',
+      ),
+    );
+    try {
+      final status = await widget.service.getChannelStatus(widget.outletId);
+      final accs = status
+          .where((c) => c['is_connected'] == true)
+          .map((c) => c['channel'].toString())
+          .toSet();
+      final connected = widget.channels.keys
+          .where((ch) => accs.contains(widget.channelToAccount[ch]))
+          .toSet();
+      if (mounted) setState(() => _connected = connected);
+    } catch (_) {}
+  }
 
   @override
   void dispose() {
@@ -936,9 +1083,24 @@ class _NewCampaignSheetState extends State<_NewCampaignSheet> {
                           ),
                           const SizedBox(height: 2),
                           Text(
-                            'Untuk pengelolaan OTOMATIS (monitoring ROAS/CTR/CPC), minta superadmin '
-                            'menghubungkan akun di Control Panel → Squad Digital Marketing.',
+                            'Hubungkan akun platform sendiri (tanpa superadmin) lewat tombol '
+                            'di bawah untuk mengelola kampanye otomatis (monitoring ROAS/CTR/CPC). '
+                            'Token hanya dikirim ke server KasirGo dan tidak pernah ditampilkan lagi.',
                             style: GoogleFonts.inter(fontSize: 12, color: AppTheme.textSecondary),
+                          ),
+                          const SizedBox(height: 8),
+                          Align(
+                            alignment: Alignment.centerLeft,
+                            child: OutlinedButton.icon(
+                              onPressed: _openConnect,
+                              icon: const Icon(Icons.link_rounded, size: 16),
+                              label: const Text('Hubungkan Akun Kanal'),
+                              style: OutlinedButton.styleFrom(
+                                minimumSize:
+                                    const Size(0, AppTheme.touchTargetMedium),
+                                padding: const EdgeInsets.symmetric(horizontal: 12),
+                              ),
+                            ),
                           ),
                         ],
                       ),
@@ -998,9 +1160,21 @@ class _NewCampaignSheetState extends State<_NewCampaignSheet> {
                       const SizedBox(height: 6),
                       Text(
                         'Akun ${widget.channels[_channel] ?? _channel} belum terhubung ke KasirGo. '
-                        'Kampanye akan disimpan sebagai draf. Hubungi superadmin KasirGo untuk '
-                        'menghubungkan akun agar kampanye bisa dikelola otomatis.',
+                        'Kampanye tetap bisa disimpan sebagai draf dan dijalankan manual. '
+                        'Hubungkan akun sendiri agar kampanye bisa dikelola otomatis.',
                         style: GoogleFonts.inter(fontSize: 12, color: AppTheme.textPrimary),
+                      ),
+                      const SizedBox(height: 8),
+                      OutlinedButton.icon(
+                        onPressed: _openConnect,
+                        icon: const Icon(Icons.link_rounded, size: 16),
+                        label: Text(
+                            'Hubungkan Akun ${widget.channels[_channel] ?? _channel}'),
+                        style: OutlinedButton.styleFrom(
+                          minimumSize:
+                              const Size(0, AppTheme.touchTargetMedium),
+                          padding: const EdgeInsets.symmetric(horizontal: 12),
+                        ),
                       ),
                     ],
                   ),

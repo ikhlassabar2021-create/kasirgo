@@ -13,6 +13,7 @@ import '../../utils/wa_helper.dart';
 import '../../widgets/common/app_button.dart';
 import '../../widgets/common/app_card.dart';
 import '../../widgets/common/centennial_background.dart';
+import '../../widgets/common/dm_channel_connect_sheet.dart';
 
 class PromotionScreen extends ConsumerStatefulWidget {
   const PromotionScreen({super.key});
@@ -116,6 +117,8 @@ class _PromotionScreenState extends ConsumerState<PromotionScreen> {
         assets: _assets,
         bestHours: _bestHours,
         channelStatus: _channelStatus,
+        outletId: outletId,
+        service: _service,
       ),
     );
     if (result == null) return;
@@ -361,13 +364,47 @@ class _PromotionScreenState extends ConsumerState<PromotionScreen> {
             const SizedBox(height: 8),
             Text(
               'Posting manual (salin caption + buka WhatsApp/Website) SELALU bisa tanpa koneksi akun. '
-              'Koneksi akun diperlukan untuk posting OTOMATIS - hubungi superadmin untuk mengaktifkan.',
+              'Hubungkan akun untuk melacak status kanal - bisa Anda atur sendiri di sini.',
               style: GoogleFonts.inter(fontSize: 12, color: AppTheme.textSecondary),
+            ),
+            const SizedBox(height: 10),
+            SizedBox(
+              height: AppTheme.touchTargetMedium,
+              child: OutlinedButton.icon(
+                onPressed: _openChannelConnect,
+                icon: const Icon(Icons.link_rounded, size: 18),
+                label: Text('Hubungkan Akun Kanal',
+                    style: GoogleFonts.inter(fontWeight: FontWeight.w700)),
+                style: OutlinedButton.styleFrom(
+                  foregroundColor: AppTheme.primaryColor,
+                  side: const BorderSide(color: AppTheme.primaryColor),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(AppTheme.radiusMedium),
+                  ),
+                ),
+              ),
             ),
           ],
         ),
       ),
     );
+  }
+
+  Future<void> _openChannelConnect() async {
+    final outletId = _outletId;
+    if (outletId == null) return;
+    await showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (_) => DmChannelConnectSheet(
+        outletId: outletId,
+        channels: _channels,
+        service: _service,
+        initialStatus: _channelStatus,
+      ),
+    );
+    await _load();
   }
 
   Widget _buildSummary() {
@@ -637,11 +674,19 @@ class _PromotionScreenState extends ConsumerState<PromotionScreen> {
 }
 
 class _NewPostSheet extends StatefulWidget {
-  const _NewPostSheet({required this.assets, required this.bestHours, this.channelStatus = const []});
+  const _NewPostSheet({
+    required this.assets,
+    required this.bestHours,
+    this.channelStatus = const [],
+    required this.outletId,
+    required this.service,
+  });
 
   final List<Map<String, dynamic>> assets;
   final List<int> bestHours;
   final List<Map<String, dynamic>> channelStatus;
+  final String outletId;
+  final DmService service;
 
   @override
   State<_NewPostSheet> createState() => _NewPostSheetState();
@@ -652,10 +697,35 @@ class _NewPostSheetState extends State<_NewPostSheet> {
   String? _assetId;
   final TextEditingController _caption = TextEditingController();
   DateTime _when = DateTime.now().add(const Duration(hours: 1));
+  late List<Map<String, dynamic>> _status;
+
+  @override
+  void initState() {
+    super.initState();
+    _status = List<Map<String, dynamic>>.from(widget.channelStatus);
+  }
 
   bool _isChannelConnected(String channel) {
-    return widget.channelStatus
+    return _status
         .any((c) => c['channel'] == channel && c['is_connected'] == true);
+  }
+
+  Future<void> _openConnect() async {
+    await showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (_) => DmChannelConnectSheet(
+        outletId: widget.outletId,
+        channels: Map.fromEntries(_PromotionChannels.all),
+        service: widget.service,
+        initialStatus: _status,
+      ),
+    );
+    try {
+      final res = await widget.service.getChannelStatus(widget.outletId);
+      if (mounted) setState(() => _status = res);
+    } catch (_) {}
   }
 
   String _channelLabel(String channel) {
@@ -762,9 +832,27 @@ class _NewPostSheetState extends State<_NewPostSheet> {
                       Text(
                         'Kanal ini belum terhubung ke akun Anda. Posting manual tetap bisa: '
                         'isi caption, lalu aplikasi akan membuka ${_channelLabel(_channel)} '
-                        'untuk Anda posting sendiri.\n\n'
-                        'Untuk posting OTOMATIS, hubungi superadmin KasirGo untuk mengaktifkan koneksi akun.',
+                        'untuk Anda posting sendiri.',
                         style: GoogleFonts.inter(fontSize: 12, color: AppTheme.textPrimary),
+                      ),
+                      const SizedBox(height: 8),
+                      SizedBox(
+                        height: AppTheme.touchTargetMedium,
+                        child: OutlinedButton.icon(
+                          onPressed: _openConnect,
+                          icon: const Icon(Icons.link_rounded, size: 18),
+                          label: Text('Hubungkan Akun ${_channelLabel(_channel)}',
+                              style: GoogleFonts.inter(
+                                  fontSize: 12, fontWeight: FontWeight.w700)),
+                          style: OutlinedButton.styleFrom(
+                            foregroundColor: AppTheme.primaryColor,
+                            side: const BorderSide(color: AppTheme.primaryColor),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(
+                                  AppTheme.radiusMedium),
+                            ),
+                          ),
+                        ),
                       ),
                     ],
                   ),
