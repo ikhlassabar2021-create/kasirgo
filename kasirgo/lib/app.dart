@@ -2,9 +2,12 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'config/app_theme.dart';
+import 'models/app_mode.dart';
 import 'models/product.dart';
 import 'screens/auth/login_screen.dart';
 import 'screens/auth/register_screen.dart';
+import 'screens/buyer/buyer_shell.dart';
+import 'screens/buyer/mode_gate.dart';
 import 'screens/owner/owner_home_screen.dart';
 import 'screens/owner/product_list_screen.dart';
 import 'screens/owner/product_form_screen.dart';
@@ -27,11 +30,20 @@ import 'services/auth_service.dart';
 import 'services/notification_service.dart';
 import 'services/report_scheduler_service.dart';
 import 'providers/auth_provider.dart';
+import 'providers/app_mode_provider.dart';
 import 'widgets/common/kyc_gate.dart';
 
 final _router = GoRouter(
-  initialLocation: '/login',
+  initialLocation: '/mode',
   routes: [
+    GoRoute(
+      path: '/mode',
+      builder: (context, state) => const ModeGate(),
+    ),
+    GoRoute(
+      path: '/buyer',
+      builder: (context, state) => const BuyerShell(),
+    ),
     GoRoute(
       path: '/login',
       builder: (context, state) => const LoginScreen(),
@@ -141,6 +153,7 @@ class _KasirGoAppState extends ConsumerState<KasirGoApp> {
   void _listenAuth() {
     final authService = AuthService();
     authService.authStateChanges.listen((data) async {
+      if (ref.read(appModeProvider) == AppMode.buyer) return;
       if (data.session != null && mounted) {
         final user = await authService.getCurrentUser();
         if (user != null && mounted) {
@@ -170,6 +183,8 @@ class _KasirGoAppState extends ConsumerState<KasirGoApp> {
 
     // Notifikasi lokal untuk pengingat "Laporan Otomatis ke Bos".
     NotificationService.instance.initialize(onTap: _handleNotificationTap);
+
+    if (ref.read(appModeProvider) == AppMode.buyer) return;
 
     final authService = AuthService();
     final user = await authService.getCurrentUser();
