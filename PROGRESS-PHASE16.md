@@ -227,6 +227,31 @@ CATATAN ST16-4 (2026-10-27):
   dipanggil EF (token tersimpan, posting/iklan saat ini MANUAL). Login pihak ketiga TIDAK
   memakai user+password (platform pakai OAuth token; menyimpan password melanggar ToS).
 
+### ST16G Hardening Token Kanal DM + Prune OAuth (SELESAI)
+- Temuan review OAuth ditindaklanjuti:
+  1. **Token kanal kini TERENKRIPSI at-rest** (`dm_channel_accounts.token_enc`).
+     Migrasi `docs/migrations/2026-10-30-kasirgo-16g-dm-token-security.sql` DITERAPKAN:
+     kunci acak 32-byte di Supabase Vault (`dm_channel_token_key`); helper
+     `dm_encrypt_token`/`dm_decrypt_token`/`dm_token_key` SECURITY DEFINER, EXECUTE
+     HANYA `service_role` (authenticated/anon ditolak). Format ciphertext `v1:<base64 pgp>`.
+     `dm_set_own_channel_account` (16e) ditulis ulang -> enkripsi sebelum simpan.
+     Backfill token lama (plaintext) -> terenkripsi, idempoten (prefix `v1:`).
+  2. **Prune state anti-CSRF**: index `idx_dm_oauth_states_expires` + RPC
+     `dm_prune_oauth_states()` (service_role) memangkas state kedaluwarsa >1 hari.
+  3. **Cegah open-redirect**: EF `dm_oauth` memvalidasi `redirect_to` terhadap
+     allowlist origin (`DM_OAUTH_ALLOWED_ORIGINS`, default GitHub Pages + localhost)
+     + scheme custom `kasirgo://`; fallback aman bila tidak cocok.
+  4. **App baca hasil callback**: `dm_channel_connect_sheet.dart` menampilkan
+     `?dm_oauth=connected|error` (snackbar + refresh) selain polling.
+- EF `dm_oauth` REDEPLOYED: token ditulis terenkripsi (via `dm_encrypt_token`),
+  prune state saat `start`, validasi redirect. Verifikasi: `dm_encrypt_token`/decrypt
+  round-trip OK; `authenticated` TIDAK bisa decrypt (false); `service_role` bisa;
+  `dm_prune_oauth_states()` OK; `dm_set_own_channel_account` body memanggil encrypt;
+  0 baris token plaintext. EF smoke: `start` owner `{configured:false}`; tanpa JWT 401;
+  callback state bogus 400. `flutter analyze lib` 0 error (hanya info pre-existing).
+- CATATAN: `dm_decrypt_token` disiapkan untuk saat posting/ads otomatis di-wire (belum
+  dipakai EF lain); token tetap tidak pernah sampai ke klien.
+
 ## CATATAN
 - Prasyarat: Phase 14 & 15 SELESAI.
 - Auto-posting butuh koneksi akun resmi; bila belum -> fallback "mesin produksi aset +

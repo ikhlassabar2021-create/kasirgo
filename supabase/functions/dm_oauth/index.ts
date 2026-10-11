@@ -177,6 +177,28 @@ function redirectTo(target: string, params: Record<string, string>) {
   return Response.redirect(`${target}${sep}${qs}`, 302);
 }
 
+// Allowlist origin redirect balik (cegah open-redirect). Bisa ditimpa via env
+// DM_OAUTH_ALLOWED_ORIGINS (dipisah koma). Scheme custom app (kasirgo://) aman.
+const ALLOWED_ORIGINS: string[] = (Deno.env.get("DM_OAUTH_ALLOWED_ORIGINS") ??
+  "https://ikhlassabar2021-create.github.io,http://localhost:8080,http://localhost:3000")
+  .split(",").map((s) => s.trim()).filter(Boolean);
+
+const ALLOWED_SCHEMES = ["kasirgo:", "kasirgo-dev:"];
+
+function sanitizeRedirect(target: string): string {
+  if (!target) return "";
+  try {
+    const u = new URL(target);
+    if (ALLOWED_SCHEMES.includes(u.protocol)) return target;
+    if ((u.protocol === "https:" || u.protocol === "http:") && ALLOWED_ORIGINS.includes(u.origin)) {
+      return target;
+    }
+  } catch {
+    return "";
+  }
+  return "";
+}
+
 Deno.serve(async (req: Request) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: CORS });
 
@@ -203,7 +225,7 @@ Deno.serve(async (req: Request) => {
       .select("*")
       .eq("state", state)
       .maybeSingle();
-    const fallback = (st?.redirect_to as string) || `${supabaseUrl}`;
+    const fallback = sanitizeRedirect((st?.redirect_to as string) ?? "") || `${supabaseUrl}`;
 
     if (!st) return html("Koneksi gagal", "Sesi koneksi tidak ditemukan atau sudah kedaluwarsa. Silakan ulangi dari aplikasi.", 400);
     if (st.consumed_at) return redirectTo(fallback, { dm_oauth: "error", channel: st.channel, message: "Sesi sudah dipakai." });
@@ -228,13 +250,20 @@ Deno.serve(async (req: Request) => {
       const accessToken = String(tokenData.access_token ?? tokenData.accessToken ?? "");
       const acct = await fetchAccount(pcfg, accessToken);
 
+      // Simpan token TERENKRIPSI (kunci hanya di Vault; fungsi service_role).
+      let tokenStored: string | null = accessToken || null;
+      if (accessToken) {
+        const { data: enc } = await admin.rpc("dm_encrypt_token", { p_token: accessToken });
+        if (typeof enc === "string" && enc.length) tokenStored = enc;
+      }
+
       await admin.from("dm_channel_accounts").upsert(
         {
           outlet_id: st.outlet_id,
           channel: st.channel,
           account_name: acct.name || CHANNEL_LABEL[st.channel] || st.channel,
           external_id: acct.id || null,
-          token_enc: accessToken,
+          token_enc: tokenStored,
           is_connected: true,
           last_sync: new Date().toISOString(),
         },
@@ -276,7 +305,7 @@ Deno.serve(async (req: Request) => {
     const mode = String(body.mode ?? "start");
     const outletId = String(body.outlet_id ?? "");
     const channel = String(body.channel ?? "");
-    const redirectToApp = String(body.redirect_to ?? "").slice(0, 500);
+    const redirectToApp = sanitizeRedirect(String(body.redirect_to ?? "").slice(0, 500));
 
     if (mode !== "start") return json({ success: false, message: "mode tidak dikenal" }, 400);
     if (!outletId || !channel) return json({ success: false, message: "outlet_id & channel wajib." }, 400);
@@ -310,6 +339,8 @@ Deno.serve(async (req: Request) => {
     }
 
     const state = `${crypto.randomUUID()}${crypto.randomUUID().replace(/-/g, "")}`.slice(0, 64);
+    // Bersihkan state kedaluwarsa (anti-CSRF) agar tabel tidak menumpuk.
+    try { await admin.rpc("dm_prune_oauth_states"); } catch { /* non-fatal */ }
     const { error: insErr } = await admin.from("dm_oauth_states").insert({
       state,
       outlet_id: outletId,

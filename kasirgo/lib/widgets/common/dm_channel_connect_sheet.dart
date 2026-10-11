@@ -42,6 +42,27 @@ class _DmChannelConnectSheetState extends State<DmChannelConnectSheet> {
     super.initState();
     _status = List<Map<String, dynamic>>.from(widget.initialStatus);
     _refresh();
+    _checkRedirectResult();
+  }
+
+  /// Bila aplikasi dimuat ulang setelah callback OAuth (redirect balik membawa
+  /// `?dm_oauth=connected|error`), tampilkan hasilnya lalu segarkan status.
+  void _checkRedirectResult() {
+    final params = Uri.base.queryParameters;
+    final result = params['dm_oauth'];
+    if (result == null || result.isEmpty) return;
+    final channel = params['channel'] ?? '';
+    final label = widget.channels[channel] ?? channel;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      if (result == 'connected') {
+        final acct = params['account'];
+        _snack('Akun $label berhasil dihubungkan${(acct != null && acct.isNotEmpty) ? ' ($acct)' : ''}.');
+      } else {
+        _snack('Koneksi $label gagal: ${params['message'] ?? 'silakan coba lagi'}');
+      }
+      _refresh();
+    });
   }
 
   bool _isConnected(String channel) => _status.any(
