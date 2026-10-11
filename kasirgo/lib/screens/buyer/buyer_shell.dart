@@ -13,6 +13,7 @@ import '../../widgets/common/app_button.dart';
 import '../../widgets/common/app_card.dart';
 import '../../widgets/common/centennial_background.dart';
 import '../../widgets/common/responsive.dart';
+import 'buyer_home_tab.dart';
 import 'buyer_onboarding_screen.dart';
 
 /// ST17-4 (Phase 17 - Ekosistem Hyper-Local): shell Pembeli.
@@ -197,79 +198,6 @@ Future<void> _switchMode(BuildContext context, WidgetRef ref) async {
   await ref.read(appModeProvider.notifier).clear();
   ref.invalidate(appCustomerProvider);
   if (context.mounted) context.go('/mode');
-}
-
-/// Tab Beranda Pembeli (placeholder ST17-4; radar + katalog menyusul ST17-5).
-class BuyerHomeTab extends StatelessWidget {
-  final AppCustomer customer;
-
-  const BuyerHomeTab({super.key, required this.customer});
-
-  @override
-  Widget build(BuildContext context) {
-    return ListView(
-      padding: const EdgeInsets.all(16),
-      children: [
-        AppCard(
-          padding: const EdgeInsets.all(20),
-          gradient: AppTheme.primaryGradient,
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                'Halo, ${customer.displayName}!',
-                style: GoogleFonts.inter(
-                  fontSize: 20,
-                  fontWeight: FontWeight.w700,
-                  color: Colors.white,
-                ),
-              ),
-              const SizedBox(height: 6),
-              Text(
-                'Temukan warung & produk di sekitarmu. Pesan, bayar, ambil atau diantar.',
-                style: GoogleFonts.inter(
-                  fontSize: 13,
-                  color: Colors.white.withValues(alpha: 0.9),
-                ),
-              ),
-            ],
-          ),
-        ),
-        const SizedBox(height: 20),
-        const AppSectionTitle(
-          title: 'Jelajahi Sekitar',
-          subtitle: 'Radar warung terdekat segera hadir',
-          icon: Icons.explore_rounded,
-        ),
-        const SizedBox(height: 12),
-        const AppCard(
-          child: Column(
-            children: [
-              Icon(Icons.radar_rounded, size: 40, color: AppTheme.primaryColor),
-              SizedBox(height: 10),
-              Text(
-                'Radar Hyper-Local',
-                style: TextStyle(fontWeight: FontWeight.w700, fontSize: 15),
-              ),
-              SizedBox(height: 4),
-              Text(
-                'Peta warung, gerobak, dan status buka/tutup dalam radius 1-3 km.',
-                textAlign: TextAlign.center,
-                style: TextStyle(fontSize: 12.5, color: AppTheme.textSecondary),
-              ),
-            ],
-          ),
-        ),
-        const SizedBox(height: 20),
-        AppButton(
-          label: 'Pesan Manual via Kode Warung',
-          icon: Icons.qr_code_rounded,
-          variant: AppButtonVariant.outline,
-          onPressed: () => context.push('/customer'),
-        ),
-      ],
-    );
-  }
 }
 
 /// Tab Pesanan: daftar pesanan milik Pembeli saat ini.
