@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/foundation.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
@@ -63,6 +65,34 @@ class OrderService {
       debugPrint('OrderService.myOrders error: $e');
       return [];
     }
+  }
+
+  /// Satu pesanan berdasarkan id (untuk halaman pelacakan).
+  Future<Order?> getOrder(String orderId) async {
+    try {
+      final res = await _client
+          .from('orders')
+          .select('*, order_items(*)')
+          .eq('id', orderId)
+          .maybeSingle();
+      if (res == null) return null;
+      return Order.fromJson(Map<String, dynamic>.from(res));
+    } catch (e) {
+      debugPrint('OrderService.getOrder error: $e');
+      return null;
+    }
+  }
+
+  /// Pantau perubahan satu pesanan via Realtime (halaman pelacakan).
+  Stream<Order?> watchOrder(String orderId) {
+    return _client
+        .from('orders')
+        .stream(primaryKey: ['id'])
+        .eq('id', orderId)
+        .map((rows) {
+      if (rows.isEmpty) return null;
+      return Order.fromJson(Map<String, dynamic>.from(rows.first));
+    });
   }
 
   // ---------------------------------------------------------------------------

@@ -20,6 +20,7 @@ import '../../widgets/ads/sponsor_ad_slot.dart';
 import '../../widgets/common/app_button.dart';
 import '../../widgets/common/app_card.dart';
 import '../../widgets/common/app_text_field.dart';
+import 'buyer_checkout_screen.dart';
 
 /// ST17-5 (Phase 17 - Ekosistem Hyper-Local): Beranda Pembeli.
 ///
@@ -216,7 +217,12 @@ class _BuyerHomeTabState extends ConsumerState<BuyerHomeTab> {
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(AppTheme.radiusLarge)),
       ),
-      builder: (_) => const _CartSheet(),
+      builder: (_) => _CartSheet(
+        customer: widget.customer,
+        outlet: _selected,
+        buyerLat: _location?.lat,
+        buyerLng: _location?.lng,
+      ),
     );
   }
 
@@ -891,7 +897,17 @@ class _ProductCard extends StatelessWidget {
 
 /// Keranjang (satu toko per transaksi).
 class _CartSheet extends ConsumerWidget {
-  const _CartSheet();
+  final AppCustomer customer;
+  final NearbyOutlet? outlet;
+  final double? buyerLat;
+  final double? buyerLng;
+
+  const _CartSheet({
+    required this.customer,
+    this.outlet,
+    this.buyerLat,
+    this.buyerLng,
+  });
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -1031,9 +1047,16 @@ class _CartSheet extends ConsumerWidget {
                 icon: Icons.arrow_forward_rounded,
                 onPressed: () {
                   Navigator.of(context).pop();
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(
-                      content: Text('Checkout & pelacakan pesanan segera hadir.'),
+                  Navigator.of(context).push(
+                    MaterialPageRoute(
+                      builder: (_) => BuyerCheckoutScreen(
+                        outletId: cart.outletId,
+                        outletName: cart.outletName,
+                        customer: customer,
+                        hasDelivery: outlet?.hasDelivery ?? false,
+                        buyerLat: buyerLat,
+                        buyerLng: buyerLng,
+                      ),
                     ),
                   );
                 },
