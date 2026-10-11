@@ -90,6 +90,12 @@ class Transaction {
   final String? eventId;
   final String? deviceId;
 
+  /// ST17-1: pemisahan omzet produk vs titipan ongkir (hyper-local).
+  final String? orderId;
+  final double? grossAmount;
+  final double? productRevenue;
+  final double deliveryPassThrough;
+
   const Transaction({
     required this.id,
     required this.outletId,
@@ -115,6 +121,10 @@ class Transaction {
     this.syncStatus = 'synced',
     this.eventId,
     this.deviceId,
+    this.orderId,
+    this.grossAmount,
+    this.productRevenue,
+    this.deliveryPassThrough = 0,
   });
 
   factory Transaction.fromJson(Map<String, dynamic> json) {
@@ -160,6 +170,15 @@ class Transaction {
       syncStatus: json['sync_status']?.toString() ?? 'synced',
       eventId: json['event_id']?.toString(),
       deviceId: json['device_id']?.toString(),
+      orderId: json['order_id']?.toString(),
+      grossAmount: json['gross_amount'] != null
+          ? (json['gross_amount'] as num).toDouble()
+          : null,
+      productRevenue: json['product_revenue'] != null
+          ? (json['product_revenue'] as num).toDouble()
+          : null,
+      deliveryPassThrough:
+          (json['delivery_pass_through'] as num?)?.toDouble() ?? 0,
     );
   }
 
@@ -191,6 +210,12 @@ class Transaction {
     if (id.isNotEmpty) {
       data['id'] = id;
     }
+    if (orderId != null) data['order_id'] = orderId;
+    if (grossAmount != null) data['gross_amount'] = grossAmount;
+    if (productRevenue != null) data['product_revenue'] = productRevenue;
+    if (deliveryPassThrough != 0) {
+      data['delivery_pass_through'] = deliveryPassThrough;
+    }
     return data;
   }
 
@@ -219,6 +244,10 @@ class Transaction {
       'sync_status': syncStatus,
       'event_id': eventId,
       'device_id': deviceId,
+      'order_id': orderId,
+      'gross_amount': grossAmount,
+      'product_revenue': productRevenue,
+      'delivery_pass_through': deliveryPassThrough,
     };
   }
 
@@ -269,6 +298,15 @@ class Transaction {
       syncStatus: map['sync_status']?.toString() ?? 'synced',
       eventId: map['event_id']?.toString(),
       deviceId: map['device_id']?.toString(),
+      orderId: map['order_id']?.toString(),
+      grossAmount: map['gross_amount'] != null
+          ? (map['gross_amount'] as num).toDouble()
+          : null,
+      productRevenue: map['product_revenue'] != null
+          ? (map['product_revenue'] as num).toDouble()
+          : null,
+      deliveryPassThrough:
+          (map['delivery_pass_through'] as num?)?.toDouble() ?? 0,
     );
   }
 
@@ -297,6 +335,10 @@ class Transaction {
     String? syncStatus,
     String? eventId,
     String? deviceId,
+    String? orderId,
+    double? grossAmount,
+    double? productRevenue,
+    double? deliveryPassThrough,
   }) {
     return Transaction(
       id: id ?? this.id,
@@ -323,6 +365,10 @@ class Transaction {
       syncStatus: syncStatus ?? this.syncStatus,
       eventId: eventId ?? this.eventId,
       deviceId: deviceId ?? this.deviceId,
+      orderId: orderId ?? this.orderId,
+      grossAmount: grossAmount ?? this.grossAmount,
+      productRevenue: productRevenue ?? this.productRevenue,
+      deliveryPassThrough: deliveryPassThrough ?? this.deliveryPassThrough,
     );
   }
 }

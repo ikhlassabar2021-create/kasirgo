@@ -833,7 +833,12 @@ semua tabel baru berbasis `outlet_id`.
 | 9 | PPOB + Closed-loop + Embedded B2B Restock | SELESAI |
 | 10 | Fintech Lead + Hyperlocal Data + Micro-insurance | SELESAI |
 | 11 | Superadmin Web (12 revenue engine, RBAC, rules engine, monitoring) | SELESAI |
-| **12** | **Polish + Security Audit + Release** | **MULAI DI SINI** |
+| 12 | Polish + Security Audit + Release | SELESAI |
+| 13 | Superadmin Web & Control Plane + Integrasi QRIS otomatis (Midtrans/RCB) + webhook + superadmin | SELESAI |
+| 14 | Dokter Bisnis AI (ST14-1..12) | SELESAI |
+| 15 | Master Prompt Karakter/Skill AI + 12 Fitur Bos Virtual (ST15-1..4) | SELESAI |
+| **16** | **Squad Digital Marketing AI (ST16-1..4)** | **SELESAI** |
+| **17** | **Ekosistem Hyper-Local: Aplikasi Pelanggan + Pesanan Online (ST17-1..7)** | **RENCANA** |
 
 Catatan: porsi yang OBSOLETE dari Phase 5 dan harus dibuang di 5.5B: subscription gate
 (free/basic_25/pro_50), iklan banner free tier, limit 500 produk/transaksi.
@@ -1395,6 +1400,141 @@ onboarding KYC wajib (app terkunci sampai verified); panduan PDF/video via Contr
 - ST12-3: Build APK release split-per-abi <10MB + deploy superadmin
 - Test: full flow end-to-end semua role + offline + Program Pendukung.
 
+### PHASE 13A - QRIS Dinamis Midtrans (zero-custody, server-side)  [SELESAI KODE]
+Tujuan: QRIS dinamis yang otomatis LUNAS lewat webhook, tanpa server key menyentuh APK.
+Prinsip: **zero-custody** -- Server Key hanya di server (Supabase Edge Function + Vault),
+terenkripsi at-rest; tidak pernah dikirim ke klien/APK.
+- ST13A-1 (skema DB): tabel `outlet_pg_configs` (kredensial PG per outlet; server key
+  disimpan sebagai `server_key_secret_id` = uuid `vault.secrets`). RLS owner-read +
+  column-level grant: `authenticated` tidak bisa membaca `server_key_secret_id`; `anon`
+  tanpa akses. `transactions` + kolom `provider_ref`, `paid_at`. RPC
+  `get_outlet_payment_config(outlet)` mengembalikan config ter-mask. `platform_integrations`
+  key `payment_gateway` -> provider `midtrans` (base_url sandbox + production); `pg_duitku` dihapus.
+- ST13A-2 (EF `save_payment_config`): verifikasi JWT = owner outlet; simpan server key ke
+  Vault via RPC `vault_put_secret` (EXECUTE hanya service_role); upsert `outlet_pg_configs`;
+  kembalikan config ter-mask. `payment_orders.provider_order_id` untuk id order Midtrans.
+- ST13A-3 (EF `test_payment_connection`): validasi kredensial tanpa efek samping (probe
+  status order dummy; 401 = invalid, 404/200 = valid); update status verified/pending.
+- ST13A-4 (EF `create_payment`): ambil kredensial outlet + server key dari Vault; Midtrans
+  Core API `POST /v2/charge` `payment_type=qris` (Basic auth `Base64(ServerKey:)`); simpan
+  `payment_orders` (provider midtrans, qris_string, qris_url, transaction_id, expiry) dan
+  kembalikan `qr_string` + `provider_ref`.
+- ST13A-5 (EF `midtrans_webhook`): verifikasi signature
+  `SHA512(order_id + status_code + gross_amount + ServerKey)`; map
+  `transaction_status`/`fraud_status` -> PAID/PENDING/EXPIRED/FAILED/REFUND; **idempotent**;
+  aktivasi langganan bila `purpose='subscription'`; tandai `transactions.payment_status='paid'`
+  + `paid_at` + `provider_ref`. Signature salah -> 401.
+- Migrasi: `docs/migrations/2026-10-12-kasirgo-13a-midtrans-schema.sql`,
+  `2026-10-12-kasirgo-13a-midtrans-2.sql`.
+- Catatan deploy: `midtrans_webhook` harus `verify_jwt=false`; `create_payment` /
+  `save_payment_config` / `test_payment_connection` `verify_jwt=true`.
+- Kredensial per outlet diisi owner via UI (merchant_id + client_key + server_key);
+  server key hanya dikirim sekali ke EF lalu disimpan terenkripsi.
+
+### PHASE 13B - Retrofit App ke Midtrans (zero-custody)  [SELESAI]
+Tujuan: aplikasi memakai Midtrans untuk QRIS dinamis (LUNAS otomatis via webhook),
+menggantikan RCB. Server Key tetap hanya di server/Vault.
+- ST13B-1 (`payment_service.dart`): lapisan `PgProviderClient` + `MidtransProvider`
+  (facade `PaymentService`). `createQris` memanggil EF `create_payment`;
+  `checkStatus` membaca tabel `payment_orders` (di-update webhook); `confirmPaid`
+  no-op (webhook = sumber kebenaran). `PgPaymentOrder.providerOrderId` (dulu
+  `rcbOrderId`); `fromApi` toleran terhadap variasi field. `getFinancialConfig`
+  async dari RPC `get_financial_config` (min/max/free nyata) + cache SharedPreferences;
+  `loadProviderConfig` dari RPC `get_outlet_payment_config` (ter-mask). Hapus
+  dependensi RCB/`get_pg_client_config`/`sandbox_direct`. Hapus cabang auto-pay
+  "Pembayaran Gratis" (`free_threshold` = ambang biaya platform, bukan pembayaran gratis).
+- ST13B-2 (`checkout_dialog.dart`): render QR asli dari `qr_string` (QrImageView),
+  panel status menunggu + polling 5 detik auto-update saat PAID/EXPIRED, batas
+  nominal dari `_finCfg`. `supporter_service.dart`/`supporter_screen.dart` ikut
+  memakai `providerOrderId`.
+- ST13B-3 (wizard `screens/owner/midtrans_connect_screen.dart`): status koneksi,
+  panduan 3 langkah + deep link Access Keys, form Merchant ID/Client Key/Server Key
+  (obscure, tidak pernah ditampilkan kembali), toggle Produksi/Sandbox, Tes Koneksi
+  (simpan via EF `save_payment_config` + probe via EF `test_payment_connection`).
+  Entry: Pengaturan > "Hubungkan Midtrans (QRIS Dinamis)".
+- Gating: QRIS dinamis hanya untuk peserta Pendukung/trial
+  (`hasFeature('payment_gateway')`), else dialog Pendukung; QRIS statis tetap
+  gratis sebagai fallback.
+- Commit: ST13B-1 `3b6765a`, ST13B-3 `6cddb0a`.
+- BLOCKER EKSTERNAL: channel QRIS akun Midtrans production belum diaktifkan
+  (`402 Payment channel is not activated`) -> charge nyata belum menghasilkan
+  `qr_string`. Alur webhook -> PAID sudah terbukti lulus (Phase 13A).
+
+### PHASE 13C - Superadmin kelola Payment Gateway + uji sandbox + go-live  [SELESAI]
+Tujuan: superadmin mengelola status Payment Gateway tiap outlet dari Control Plane
+(tanpa melihat Server Key), lalu uji sandbox end-to-end, go-live, dan audit keamanan.
+- ST13C-1 (SELESAI): migrasi `docs/migrations/2026-10-13-kasirgo-13c-superadmin-pg.sql`:
+  - `admin_list_outlet_pg_configs()` -> JSONB daftar outlet + status PG ter-mask
+    (provider, merchant_id, client_key, has_server_key, is_production, status,
+    last_tested_at, last_test_result). SECURITY DEFINER + cek `is_platform_admin()`;
+    tidak pernah mengembalikan `server_key_secret_id`.
+  - `admin_set_outlet_pg_status(p_outlet, p_status)` -> `verified|disabled|pending`,
+    menulis `log_admin_action('outlet_pg.set_status', ...)`.
+  - UI superadmin tab "Payment Gateway" (`ControlPlane.tsx`): tabel "Status Payment
+    Gateway per Outlet" (badge Aktif/Nonaktif/Menunggu/Belum diatur, mode
+    Produksi/Sandbox, hasil tes terakhir, tombol Tes + Aktifkan/Nonaktifkan).
+    Helper `src/lib/controlPlane.ts`: `listOutletPgConfigs`/`setOutletPgStatus`.
+  - EF `test_payment_connection` kini juga mengizinkan superadmin (selain owner);
+    EF `create_payment` menolak outlet ber-status `disabled` (403).
+- ST13C-2 (SELESAI): uji E2E sandbox outlet percontohan **Warung Test**
+  (`5dda8727-...`, owner `ikhlassabar2021+warung@gmail.com`), mode `is_production=false`.
+  Kredensial sandbox disimpan via EF `save_payment_config` (Server Key -> Vault).
+  Hasil (semua lulus):
+  1. `test_payment_connection` -> `valid:true, http_status:200` ("Kredensial valid"),
+     status config -> `verified`.
+  2. `create_payment` QRIS sandbox (Rp 11.008) -> `success:true`, `status:PENDING`,
+     `qris_string` dinamis terbit + `qris_url` (PNG 200) + `expired_at`.
+  3. Webhook `settlement` (signature SHA512 valid) -> `status:PAID`;
+     panggil ulang -> `idempotent:true`.
+  4. Signature salah -> **401** "Invalid signature" (ditolak).
+  5. Alur POS penuh: transaksi `unpaid` dibuat -> charge QRIS dengan
+     `transaction_id` -> webhook settlement -> `payment_orders.status=PAID` +
+     `transactions.payment_status='paid'`, `paid_at` terisi, `provider_ref`=order id.
+- ST13C-3 (SELESAI):
+  - **Audit keamanan** (detail di `docs/GO-LIVE-PAYMENT-GATEWAY.md`): tidak ada kunci
+    di repo/history/bundle; hanya anon key; RLS + kolom grant + Vault benar; webhook
+    signature + idempotent benar. REMEDIASI: `create_payment` kini memvalidasi
+    `transaction_id` (milik outlet, belum dibayar, nominal = `final_amount`) —
+    terverifikasi 400/403/409. Regression E2E POS lulus setelah deploy.
+  - **Dokumen go-live**: `docs/GO-LIVE-PAYMENT-GATEWAY.md` — checklist go-live per
+    outlet (aktifkan channel QRIS, Notification URL webhook, uji nominal kecil),
+    rekomendasi rotate Server Key, dan perbandingan provider QRIS dinamis alternatif
+    berizin PJP (Xendit/iPaymu/Tripay/Duitku) — rekomendasi Xendit atau iPaymu;
+    arsitektur `PgProviderClient` siap tambah provider tanpa ubah UI.
+  - Catatan QRIS statis vs dinamis: QRIS statis (GoPay/QR tetap toko) tidak bisa
+    otomatis (tanpa webhook); tetap tersedia sebagai fallback gratis. QRIS otomatis
+    memerlukan channel QRIS API (dinamis) di provider PJP.
+
+### PAYMENT GATEWAY RCB - Provider-aware + zero-custody  [SELESAI]
+Tujuan: aplikasi memilih provider Payment Gateway otomatis dari config superadmin
+(TANPA ubah kode); semua charge/poll lewat Edge Function (zero-custody).
+- Provider dibaca dari RPC `get_pg_client_config` (cache prefs):
+  `RcbProvider` (default) atau `MidtransProvider`, dari
+  `platform_integrations.payment_gateway.provider`.
+- Superadmin dapat mengganti provider (RCB/Midtrans) + mode (sandbox/production)
+  via Control Plane tab Payment Gateway tanpa ubah kode.
+- Zero-custody: `api_key` TIDAK lagi dikembalikan `get_pg_client_config`;
+  semua charge/poll RCB lewat Edge Function.
+- FIX EF `rcb_create_charge`: `expired_time` epoch (int) dikonversi ke ISO -> kolom
+  `expired_at` timestamptz (sebelumnya insert gagal senyap -> webhook "Order tidak
+  ditemukan"); ditambah cek error insert.
+- Migrasi `2026-10-08-kasirgo-rcb-provider-normalize.sql` (config -> provider rcb +
+  mode sandbox_server).
+- E2E LULUS: `create_supporter_checkout` -> `rcb_create_charge` (subscription) ->
+  webhook SHA256 PAID -> `supporters` active +30 hari; `confirm_pg_order` (polling
+  fallback) OK. Default = RCB sandbox.
+- Catatan mode `sandbox_direct` (API key di klien) = HANYA untuk tes; wajib pindah ke
+  Edge Function (`sandbox_server`/`live_server`) sebelum produksi.
+
+### PHASE 13C (tambahan) - QR Meja food-only + Laporan kasir + backup bulanan + afiliasi mandiri  [SELESAI]
+Bukan phase baru; penyempurnaan pasca-13C. Migrasi
+`2026-10-06-kasirgo-13c-fixes.sql`.
+- QR Meja (pelanggan) hanya untuk outlet food (cafe/resto/warteg); non-food pakai
+  katalog biasa.
+- Laporan kasir (rekap shift) + backup bulanan.
+- Hapus UI asuransi (micro-insurance) dari app.
+- Pendaftaran afiliasi mandiri (owner daftar sendiri dari app).
+
 ### PHASE 14 - Dokter Bisnis AI (Chat Agent + Diagnosa + Resep)  [BAGIAN 13]
 - Untuk OUTLET BERLANGGANAN (Program Pendukung aktif) = fitur berbayar. Bahasa Indonesia.
 - Chat langsung di dashboard (seperti tool task) setelah provider terkoneksi.
@@ -1431,6 +1571,39 @@ Bukan phase baru; menyempurnakan alur QR Meja pelanggan yang sudah live.
 - Catatan platform: di WEB, SQLite = no-op stub, jadi data (termasuk `customers`) langsung ke Supabase
   (teks/angka, biaya sangat kecil). Di APK, produk/transaksi/`customers` ada di SQLite lokal + sync;
   `customers` tidak ikut antrean sync. Foto produk selalu LOKAL (tidak pernah diunggah).
+
+### DELTA PASCA-PHASE - BATCH Perbaikan Owner & Superadmin (#1 - #5)  [SELESAI]
+Bukan phase baru; batch bugfix hasil testing user. Detail: `AGENTS.md` + `TESTING-CHECKLIST.md`.
+- BATCH #1 (FIX #1-#17, commit `7629155`..`d420c83`): login email belum dikonfirmasi;
+  KYC NIK tahun lahir 2 digit + marker KTP; dialog sukses checkout baru +
+  Struk PDF; field Nama Pelanggan + auto-create pelanggan dari nomor WA; dialog
+  tambah/hapus pelanggan diperindah; FK `transaction_items` ON DELETE SET NULL
+  (fix hapus produk); PPOB/Kulakan/Modal Usaha disembunyikan; checkout QRIS
+  statis-only; QR Meja tambah via keyboard; Riwayat Kasus filter + hapus;
+  hardening balasan AI; laporan Excel/PDF SAK EMKM; affiliate owner + superadmin
+  (`outlet_affiliate_profiles`/`outlet_affiliate_closings`); sembunyikan laporan
+  PPOB/PG dari superadmin.
+- BATCH #2 `7d57a00`: resep 2 tombol (Jalankan + Tandai Selesai); kirim struk
+  Text/PDF ke WA; KYC hardening (NIK 16 digit, magic bytes gambar); gating Dokter
+  Bisnis AI; trial/upgrade jalur dua (Trial + QRIS Dinamis Pendukung).
+- BATCH #3 `672286b`: fix `submit_kyc` kolom salah (`phone`/`auto_verified`/
+  `verified_at`) + auto-verify -> migrasi
+  `2026-10-22-kasirgo-fix-submit-kyc-columns.sql`; wording login; tombol X dialog
+  hapus produk; sinkron kartu resep saat Tandai Selesai; `cross_sell` buka POS.
+- BATCH #4 `731fb3b`: CORS di 5 EF (`rcb_create_charge`, `rcb_check_status`,
+  `create_payment`, `save_payment_config`, `test_payment_connection`) -> fix QRIS
+  dinamis gagal diam-diam di browser; hapus menu "Hubungkan Midtrans" + kartu
+  Konfigurasi Platform dari Pengaturan owner; hapus outlet via RPC
+  `delete_owner_outlet` (migrasi
+  `2026-10-23-kasirgo-fix-delete-owner-outlet.sql`).
+- BATCH #5 `ff04bb3`: fix QRIS Dinamis tak muncul saat "Dukung KasirGo" dari
+  Pengaturan. Root cause: `settings_screen.dart` `_handleSupport` hanya SnackBar,
+  hasil QR dibuang. Fix: widget bersama BARU
+  `kasirgo/lib/widgets/common/dynamic_qris_sheet.dart` (`DynamicQrisSheet`, QR +
+  polling `rcb_check_status`), dipakai `SupporterScreen` DAN `settings_screen.dart`.
+- KEBIJAKAN QRIS: pembayaran PRODUK di POS = QRIS Statis manual
+  (`checkout_dialog.dart` static-only); QRIS Dinamis otomatis HANYA di alur
+  upgrade Program Pendukung.
 
 ---
 
@@ -2173,13 +2346,108 @@ addendum L-O); Phase 14 tetap ST14-1..12.
 Semua modul baru = Program Pendukung (berbayar), gate Pendukung, ikuti Design System v2, tanpa mengubah
 fitur/skema lama. Test: per modul berfungsi dari menu owner DAN dari tombol aksi resep Dokter Bisnis.
 
+### 13.28 Squad Digital Marketing AI (Team Desain + Promosi + Iklan Berbayar)
+> Implementasi: **Phase 16** (ST16-1..ST16-4, lihat BAGIAN 15). Fitur "Tim Marketing Digital dalam
+> satu aplikasi" untuk owner yang tidak punya desainer/ads-manager: owner cukup chat, tim AI mengerjakan.
+
+#### 13.28.1 Konsep & Alur Kerja (pipeline 3 tim)
+Owner chat/kirim brief ATAU AI ambil data otomatis dari POS (produk, harga, foto, promo) -> 3 tim bekerja
+berurutan, tiap tahap bisa di-approve manual atau otomatis (mode AUTO/MANUAL per tim):
+
+1. **TEAM DESAIN (Creative AI)** - membuat aset:
+   - **Copywriting**: caption, hook, CTA, hashtag, ide konten (Indonesia, gaya sesuai outlet_type).
+   - **Gambar**: grafik promo (produksi lokal, template bg, teks harga, QR) - semua DIHASILKAN/KOMPOSISI
+     (template + teks + foto produk dari POS) -> output PNG/JPG siap posting.
+   - **Video**: video pendek 15-30 detik dari foto produk + template animasi + teks + musik -> MP4
+     (siap TikTok/Reels/Shorts). LLM menulis naskah/naratif; rendering pakai template animasi
+     (Flutter render frame -> FFmpeg/lottie server-side atau client-side sederhana).
+   - Input bahan: chat owner (brief teks), foto produk POS (`image_local_path`), foto upload manual,
+     HPP/harga untuk klaim "hemat X%".
+   - Output: `dm_assets` (tipe image/video/copy, file path, caption, status, versi).
+2. **TEAM PROMOSI (Organic Publisher)** - posting ke kanal gratis:
+   - Kanal: Facebook (feed + Fanpage), Facebook Group (draft manual, anti-spam), Instagram (feed/reel),
+     TikTok (upload draft), Shopee (produk/katalog update + status promo), WA (status + broadcast list).
+   - CATATAN TEKNIS: beberapa kanal butuh token/akun resmi (Meta Graph API utk FB/IG, TikTok Content
+     Posting API, Shopee OpenAPI). Jika owner belum connect -> fallback: asset dikirim ke WA owner
+     + tombol "buka aplikasi kanal" (manual 1-tap). Semua kredensial tersimpan terenkripsi (superadmin).
+   - Jadwal otomatis (kalender konten per minggu), deteksi jam ramai pelanggan = waktu posting optimal.
+3. **TEAM IKLAN (Paid Ads Manager)** - iklan berbayar:
+   - Kanal: Meta Ads (FB/IG), Google Ads (Search/Maps), TikTok Ads, Shopee Ads.
+   - Membuat campaign DRAFT lengkap (objective, audience geofence radius toko, budget harian,
+     jadwal, creative dari Team Desain, copy) -> **persetujuan owner WAJIB** (addendum M) ->
+     kirim via API resmi bila owner connect billing, atau export "checklist setting manual".
+   - AI pantau hasil (ROAS/CTR/CPC via API report) -> laporan mingguan + rekomendasi geser budget
+     (mis. "Stop iklan A ROAS 0.8, pindah ke iklan B ROAS 3.1").
+
+#### 13.28.2 Mode Otomatis vs Manual (per tim, diatur owner)
+- Toggle per tim di layar owner: **MANUAL** (AI siapkan -> owner review/approve -> eksekusi) atau
+  **AUTO** (eksekusi sendiri sesuai jadwal; untuk TEAM IKLAN AUTO tetap butuh approval pertama kali
+  dan limit budget harian).
+- Kalender konten: owner lihat jadwal posting mingguan, bisa geser/hapus.
+- Guardrail: quota budget iklan (maks harian di-set owner, superadmin bisa batas global), filter konten
+  (dilarang klaim medis/terlarang), watermark logo opsional, jam hening (tidak posting 22.00-06.00).
+
+#### 13.28.3 Data Model (BAGIAN 3 tambahan)
+- `dm_assets` (outlet_id, kind image/video/copy, title, file_path, caption, hashtags, source
+  pos_product/brief/template, status draft/approved/published, created_at).
+- `dm_posts` (outlet_id, asset_id, channel fb/fb_group/ig/tiktok/shopee/wa_status, status
+  draft/queued/posted/failed, scheduled_at, posted_at, post_url, error).
+- `dm_campaigns` (outlet_id, channel meta/google/tiktok/shopee, objective, budget_daily, start/end,
+  status draft/approved/active/paused/done, external_id, metrics JSONB).
+- `dm_settings` per outlet (mode per tim, budget limit, jam hening, watermark, connected_accounts
+  token_enc, last_sync).
+- Index: outlet_id + scheduled_at/status.
+- Semua tabel RLS per outlet; token/kredensial HANYA service_role + terenkripsi.
+
+#### 13.28.4 Integrasi Dokter Bisnis
+- Dokter Bisnis bisa MENUGASKAN: resep -> "buat video promo paket nasi goreng" -> tool `create_asset`
+  memanggil pipeline Team Desain, `schedule_post` untuk Team Promosi, `draft_campaign` untuk Team Iklan.
+- Laporan iklan masuk ke analisa efektivitas promosi (13.17) -> dokter menilai ROI promosi offline vs online.
+
+#### 13.28.5 Batas Realistis (jujur)
+- Auto-posting butuh koneksi akun resmi; bila tidak, fitur tetap berguna sebagai "mesin produksi aset +
+  reminder posting manual 1-tap" (tidak menjanjikan autopost penuh).
+- Kualitas video bergantung template; fokus kualitas: template rapi + teks harga + foto produk asli.
+- Biaya iklan ditanggung owner (KasirGo TIDAK menampung uang iklan); billing langsung di platform iklan.
+
+#### 13.28.6 Superadmin Config - LLM & Provider Squad DM (terpusat ATAU per outlet)
+> Semua setting integrasi/margin lewat superadmin, tanpa ubah koding (Control Plane). Owner TIDAK pernah
+> melihat/mengubah kunci. Reuse pola BAGIAN 13.4/13.8 (provider default + opsi per outlet).
+- **Tab superadmin**: "Squad Digital Marketing" (+ halaman Outlet Detail) - grup setting Control Plane.
+- **Mode provider**: pilih **Terpusat (Global)** (semua outlet pakai 1 kunci) ATAU **Per Outlet**
+  (override per outlet). Bila per-outlet kosong -> jatuh ke nilai global.
+- **Field LLM (OpenAI-compatible)**:
+  - `base_url`, `api_key_enc`, `model`, `temperature`, `max_tokens`.
+  - `unlimited_tokens` (toggle) + `token_quota` (dipakai bila unlimited OFF).
+  - **Batas request token** per periode (harian/bulanan) + counter pemakaian (`used_token_current`).
+- **Field provider konten**: provider gambar (SD/Flux dll), provider video/template, provider copy (LLM);
+  masing-masing `base_url` + `api_key_enc` + `model` (opsional, bisa berbagi LLM yang sama).
+- **Field kredensial kanal** (per outlet, terenkripsi `token_enc`): Meta (FB/IG), TikTok, Shopee, WA,
+  Ads billing - hanya service_role; owner cukup "Connect"/"Putuskan", tidak lihat token.
+- **Budget guardrail**: budget iklan harian per outlet + batas global superadmin; pause otomatis bila
+  ROAS < target (addendum M - approval owner tetap wajib untuk aksi yang mengeluarkan uang).
+- **Data model** (memakai yang ada, minim tabel baru):
+  - `platform_configs` group `digital_marketing_llm` (scope **global / segment / outlet**) - value JSONB:
+    `{provider_mode: global|per_outlet, llm:{base_url, api_key_enc, model, temperature, max_tokens,
+    unlimited_tokens, token_quota, request_token_limit, used_token_current}, image:{...}, video:{...},
+    ads_global_budget_cap}`. Pola sama `business_doctor` (BAGIAN 13.8) + versioning/rollback.
+  - Bila ingin eksplisit per outlet: tabel `outlet_dm_configs` (outlet_id, base_url, api_key_enc, model,
+    is_active, unlimited_tokens, token_quota, request_token_limit, used_token_current, updated_by).
+  - `dm_settings.connected_accounts` (token_enc) untuk kredensial kanal.
+- **Keamanan**: `api_key_enc`/`token_enc` HANYA `service_role`; view publik MENGEcualikan kolom secret;
+  catat `api_key_updated_by` + `audit_logs`; jangan render secret penuh di UI (hanya "sk-...xxxx").
+- **Tombol uji**: "Tes Koneksi" (ping base_url/model) + "Chat Uji" (1 prompt) seperti tab Dokter Bisnis.
+
 ---
 
 ## BAGIAN 14 - PROMPT SIAP-TEMPEL PHASE 14 & PHASE 15 (DOKTER BISNIS AI)
 Cara pakai: tempel PROMPT PEMBUKA UNIVERSAL (bagian 2.4 / di bawah), lalu blok `=== SUB-TASK ... ===`.
 Satu sub-task = satu sesi, commit+push, STOP, tunggu "lanjut". Phase 14 dulu (ST14-1..12), baru Phase 15
-(ST15-1..4). Prasyarat Phase 14/15: provider LLM OpenAI-compatible diset di superadmin; bila belum ada ->
+(ST15-1..4). Prasyarat Phase 14/15: provider LLM [OI]-compatible diset di superadmin; bila belum ada ->
 mode fallback AI lokal `utils/ai_engine.dart`.
+Prompt di BAGIAN ini portabel: SATU file referensi = **KasirGo Workflow** (file ini). Cukup rujuk
+"KasirGo Workflow BAGIAN <nomor>" di task baru, tanpa path/nama file lain. Repo: gunakan repo KasirGo
+yang sedang dikerjakan (task/akun baru) - tidak perlu link/repo hardcoded.
 
 ### 14.1 PROMPT PEMBUKA UNIVERSAL (versi Phase 14/15)
 ```
@@ -2193,7 +2461,7 @@ primary #0284C7, gradient #06B6D4->#0284C7, teks #0F172A/#64748B, font Inter. DI
 pakai komponen widgets/common/. Fitur baru = gate Pendukung; jangan ubah fitur/logic/skema lama.
 
 === KONTEKS PHASE 14/15 (Dokter Bisnis AI) ===
-Baca BAGIAN 13 file ini (13.1-13.26). Kunci provider (base_url/api_key/model) HANYA di superadmin.
+Baca KasirGo Workflow BAGIAN 13 (13.1-13.26). Kunci provider (base_url/api_key/model) HANYA di superadmin.
 Bahasa Indonesia. Buat PROGRESS-PHASE14.md (Phase 14) / PROGRESS-PHASE15.md (Phase 15).
 
 === ATURAN HEMAT TOKEN ===
@@ -2446,3 +2714,319 @@ Perilaku Addendum + Hardening (BAGIAN 13.26 15D + addendum L/M/N/O):
 ```
 
 Setelah Phase 15: aplikasi + Dokter Bisnis AI + Master Prompt Karakter/Skill + 12 Fitur Bos Virtual SELESAI.
+
+## BAGIAN 15 - PHASE 16: SQUAD DIGITAL MARKETING AI (PROMPT SIAP-TEMPEL)
+> STATUS: **SELESAI** (ST16-1..ST16-4). Detail: `PROGRESS-PHASE16.md`.
+Prasyarat: Phase 14 & 15 SELESAI. Fitur pendukung (berbayar): owner chat/brief -> 3 tim AI (Desain,
+Promosi, Iklan) buat aset & posting & campaign. Buat PROGRESS-PHASE16.md. 4 sub-task.
+
+Cara pakai: SATU file referensi = **KasirGo Workflow** (file ini). Prompt di BAGIAN ini hanya menyebut
+"KasirGo Workflow BAGIAN <nomor>", tanpa path/nama file lain - cukup pakai file ini sebagai referensi
+di task baru.
+Repo: gunakan repo KasirGo yang sedang dikerjakan (task/akun baru) - TIDAK perlu link/repo hardcoded;
+sesuaikan dengan repo saat itu.
+
+### 16.1 PROMPT PEMBUKA UNIVERSAL (versi Phase 16)
+```
+=== KONTEKS KASIRGO 3.0 ===
+KasirGo: OS UMKM Indonesia, GRATIS SELAMANYA untuk fitur inti (POS/produk/transaksi/stok). Flutter + Supabase + offline SQLite.
+Program Pendukung = SATU harga Rp50.000/bulan (fitur pertumbuhan) + reverse trial 14 hari.
+KYC owner WAJIB (app TERKUNCI sampai verified). Iklan HANYA di web pelanggan.
+Role: Owner/Admin/Cashier/Kitchen/Customer/Superadmin. Modular per outlet_type (kelontong/warteg/cafe/retail).
+Design v2 "Centennial Modern Ocean White" (Bagian 1.6): bg #F8FAFC, surface #FFFFFF + border #E2E8F0,
+primary #0284C7, gradient #06B6D4->#0284C7, teks #0F172A/#64748B, font Inter. DILARANG hardcode warna;
+pakai komponen widgets/common/. Fitur baru = gate Pendukung; jangan ubah fitur/logic/skema lama.
+
+=== KONTEKS PHASE 16 (Squad Digital Marketing AI) ===
+Baca KasirGo Workflow BAGIAN 13.28 (termasuk 13.28.6 Superadmin Config LLM: base_url/api_key/
+model + unlimited token/batas request token, mode TERPUSAT atau PER OUTLET). Kredensial kanal social/ads
+HANYA superadmin + terenkripsi (token_enc); owner tidak melihat. Billing iklan ditanggung owner di platform
+masing-masing. Bahasa Indonesia. Buat PROGRESS-PHASE16.md.
+
+=== ATURAN HEMAT TOKEN ===
+Flutter terinstall; jangan install/pub get/build APK. Baca HANYA PROGRESS-PHASE16.md.
+Output hanya kode, tanpa komentar/penjelasan/echo file. Edit targeted, jangan rewrite.
+Analyze per file: dart analyze <f> 2>&1|tail -20.
+Selesai: git add . && git commit -m "progress: [f]" && git push, lalu STOP.
+
+=== ERROR ===
+analyze dulu; kirim HANYA file:baris:pesan; 1 error/percobaan; error sama >2x -> STOP, push, tulis BLOCKER, laporkan.
+```
+
+### 16.2 SUB-TASK (ST16-1..ST16-4)
+```
+=== SUB-TASK ST16-1 ===
+Fondasi Squad DM (BAGIAN 13.28.3):
+- Migration: dm_assets, dm_posts, dm_campaigns, dm_settings (+ RLS per outlet; token/kredensial HANYA
+  service_role, terenkripsi); INDEX outlet_id + scheduled_at/status
+- Tab superadmin "Squad Digital Marketing": global config (provider gambar/video/copy, base_url + api_key +
+  model LLM + unlimited token/token_quota + batas request token, mode TERPUSAT atau PER OUTLET - lihat
+  13.28.6, batas budget global, whitelist konten terlarang) + per-outlet connect akun (fb/ig/tiktok/shopee)
+  -> token_enc
+- Edge Function dm_creative: pipeline copy (LLM) + gambar (template+foto produk+teks harga) -> dm_assets;
+  gaya copy sesuai outlet_type; watermark opsional
+- Gating Pendukung + kuota asset per bulan (unlimited_tokens pola sama BAGIAN 13.8)
+Ikuti Design System v2. flutter analyze bersih. commit+push, STOP.
+```
+
+```
+=== SUB-TASK ST16-2 ===
+Team Desain UI + Video (BAGIAN 13.28.1):
+- Layar owner "Studio Desain": brief chat -> AI buat 3 opsi copy + gambar (preview) -> pilih/edit -> save
+  dm_assets; ambil produk otomatis dari POS (nama/foto/harga/promo)
+- Video 15-30 detik: naskah AI + template animasi (foto produk + teks + musik) -> MP4; preview + regenerate
+- Mode per tim (MANUAL/AUTO) di dm_settings; jam hening + filter klaim medis/terlarang
+- Tombol Dokter Bisnis: resep -> "Buat Video Promo" (tool create_asset) -> pipeline Team Desain
+flutter analyze bersih. commit+push, STOP.
+```
+
+```
+=== SUB-TASK ST16-3 ===
+Team Promosi - jadwal + posting (BAGIAN 13.28.1-2):
+- Kalender konten mingguan (dm_posts): draft/queued/posted/failed; geser/hapus drag
+- Kanal: WA status + broadcast (wa.me), FB feed/fanpage + IG (Meta Graph API bila connected), TikTok
+  (Content Posting API bila connected), Shopee (OpenAPI bila connected); BELUM connected -> asset ke
+  WA owner + tombol "Buka Aplikasi Kanal" (manual 1-tap)
+- AI jadwalkan jam optimal dari data jam ramai pelanggan (BAGIAN 13.17); anti-spam fb_group (draft manual)
+- Report: posting sukses/gagal + reach bila API tersedia
+flutter analyze bersih. Uji posting draft ke 1 kanal (manual path). commit+push, STOP.
+```
+
+```
+=== SUB-TASK ST16-4 ===
+Team Iklan + Hardening + Tes (BAGIAN 13.28.1-5):
+- Campaign draft: Meta Ads, Google Ads, TikTok Ads, Shopee Ads (objective, geofence radius toko,
+  budget harian, jadwal, creative dari dm_assets) -> approval WAJIB owner (addendum M) ->
+  kirim via API bila connected, else checklist setting manual
+- Monitor hasil (ROAS/CTR/CPC) via API report bila connected -> laporan mingguan + rekomendasi
+  geser budget -> rekomendasi masuk chat Dokter Bisnis
+- Guardrail: budget limit harian (owner + batas global superadmin), pause otomatis bila ROAS < target,
+  audit_logs semua aksi
+- Uji end-to-end: brief -> asset -> post draft -> campaign draft -> approval; gating non-Pendukung;
+  token tidak bocor; PROGRESS-PHASE16.md SELESAI. commit+push, STOP.
+```
+
+Setelah Phase 16: KasirGo punya "Tim Marketing Digital" lengkap (Desain+Promosi+Iklan) untuk UMKM.
+
+### 16.3 CATATAN SELESAI (Phase 16) - 2026-10-27
+STATUS: **PHASE 16 TUNTAS** (ST16-1..ST16-4). Migrasi `docs/migrations/2026-10-24-kasirgo-16a-squad-dm.sql`
+(7 tabel `dm_*` + RPC admin) & `2026-10-27-kasirgo-16d-ads.sql` (kolom `dm_campaigns` + RPC owner guardrail/
+channel/audit + HARDENING policy `platform_configs`). EF `dm_creative`. App: `dm_service.dart`,
+`screens/owner/design_studio_screen.dart`, `promotion_screen.dart`, `ads_studio_screen.dart`,
+`doctor_promotion_log_screen.dart`, kartu Studio di `owner_home_screen.dart`. Admin: `ControlPlane.tsx`
+tab "Squad Digital Marketing". Gating fitur Pendukung (`digital_marketing`). Commit app repo `main`:
+`5add2f8` (ST16-1), `8c276fe` (ST16-2), `481e888` (ST16-3), `458042e` (ST16-4 + hardening). Verifikasi:
+`dart analyze lib` 0 error, `flutter analyze lib` bersih, unit test `test/ads_metrics_test.dart` lulus,
+E2E REST owner (guardrail/channel/campaign/audit) OK, token LLM tidak bocor ke client. Deploy web gh-pages
+root + `/admin/`. BLOCKER eksisting (bukan kode): kanal social/ads belum terhubung -> fallback checklist
+manual; billing iklan ditanggung owner di platform masing-masing.
+
+---
+
+## BAGIAN 16 - PHASE 17: EKOSISTEM HYPER-LOCAL (APLIKASI PELANGGAN + PESANAN ONLINE)
+
+> STATUS: **RENCANA** (belum dikerjakan). Prasyarat: Phase 16 SELESAI.
+> Sumber: PRD "Ekosistem KasirGo (Hyper-Local Discovery & POS)" v1.0 yang diselaraskan ke arsitektur KasirGo.
+
+### 17.0 KEPUTUSAN ARSITEKTUR (mengikat)
+1. **SATU APK mode ganda**: aplikasi yang sama punya mode **Penjual** (POS/KDS/Laporan) dan mode **Pembeli**
+   (Radar/Katalog/Keranjang/Pesanan). Tidak ada dua APK terpisah untuk MVP. Build web/PWA juga tersedia
+   untuk Pembeli (0 install, link/QR per warung). Ekstraksi ke app terpisah bisa dilakukan nanti karena
+   kode sudah terpisah per role (risiko rendah).
+2. **Identitas Pembeli**: Supabase **anonymous auth** (`signInAnonymously`) + profil `app_customers`
+   (nama + nohp + device). Bukan device_uuid murni (agar tahan reinstall). Upgrade OTP WA opsional nanti.
+3. **Order terpisah dari Transaction**: siklus order (baru/diproses/siap/selesai/batal) hidup di tabel
+   `orders`; `transactions` baru dibuat saat order **selesai** (single source of truth omzet). Jangan
+   campur `order_status` ke `transactions`.
+4. **QRIS dual-mode dipertahankan**: statis + validasi mutasi manual (onboarding mikro-UMKM, tanpa MDR)
+   DAN dinamis + webhook (Phase 7/7.5). Static-manual bukan pengganti, tapi jalur default bagi yang belum
+   punya payment gateway.
+5. **Zero-custody / zero-logistics**: KasirGo **tidak menampung uang**; bayar ke QRIS/rekening milik warung
+   lalu kasir validasi. Pengiriman **mandiri/komunitas** (tanpa API logistik pihak ketiga) dengan **markup
+   ongkir** diatur owner.
+6. **Uang titipan ongkir BUKAN omzet**: `delivery_pass_through` tidak masuk laba/omzet/komisi/metrik apa pun.
+7. **Peta Rp0**: `flutter_map` + OpenStreetMap (tanpa API key); sediakan fallback mode daftar (list) saat
+   peta/offline tidak tersedia.
+8. **Iklan hanya di sisi Pembeli** (sponsor hyperlocal + Adsterra fallback; Pendukung = ad-free). Owner
+   tidak pernah melihat iklan.
+9. **Privasi (UU PDP)**: consent eksplisit untuk lokasi + nohp; lokasi gerobak di-broadcast HANYA saat
+   status "Buka Lapak".
+10. **Ukuran APK**: App Bundle + `--split-per-abi` + tree-shake; target realistis (bukan <10MB untuk APK
+    penuh). Pembeli bisa pakai web bila ingin benar-benar ringan.
+11. **Tanpa voice** di sisi Pembeli (fokus sentuh + laporan keuangan otomatis). Voice (opsional) tetap
+    hanya milik Dokter Bisnis AI sisi owner.
+
+### 17.1 PROMPT PEMBUKA UNIVERSAL (versi Phase 17)
+```
+=== KONTEKS KASIRGO 3.0 (PHASE 17) ===
+KasirGo: OS UMKM Indonesia, GRATIS SELAMANYA untuk fitur inti (POS/produk/transaksi/stok).
+Flutter + Supabase + offline SQLite. Program Pendukung = SATU harga Rp50.000/bulan + reverse trial 14 hari.
+KYC owner WAJIB (app TERKUNCI sampai verified). Iklan HANYA di sisi pelanggan. Design v2 "Centennial
+Modern Ocean White" (BAGIAN 1.6): bg #F8FAFC, surface #FFFFFF + border #E2E8F0, primary #0284C7,
+gradient #06B6D4->#0284C7, teks #0F172A/#64748B, font Inter. DILARANG hardcode warna; pakai widgets/common/.
+
+=== KONTEKS PHASE 17 (Ekosistem Hyper-Local) ===
+SATU APK mode ganda (Penjual/Pembeli). Baca BAGIAN 16 (17.0 keputusan arsitektur + 17.3 data model).
+Pembeli: onboarding anon (nama+nohp), radar 1-3 km, katalog+keranjang 1 toko/transaksi, bayar QRIS
+statis/rekening + "Saya Sudah Bayar", tracking status realtime. Pesanan -> kasir validasi mutasi manual
+-> selesai -> transactions (pisah product_revenue vs delivery_pass_through; ongkir BUKAN omzet).
+Pengiriman mandiri/komunitas (tanpa API logistik). KasirGo tidak menampung uang. Peta flutter_map+OSM.
+Pembeli juga tersedia via web/PWA. Buat PROGRESS-PHASE17.md.
+
+=== ATURAN HEMAT TOKEN ===
+Flutter terinstall; jangan install/pub get/build APK. Baca HANYA PROGRESS-PHASE17.md.
+Output hanya kode, tanpa komentar/penjelasan/echo file. Edit targeted, jangan rewrite.
+Analyze per file: dart analyze <f> 2>&1|tail -20.
+Selesai: git add . && git commit -m "progress: [f]" && git push, lalu STOP.
+
+=== ERROR ===
+analyze dulu; kirim HANYA file:baris:pesan; 1 error/percobaan; error sama >2x -> STOP, push, tulis BLOCKER, laporkan.
+```
+
+### 17.2 PRASYARAT EKSTERNAL & SETTING SUPERADMIN
+- Aktifkan extension **PostGIS** di Supabase (gratis) untuk radius `ST_DWithin`.
+- Aktifkan **Realtime** untuk tabel `orders`, `outlet_locations`, `service_queue`.
+- Seed `platform_configs` grup `hyperlocal`: `radius_default_km`, `max_radius_km`,
+  `delivery_max_markup_pct`, `map_tile_url` (OSM), `maps_attribution`, `customer_ads_enabled`.
+- (Opsional) kanal OTP WA untuk upgrade identitas Pembeli.
+- Semua kredensial tetap server-side (`service_role`); tidak ada di repo/APK.
+
+### 17.3 DATA MODEL (BAGIAN 3 tambahan)
+```
+outlets (ALTER):
+  latitude DOUBLE PRECISION, longitude DOUBLE PRECISION,
+  is_mobile BOOLEAN DEFAULT FALSE,               -- gerobakan
+  is_open BOOLEAN DEFAULT FALSE,
+  open_hours JSONB,
+  service_queue_enabled BOOLEAN DEFAULT FALSE,
+  delivery_rules JSONB DEFAULT
+    '{"enabled":false,"mode":"flat","value":0,"min_km":0,"max_km":3,"free_above":0,"zones":[],"courier":"owner"}'
+  -- mode: flat | percent; value nominal/persen; zones: [{max_km, fee}]
+
+orders (BARU):
+  id, outlet_id, buyer_id (app_customers), code,
+  status CHECK (baru/diproses/siap/selesai/dibatalkan) DEFAULT 'baru',
+  payment_status CHECK (belum_konfirmasi/divalidasi/ditolak) DEFAULT 'belum_konfirmasi',
+  fulfillment CHECK (pickup/delivery) DEFAULT 'pickup',
+  subtotal, delivery_fee, total, distance_km, note,
+  proof_path (path lokal opsional), validated_by, validated_at,
+  transaction_id (FK transactions), created_at, updated_at
+
+order_items (BARU): id, order_id, product_id, name_snapshot, price_snapshot, qty, line_total
+
+app_customers (BARU): id, auth_uid UUID UNIQUE, phone, name, device_uuid, created_at, last_seen
+  -- auth_uid = auth.uid() hasil anonymous auth
+
+outlet_locations (BARU): id, outlet_id UNIQUE, latitude, longitude, updated_at
+  -- Realtime broadcast (hanya ojol/gerobak / is_mobile)
+
+service_queue (BARU): id, outlet_id, buyer_id, number INT, 
+  status CHECK (menunggu/dipanggil/selesai/batal) DEFAULT 'menunggu', created_at
+
+transactions (ALTER):
+  gross_amount NUMERIC, product_revenue NUMERIC, delivery_pass_through NUMERIC,
+  channel TEXT CHECK (offline/online/dinein) DEFAULT 'offline',
+  order_id UUID REFERENCES orders(id)
+
+RPC (SECURITY DEFINER, tanpa rahasia):
+  nearby_outlets(p_lat, p_lng, p_radius_km) -> setof outlet publik (nama, jarak, is_open, is_mobile,
+    antrean, thumb) memakai ST_DWithin + GIST index; hormati max_radius_km
+  submit_order(...) -> insert order + order_items + hitung delivery_fee dari delivery_rules (atomik)
+  validate_order_payment(p_order, p_accept) -> set payment_status + status (audit)
+  complete_order(p_order) -> buat transactions + transaction_items, isi transaction_id, status selesai
+    (idempoten), update laporan
+
+RLS: orders/order_items/service_queue -> owner (outlet) full + buyer (auth_uid=auth.uid()) SELECT miliknya
+  + INSERT; app_customers -> self; outlet_locations -> SELECT publik saat is_open + owner UPDATE.
+```
+
+### 17.4 SUB-TASK (ST17-1..ST17-7)
+
+```
+=== SUB-TASK ST17-1 ===
+Backend/DB fondasi hyper-local (BAGIAN 17.3):
+- Migration idempotent: ALTER outlets (lat/lng, is_mobile, is_open, open_hours, service_queue_enabled,
+  delivery_rules); BUAT orders, order_items, app_customers, outlet_locations, service_queue;
+  ALTER transactions (gross_amount/product_revenue/delivery_pass_through/channel/order_id)
+- PostGIS + GIST index; RPC nearby_outlets/submit_order/validate_order_payment/complete_order;
+  RLS (owner full, buyer SELECT/INSERT miliknya); Realtime publication orders/outlet_locations/service_queue;
+  seed platform_configs grup 'hyperlocal'
+- Models (order.dart, order_item.dart, app_customer.dart) + service (order_service.dart,
+  location_service.dart) + update transaction model
+Ikuti Design System v2. flutter analyze bersih. Uji RPC via SQL. commit+push, STOP.
+```
+
+```
+=== SUB-TASK ST17-2 ===
+POS - Pesanan Online Masuk (real-time + validasi mutasi manual):
+- Layar owner/kasir "Pesanan Online": list order via Realtime; detail (nama, jarak km, barang, ongkir,
+  total); badge berkedip "Menunggu Pengecekan Kasir"
+- Tombol "Pembayaran Valid & Proses" (status diproses) / "Tolak/Belum Masuk" (dibatalkan); tombol "Selesai"
+- Notifikasi lokal + bunyi saat order baru; integrasi ke incoming_orders existing
+Flutter analyze bersih. Uji order test -> validasi -> selesai. commit+push, STOP.
+```
+
+```
+=== SUB-TASK ST17-3 ===
+POS - Laporan Keuangan Otomatis (pisah omzet produk vs titipan ongkir):
+- complete_order memakai RPC -> transactions {product_revenue, delivery_pass_through, gross_amount,
+  channel='online', order_id}
+- Layar laporan: Omzet Produk (laba barang) TERPISAH dari Uang Titipan Ongkir (bukan omzet); arus kas akurat
+- Rekap harian/mingguan/bulanan + ekspor Excel/PDF
+Flutter analyze bersih. Uji angka cocok. commit+push, STOP.
+```
+
+```
+=== SUB-TASK ST17-4 ===
+App - Mode ganda + customer shell + onboarding zero-friction:
+- AppMode gate (Penjual/Pembeli) di root router + shell Pembeli; simpan mode lokal
+- Onboarding Pembeli: input Nama + NoHP -> Supabase anonymous auth -> baris app_customers; simpan sesi aman
+- Consent UU PDP (lokasi + nohp); layar Profil Pembeli + logout + ganti mode
+Ikuti Design System v2. flutter analyze bersih. commit+push, STOP.
+```
+
+```
+=== SUB-TASK ST17-5 ===
+App Pembeli - Radar Hyper-Local + Katalog + Keranjang:
+- Radar: flutter_map + OSM (fallback daftar) panggil nearby_outlets (1-3 km); status Buka/Tutup;
+  live gerobak (outlet_locations Realtime); jumlah antrean (service_queue)
+- Katalog publik ala marketplace (grid, foto, harga) + detail; keranjang 1 toko/transaksi
+- Reuse online_catalog / customer_menu; iklan sisi pelanggan (Phase 7.8) non-intrusif
+Flutter analyze bersih. Uji radar + katalog + keranjang. commit+push, STOP.
+```
+
+```
+=== SUB-TASK ST17-6 ===
+App Pembeli - Checkout + QRIS statis + Tracking:
+- Checkout: pilih Click&Collect atau Delivery (ongkir otomatis dari delivery_rules) -> tulis orders
+- Tampil QRIS statis / nomor rekening warung + tombol "Saya Sudah Bayar" (upload bukti opsional)
+- Halaman pelacakan realtime: Menunggu Validasi Kasir -> Disiapkan -> Siap -> Selesai
+- Kirim ringkasan ke WA owner (wa.me)
+Flutter analyze bersih. Uji checkout -> kasir validasi -> tracking. commit+push, STOP.
+```
+
+```
+=== SUB-TASK ST17-7 ===
+Gerobakan live tracking + antrean jasa + hardening + E2E:
+- Gerobak: owner toggle "Buka Lapak" -> update outlet_locations berkala (saat app terbuka dulu);
+  pelanggan lihat posisi live
+- Antrean jasa (bengkel/cukur): nomor antrean service_queue
+- Hardening: rate limit order + anti-spam, audit RLS, ukuran APK (App Bundle/split-ABI),
+  iklan sisi pelanggan aman, uji privasi (UU PDP)
+- Uji end-to-end; PROGRESS-PHASE17.md SELESAI; update tracker. commit+push, STOP.
+```
+
+Setelah Phase 17: KasirGo punya ekosistem hyper-local (Penjual + Pembeli) dalam satu APK + web/PWA,
+dengan laporan keuangan yang memisahkan omzet produk dari uang titipan ongkir.
+
+### 17.5 RISIKO & MITIGASI
+| Risiko | Mitigasi |
+|--------|----------|
+| APK besar (satu APK) | App Bundle + split-ABI + tree-shake; Pembeli via web/PWA |
+| Spam order (tanpa password) | anon auth + rate limit + OTP WA opsional + validasi kasir |
+| Penipuan "sudah bayar" | wajib bukti transfer + validasi mutasi oleh kasir + audit_logs |
+| Privasi lokasi | consent UU PDP; broadcast hanya saat is_open |
+| Ongkir dianggap omzet | kolom terpisah `delivery_pass_through` dikecualikan dari laporan laba |
+| Peta berbiaya | flutter_map + OSM (gratis); fallback list |
+| Satu rilis menahan fitur lain | feature flags + rilis bertahap |
+
