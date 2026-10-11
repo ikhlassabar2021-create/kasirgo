@@ -76,6 +76,23 @@ class _ReportScreenState extends ConsumerState<ReportScreen> with SingleTickerPr
     }
   }
 
+  /// ST17-3: Omzet produk (laba barang). Untuk order online `final_amount`
+  /// mencakup ongkir, sehingga omzet memakai `product_revenue` (subtotal).
+  /// Ongkir titipan kurir TIDAK dihitung sebagai omzet.
+  double _productRevenueOf(Transaction t) {
+    if (t.productRevenue != null) return t.productRevenue!;
+    if (t.deliveryPassThrough > 0) {
+      return t.finalAmount - t.deliveryPassThrough;
+    }
+    return t.finalAmount;
+  }
+
+  double get _totalProductRevenue =>
+      _transactions.fold<double>(0, (sum, t) => sum + _productRevenueOf(t));
+
+  double get _totalDeliveryPassThrough =>
+      _transactions.fold<double>(0, (sum, t) => sum + t.deliveryPassThrough);
+
   Future<void> _loadData() async {
     final user = ref.read(currentUserProvider);
     if (user?.outletId == null) {
@@ -297,7 +314,8 @@ class _ReportScreenState extends ConsumerState<ReportScreen> with SingleTickerPr
       final summarySheet = excel['Ringkasan'];
       excel.setDefaultSheet('Ringkasan');
 
-      final totalOmzet = _transactions.fold<double>(0, (sum, t) => sum + t.finalAmount);
+      final totalOmzet = _totalProductRevenue;
+      final titipanOngkir = _totalDeliveryPassThrough;
       final totalBruto = _transactions.fold<double>(0, (sum, t) => sum + t.totalAmount);
       final totalDiskon =
           _transactions.fold<double>(0, (sum, t) => sum + (t.discountAmount ?? 0));
@@ -330,9 +348,14 @@ class _ReportScreenState extends ConsumerState<ReportScreen> with SingleTickerPr
       summarySheet.appendRow([xl.TextCellValue('Pos Keuangan'), xl.TextCellValue('Jumlah (Rp)')]);
       summarySheet.appendRow([xl.TextCellValue('Pendapatan Penjualan (Bruto)'), xl.DoubleCellValue(totalBruto)]);
       summarySheet.appendRow([xl.TextCellValue('Potongan / Diskon'), xl.DoubleCellValue(-totalDiskon)]);
-      summarySheet.appendRow([xl.TextCellValue('Pendapatan Penjualan (Neto)'), xl.DoubleCellValue(totalOmzet)]);
+      summarySheet.appendRow([xl.TextCellValue('Omzet Produk (Neto)'), xl.DoubleCellValue(totalOmzet)]);
       summarySheet.appendRow([xl.TextCellValue('Beban Pokok Penjualan (HPP)'), xl.DoubleCellValue(-totalHpp)]);
       summarySheet.appendRow([xl.TextCellValue('LABA KOTOR'), xl.DoubleCellValue(labaKotor)]);
+      summarySheet.appendRow([xl.TextCellValue('')]);
+      summarySheet.appendRow([xl.TextCellValue('ARUS KAS')]);
+      summarySheet.appendRow([xl.TextCellValue('Omzet Produk'), xl.DoubleCellValue(totalOmzet)]);
+      summarySheet.appendRow([xl.TextCellValue('Titipan Ongkir (bukan omzet)'), xl.DoubleCellValue(titipanOngkir)]);
+      summarySheet.appendRow([xl.TextCellValue('Total Kas Masuk'), xl.DoubleCellValue(totalOmzet + titipanOngkir)]);
       summarySheet.appendRow([xl.TextCellValue('')]);
       summarySheet.appendRow([xl.TextCellValue('RINGKASAN AKTIVITAS')]);
       summarySheet.appendRow([xl.TextCellValue('Jumlah Transaksi'), xl.IntCellValue(countTx)]);
@@ -349,20 +372,25 @@ class _ReportScreenState extends ConsumerState<ReportScreen> with SingleTickerPr
         xl.TextCellValue('Metode Bayar'),
         xl.TextCellValue('Kas Masuk (Rp)'),
         xl.TextCellValue('Diskon (Rp)'),
-        xl.TextCellValue('Total Neto (Rp)'),
+        xl.TextCellValue('Omzet Produk (Rp)'),
+        xl.TextCellValue('Titipan Ongkir (Rp)'),
       ]);
       for (final tx in _transactions) {
         salesSheet.appendRow([
           xl.TextCellValue(Formatters.date(tx.createdAt)),
           xl.TextCellValue(tx.id),
           xl.TextCellValue(tx.paymentMethod),
-          xl.DoubleCellValue(tx.totalAmount),
-          xl.DoubleCellValue(tx.discountAmount ?? 0),
           xl.DoubleCellValue(tx.finalAmount),
+          xl.DoubleCellValue(tx.discountAmount ?? 0),
+          xl.DoubleCellValue(_productRevenueOf(tx)),
+          xl.DoubleCellValue(tx.deliveryPassThrough),
         ]);
       }
+      final totalKasMasuk =
+          _transactions.fold<double>(0, (sum, t) => sum + t.finalAmount);
       salesSheet.appendRow([xl.TextCellValue('TOTAL'), xl.TextCellValue(''), xl.TextCellValue(''),
-        xl.DoubleCellValue(totalBruto), xl.DoubleCellValue(totalDiskon), xl.DoubleCellValue(totalOmzet)]);
+        xl.DoubleCellValue(totalKasMasuk), xl.DoubleCellValue(totalDiskon),
+        xl.DoubleCellValue(totalOmzet), xl.DoubleCellValue(titipanOngkir)]);
 
       // --- Sheet per Produk ---
       final productSheet = excel['Per Produk'];
@@ -435,7 +463,8 @@ class _ReportScreenState extends ConsumerState<ReportScreen> with SingleTickerPr
     try {
       final user = ref.read(currentUserProvider);
       final range = _getDateRange();
-      final totalOmzet = _transactions.fold<double>(0, (sum, t) => sum + t.finalAmount);
+      final totalOmzet = _totalProductRevenue;
+      final titipanOngkir = _totalDeliveryPassThrough;
       final totalBruto = _transactions.fold<double>(0, (sum, t) => sum + t.totalAmount);
       final totalDiskon =
           _transactions.fold<double>(0, (sum, t) => sum + (t.discountAmount ?? 0));
@@ -517,14 +546,26 @@ class _ReportScreenState extends ConsumerState<ReportScreen> with SingleTickerPr
                     _pdfRowHeader('Pos Keuangan', 'Jumlah'),
                     _pdfRow2('Pendapatan Penjualan (Bruto)', Formatters.currency(totalBruto)),
                     if (totalDiskon > 0) _pdfRow2('Potongan Penjualan / Diskon', '- ${Formatters.currency(totalDiskon)}'),
-                    _pdfRow2('Pendapatan Penjualan (Neto)', Formatters.currency(totalOmzet), bold: true),
+                    _pdfRow2('Omzet Produk (Neto)', Formatters.currency(totalOmzet), bold: true),
                     _pdfRow2('Beban Pokok Penjualan (HPP)', '- ${Formatters.currency(totalHpp)}'),
                     _pdfRow2('LABA KOTOR', Formatters.currency(labaKotor), bold: true, highlight: true),
                     if (totalPajak > 0) _pdfRow2('Pajak / PPN Terkumpul (disetor ke negara)', Formatters.currency(totalPajak)),
                   ],
                 ),
                 pw.SizedBox(height: 16),
-                pw.Text('C. Rincian Penerimaan per Metode Bayar', style: pw.TextStyle(fontSize: 12, fontWeight: pw.FontWeight.bold)),
+                pw.Text('C. Arus Kas', style: pw.TextStyle(fontSize: 12, fontWeight: pw.FontWeight.bold)),
+                pw.SizedBox(height: 4),
+                pw.Table(
+                  border: pw.TableBorder.all(color: PdfColors.grey400, width: 0.5),
+                  children: [
+                    _pdfRowHeader('Pos Kas', 'Jumlah'),
+                    _pdfRow2('Omzet Produk', Formatters.currency(totalOmzet)),
+                    _pdfRow2('Titipan Ongkir (bukan omzet)', Formatters.currency(titipanOngkir)),
+                    _pdfRow2('Total Kas Masuk', Formatters.currency(totalOmzet + titipanOngkir), bold: true, highlight: true),
+                  ],
+                ),
+                pw.SizedBox(height: 16),
+                pw.Text('D. Rincian Penerimaan per Metode Bayar', style: pw.TextStyle(fontSize: 12, fontWeight: pw.FontWeight.bold)),
                 pw.SizedBox(height: 4),
                 pw.Table(
                   border: pw.TableBorder.all(color: PdfColors.grey400, width: 0.5),
@@ -536,7 +577,7 @@ class _ReportScreenState extends ConsumerState<ReportScreen> with SingleTickerPr
                   ],
                 ),
                 pw.SizedBox(height: 24),
-                pw.Text('D. Catatan', style: pw.TextStyle(fontSize: 12, fontWeight: pw.FontWeight.bold)),
+                pw.Text('E. Catatan', style: pw.TextStyle(fontSize: 12, fontWeight: pw.FontWeight.bold)),
                 pw.SizedBox(height: 4),
                 pw.Bullet(
                   text: 'Laporan ini disusun dari catatan transaksi POS KasirGo dan dapat dilampirkan '
@@ -628,12 +669,15 @@ class _ReportScreenState extends ConsumerState<ReportScreen> with SingleTickerPr
 
   void _showShareDialog() {
     final range = _getDateRange();
-    final totalOmzet = _transactions.fold<double>(0, (sum, t) => sum + t.finalAmount);
+    final totalOmzet = _totalProductRevenue;
+    final titipanOngkir = _totalDeliveryPassThrough;
     final countTx = _transactions.length;
 
     final summaryText = 'Laporan Penjualan KasirGo%0A'
         'Periode: ${Formatters.date(range.start)} - ${Formatters.date(range.end)}%0A'
-        'Total Omzet: ${Formatters.currency(totalOmzet)}%0A'
+        'Omzet Produk: ${Formatters.currency(totalOmzet)}%0A'
+        'Titipan Ongkir (bukan omzet): ${Formatters.currency(titipanOngkir)}%0A'
+        'Total Kas Masuk: ${Formatters.currency(totalOmzet + titipanOngkir)}%0A'
         'Total Transaksi: $countTx%0A%0A'
         'Dicatat otomatis oleh KasirGo Super-App UMKM.';
 
@@ -732,9 +776,10 @@ class _ReportScreenState extends ConsumerState<ReportScreen> with SingleTickerPr
   }
 
   Widget _buildSummaryTab() {
-    final totalOmzet = _transactions.fold<double>(0, (sum, t) => sum + t.finalAmount);
+    final omzetProduk = _totalProductRevenue;
+    final titipanOngkir = _totalDeliveryPassThrough;
     final countTx = _transactions.length;
-    final avgTx = countTx > 0 ? totalOmzet / countTx : 0.0;
+    final avgTx = countTx > 0 ? omzetProduk / countTx : 0.0;
 
     double totalUntung = 0;
     for (final tx in _transactions) {
@@ -745,8 +790,8 @@ class _ReportScreenState extends ConsumerState<ReportScreen> with SingleTickerPr
       }
     }
 
-    if (totalUntung == 0 && totalOmzet > 0) {
-      totalUntung = totalOmzet * 0.25;
+    if (totalUntung == 0 && omzetProduk > 0) {
+      totalUntung = omzetProduk * 0.25;
     }
 
     return RefreshIndicator(
@@ -761,8 +806,8 @@ class _ReportScreenState extends ConsumerState<ReportScreen> with SingleTickerPr
               children: [
                 Expanded(
                   child: _ReportCard(
-                    title: 'Total Omzet',
-                    value: Formatters.currency(totalOmzet),
+                    title: 'Omzet Produk',
+                    value: Formatters.currency(omzetProduk),
                     icon: Icons.payments,
                     color: AppTheme.primaryColor,
                   ),
@@ -778,6 +823,38 @@ class _ReportScreenState extends ConsumerState<ReportScreen> with SingleTickerPr
                 ),
               ],
             ),
+            if (titipanOngkir > 0) ...[
+              const SizedBox(height: 12),
+              Row(
+                children: [
+                  Expanded(
+                    child: _ReportCard(
+                      title: 'Titipan Ongkir',
+                      value: Formatters.currency(titipanOngkir),
+                      icon: Icons.delivery_dining_rounded,
+                      color: AppTheme.warningColor,
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: _ReportCard(
+                      title: 'Arus Kas Masuk',
+                      value: Formatters.currency(omzetProduk + titipanOngkir),
+                      icon: Icons.account_balance_wallet_rounded,
+                      color: AppTheme.secondaryColor,
+                    ),
+                  ),
+                ],
+              ),
+              Padding(
+                padding: const EdgeInsets.only(top: 6),
+                child: Text(
+                  'Uang titipan ongkir milik kurir, BUKAN omzet. '
+                  'Arus kas = omzet produk + titipan ongkir.',
+                  style: TextStyle(fontSize: 11, color: AppTheme.textSecondary),
+                ),
+              ),
+            ],
             const SizedBox(height: 12),
             Row(
               children: [
@@ -984,7 +1061,7 @@ class _ReportScreenState extends ConsumerState<ReportScreen> with SingleTickerPr
     for (final tx in _transactions) {
       final diff = tx.createdAt.difference(range.start).inDays;
       if (diff >= 0 && diff < daySlots) {
-        dailyMap[diff] = (dailyMap[diff] ?? 0) + tx.finalAmount;
+        dailyMap[diff] = (dailyMap[diff] ?? 0) + _productRevenueOf(tx);
       }
     }
 
@@ -1115,9 +1192,14 @@ class _ReportScreenState extends ConsumerState<ReportScreen> with SingleTickerPr
                       crossAxisAlignment: CrossAxisAlignment.end,
                       children: [
                         Text(
-                          Formatters.currency(tx.finalAmount),
+                          Formatters.currency(_productRevenueOf(tx)),
                           style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14, color: AppTheme.successColor),
                         ),
+                        if (tx.deliveryPassThrough > 0)
+                          Text(
+                            '+${Formatters.currency(tx.deliveryPassThrough)} ongkir',
+                            style: const TextStyle(color: AppTheme.warningColor, fontSize: 10),
+                          ),
                         Text(
                           '${tx.items.length} item',
                           style: const TextStyle(color: AppTheme.textSecondary, fontSize: 11),
@@ -1147,7 +1229,7 @@ class _ReportScreenState extends ConsumerState<ReportScreen> with SingleTickerPr
     for (final tx in _transactions) {
       final diff = tx.createdAt.difference(range.start).inDays;
       if (diff >= 0 && diff < daySlots) {
-        dailyMap[diff] = (dailyMap[diff] ?? 0) + tx.finalAmount;
+        dailyMap[diff] = (dailyMap[diff] ?? 0) + _productRevenueOf(tx);
       }
     }
 
@@ -1305,10 +1387,12 @@ class _ReportScreenState extends ConsumerState<ReportScreen> with SingleTickerPr
     final channelStats = <String, Map<String, dynamic>>{};
     for (final tx in _transactions) {
       final ch = tx.channel.isEmpty ? 'offline' : tx.channel;
-      final cur = channelStats[ch] ?? {'count': 0, 'revenue': 0.0, 'fee': 0.0};
+      final cur = channelStats[ch] ??
+          {'count': 0, 'revenue': 0.0, 'fee': 0.0, 'delivery': 0.0};
       cur['count'] = (cur['count'] as int) + 1;
-      cur['revenue'] = (cur['revenue'] as double) + tx.finalAmount;
+      cur['revenue'] = (cur['revenue'] as double) + _productRevenueOf(tx);
       cur['fee'] = (cur['fee'] as double) + (tx.discountAmount ?? 0.0);
+      cur['delivery'] = (cur['delivery'] as double) + tx.deliveryPassThrough;
       channelStats[ch] = cur;
     }
 
@@ -1323,42 +1407,77 @@ class _ReportScreenState extends ConsumerState<ReportScreen> with SingleTickerPr
         final count = stat['count'] as int;
         final rev = stat['revenue'] as double;
         final fee = stat['fee'] as double;
+        final delivery = stat['delivery'] as double;
 
         return Card(
           color: AppTheme.surfaceColor,
           margin: const EdgeInsets.only(bottom: 12),
           child: Padding(
             padding: const EdgeInsets.all(16),
-            child: Row(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                CircleAvatar(
-                  backgroundColor: AppTheme.primaryColor.withValues(alpha: 0.2),
-                  child: Icon(
-                    ch == 'offline' ? Icons.store : Icons.shopping_bag,
-                    color: AppTheme.accentColor,
-                  ),
+                Row(
+                  children: [
+                    CircleAvatar(
+                      backgroundColor: AppTheme.primaryColor.withValues(alpha: 0.2),
+                      child: Icon(
+                        ch == 'offline'
+                            ? Icons.store
+                            : ch == 'online'
+                                ? Icons.delivery_dining_rounded
+                                : Icons.shopping_bag,
+                        color: AppTheme.accentColor,
+                      ),
+                    ),
+                    const SizedBox(width: 14),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            ch.toUpperCase(),
+                            style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15),
+                          ),
+                          const SizedBox(height: 2),
+                          Text(
+                            '$count Transaksi • Potongan Platform: ${Formatters.currency(fee)}',
+                            style: const TextStyle(color: AppTheme.textSecondary, fontSize: 11),
+                          ),
+                        ],
+                      ),
+                    ),
+                    Column(
+                      crossAxisAlignment: CrossAxisAlignment.end,
+                      children: [
+                        Text(
+                          Formatters.currency(rev),
+                          style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14, color: AppTheme.successColor),
+                        ),
+                        Text(
+                          'Omzet Produk',
+                          style: const TextStyle(color: AppTheme.textSecondary, fontSize: 10),
+                        ),
+                      ],
+                    ),
+                  ],
                 ),
-                const SizedBox(width: 14),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
+                if (delivery > 0) ...[
+                  const SizedBox(height: 10),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
                       Text(
-                        ch.toUpperCase(),
-                        style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15),
-                      ),
-                      const SizedBox(height: 2),
-                      Text(
-                        '$count Transaksi • Potongan Platform: ${Formatters.currency(fee)}',
+                        'Titipan Ongkir (bukan omzet)',
                         style: const TextStyle(color: AppTheme.textSecondary, fontSize: 11),
+                      ),
+                      Text(
+                        Formatters.currency(delivery),
+                        style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 12, color: AppTheme.warningColor),
                       ),
                     ],
                   ),
-                ),
-                Text(
-                  Formatters.currency(rev),
-                  style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14, color: AppTheme.successColor),
-                ),
+                ],
               ],
             ),
           ),
