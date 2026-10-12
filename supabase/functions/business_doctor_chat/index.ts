@@ -1084,6 +1084,10 @@ function toolsFor(internetActive: boolean, skills: string[]) {
   return base;
 }
 
+// Batas waktu tiap panggilan LLM agar respons tidak menggantung lama
+// (bila lewat -> lempar error -> app pakai analisa lokal instan).
+const LLM_TIMEOUT_MS = Number(Deno.env.get("DOCTOR_LLM_TIMEOUT_MS") ?? 45000) || 45000;
+
 async function callLlm(cfg: Json, messages: Json[], tools: Json[] | null) {
   let base = String(cfg.base_url ?? "").replace(/\/+$/, "");
   const url = base.includes("/chat/completions") ? base : `${base}/chat/completions`;
@@ -1097,11 +1101,24 @@ async function callLlm(cfg: Json, messages: Json[], tools: Json[] | null) {
     body.tools = tools;
     body.tool_choice = "auto";
   }
-  const resp = await fetch(url, {
-    method: "POST",
-    headers: { "Content-Type": "application/json", Authorization: `Bearer ${cfg.api_key}` },
-    body: JSON.stringify(body),
-  });
+  const ctrl = new AbortController();
+  const timer = setTimeout(() => ctrl.abort(), LLM_TIMEOUT_MS);
+  let resp: Response;
+  try {
+    resp = await fetch(url, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", Authorization: `Bearer ${cfg.api_key}` },
+      body: JSON.stringify(body),
+      signal: ctrl.signal,
+    });
+  } catch (e) {
+    if ((e as Error)?.name === "AbortError") {
+      throw new Error(`Provider AI timeout (>${Math.round(LLM_TIMEOUT_MS / 1000)} detik).`);
+    }
+    throw e;
+  } finally {
+    clearTimeout(timer);
+  }
   const data = await resp.json().catch(() => ({}));
   if (!resp.ok) throw new Error(data?.error?.message ?? data?.message ?? `LLM HTTP ${resp.status}`);
   return data;
@@ -1298,8 +1315,8 @@ Deno.serve(async (req: Request) => {
         } catch (_e) {
           data = await callLlm(provider, messages, null);
         }
-        // Tool loop (maks 3 putaran).
-        for (let round = 0; round < 3; round++) {
+        // Tool loop (maks 2 putaran) agar respons lebih cepat.
+        for (let round = 0; round < 2; round++) {
           const choice = data?.choices?.[0];
           tokens += Number(data?.usage?.total_tokens ?? 0);
           const toolCalls = choice?.message?.tool_calls ?? [];
@@ -1309,11 +1326,15 @@ Deno.serve(async (req: Request) => {
             content: choice?.message?.content ?? null,
             tool_calls: toolCalls,
           });
-          for (const tc of toolCalls) {
+          // Jalankan semua tool pada putaran ini secara paralel (lebih cepat).
+          const results = await Promise.all(toolCalls.map(async (tc: Json) => {
             let args: Json = {};
             try { args = JSON.parse(tc?.function?.arguments ?? "{}"); } catch { args = {}; }
             const result = await execTool(admin, outletId, tc?.function?.name, args, internetActive, conversationId, sink);
-            messages.push({ role: "tool", tool_call_id: tc.id, content: JSON.stringify(result) });
+            return { id: tc.id, result };
+          }));
+          for (const r of results) {
+            messages.push({ role: "tool", tool_call_id: r.id, content: JSON.stringify(r.result) });
           }
           // Panggil lanjutan tanpa tool_choice agar model berhenti memanggil tool
           // dan menulis jawaban final.

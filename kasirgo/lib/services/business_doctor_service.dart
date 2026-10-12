@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 
 import 'package:supabase_flutter/supabase_flutter.dart';
@@ -21,9 +22,11 @@ class BusinessDoctorService {
           'message': message,
           'conversation_id': ?conversationId,
         },
-      );
+      ).timeout(const Duration(seconds: 75));
       if (res.data is Map) return (res.data as Map).cast<String, dynamic>();
       return <String, dynamic>{};
+    } on TimeoutException {
+      throw Exception('Dokter Bisnis lama merespons. Coba lagi sebentar.');
     } on FunctionException catch (e) {
       throw Exception(_message(e.details) ?? 'Gagal menghubungi Dokter Bisnis.');
     }
