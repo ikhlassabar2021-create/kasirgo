@@ -961,6 +961,9 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
           _buildMenuRow(Icons.qr_code_2_rounded, 'QRIS Toko (Manual / Statis)', () {
             _showQrisConfigDialog();
           }),
+          _buildMenuRow(Icons.delivery_dining_rounded, 'Pengiriman / Diantar', () {
+            _showDeliveryConfigDialog();
+          }),
           _buildMenuRow(Icons.lock_outline, 'Ubah Password', () {
             _showChangePasswordDialog();
           }),
@@ -1057,6 +1060,9 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
           nmid: existing.nmid.trim().isEmpty
               ? (db['nmid']?.toString() ?? '')
               : existing.nmid,
+          imageBase64: existing.imageBase64.trim().isEmpty
+              ? (db['qris_image']?.toString() ?? '')
+              : existing.imageBase64,
         );
       }
     } catch (_) {}
@@ -1256,6 +1262,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                     bankWallet: config.bankOrWallet,
                     accountNumber: config.qrisString,
                     nmid: config.nmid,
+                    qrisImage: config.imageBase64,
                   );
                   if (!ctx.mounted) return;
                   Navigator.pop(ctx);
@@ -1268,6 +1275,177 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                             : 'QRIS tersimpan lokal, tetapi gagal simpan info pembayaran ke server. Coba lagi.',
                       ),
                       backgroundColor: saved ? AppTheme.successColor : AppTheme.warningColor,
+                    ),
+                  );
+                },
+                icon: const Icon(Icons.save_outlined, size: 18),
+                label: const Text('Simpan'),
+              ),
+            ],
+          );
+        },
+      ),
+    );
+  }
+
+  void _showDeliveryConfigDialog() async {
+    final user = ref.read(currentUserProvider);
+    final outletId = user?.outletId;
+    if (outletId == null || outletId.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Outlet ID tidak ditemukan')),
+      );
+      return;
+    }
+
+    Map<String, dynamic> rules = <String, dynamic>{};
+    try {
+      rules = await SupabaseService().getOutletDeliveryRules(outletId);
+    } catch (_) {}
+    if (!mounted) return;
+
+    bool enabled = rules['enabled'] == true;
+    String mode = (rules['mode']?.toString() ?? 'flat');
+    if (mode != 'percent') mode = 'flat';
+    final valueController = TextEditingController(
+      text: ((rules['value'] as num?)?.toDouble() ?? 0).toStringAsFixed(0),
+    );
+    final freeAboveController = TextEditingController(
+      text: ((rules['free_above'] as num?)?.toDouble() ?? 0).toStringAsFixed(0),
+    );
+    final maxKmController = TextEditingController(
+      text: ((rules['max_km'] as num?)?.toDouble() ?? 3).toStringAsFixed(0),
+    );
+
+    showDialog(
+      context: context,
+      builder: (ctx) => StatefulBuilder(
+        builder: (context, setDialogState) {
+          return AlertDialog(
+            backgroundColor: AppTheme.surfaceColor,
+            title: const Text(
+              'Pengiriman / Diantar',
+              style: TextStyle(fontWeight: FontWeight.bold),
+            ),
+            content: SizedBox(
+              width: 420,
+              child: SingleChildScrollView(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text(
+                      'Aktifkan layanan antar agar pelanggan bisa memesan dengan opsi "Diantar". Ongkir dihitung otomatis saat checkout.',
+                      style: TextStyle(
+                        fontSize: 13,
+                        color: AppTheme.textSecondary,
+                        height: 1.4,
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                    SwitchListTile(
+                      contentPadding: EdgeInsets.zero,
+                      value: enabled,
+                      activeThumbColor: AppTheme.primaryColor,
+                      title: const Text('Aktifkan layanan antar'),
+                      onChanged: (v) => setDialogState(() => enabled = v),
+                    ),
+                    const SizedBox(height: 4),
+                    DropdownButtonFormField<String>(
+                      initialValue: mode,
+                      decoration: const InputDecoration(
+                        labelText: 'Cara hitung ongkir',
+                        isDense: true,
+                      ),
+                      items: const [
+                        DropdownMenuItem(
+                          value: 'flat',
+                          child: Text('Nominal tetap (Rp)'),
+                        ),
+                        DropdownMenuItem(
+                          value: 'percent',
+                          child: Text('Persen dari belanja (%)'),
+                        ),
+                      ],
+                      onChanged: (v) => setDialogState(() => mode = v ?? 'flat'),
+                    ),
+                    const SizedBox(height: 12),
+                    TextField(
+                      controller: valueController,
+                      keyboardType: TextInputType.number,
+                      decoration: InputDecoration(
+                        labelText: mode == 'percent'
+                            ? 'Persen ongkir (%)'
+                            : 'Ongkir (Rp)',
+                        prefixIcon: const Icon(
+                          Icons.payments_outlined,
+                          color: AppTheme.textSecondary,
+                        ),
+                        isDense: true,
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                    TextField(
+                      controller: freeAboveController,
+                      keyboardType: TextInputType.number,
+                      decoration: const InputDecoration(
+                        labelText: 'Gratis ongkir bila belanja di atas (Rp, 0 = nonaktif)',
+                        prefixIcon: Icon(
+                          Icons.redeem_outlined,
+                          color: AppTheme.textSecondary,
+                        ),
+                        isDense: true,
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                    TextField(
+                      controller: maxKmController,
+                      keyboardType: TextInputType.number,
+                      decoration: const InputDecoration(
+                        labelText: 'Jarak maksimal antar (km)',
+                        prefixIcon: Icon(
+                          Icons.map_outlined,
+                          color: AppTheme.textSecondary,
+                        ),
+                        isDense: true,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(ctx),
+                child: const Icon(Icons.close_rounded, size: 20),
+              ),
+              ElevatedButton.icon(
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: AppTheme.primaryColor,
+                  foregroundColor: Colors.white,
+                ),
+                onPressed: () async {
+                  final saved = await SupabaseService().saveOutletDeliveryRules(
+                    outletId: outletId,
+                    enabled: enabled,
+                    mode: mode,
+                    value: double.tryParse(valueController.text.trim()) ?? 0,
+                    freeAbove:
+                        double.tryParse(freeAboveController.text.trim()) ?? 0,
+                    maxKm: double.tryParse(maxKmController.text.trim()) ?? 3,
+                  );
+                  if (!ctx.mounted) return;
+                  Navigator.pop(ctx);
+                  if (!mounted) return;
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text(
+                        saved
+                            ? 'Pengaturan pengiriman disimpan.'
+                            : 'Gagal menyimpan pengaturan pengiriman. Coba lagi.',
+                      ),
+                      backgroundColor:
+                          saved ? AppTheme.successColor : AppTheme.warningColor,
                     ),
                   );
                 },

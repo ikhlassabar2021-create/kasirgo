@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'dart:typed_data';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -437,8 +438,18 @@ class _BuyerCheckoutScreenState extends ConsumerState<BuyerCheckoutScreen> {
     final bank = _str(_payment, 'bank_wallet');
     final account = _str(_payment, 'account_number');
     final merchant = _str(_payment, 'merchant_name');
-    final hasQris = nmid.isNotEmpty;
+    final qrisImage = _str(_payment, 'qris_image');
+    final hasQris = nmid.isNotEmpty || qrisImage.isNotEmpty;
     final hasBank = account.isNotEmpty;
+
+    Uint8List? qrisBytes;
+    if (qrisImage.trim().isNotEmpty) {
+      try {
+        qrisBytes = base64Decode(qrisImage);
+      } catch (_) {
+        qrisBytes = null;
+      }
+    }
 
     return ListView(
       padding: const EdgeInsets.all(16),
@@ -503,25 +514,43 @@ class _BuyerCheckoutScreenState extends ConsumerState<BuyerCheckoutScreen> {
                     borderRadius: BorderRadius.circular(AppTheme.radiusMedium),
                     border: Border.all(color: AppTheme.borderColor),
                   ),
-                  child: Row(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      const Icon(
-                        Icons.qr_code_2_rounded,
-                        color: AppTheme.primaryColor,
-                        size: 18,
-                      ),
-                      const SizedBox(width: 10),
-                      Expanded(
-                        child: Text(
-                          'Scan QRIS ${merchant.isNotEmpty ? merchant : widget.outletName} '
-                          'senilai ${Formatters.currency(total)}, lalu tekan '
-                          '"Saya Sudah Bayar".',
-                          style: GoogleFonts.inter(
-                            fontSize: 11.5,
-                            height: 1.35,
-                            color: AppTheme.textSecondary,
+                      if (qrisBytes != null) ...[
+                        Center(
+                          child: ClipRRect(
+                            borderRadius: BorderRadius.circular(8),
+                            child: Image.memory(
+                              qrisBytes,
+                              height: 220,
+                              fit: BoxFit.contain,
+                            ),
                           ),
                         ),
+                        const SizedBox(height: 12),
+                      ],
+                      Row(
+                        children: [
+                          const Icon(
+                            Icons.qr_code_2_rounded,
+                            color: AppTheme.primaryColor,
+                            size: 18,
+                          ),
+                          const SizedBox(width: 10),
+                          Expanded(
+                            child: Text(
+                              'Scan QRIS ${merchant.isNotEmpty ? merchant : widget.outletName} '
+                              'senilai ${Formatters.currency(total)}, lalu tekan '
+                              '"Saya Sudah Bayar".',
+                              style: GoogleFonts.inter(
+                                fontSize: 11.5,
+                                height: 1.35,
+                                color: AppTheme.textSecondary,
+                              ),
+                            ),
+                          ),
+                        ],
                       ),
                     ],
                   ),

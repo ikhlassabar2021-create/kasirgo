@@ -1779,6 +1779,49 @@ class SupabaseService {
     }
   }
 
+  /// Baca aturan ongkir/pengiriman outlet (untuk form owner & checkout pembeli).
+  Future<Map<String, dynamic>> getOutletDeliveryRules(String outletId) async {
+    try {
+      final res = await _client
+          .from('outlets')
+          .select('delivery_rules')
+          .eq('id', outletId)
+          .maybeSingle();
+      final rules = res?['delivery_rules'];
+      if (rules is Map) return Map<String, dynamic>.from(rules);
+      return <String, dynamic>{};
+    } catch (e) {
+      return <String, dynamic>{};
+    }
+  }
+
+  /// Simpan aturan ongkir/pengiriman outlet (owner). Pembeli hanya melihat
+  /// opsi "Diantar" bila [enabled] true.
+  Future<bool> saveOutletDeliveryRules({
+    required String outletId,
+    required bool enabled,
+    required String mode,
+    required double value,
+    required double freeAbove,
+    required double maxKm,
+  }) async {
+    try {
+      await _client.from('outlets').update({
+        'delivery_rules': {
+          'enabled': enabled,
+          'mode': mode,
+          'value': value,
+          'free_above': freeAbove,
+          'max_km': maxKm,
+        },
+      }).eq('id', outletId);
+      return true;
+    } catch (e) {
+      debugPrint('saveOutletDeliveryRules error: $e');
+      return false;
+    }
+  }
+
   /// Menu publik untuk pelanggan QR meja (tanpa login).
   Future<List<Product>> getPublicMenu(String outletId) async {
     try {
@@ -1934,7 +1977,7 @@ class SupabaseService {
     }
   }
 
-  /// Simpan info pembayaran outlet (owner). Teks saja.
+  /// Simpan info pembayaran outlet (owner). Teks + gambar QRIS (base64).
   Future<bool> saveOutletPayment({
     required String outletId,
     required String merchantName,
@@ -1942,6 +1985,7 @@ class SupabaseService {
     required String accountNumber,
     required String nmid,
     String instruction = '',
+    String qrisImage = '',
   }) async {
     try {
       await _client.from('outlet_payment_configs').upsert({
@@ -1951,6 +1995,7 @@ class SupabaseService {
         'account_number': accountNumber,
         'nmid': nmid,
         'instruction': instruction,
+        'qris_image': qrisImage,
         'is_active': true,
         'updated_at': DateTime.now().toUtc().toIso8601String(),
       });
