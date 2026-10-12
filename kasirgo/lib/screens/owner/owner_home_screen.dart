@@ -28,9 +28,6 @@ import 'health_score_screen.dart';
 import 'business_doctor_screen.dart';
 import 'bundle_manager_screen.dart';
 import 'lapak_live_screen.dart';
-import 'ads_studio_screen.dart';
-import 'design_studio_screen.dart';
-import 'promotion_screen.dart';
 import '../../services/business_doctor_service.dart';
 import '../modules/kitchen_display_screen.dart';
 import 'shift_screen.dart';
@@ -895,42 +892,6 @@ class _OwnerHomeScreenState extends ConsumerState<OwnerHomeScreen> {
 
     quickActionItems.add(
       _ModuleCard(
-        icon: Icons.palette_rounded,
-        title: 'Studio Desain',
-        subtitle: 'Konten & video AI',
-        color: AppTheme.accentColor,
-        onTap: () => _pushGated(
-            'digital_marketing', const DesignStudioScreen(),
-            title: 'Studio Desain'),
-      ),
-    );
-
-    quickActionItems.add(
-      _ModuleCard(
-        icon: Icons.campaign_rounded,
-        title: 'Studio Promosi',
-        subtitle: 'Jadwal & posting',
-        color: AppTheme.successColor,
-        onTap: () => _pushGated(
-            'digital_marketing', const PromotionScreen(),
-            title: 'Studio Promosi'),
-      ),
-    );
-
-    quickActionItems.add(
-      _ModuleCard(
-        icon: Icons.ads_click_rounded,
-        title: 'Studio Iklan',
-        subtitle: 'Iklan berbayar & ROAS',
-        color: const Color(0xFF0EA5E9),
-        onTap: () => _pushGated(
-            'digital_marketing', const AdsStudioScreen(),
-            title: 'Studio Iklan'),
-      ),
-    );
-
-    quickActionItems.add(
-      _ModuleCard(
         icon: Icons.inventory_2_rounded,
         title: 'Paket Bundling',
         subtitle: 'Jual 1 harga',
@@ -946,8 +907,8 @@ class _OwnerHomeScreenState extends ConsumerState<OwnerHomeScreen> {
         title: 'Lapak Live',
         subtitle: 'Buka lapak & antrean',
         color: const Color(0xFF0D9488),
-        onTap: () => Navigator.push(context,
-            MaterialPageRoute(builder: (_) => const LapakLiveScreen())),
+        onTap: () => _pushGated('lapak_live', const LapakLiveScreen(),
+            title: 'Lapak Live'),
       ),
     );
 
