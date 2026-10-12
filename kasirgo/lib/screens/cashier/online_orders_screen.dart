@@ -46,6 +46,7 @@ class _OnlineOrdersViewState extends ConsumerState<OnlineOrdersView>
   String _filter = 'menunggu';
   sb.RealtimeChannel? _channel;
   final Set<String> _seen = {};
+  final Set<String> _busyOrders = {};
   late final AnimationController _blink;
 
   @override
@@ -140,38 +141,56 @@ class _OnlineOrdersViewState extends ConsumerState<OnlineOrdersView>
   }
 
   Future<void> _validate(Order order, bool accept) async {
-    final res = await _service.validateOrderPayment(
-      orderId: order.id,
-      accept: accept,
-    );
-    if (!mounted) return;
-    final ok = res['success'] == true;
-    ScaffoldMessenger.of(context)
-      ..hideCurrentSnackBar()
-      ..showSnackBar(SnackBar(
-        content: Text(ok
-            ? (accept
-                ? 'Pembayaran valid. Pesanan diproses.'
-                : 'Pesanan ditolak / pembayaran belum masuk.')
-            : 'Gagal memproses: ${res['error'] ?? 'unknown'}'),
-        backgroundColor: ok ? AppTheme.successColor : AppTheme.errorColor,
-      ));
-    if (ok) await _load(silent: true);
+    if (_busyOrders.contains(order.id)) return;
+    setState(() => _busyOrders.add(order.id));
+    try {
+      final res = await _service.validateOrderPayment(
+        orderId: order.id,
+        accept: accept,
+      );
+      if (!mounted) return;
+      final ok = res['success'] == true;
+      final idempotent = res['idempotent'] == true;
+      ScaffoldMessenger.of(context)
+        ..hideCurrentSnackBar()
+        ..showSnackBar(SnackBar(
+          content: Text(ok
+              ? (idempotent
+                  ? 'Pesanan ini sudah divalidasi sebelumnya.'
+                  : (accept
+                      ? 'Pembayaran valid. Pesanan diproses.'
+                      : 'Pesanan ditolak / pembayaran belum masuk.'))
+              : 'Gagal memproses: ${res['error'] ?? 'unknown'}'),
+          backgroundColor: ok ? AppTheme.successColor : AppTheme.errorColor,
+        ));
+      if (ok) await _load(silent: true);
+    } finally {
+      if (mounted) setState(() => _busyOrders.remove(order.id));
+    }
   }
 
   Future<void> _complete(Order order) async {
-    final res = await _service.completeOrder(order.id);
-    if (!mounted) return;
-    final ok = res['success'] == true;
-    ScaffoldMessenger.of(context)
-      ..hideCurrentSnackBar()
-      ..showSnackBar(SnackBar(
-        content: Text(ok
-            ? 'Pesanan selesai. Transaksi tercatat.'
-            : 'Gagal menyelesaikan: ${res['error'] ?? 'unknown'}'),
-        backgroundColor: ok ? AppTheme.successColor : AppTheme.errorColor,
-      ));
-    if (ok) await _load(silent: true);
+    if (_busyOrders.contains(order.id)) return;
+    setState(() => _busyOrders.add(order.id));
+    try {
+      final res = await _service.completeOrder(order.id);
+      if (!mounted) return;
+      final ok = res['success'] == true;
+      final idempotent = res['idempotent'] == true;
+      ScaffoldMessenger.of(context)
+        ..hideCurrentSnackBar()
+        ..showSnackBar(SnackBar(
+          content: Text(ok
+              ? (idempotent
+                  ? 'Pesanan ini sudah diselesaikan sebelumnya.'
+                  : 'Pesanan selesai. Transaksi tercatat.')
+              : 'Gagal menyelesaikan: ${res['error'] ?? 'unknown'}'),
+          backgroundColor: ok ? AppTheme.successColor : AppTheme.errorColor,
+        ));
+      if (ok) await _load(silent: true);
+    } finally {
+      if (mounted) setState(() => _busyOrders.remove(order.id));
+    }
   }
 
   List<Order> get _filtered {
@@ -600,12 +619,14 @@ class _OnlineOrdersViewState extends ConsumerState<OnlineOrdersView>
               children: [
                 Expanded(
                   child: _actionBtn('Pembayaran Valid & Proses',
-                      AppTheme.successColor, () => _validate(o, true)),
+                      AppTheme.successColor, () => _validate(o, true),
+                      busy: _busyOrders.contains(o.id)),
                 ),
                 const SizedBox(width: 8),
                 Expanded(
                   child: _actionBtn('Tolak / Belum Masuk',
-                      AppTheme.errorColor, () => _validate(o, false)),
+                      AppTheme.errorColor, () => _validate(o, false),
+                      busy: _busyOrders.contains(o.id)),
                 ),
               ],
             ),
@@ -615,7 +636,8 @@ class _OnlineOrdersViewState extends ConsumerState<OnlineOrdersView>
               children: [
                 Expanded(
                   child: _actionBtn('Selesai', AppTheme.primaryColor,
-                      () => _complete(o)),
+                      () => _complete(o),
+                      busy: _busyOrders.contains(o.id)),
                 ),
               ],
             ),
@@ -628,7 +650,8 @@ class _OnlineOrdersViewState extends ConsumerState<OnlineOrdersView>
   String _qty(double q) =>
       q == q.roundToDouble() ? q.toInt().toString() : q.toString();
 
-  Widget _actionBtn(String label, Color color, VoidCallback onTap) {
+  Widget _actionBtn(String label, Color color, VoidCallback onTap,
+      {bool busy = false}) {
     return SizedBox(
       height: 44,
       child: ElevatedButton(
@@ -640,11 +663,18 @@ class _OnlineOrdersViewState extends ConsumerState<OnlineOrdersView>
           shape:
               RoundedRectangleBorder(borderRadius: BorderRadius.circular(11)),
         ),
-        onPressed: onTap,
-        child: Text(label,
-            textAlign: TextAlign.center,
-            style: GoogleFonts.inter(
-                fontWeight: FontWeight.w700, fontSize: 12)),
+        onPressed: busy ? null : onTap,
+        child: busy
+            ? const SizedBox(
+                width: 18,
+                height: 18,
+                child: CircularProgressIndicator(
+                    strokeWidth: 2, color: Colors.white),
+              )
+            : Text(label,
+                textAlign: TextAlign.center,
+                style: GoogleFonts.inter(
+                    fontWeight: FontWeight.w700, fontSize: 12)),
       ),
     );
   }
