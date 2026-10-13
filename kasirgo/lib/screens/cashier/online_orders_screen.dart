@@ -665,9 +665,15 @@ class _OnlineOrdersViewState extends ConsumerState<OnlineOrdersView>
   Widget _header() {
     return Container(
       color: AppTheme.surfaceColor,
-      padding: const EdgeInsets.fromLTRB(16, 12, 8, 12),
+      padding: const EdgeInsets.fromLTRB(8, 12, 8, 12),
       child: Row(
         children: [
+          IconButton(
+            tooltip: 'Kembali',
+            icon: const Icon(Icons.arrow_back_rounded,
+                color: AppTheme.textPrimary),
+            onPressed: () => Navigator.of(context).maybePop(),
+          ),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
