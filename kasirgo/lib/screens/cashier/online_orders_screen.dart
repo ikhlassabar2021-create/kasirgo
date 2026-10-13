@@ -181,13 +181,16 @@ class _OnlineOrdersViewState extends ConsumerState<OnlineOrdersView>
       if (!mounted) return;
       final ok = res['success'] == true;
       final idempotent = res['idempotent'] == true;
+      final savedCustomer = res['customer_id'] != null;
       ScaffoldMessenger.of(context)
         ..hideCurrentSnackBar()
         ..showSnackBar(SnackBar(
           content: Text(ok
               ? (idempotent
                   ? 'Pesanan ini sudah diselesaikan sebelumnya.'
-                  : 'Pesanan selesai. Transaksi tercatat.')
+                  : (savedCustomer
+                      ? 'Pesanan selesai. Transaksi tercatat & pembeli masuk daftar pelanggan.'
+                      : 'Pesanan selesai. Transaksi tercatat.'))
               : 'Gagal menyelesaikan: ${res['error'] ?? 'unknown'}'),
           backgroundColor: ok ? AppTheme.successColor : AppTheme.errorColor,
         ));
