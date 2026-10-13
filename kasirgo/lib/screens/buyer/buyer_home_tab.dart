@@ -130,12 +130,38 @@ class _BuyerHomeTabState extends ConsumerState<BuyerHomeTab> {
   }
 
   Future<void> _init() async {
+    // Item 4: lokasi aktif OTOMATIS tanpa perlu atur manual.
+    // Pakai lokasi tersimpan dulu (instan), lalu segarkan di latar belakang.
     final saved = await _buyerLocation.loadSaved();
-    if (!mounted) return;
     if (saved != null) {
+      if (!mounted) return;
       setState(() => _location = saved);
       await _loadOutlets();
+      _autoDetect();
+      return;
     }
+    // Belum ada lokasi tersimpan -> deteksi otomatis tanpa dialog.
+    await _autoDetect();
+  }
+
+  /// Deteksi lokasi otomatis tanpa memaksa dialog. Bila gagal, Pembeli tetap
+  /// bisa mengisi manual lewat kartu lokasi / tombol di radar.
+  Future<void> _autoDetect() async {
+    if (_locating) return;
+    setState(() => _locating = true);
+    final pos = await _buyerLocation.detect();
+    if (!mounted) return;
+    if (pos == null) {
+      setState(() => _locating = false);
+      return;
+    }
+    await _buyerLocation.save(pos);
+    if (!mounted) return;
+    setState(() {
+      _location = pos;
+      _locating = false;
+    });
+    await _loadOutlets();
   }
 
   Future<void> _loadOutlets() async {
@@ -689,7 +715,9 @@ class _BuyerHomeTabState extends ConsumerState<BuyerHomeTab> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  loc == null ? 'Lokasi belum diatur' : 'Lokasi aktif',
+                  loc == null
+                      ? (_locating ? 'Mendeteksi lokasi...' : 'Lokasi belum diatur')
+                      : 'Lokasi aktif',
                   style: GoogleFonts.inter(
                     fontSize: 14,
                     fontWeight: FontWeight.w700,
@@ -699,7 +727,9 @@ class _BuyerHomeTabState extends ConsumerState<BuyerHomeTab> {
                 const SizedBox(height: 2),
                 Text(
                   loc == null
-                      ? 'Aktifkan agar radar warung sekitar berfungsi.'
+                      ? (_locating
+                          ? 'Mendeteksi otomatis, mohon tunggu...'
+                          : 'Lokasi aktif otomatis. Isi manual bila perlu.')
                       : '${loc.lat.toStringAsFixed(4)}, ${loc.lng.toStringAsFixed(4)}',
                   style: GoogleFonts.inter(
                     fontSize: 12,
@@ -784,16 +814,25 @@ class _BuyerHomeTabState extends ConsumerState<BuyerHomeTab> {
     return AppCard(
       child: Column(
         children: [
-          const Icon(Icons.location_searching_rounded,
-              size: 40, color: AppTheme.primaryColor),
+          if (_locating)
+            const SizedBox(
+              height: 40,
+              width: 40,
+              child: CircularProgressIndicator(strokeWidth: 2.5),
+            )
+          else
+            const Icon(Icons.location_searching_rounded,
+                size: 40, color: AppTheme.primaryColor),
           const SizedBox(height: 10),
           Text(
-            'Radar Hyper-Local',
+            _locating ? 'Mendeteksi lokasimu...' : 'Radar Hyper-Local',
             style: GoogleFonts.inter(fontWeight: FontWeight.w700, fontSize: 15),
           ),
           const SizedBox(height: 4),
           Text(
-            'Aktifkan lokasi untuk menemukan warung, gerobak, dan status buka/tutup dalam radius 1-3 km.',
+            _locating
+                ? 'Mohon izinkan akses lokasi bila diminta browser.'
+                : 'Aktifkan lokasi untuk menemukan warung, gerobak, dan status buka/tutup dalam radius 1-3 km.',
             textAlign: TextAlign.center,
             style: GoogleFonts.inter(fontSize: 12.5, color: AppTheme.textSecondary),
           ),
