@@ -201,6 +201,58 @@ class _EmployeeScreenState extends ConsumerState<EmployeeScreen> with SingleTick
     if (mounted) _showAddEmployeeDialog();
   }
 
+  Future<void> _deleteEmployee(Employee employee) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: AppTheme.surfaceColor,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: const Text('Hapus Karyawan?'),
+        content: Text(
+          'Karyawan "${employee.name}" akan dihapus dan tidak bisa lagi mengakses outlet ini. '
+          'Akun login (bila ada) tetap tersimpan namun kehilangan akses.',
+          style: const TextStyle(color: AppTheme.textSecondary, fontSize: 13, height: 1.4),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text('Batal'),
+          ),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppTheme.errorColor,
+              foregroundColor: Colors.white,
+            ),
+            onPressed: () => Navigator.pop(ctx, true),
+            child: const Text('Hapus'),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true) return;
+
+    if (employee.id.startsWith('local_')) {
+      final local = await _loadLocalStaff(employee.outletId);
+      local.removeWhere((e) => e.id == employee.id);
+      await _saveLocalStaff(employee.outletId, local);
+    } else {
+      final ok = await _supabaseService.deleteEmployee(employee.id);
+      if (!ok) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Gagal menghapus karyawan')),
+          );
+        }
+        return;
+      }
+    }
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text('Karyawan ${employee.name} dihapus')),
+    );
+    _loadEmployees();
+  }
+
   void _showAddEmployeeDialog() {
     final formKey = GlobalKey<FormState>();
     final nameController = TextEditingController();
@@ -992,6 +1044,42 @@ class _EmployeeScreenState extends ConsumerState<EmployeeScreen> with SingleTick
                                         ],
                                       ),
                                     ),
+                                  ),
+                                  PopupMenuButton<String>(
+                                    tooltip: 'Opsi',
+                                    icon: const Icon(Icons.more_vert_rounded,
+                                        color: AppTheme.textSecondary),
+                                    onSelected: (value) {
+                                      if (value == 'role') {
+                                        _showRoleAssignmentDialog(employee);
+                                      } else if (value == 'delete') {
+                                        _deleteEmployee(employee);
+                                      }
+                                    },
+                                    itemBuilder: (context) => const [
+                                      PopupMenuItem(
+                                        value: 'role',
+                                        child: Row(
+                                          children: [
+                                            Icon(Icons.badge_outlined, size: 18),
+                                            SizedBox(width: 10),
+                                            Text('Ubah Role'),
+                                          ],
+                                        ),
+                                      ),
+                                      PopupMenuItem(
+                                        value: 'delete',
+                                        child: Row(
+                                          children: [
+                                            Icon(Icons.delete_outline,
+                                                size: 18, color: AppTheme.errorColor),
+                                            SizedBox(width: 10),
+                                            Text('Hapus Karyawan',
+                                                style: TextStyle(color: AppTheme.errorColor)),
+                                          ],
+                                        ),
+                                      ),
+                                    ],
                                   ),
                                 ],
                               ),

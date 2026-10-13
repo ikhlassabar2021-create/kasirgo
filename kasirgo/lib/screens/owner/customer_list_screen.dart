@@ -199,6 +199,141 @@ class _CustomerListScreenState extends ConsumerState<CustomerListScreen> {
     );
   }
 
+  void _showEditCustomerDialog(Customer customer) {
+    final formKey = GlobalKey<FormState>();
+    final nameController = TextEditingController(text: customer.name);
+    final phoneController = TextEditingController(text: customer.phone ?? '');
+    bool isSubmitting = false;
+
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (dialogCtx) {
+        return StatefulBuilder(
+          builder: (context, setDialogState) {
+            return AlertDialog(
+              backgroundColor: AppTheme.surfaceColor,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+              titlePadding: const EdgeInsets.fromLTRB(20, 16, 8, 0),
+              contentPadding: const EdgeInsets.fromLTRB(20, 16, 20, 0),
+              title: Row(
+                children: [
+                  Container(
+                    padding: const EdgeInsets.all(8),
+                    decoration: BoxDecoration(
+                      color: AppTheme.primaryColor.withValues(alpha: 0.15),
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: const Icon(Icons.edit,
+                        color: AppTheme.accentColor, size: 20),
+                  ),
+                  const SizedBox(width: 12),
+                  const Expanded(
+                    child: Text('Ubah Pelanggan',
+                        style: TextStyle(
+                            fontSize: 17, fontWeight: FontWeight.w800)),
+                  ),
+                  IconButton(
+                    tooltip: 'Tutup',
+                    icon: const Icon(Icons.close_rounded,
+                        color: AppTheme.textSecondary),
+                    onPressed:
+                        isSubmitting ? null : () => Navigator.pop(dialogCtx),
+                  ),
+                ],
+              ),
+              content: Form(
+                key: formKey,
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    TextFormField(
+                      controller: nameController,
+                      textCapitalization: TextCapitalization.words,
+                      decoration: const InputDecoration(
+                        labelText: 'Nama Pelanggan *',
+                        prefixIcon: Icon(Icons.person, color: AppTheme.textSecondary),
+                      ),
+                      validator: (value) {
+                        if (value == null || value.trim().isEmpty) {
+                          return 'Nama wajib diisi';
+                        }
+                        return null;
+                      },
+                    ),
+                    const SizedBox(height: 16),
+                    TextFormField(
+                      controller: phoneController,
+                      keyboardType: TextInputType.phone,
+                      decoration: const InputDecoration(
+                        labelText: 'Nomor WhatsApp / HP',
+                        hintText: '081234567890',
+                        prefixIcon: Icon(Icons.phone, color: AppTheme.textSecondary),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              actions: [
+                SizedBox(
+                  width: double.infinity,
+                  height: 48,
+                  child: ElevatedButton.icon(
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: AppTheme.primaryColor,
+                      foregroundColor: Colors.white,
+                      shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12)),
+                    ),
+                    onPressed: isSubmitting
+                        ? null
+                        : () async {
+                          if (!formKey.currentState!.validate()) return;
+                          setDialogState(() => isSubmitting = true);
+
+                          final updated = customer.copyWith(
+                            name: nameController.text.trim(),
+                            phone: phoneController.text.trim().isEmpty
+                                ? null
+                                : phoneController.text.trim(),
+                          );
+
+                          final res = await _supabaseService.updateCustomer(updated);
+                          if (!dialogCtx.mounted) return;
+                          Navigator.pop(dialogCtx);
+                          if (!mounted) return;
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(
+                              content: Text(res != null
+                                  ? 'Perubahan pelanggan disimpan'
+                                  : 'Gagal menyimpan perubahan'),
+                              backgroundColor: res != null
+                                  ? AppTheme.successColor
+                                  : AppTheme.errorColor,
+                            ),
+                          );
+                          if (res != null) _loadCustomers();
+                        },
+                    icon: isSubmitting
+                        ? const SizedBox(
+                            width: 16,
+                            height: 16,
+                            child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                          )
+                        : const Icon(Icons.check_rounded, size: 20),
+                    label: const Text('Simpan',
+                        style: TextStyle(fontWeight: FontWeight.w700)),
+                  ),
+                ),
+                const SizedBox(height: 8),
+              ],
+            );
+          },
+        );
+      },
+    );
+  }
+
   /// Konfirmasi + hapus pelanggan.
   Future<void> _confirmDeleteCustomer(Customer customer) async {
     final ok = await showDialog<bool>(
@@ -856,11 +991,24 @@ class _CustomerListScreenState extends ConsumerState<CustomerListScreen> {
                                         shape: RoundedRectangleBorder(
                                             borderRadius: BorderRadius.circular(12)),
                                         onSelected: (v) {
-                                          if (v == 'delete') {
+                                          if (v == 'edit') {
+                                            _showEditCustomerDialog(customer);
+                                          } else if (v == 'delete') {
                                             _confirmDeleteCustomer(customer);
                                           }
                                         },
                                         itemBuilder: (_) => const [
+                                          PopupMenuItem(
+                                            value: 'edit',
+                                            child: Row(
+                                              children: [
+                                                Icon(Icons.edit_outlined,
+                                                    size: 18, color: AppTheme.textPrimary),
+                                                SizedBox(width: 8),
+                                                Text('Ubah'),
+                                              ],
+                                            ),
+                                          ),
                                           PopupMenuItem(
                                             value: 'delete',
                                             child: Row(
