@@ -5,12 +5,14 @@ import 'package:google_fonts/google_fonts.dart';
 
 import '../../config/app_theme.dart';
 import '../../models/app_customer.dart';
+import '../../models/buyer_profile.dart';
 import '../../models/order.dart';
 import '../../providers/app_mode_provider.dart';
 import '../../services/order_service.dart';
 import '../../utils/formatters.dart';
 import '../../widgets/common/app_button.dart';
 import '../../widgets/common/app_card.dart';
+import '../../widgets/common/app_text_field.dart';
 import '../../widgets/common/centennial_background.dart';
 import '../../widgets/common/responsive.dart';
 import 'buyer_home_tab.dart';
@@ -362,6 +364,8 @@ class BuyerProfileView extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final profileAsync = ref.watch(buyerProfileProvider);
+    final profile = profileAsync.valueOrNull;
     final content = ListView(
       padding: const EdgeInsets.all(16),
       children: [
@@ -403,6 +407,47 @@ class BuyerProfileView extends ConsumerWidget {
               ),
             ],
           ),
+        ),
+        const SizedBox(height: 20),
+        AppCard(
+          child: Column(
+            children: [
+              _InfoRow(
+                icon: Icons.account_circle_rounded,
+                label: 'Nama Akun',
+                value: (profile?.accountName.isNotEmpty ?? false)
+                    ? profile!.accountName
+                    : '-',
+              ),
+              const Divider(height: 24, color: AppTheme.borderColor),
+              _InfoRow(
+                icon: Icons.person_outline_rounded,
+                label: 'Nama',
+                value: (profile?.name.isNotEmpty ?? false) ? profile!.name : '-',
+              ),
+              const Divider(height: 24, color: AppTheme.borderColor),
+              _InfoRow(
+                icon: Icons.email_rounded,
+                label: 'Email',
+                value: (profile?.email.isNotEmpty ?? false) ? profile!.email : '-',
+              ),
+              const Divider(height: 24, color: AppTheme.borderColor),
+              _InfoRow(
+                icon: Icons.location_on_rounded,
+                label: 'Alamat',
+                value: (profile?.address.isNotEmpty ?? false)
+                    ? profile!.address
+                    : '-',
+              ),
+            ],
+          ),
+        ),
+        const SizedBox(height: 12),
+        AppButton(
+          label: 'Ubah Data Akun',
+          icon: Icons.edit_rounded,
+          variant: AppButtonVariant.outline,
+          onPressed: () => _editProfile(context, ref),
         ),
         const SizedBox(height: 20),
         AppCard(
@@ -461,6 +506,31 @@ class BuyerProfileView extends ConsumerWidget {
     );
   }
 
+  Future<void> _editProfile(BuildContext context, WidgetRef ref) async {
+    final current = await ref.read(buyerProfileServiceProvider).load() ??
+        BuyerProfile(
+          name: customer.name ?? '',
+          phone: customer.phone ?? '',
+        );
+    if (!context.mounted) return;
+    final saved = await showModalBottomSheet<bool>(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: AppTheme.surfaceColor,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (_) => _EditBuyerProfileSheet(initial: current),
+    );
+    if (saved == true && context.mounted) {
+      ref.invalidate(buyerProfileProvider);
+      ref.invalidate(appCustomerProvider);
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Data akun tersimpan.')),
+      );
+    }
+  }
+
   Future<void> _signOut(BuildContext context, WidgetRef ref) async {
     final confirmed = await showDialog<bool>(
       context: context,
@@ -504,16 +574,177 @@ class _InfoRow extends StatelessWidget {
           label,
           style: GoogleFonts.inter(fontSize: 13, color: AppTheme.textSecondary),
         ),
-        const Spacer(),
-        Text(
-          value,
-          style: GoogleFonts.inter(
-            fontSize: 13,
-            fontWeight: FontWeight.w600,
-            color: AppTheme.textPrimary,
+        const SizedBox(width: 12),
+        Expanded(
+          child: Text(
+            value,
+            textAlign: TextAlign.right,
+            style: GoogleFonts.inter(
+              fontSize: 13,
+              fontWeight: FontWeight.w600,
+              color: AppTheme.textPrimary,
+            ),
           ),
         ),
       ],
+    );
+  }
+}
+
+/// Sheet ubah data akun Pembeli (disimpan LOKAL + sinkron nama/nohp ke server).
+class _EditBuyerProfileSheet extends ConsumerStatefulWidget {
+  final BuyerProfile initial;
+
+  const _EditBuyerProfileSheet({required this.initial});
+
+  @override
+  ConsumerState<_EditBuyerProfileSheet> createState() =>
+      _EditBuyerProfileSheetState();
+}
+
+class _EditBuyerProfileSheetState
+    extends ConsumerState<_EditBuyerProfileSheet> {
+  final _formKey = GlobalKey<FormState>();
+  late final TextEditingController _accountCtrl;
+  late final TextEditingController _nameCtrl;
+  late final TextEditingController _emailCtrl;
+  late final TextEditingController _phoneCtrl;
+  late final TextEditingController _addressCtrl;
+  bool _busy = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _accountCtrl = TextEditingController(text: widget.initial.accountName);
+    _nameCtrl = TextEditingController(text: widget.initial.name);
+    _emailCtrl = TextEditingController(text: widget.initial.email);
+    _phoneCtrl = TextEditingController(text: widget.initial.phone);
+    _addressCtrl = TextEditingController(text: widget.initial.address);
+  }
+
+  @override
+  void dispose() {
+    _accountCtrl.dispose();
+    _nameCtrl.dispose();
+    _emailCtrl.dispose();
+    _phoneCtrl.dispose();
+    _addressCtrl.dispose();
+    super.dispose();
+  }
+
+  Future<void> _save() async {
+    if (_busy) return;
+    if (!(_formKey.currentState?.validate() ?? false)) return;
+    setState(() => _busy = true);
+    final profile = BuyerProfile(
+      accountName: _accountCtrl.text.trim(),
+      name: _nameCtrl.text.trim(),
+      email: _emailCtrl.text.trim(),
+      phone: _phoneCtrl.text.trim(),
+      address: _addressCtrl.text.trim(),
+    );
+    await ref.read(buyerProfileServiceProvider).save(profile);
+    // Sinkron nama/nohp ke baris `app_customers` agar pesanan tetap konsisten.
+    await ref.read(appCustomerServiceProvider).updateProfile(
+          name: profile.name,
+          phone: profile.phone,
+        );
+    if (!mounted) return;
+    Navigator.of(context).pop(true);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: EdgeInsets.only(
+        left: 20,
+        right: 20,
+        top: 20,
+        bottom: MediaQuery.of(context).viewInsets.bottom + 24,
+      ),
+      child: SingleChildScrollView(
+        child: Form(
+          key: _formKey,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Text(
+                'Ubah Data Akun',
+                style: GoogleFonts.inter(
+                  fontSize: 18,
+                  fontWeight: FontWeight.w700,
+                  color: AppTheme.textPrimary,
+                ),
+              ),
+              const SizedBox(height: 16),
+              AppTextField(
+                controller: _accountCtrl,
+                label: 'Nama Akun',
+                hint: 'Mis. budi88',
+                prefixIcon: Icons.account_circle_rounded,
+                validator: (v) => (v == null || v.trim().isEmpty)
+                    ? 'Nama akun wajib diisi'
+                    : null,
+              ),
+              const SizedBox(height: 12),
+              AppTextField(
+                controller: _nameCtrl,
+                label: 'Nama Lengkap',
+                hint: 'Mis. Budi Santoso',
+                prefixIcon: Icons.person_rounded,
+                validator: (v) => (v == null || v.trim().isEmpty)
+                    ? 'Nama wajib diisi'
+                    : null,
+              ),
+              const SizedBox(height: 12),
+              AppTextField(
+                controller: _emailCtrl,
+                label: 'Email (opsional)',
+                hint: 'nama@email.com',
+                prefixIcon: Icons.email_rounded,
+                keyboardType: TextInputType.emailAddress,
+                validator: (v) {
+                  final t = (v ?? '').trim();
+                  if (t.isEmpty) return null;
+                  if (!RegExp(r'^[^@\s]+@[^@\s]+\.[^@\s]+$').hasMatch(t)) {
+                    return 'Format email belum benar';
+                  }
+                  return null;
+                },
+              ),
+              const SizedBox(height: 12),
+              AppTextField(
+                controller: _phoneCtrl,
+                label: 'Nomor HP / WhatsApp',
+                hint: '08xxxxxxxxxx',
+                prefixIcon: Icons.phone_rounded,
+                keyboardType: TextInputType.phone,
+                validator: (v) {
+                  final digits = (v ?? '').replaceAll(RegExp(r'[^0-9]'), '');
+                  if (digits.length < 9) return 'Nomor HP belum benar';
+                  return null;
+                },
+              ),
+              const SizedBox(height: 12),
+              AppTextField(
+                controller: _addressCtrl,
+                label: 'Alamat Lengkap',
+                hint: 'Jalan, No. rumah, RT/RW, Kelurahan, Kota',
+                prefixIcon: Icons.location_on_rounded,
+                maxLines: 2,
+              ),
+              const SizedBox(height: 18),
+              AppButton(
+                label: 'Simpan',
+                icon: Icons.check_rounded,
+                isLoading: _busy,
+                onPressed: _save,
+              ),
+            ],
+          ),
+        ),
+      ),
     );
   }
 }

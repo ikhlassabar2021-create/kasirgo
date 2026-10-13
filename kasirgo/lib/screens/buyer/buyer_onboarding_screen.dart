@@ -4,14 +4,16 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 
 import '../../config/app_theme.dart';
+import '../../models/buyer_profile.dart';
 import '../../providers/app_mode_provider.dart';
 import '../../widgets/common/app_button.dart';
 import '../../widgets/common/app_card.dart';
 import '../../widgets/common/app_text_field.dart';
 import '../../widgets/common/centennial_background.dart';
 
-/// ST17-4 (Phase 17 - Ekosistem Hyper-Local): onboarding Pembeli zero-friction.
-/// Cukup Nama + NoHP -> sesi anonymous -> baris `app_customers`.
+/// ST17-4 (Phase 17 - Ekosistem Hyper-Local): onboarding Pembeli.
+/// Data akun lengkap (nama akun, nama, email, nohp, alamat) tersimpan LOKAL
+/// di perangkat untuk autofill checkout. Sesi anonymous -> baris `app_customers`.
 /// Consent UU PDP (lokasi + nohp) disimpan lokal di perangkat.
 class BuyerOnboardingScreen extends ConsumerStatefulWidget {
   const BuyerOnboardingScreen({super.key});
@@ -23,8 +25,11 @@ class BuyerOnboardingScreen extends ConsumerStatefulWidget {
 
 class _BuyerOnboardingScreenState extends ConsumerState<BuyerOnboardingScreen> {
   final _formKey = GlobalKey<FormState>();
+  final _accountCtrl = TextEditingController();
   final _nameCtrl = TextEditingController();
+  final _emailCtrl = TextEditingController();
   final _phoneCtrl = TextEditingController();
+  final _addressCtrl = TextEditingController();
 
   bool _consentPhone = true;
   bool _consentLocation = false;
@@ -32,8 +37,11 @@ class _BuyerOnboardingScreenState extends ConsumerState<BuyerOnboardingScreen> {
 
   @override
   void dispose() {
+    _accountCtrl.dispose();
     _nameCtrl.dispose();
+    _emailCtrl.dispose();
     _phoneCtrl.dispose();
+    _addressCtrl.dispose();
     super.dispose();
   }
 
@@ -66,7 +74,20 @@ class _BuyerOnboardingScreenState extends ConsumerState<BuyerOnboardingScreen> {
     }
 
     await service.setConsent(location: _consentLocation, phone: _consentPhone);
+
+    // Simpan akun lengkap LOKAL untuk autofill checkout.
+    await ref.read(buyerProfileServiceProvider).save(
+          BuyerProfile(
+            accountName: _accountCtrl.text.trim(),
+            name: _nameCtrl.text.trim(),
+            email: _emailCtrl.text.trim(),
+            phone: _phoneCtrl.text.trim(),
+            address: _addressCtrl.text.trim(),
+          ),
+        );
+
     ref.invalidate(appCustomerProvider);
+    ref.invalidate(buyerProfileProvider);
     if (mounted) setState(() => _busy = false);
   }
 
@@ -95,13 +116,40 @@ class _BuyerOnboardingScreenState extends ConsumerState<BuyerOnboardingScreen> {
                           crossAxisAlignment: CrossAxisAlignment.stretch,
                           children: [
                             AppTextField(
+                              controller: _accountCtrl,
+                              label: 'Nama Akun',
+                              hint: 'Mis. budi88',
+                              prefixIcon: Icons.account_circle_rounded,
+                              validator: (v) => (v == null || v.trim().isEmpty)
+                                  ? 'Nama akun wajib diisi'
+                                  : null,
+                            ),
+                            const SizedBox(height: 14),
+                            AppTextField(
                               controller: _nameCtrl,
-                              label: 'Nama Anda',
-                              hint: 'Mis. Budi',
+                              label: 'Nama Lengkap',
+                              hint: 'Mis. Budi Santoso',
                               prefixIcon: Icons.person_rounded,
                               validator: (v) => (v == null || v.trim().isEmpty)
                                   ? 'Nama wajib diisi'
                                   : null,
+                            ),
+                            const SizedBox(height: 14),
+                            AppTextField(
+                              controller: _emailCtrl,
+                              label: 'Email (opsional)',
+                              hint: 'nama@email.com',
+                              prefixIcon: Icons.email_rounded,
+                              keyboardType: TextInputType.emailAddress,
+                              validator: (v) {
+                                final t = (v ?? '').trim();
+                                if (t.isEmpty) return null;
+                                if (!RegExp(r'^[^@\s]+@[^@\s]+\.[^@\s]+$')
+                                    .hasMatch(t)) {
+                                  return 'Format email belum benar';
+                                }
+                                return null;
+                              },
                             ),
                             const SizedBox(height: 14),
                             AppTextField(
@@ -121,6 +169,17 @@ class _BuyerOnboardingScreenState extends ConsumerState<BuyerOnboardingScreen> {
                                 }
                                 return null;
                               },
+                            ),
+                            const SizedBox(height: 14),
+                            AppTextField(
+                              controller: _addressCtrl,
+                              label: 'Alamat Lengkap',
+                              hint: 'Jalan, No. rumah, RT/RW, Kelurahan, Kota',
+                              prefixIcon: Icons.location_on_rounded,
+                              maxLines: 2,
+                              validator: (v) => (v == null || v.trim().isEmpty)
+                                  ? 'Alamat wajib diisi'
+                                  : null,
                             ),
                             const SizedBox(height: 8),
                             _ConsentTile(
@@ -192,7 +251,7 @@ class _BuyerOnboardingScreenState extends ConsumerState<BuyerOnboardingScreen> {
         ),
         const SizedBox(height: 4),
         Text(
-          'Cukup nama dan nomor HP. Tanpa email, tanpa password.',
+          'Isi data akun Anda. Tanpa password, langsung bisa belanja.',
           textAlign: TextAlign.center,
           style: GoogleFonts.inter(fontSize: 13, color: AppTheme.textSecondary),
         ),

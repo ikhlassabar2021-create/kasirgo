@@ -9,6 +9,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 import '../../config/app_theme.dart';
 import '../../models/app_customer.dart';
+import '../../providers/app_mode_provider.dart';
 import '../../providers/cart_provider.dart';
 import '../../services/order_service.dart';
 import '../../services/supabase_service.dart';
@@ -70,7 +71,25 @@ class _BuyerCheckoutScreenState extends ConsumerState<BuyerCheckoutScreen> {
     super.initState();
     _nameCtrl.text = widget.customer.name ?? '';
     _phoneCtrl.text = widget.customer.phone ?? '';
+    _prefillFromProfile();
     _loadPaymentInfo();
+  }
+
+  /// Isi otomatis dari akun Pembeli LOKAL (nama, nohp, alamat).
+  Future<void> _prefillFromProfile() async {
+    final profile = await ref.read(buyerProfileServiceProvider).load();
+    if (!mounted || profile == null) return;
+    setState(() {
+      if (_nameCtrl.text.trim().isEmpty && profile.hasName) {
+        _nameCtrl.text = profile.name;
+      }
+      if (_phoneCtrl.text.trim().isEmpty && profile.hasPhone) {
+        _phoneCtrl.text = profile.phone;
+      }
+      if (_addressCtrl.text.trim().isEmpty && profile.hasAddress) {
+        _addressCtrl.text = profile.address;
+      }
+    });
   }
 
   @override
