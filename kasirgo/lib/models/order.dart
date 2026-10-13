@@ -73,6 +73,7 @@ class Order {
   final String? buyerPhone;
   final double? buyerLat;
   final double? buyerLng;
+  final String? buyerAddress;
   final String? proofPath;
   final String? validatedBy;
   final DateTime? validatedAt;
@@ -98,6 +99,7 @@ class Order {
     this.buyerPhone,
     this.buyerLat,
     this.buyerLng,
+    this.buyerAddress,
     this.proofPath,
     this.validatedBy,
     this.validatedAt,
@@ -137,6 +139,7 @@ class Order {
       buyerLng: json['buyer_lng'] == null
           ? null
           : OrderItem._toDouble(json['buyer_lng']),
+      buyerAddress: json['buyer_address']?.toString(),
       proofPath: json['proof_path']?.toString(),
       validatedBy: json['validated_by']?.toString(),
       validatedAt: _toDate(json['validated_at']),
@@ -165,6 +168,7 @@ class Order {
       'buyer_phone': buyerPhone,
       'buyer_lat': buyerLat,
       'buyer_lng': buyerLng,
+      'buyer_address': buyerAddress,
       'proof_path': proofPath,
       'validated_by': validatedBy,
       'validated_at': validatedAt?.toIso8601String(),

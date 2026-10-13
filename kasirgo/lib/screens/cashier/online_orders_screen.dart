@@ -543,6 +543,35 @@ class _OnlineOrdersViewState extends ConsumerState<OnlineOrdersView>
                 ],
               ),
             ),
+          if (o.isDelivery && o.buyerAddress?.trim().isNotEmpty == true)
+            Padding(
+              padding: const EdgeInsets.only(top: 6),
+              child: Container(
+                width: double.infinity,
+                padding: const EdgeInsets.all(9),
+                decoration: BoxDecoration(
+                  color: AppTheme.accentColor.withValues(alpha: 0.08),
+                  borderRadius: BorderRadius.circular(AppTheme.radiusMedium),
+                ),
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Icon(Icons.location_on_rounded,
+                        size: 14, color: AppTheme.accentColor),
+                    const SizedBox(width: 6),
+                    Expanded(
+                      child: Text(
+                        o.buyerAddress!,
+                        style: GoogleFonts.inter(
+                            color: AppTheme.textPrimary,
+                            fontSize: 11.5,
+                            height: 1.35),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
           const SizedBox(height: 10),
           ...o.items.map((it) => Padding(
                 padding: const EdgeInsets.only(bottom: 4),

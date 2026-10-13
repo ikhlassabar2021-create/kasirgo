@@ -30,6 +30,7 @@ class OrderService {
     double? buyerLng,
     String? name,
     String? phone,
+    String? address,
   }) async {
     try {
       final res = await _client.rpc('submit_order', params: {
@@ -41,6 +42,7 @@ class OrderService {
         'p_buyer_lng': buyerLng,
         'p_name': name,
         'p_phone': phone,
+        'p_address': address,
       });
       if (res is Map) return Map<String, dynamic>.from(res);
       return {'success': false, 'error': 'UNKNOWN'};

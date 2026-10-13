@@ -55,6 +55,7 @@ class _BuyerCheckoutScreenState extends ConsumerState<BuyerCheckoutScreen> {
   final _nameCtrl = TextEditingController();
   final _phoneCtrl = TextEditingController();
   final _noteCtrl = TextEditingController();
+  final _addressCtrl = TextEditingController();
 
   String _fulfillment = 'pickup';
   bool _submitting = false;
@@ -77,6 +78,7 @@ class _BuyerCheckoutScreenState extends ConsumerState<BuyerCheckoutScreen> {
     _nameCtrl.dispose();
     _phoneCtrl.dispose();
     _noteCtrl.dispose();
+    _addressCtrl.dispose();
     super.dispose();
   }
 
@@ -103,6 +105,14 @@ class _BuyerCheckoutScreenState extends ConsumerState<BuyerCheckoutScreen> {
       );
       return;
     }
+    if (_fulfillment == 'delivery' && _addressCtrl.text.trim().isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Alamat lengkap wajib diisi untuk pengantaran.'),
+        ),
+      );
+      return;
+    }
     setState(() => _submitting = true);
     final res = await _orderService.submitOrder(
       outletId: widget.outletId,
@@ -113,6 +123,8 @@ class _BuyerCheckoutScreenState extends ConsumerState<BuyerCheckoutScreen> {
       buyerLng: widget.buyerLng,
       name: _nameCtrl.text.trim(),
       phone: _phoneCtrl.text.trim(),
+      address:
+          _addressCtrl.text.trim().isEmpty ? null : _addressCtrl.text.trim(),
     );
     if (!mounted) return;
     setState(() => _submitting = false);
@@ -180,6 +192,9 @@ class _BuyerCheckoutScreenState extends ConsumerState<BuyerCheckoutScreen> {
       ..writeln('Kode: ${o['code'] ?? o['order_id']}')
       ..writeln('Nama: ${_nameCtrl.text.trim()}')
       ..writeln('Tipe: ${_fulfillment == 'delivery' ? 'Diantar' : 'Ambil sendiri'}');
+    if (_fulfillment == 'delivery' && _addressCtrl.text.trim().isNotEmpty) {
+      buffer.writeln('Alamat: ${_addressCtrl.text.trim()}');
+    }
     for (final item in ref.read(cartProvider).items) {
       buffer.writeln('- ${item.name} x${item.qty}');
     }
@@ -345,6 +360,16 @@ class _BuyerCheckoutScreenState extends ConsumerState<BuyerCheckoutScreen> {
                 prefixIcon: Icons.phone_rounded,
                 keyboardType: TextInputType.phone,
               ),
+              if (_fulfillment == 'delivery') ...[
+                const SizedBox(height: 12),
+                AppTextField(
+                  controller: _addressCtrl,
+                  label: 'Alamat Lengkap (wajib untuk diantar)',
+                  hint: 'Jl. / Gang, No. rumah, RT/RW, patokan, kelurahan',
+                  prefixIcon: Icons.location_on_rounded,
+                  maxLines: 3,
+                ),
+              ],
               const SizedBox(height: 12),
               AppTextField(
                 controller: _noteCtrl,
