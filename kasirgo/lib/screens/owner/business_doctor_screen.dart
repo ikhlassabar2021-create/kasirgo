@@ -4,6 +4,8 @@ import 'package:google_fonts/google_fonts.dart';
 
 import '../../config/app_theme.dart';
 import '../../providers/auth_provider.dart';
+import '../../providers/module_provider.dart';
+import '../../providers/outlet_provider.dart';
 import '../../services/business_doctor_service.dart';
 import '../../widgets/common/app_button.dart';
 import '../../widgets/common/business_doctor/doctor_blocks.dart';
@@ -537,6 +539,8 @@ class _BusinessDoctorScreenState extends ConsumerState<BusinessDoctorScreen> {
           child: OnlineCatalogScreen(),
         );
       case 'qr_table':
+        // QR Meja hanya untuk usaha makanan (cafe/warteg/resto).
+        if (!_isFoodBusiness()) return null;
         return const SupporterFeatureGate(
           featureKey: 'qr_table',
           title: 'QR Meja',
@@ -553,6 +557,13 @@ class _BusinessDoctorScreenState extends ConsumerState<BusinessDoctorScreen> {
       default:
         return null;
     }
+  }
+
+  /// QR Meja & KDS hanya relevan untuk usaha makanan (cafe/warteg/resto).
+  bool _isFoodBusiness() {
+    final outletId = ref.read(currentUserProvider)?.outletId;
+    if (outletId == null || outletId.isEmpty) return false;
+    return ModuleConfig.isFoodBusiness(ref.read(outletTypeProvider(outletId)));
   }
 
   void _scrollDown() {

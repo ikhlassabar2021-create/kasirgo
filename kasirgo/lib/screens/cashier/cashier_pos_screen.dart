@@ -8,6 +8,8 @@ import '../../models/product.dart';
 import '../../models/transaction.dart';
 import '../../models/tip.dart';
 import '../../providers/auth_provider.dart';
+import '../../providers/module_provider.dart';
+import '../../providers/outlet_provider.dart';
 import '../../services/offline_transaction_service.dart';
 import '../../services/supabase_service.dart';
 import '../../utils/receipt_generator.dart';
@@ -40,7 +42,15 @@ class _CashierPosScreenState extends ConsumerState<CashierPosScreen> {
     WidgetsBinding.instance.addPostFrameCallback((_) => _initOrders());
   }
 
+  bool _isFoodBusiness() {
+    final outletId = ref.read(currentUserProvider)?.outletId;
+    if (outletId == null || outletId.isEmpty) return false;
+    return ModuleConfig.isFoodBusiness(ref.read(outletTypeProvider(outletId)));
+  }
+
   Future<void> _initOrders() async {
+    // Pesanan dine-in / QR Meja hanya relevan untuk usaha makanan.
+    if (!_isFoodBusiness()) return;
     final outletId = ref.read(currentUserProvider)?.outletId;
     if (outletId == null) return;
     await _refreshIncomingCount();
@@ -352,6 +362,8 @@ class _CashierPosScreenState extends ConsumerState<CashierPosScreen> {
   @override
   Widget build(BuildContext context) {
     final productsAsync = ref.watch(productsProvider);
+    final outletId = ref.watch(currentUserProvider)?.outletId ?? '';
+    final isFood = ModuleConfig.isFoodBusiness(ref.watch(outletTypeProvider(outletId)));
 
     return Scaffold(
       backgroundColor: AppTheme.backgroundColor,
@@ -362,39 +374,40 @@ class _CashierPosScreenState extends ConsumerState<CashierPosScreen> {
         shape: const Border(bottom: BorderSide(color: AppTheme.borderColor)),
         title: const Text('Kasir POS'),
         actions: [
-          Stack(
-            alignment: Alignment.center,
-            children: [
-              IconButton(
-                tooltip: 'Pesanan Masuk',
-                icon: const Icon(Icons.receipt_long_rounded,
-                    color: AppTheme.primaryColor),
-                onPressed: _openIncomingOrders,
-              ),
-              if (_incomingCount > 0)
-                Positioned(
-                  top: 6,
-                  right: 6,
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(
-                        horizontal: 5, vertical: 1),
-                    constraints: const BoxConstraints(minWidth: 18),
-                    decoration: BoxDecoration(
-                      color: AppTheme.errorColor,
-                      borderRadius: BorderRadius.circular(9),
-                    ),
-                    child: Text(
-                      '$_incomingCount',
-                      textAlign: TextAlign.center,
-                      style: const TextStyle(
-                          color: Colors.white,
-                          fontSize: 10,
-                          fontWeight: FontWeight.w800),
+          if (isFood)
+            Stack(
+              alignment: Alignment.center,
+              children: [
+                IconButton(
+                  tooltip: 'Pesanan Masuk',
+                  icon: const Icon(Icons.receipt_long_rounded,
+                      color: AppTheme.primaryColor),
+                  onPressed: _openIncomingOrders,
+                ),
+                if (_incomingCount > 0)
+                  Positioned(
+                    top: 6,
+                    right: 6,
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 5, vertical: 1),
+                      constraints: const BoxConstraints(minWidth: 18),
+                      decoration: BoxDecoration(
+                        color: AppTheme.errorColor,
+                        borderRadius: BorderRadius.circular(9),
+                      ),
+                      child: Text(
+                        '$_incomingCount',
+                        textAlign: TextAlign.center,
+                        style: const TextStyle(
+                            color: Colors.white,
+                            fontSize: 10,
+                            fontWeight: FontWeight.w800),
+                      ),
                     ),
                   ),
-                ),
-            ],
-          ),
+              ],
+            ),
           const LogoutButton(),
         ],
       ),
@@ -416,7 +429,7 @@ class _CashierPosScreenState extends ConsumerState<CashierPosScreen> {
             children: [
               Column(
                 children: [
-                  if (_incomingCount > 0)
+                  if (isFood && _incomingCount > 0)
                     InkWell(
                       onTap: _openIncomingOrders,
                       child: Container(
