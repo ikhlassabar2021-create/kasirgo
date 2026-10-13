@@ -487,6 +487,69 @@ class SupabaseService {
     }
   }
 
+  /// Edit transaksi (owner/superadmin) via RPC SECURITY DEFINER.
+  /// `items` opsional: daftar {id, quantity, unit_price}. Stok disesuaikan + total
+  /// dihitung ulang di server. Mengembalikan pesan error bila gagal.
+  Future<({bool success, String message})> editTransaction({
+    required String transactionId,
+    String? paymentMethod,
+    List<Map<String, dynamic>>? items,
+  }) async {
+    try {
+      final res = await _client.rpc('update_transaction', params: {
+        'p_transaction': transactionId,
+        'p_payment_method': paymentMethod,
+        'p_items': items,
+      });
+      final map = (res is Map)
+          ? Map<String, dynamic>.from(res)
+          : <String, dynamic>{};
+      if (map['success'] == true) {
+        return (success: true, message: 'Transaksi diperbarui');
+      }
+      return (success: false, message: _txError(map['error']?.toString()));
+    } catch (e) {
+      debugPrint('editTransaction error: $e');
+      return (success: false, message: 'Gagal memperbarui transaksi');
+    }
+  }
+
+  String _txError(String? code) {
+    switch (code) {
+      case 'AUTH_REQUIRED':
+        return 'Anda harus login ulang.';
+      case 'TRANSACTION_NOT_FOUND':
+        return 'Transaksi tidak ditemukan.';
+      case 'FORBIDDEN':
+        return 'Hanya pemilik outlet yang dapat mengubah transaksi.';
+      case 'INVALID_ITEM':
+        return 'Jumlah atau harga item tidak valid.';
+      default:
+        return 'Gagal memproses transaksi.';
+    }
+  }
+
+  /// Hapus transaksi (owner/superadmin) via RPC SECURITY DEFINER.
+  /// Stok produk dipulihkan + baris item dihapus di server.
+  Future<({bool success, String message})> removeTransaction(
+      String transactionId) async {
+    try {
+      final res = await _client.rpc('delete_transaction', params: {
+        'p_transaction': transactionId,
+      });
+      final map = (res is Map)
+          ? Map<String, dynamic>.from(res)
+          : <String, dynamic>{};
+      if (map['success'] == true) {
+        return (success: true, message: 'Transaksi dihapus');
+      }
+      return (success: false, message: _txError(map['error']?.toString()));
+    } catch (e) {
+      debugPrint('removeTransaction error: $e');
+      return (success: false, message: 'Gagal menghapus transaksi');
+    }
+  }
+
   Future<List<Map<String, dynamic>>> getTransactionItems(String transactionId) async {
     try {
       final response = await _client

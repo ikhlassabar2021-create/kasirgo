@@ -1,5 +1,5 @@
-import 'dart:typed_data';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:fl_chart/fl_chart.dart';
 import 'package:excel/excel.dart' as xl;
@@ -92,6 +92,42 @@ class _ReportScreenState extends ConsumerState<ReportScreen> with SingleTickerPr
 
   double get _totalDeliveryPassThrough =>
       _transactions.fold<double>(0, (sum, t) => sum + t.deliveryPassThrough);
+
+  /// Item 7: hanya Owner (atau superadmin) yang boleh mengubah/menghapus
+  /// transaksi. Admin/kasir tetap dapat melihat detail.
+  bool get _isOwner => ref.read(currentUserProvider)?.role == 'owner';
+
+  String _methodLabel(String method) {
+    switch (method) {
+      case 'cash':
+      case 'Tunai':
+        return 'Tunai';
+      case 'qris':
+        return 'QRIS';
+      case 'bank_transfer':
+        return 'Transfer';
+      default:
+        return method;
+    }
+  }
+
+  /// Item 7: buka detail transaksi (lihat item, ubah metode bayar/jumlah/harga,
+  /// atau hapus transaksi). Perubahan disimpan via RPC SECURITY DEFINER.
+  Future<void> _openTransactionDetail(Transaction tx) async {
+    final changed = await showModalBottomSheet<bool>(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (_) => TransactionDetailSheet(
+        transaction: tx,
+        isOwner: _isOwner,
+        methodLabel: _methodLabel,
+      ),
+    );
+    if (changed == true) {
+      await _loadData();
+    }
+  }
 
   Future<void> _loadData() async {
     final user = ref.read(currentUserProvider);
@@ -1139,74 +1175,84 @@ class _ReportScreenState extends ConsumerState<ReportScreen> with SingleTickerPr
             separatorBuilder: (_, _) => const SizedBox(height: 8),
             itemBuilder: (context, index) {
               final tx = _transactions[index];
-              return Container(
-                padding: const EdgeInsets.all(12),
-                decoration: BoxDecoration(
-                  color: AppTheme.surfaceColor.withValues(alpha: 0.7),
+              return Material(
+                color: Colors.transparent,
+                child: InkWell(
                   borderRadius: BorderRadius.circular(12),
-                  border: Border.all(color: AppTheme.borderColor.withValues(alpha: 0.4)),
-                ),
-                child: Row(
-                  children: [
-                    Container(
-                      padding: const EdgeInsets.all(8),
-                      decoration: BoxDecoration(
-                        color: AppTheme.primaryColor.withValues(alpha: 0.15),
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                      child: const Icon(Icons.receipt, color: AppTheme.primaryColor, size: 20),
+                  onTap: () => _openTransactionDetail(tx),
+                  child: Container(
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: AppTheme.surfaceColor.withValues(alpha: 0.7),
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(color: AppTheme.borderColor.withValues(alpha: 0.4)),
                     ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            '#${tx.id.length > 8 ? tx.id.substring(0, 8) : tx.id}',
-                            style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 13),
+                    child: Row(
+                      children: [
+                        Container(
+                          padding: const EdgeInsets.all(8),
+                          decoration: BoxDecoration(
+                            color: AppTheme.primaryColor.withValues(alpha: 0.15),
+                            borderRadius: BorderRadius.circular(8),
                           ),
-                          if (tx.items.isNotEmpty) ...[
-                            const SizedBox(height: 2),
+                          child: const Icon(Icons.receipt, color: AppTheme.primaryColor, size: 20),
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                '#${tx.id.length > 8 ? tx.id.substring(0, 8) : tx.id}',
+                                style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 13),
+                              ),
+                              if (tx.items.isNotEmpty) ...[
+                                const SizedBox(height: 2),
+                                Text(
+                                  tx.items
+                                      .map((i) =>
+                                          '${i.productName} x${i.quantity}')
+                                      .join(', '),
+                                  maxLines: 2,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: const TextStyle(
+                                      color: AppTheme.textPrimary,
+                                      fontSize: 12,
+                                      fontWeight: FontWeight.w500),
+                                ),
+                              ],
+                              const SizedBox(height: 2),
+                              Text(
+                                '${Formatters.date(tx.createdAt)} • ${_methodLabel(tx.paymentMethod)}',
+                                style: const TextStyle(color: AppTheme.textSecondary, fontSize: 11),
+                              ),
+                            ],
+                          ),
+                        ),
+                        Column(
+                          crossAxisAlignment: CrossAxisAlignment.end,
+                          children: [
                             Text(
-                              tx.items
-                                  .map((i) =>
-                                      '${i.productName} x${i.quantity}')
-                                  .join(', '),
-                              maxLines: 2,
-                              overflow: TextOverflow.ellipsis,
-                              style: const TextStyle(
-                                  color: AppTheme.textPrimary,
-                                  fontSize: 12,
-                                  fontWeight: FontWeight.w500),
+                              Formatters.currency(_productRevenueOf(tx)),
+                              style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14, color: AppTheme.successColor),
+                            ),
+                            if (tx.deliveryPassThrough > 0)
+                              Text(
+                                '+${Formatters.currency(tx.deliveryPassThrough)} ongkir',
+                                style: const TextStyle(color: AppTheme.warningColor, fontSize: 10),
+                              ),
+                            Text(
+                              '${tx.items.length} item',
+                              style: const TextStyle(color: AppTheme.textSecondary, fontSize: 11),
                             ),
                           ],
-                          const SizedBox(height: 2),
-                          Text(
-                            '${Formatters.date(tx.createdAt)} • ${tx.paymentMethod}',
-                            style: const TextStyle(color: AppTheme.textSecondary, fontSize: 11),
-                          ),
-                        ],
-                      ),
-                    ),
-                    Column(
-                      crossAxisAlignment: CrossAxisAlignment.end,
-                      children: [
-                        Text(
-                          Formatters.currency(_productRevenueOf(tx)),
-                          style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14, color: AppTheme.successColor),
                         ),
-                        if (tx.deliveryPassThrough > 0)
-                          Text(
-                            '+${Formatters.currency(tx.deliveryPassThrough)} ongkir',
-                            style: const TextStyle(color: AppTheme.warningColor, fontSize: 10),
-                          ),
-                        Text(
-                          '${tx.items.length} item',
-                          style: const TextStyle(color: AppTheme.textSecondary, fontSize: 11),
-                        ),
+                        const SizedBox(width: 4),
+                        const Icon(Icons.chevron_right_rounded,
+                            color: AppTheme.textSecondary, size: 20),
                       ],
                     ),
-                  ],
+                  ),
                 ),
               );
             },
@@ -1483,6 +1529,463 @@ class _ReportScreenState extends ConsumerState<ReportScreen> with SingleTickerPr
           ),
         );
       },
+    );
+  }
+}
+
+class _EditableItem {
+  final String id;
+  final String name;
+  final String? variantId;
+  final int originalQty;
+  final double originalPrice;
+  final TextEditingController qtyCtrl;
+  final TextEditingController priceCtrl;
+
+  _EditableItem({
+    required this.id,
+    required this.name,
+    required this.originalQty,
+    required this.originalPrice,
+    this.variantId,
+  })  : qtyCtrl = TextEditingController(text: originalQty.toString()),
+        priceCtrl = TextEditingController(
+            text: originalPrice.toInt().toString());
+
+  int get qty => int.tryParse(qtyCtrl.text.trim()) ?? 0;
+  double get price => double.tryParse(priceCtrl.text.trim()) ?? 0;
+  double get subtotal => qty * price;
+  bool get changed => qty != originalQty || price != originalPrice;
+
+  void dispose() {
+    qtyCtrl.dispose();
+    priceCtrl.dispose();
+  }
+}
+
+/// Item 7: detail transaksi + edit (metode bayar / jumlah / harga) + hapus.
+/// Hanya owner/superadmin yang dapat mengubah; kasir/admin hanya melihat.
+/// Semua perubahan diproses di server via RPC `update_transaction` /
+/// `delete_transaction` (SECURITY DEFINER) yang juga menyesuaikan stok.
+class TransactionDetailSheet extends StatefulWidget {
+  final Transaction transaction;
+  final bool isOwner;
+  final String Function(String) methodLabel;
+
+  const TransactionDetailSheet({
+    super.key,
+    required this.transaction,
+    required this.isOwner,
+    required this.methodLabel,
+  });
+
+  @override
+  State<TransactionDetailSheet> createState() => _TransactionDetailSheetState();
+}
+
+class _TransactionDetailSheetState extends State<TransactionDetailSheet> {
+  final _service = SupabaseService();
+  late List<_EditableItem> _items;
+  late String _method;
+  bool _busy = false;
+
+  static const _methods = ['cash', 'qris', 'bank_transfer'];
+
+  @override
+  void initState() {
+    super.initState();
+    final tx = widget.transaction;
+    _items = tx.items
+        .where((i) => i.id != null && i.id!.isNotEmpty)
+        .map((i) => _EditableItem(
+              id: i.id!,
+              name: i.productName,
+              variantId: i.variantId,
+              originalQty: i.quantity,
+              originalPrice: i.price,
+            ))
+        .toList();
+    _method = _normalizeMethod(tx.paymentMethod);
+  }
+
+  String _normalizeMethod(String raw) {
+    final m = raw.toLowerCase();
+    if (m.contains('qris')) return 'qris';
+    if (m.contains('transfer')) return 'bank_transfer';
+    if (m.contains('cash') || m.contains('tunai')) return 'cash';
+    return 'cash';
+  }
+
+  @override
+  void dispose() {
+    for (final i in _items) {
+      i.dispose();
+    }
+    super.dispose();
+  }
+
+  bool get _changed =>
+      _method != _normalizeMethod(widget.transaction.paymentMethod) ||
+      _items.any((i) => i.changed);
+
+  double get _itemsTotal => _items.fold(0, (s, i) => s + i.subtotal);
+
+  double get _discount => widget.transaction.discountAmount ?? 0;
+  double get _passThrough => widget.transaction.deliveryPassThrough;
+  double get _finalPreview => _itemsTotal + _passThrough - _discount;
+
+  Future<void> _save() async {
+    if (_items.any((i) => i.qty <= 0 || i.price < 0)) {
+      _snack('Jumlah minimal 1 dan harga tidak boleh negatif.');
+      return;
+    }
+    setState(() => _busy = true);
+    final res = await _service.editTransaction(
+      transactionId: widget.transaction.id,
+      paymentMethod: _method,
+      items: _items
+          .map((i) => {
+                'id': i.id,
+                'quantity': i.qty,
+                'unit_price': i.price,
+              })
+          .toList(),
+    );
+    if (!mounted) return;
+    setState(() => _busy = false);
+    if (res.success) {
+      Navigator.pop(context, true);
+    } else {
+      _snack(res.message);
+    }
+  }
+
+  Future<void> _delete() async {
+    final ok = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: const Text('Hapus Transaksi?'),
+        content: const Text(
+          'Transaksi akan dihapus permanen dan stok produk dikembalikan. '
+          'Tindakan ini tidak dapat dibatalkan.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text('Batal'),
+          ),
+          FilledButton(
+            style: FilledButton.styleFrom(backgroundColor: AppTheme.errorColor),
+            onPressed: () => Navigator.pop(ctx, true),
+            child: const Text('Hapus'),
+          ),
+        ],
+      ),
+    );
+    if (ok != true) return;
+    setState(() => _busy = true);
+    final res = await _service.removeTransaction(widget.transaction.id);
+    if (!mounted) return;
+    setState(() => _busy = false);
+    if (res.success) {
+      Navigator.pop(context, true);
+    } else {
+      _snack(res.message);
+    }
+  }
+
+  void _snack(String msg) {
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(msg)));
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final tx = widget.transaction;
+    final maxH = MediaQuery.of(context).size.height * 0.9;
+    return Container(
+      constraints: BoxConstraints(maxHeight: maxH),
+      decoration: const BoxDecoration(
+        color: AppTheme.backgroundColor,
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          const SizedBox(height: 10),
+          Container(
+            width: 40,
+            height: 4,
+            decoration: BoxDecoration(
+              color: AppTheme.borderColor,
+              borderRadius: BorderRadius.circular(2),
+            ),
+          ),
+          Padding(
+            padding: const EdgeInsets.fromLTRB(20, 12, 12, 8),
+            child: Row(
+              children: [
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Text('Detail Transaksi',
+                          style: TextStyle(
+                              fontSize: 16, fontWeight: FontWeight.bold)),
+                      const SizedBox(height: 2),
+                      Text(
+                        '#${tx.id.length > 12 ? tx.id.substring(0, 12) : tx.id} • ${Formatters.date(tx.createdAt)}',
+                        style: const TextStyle(
+                            color: AppTheme.textSecondary, fontSize: 12),
+                      ),
+                    ],
+                  ),
+                ),
+                IconButton(
+                  tooltip: 'Tutup',
+                  onPressed: _busy ? null : () => Navigator.pop(context),
+                  icon: const Icon(Icons.close_rounded),
+                ),
+              ],
+            ),
+          ),
+          const Divider(height: 1),
+          Flexible(
+            child: ListView(
+              shrinkWrap: true,
+              padding: const EdgeInsets.fromLTRB(20, 16, 20, 16),
+              children: [
+                _sectionTitle('Metode Pembayaran'),
+                const SizedBox(height: 8),
+                if (widget.isOwner)
+                  Wrap(
+                    spacing: 8,
+                    children: _methods
+                        .map((m) => ChoiceChip(
+                              label: Text(widget.methodLabel(m)),
+                              selected: _method == m,
+                              onSelected: _busy
+                                  ? null
+                                  : (_) => setState(() => _method = m),
+                            ))
+                        .toList(),
+                  )
+                else
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 12, vertical: 8),
+                    decoration: BoxDecoration(
+                      color: AppTheme.surfaceColor,
+                      borderRadius: BorderRadius.circular(10),
+                      border: Border.all(color: AppTheme.borderColor),
+                    ),
+                    child: Text(widget.methodLabel(_method)),
+                  ),
+                const SizedBox(height: 20),
+                _sectionTitle('Item (${_items.length})'),
+                const SizedBox(height: 8),
+                if (_items.isEmpty)
+                  const Text('Tidak ada rincian item.',
+                      style: TextStyle(color: AppTheme.textSecondary))
+                else
+                  ..._items.map(_buildItemRow),
+                const SizedBox(height: 20),
+                _buildTotals(),
+              ],
+            ),
+          ),
+          if (widget.isOwner)
+            SafeArea(
+              top: false,
+              child: Padding(
+                padding: const EdgeInsets.fromLTRB(20, 0, 20, 12),
+                child: Row(
+                  children: [
+                    Expanded(
+                      child: OutlinedButton.icon(
+                        onPressed: _busy ? null : _delete,
+                        style: OutlinedButton.styleFrom(
+                          foregroundColor: AppTheme.errorColor,
+                          side: const BorderSide(color: AppTheme.errorColor),
+                          minimumSize: const Size(0, 48),
+                        ),
+                        icon: const Icon(Icons.delete_outline_rounded),
+                        label: const Text('Hapus'),
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      flex: 2,
+                      child: FilledButton.icon(
+                        onPressed: (_busy || !_changed) ? null : _save,
+                        style: FilledButton.styleFrom(
+                          minimumSize: const Size(0, 48),
+                        ),
+                        icon: _busy
+                            ? const SizedBox(
+                                width: 18,
+                                height: 18,
+                                child: CircularProgressIndicator(
+                                    strokeWidth: 2, color: Colors.white),
+                              )
+                            : const Icon(Icons.save_rounded),
+                        label: const Text('Simpan Perubahan'),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            )
+          else
+            const SafeArea(
+              top: false,
+              child: Padding(
+                padding: EdgeInsets.fromLTRB(20, 0, 20, 12),
+                child: Text(
+                  'Hanya pemilik outlet yang dapat mengubah atau menghapus transaksi.',
+                  style: TextStyle(color: AppTheme.textSecondary, fontSize: 12),
+                ),
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+
+  Widget _sectionTitle(String text) => Text(
+        text,
+        style: const TextStyle(
+            fontSize: 13,
+            fontWeight: FontWeight.w600,
+            color: AppTheme.textSecondary),
+      );
+
+  Widget _buildItemRow(_EditableItem item) {
+    return Container(
+      margin: const EdgeInsets.only(bottom: 8),
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: AppTheme.surfaceColor,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: AppTheme.borderColor),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(item.name,
+              style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 13)),
+          const SizedBox(height: 10),
+          Row(
+            children: [
+              Expanded(
+                child: _miniField(
+                  label: 'Jumlah',
+                  controller: item.qtyCtrl,
+                  enabled: widget.isOwner,
+                  suffix: 'x',
+                  onChanged: (_) => setState(() {}),
+                ),
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                flex: 2,
+                child: _miniField(
+                  label: 'Harga satuan',
+                  controller: item.priceCtrl,
+                  enabled: widget.isOwner,
+                  prefix: 'Rp ',
+                  onChanged: (_) => setState(() {}),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          Align(
+            alignment: Alignment.centerRight,
+            child: Text(
+              'Subtotal: ${Formatters.currency(item.subtotal)}',
+              style: const TextStyle(
+                  fontWeight: FontWeight.w600,
+                  fontSize: 13,
+                  color: AppTheme.primaryColor),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _miniField({
+    required String label,
+    required TextEditingController controller,
+    required bool enabled,
+    String? prefix,
+    String? suffix,
+    ValueChanged<String>? onChanged,
+  }) {
+    return TextField(
+      controller: controller,
+      enabled: enabled,
+      keyboardType: TextInputType.number,
+      inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+      onChanged: onChanged,
+      style: const TextStyle(fontSize: 13),
+      decoration: InputDecoration(
+        labelText: label,
+        isDense: true,
+        prefixText: prefix,
+        suffixText: suffix,
+        contentPadding:
+            const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
+        border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+      ),
+    );
+  }
+
+  Widget _buildTotals() {
+    return Container(
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: AppTheme.surfaceColor,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: AppTheme.borderColor),
+      ),
+      child: Column(
+        children: [
+          _totalRow('Subtotal item', _itemsTotal),
+          if (_discount > 0) _totalRow('Diskon', -_discount),
+          if (_passThrough > 0)
+            _totalRow('Ongkir (titipan)', _passThrough, warn: true),
+          const Divider(height: 20),
+          _totalRow('Total', _finalPreview, bold: true),
+        ],
+      ),
+    );
+  }
+
+  Widget _totalRow(String label, double value, {bool bold = false, bool warn = false}) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 2),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          Text(label,
+              style: TextStyle(
+                  fontSize: bold ? 14 : 13,
+                  fontWeight: bold ? FontWeight.bold : FontWeight.normal,
+                  color: warn ? AppTheme.warningColor : AppTheme.textSecondary)),
+          Text(
+            Formatters.currency(value),
+            style: TextStyle(
+              fontSize: bold ? 16 : 13,
+              fontWeight: bold ? FontWeight.bold : FontWeight.w500,
+              color: bold
+                  ? AppTheme.successColor
+                  : (warn ? AppTheme.warningColor : AppTheme.textPrimary),
+            ),
+          ),
+        ],
+      ),
     );
   }
 }

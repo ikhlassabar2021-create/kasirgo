@@ -1,6 +1,7 @@
 import 'dart:convert';
 
 class TransactionItem {
+  final String? id;
   final String productId;
   final String productName;
   final double price;
@@ -10,6 +11,7 @@ class TransactionItem {
   final String? note;
 
   const TransactionItem({
+    this.id,
     required this.productId,
     required this.productName,
     required this.price,
@@ -21,9 +23,10 @@ class TransactionItem {
 
   factory TransactionItem.fromJson(Map<String, dynamic> json) {
     return TransactionItem(
+      id: json['id']?.toString(),
       productId: json['product_id'] ?? '',
       productName: json['product_name'] ?? '',
-      price: (json['price'] ?? 0).toDouble(),
+      price: (json['price'] ?? json['unit_price'] ?? 0).toDouble(),
       quantity: (json['quantity'] as num?)?.toInt() ?? 0,
       subtotal: (json['subtotal'] ?? 0).toDouble(),
       variantId: json['variant_id']?.toString(),
@@ -33,6 +36,7 @@ class TransactionItem {
 
   Map<String, dynamic> toJson() {
     return {
+      if (id != null) 'id': id,
       'product_id': productId,
       'product_name': productName,
       'price': price,
@@ -44,6 +48,7 @@ class TransactionItem {
   }
 
   TransactionItem copyWith({
+    String? id,
     String? productId,
     String? productName,
     double? price,
@@ -53,6 +58,7 @@ class TransactionItem {
     String? note,
   }) {
     return TransactionItem(
+      id: id ?? this.id,
       productId: productId ?? this.productId,
       productName: productName ?? this.productName,
       price: price ?? this.price,
