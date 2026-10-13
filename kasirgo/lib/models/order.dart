@@ -78,6 +78,9 @@ class Order {
   /// kurir_warung | grab | gojek (pilihan owner saat memproses pesanan antar).
   final String? courier;
 
+  /// Kode unik 3 digit (100-999) untuk membedakan nominal transfer yang sama.
+  final int? uniqueCode;
+
   final String? proofPath;
   final String? validatedBy;
   final DateTime? validatedAt;
@@ -105,6 +108,7 @@ class Order {
     this.buyerLng,
     this.buyerAddress,
     this.courier,
+    this.uniqueCode,
     this.proofPath,
     this.validatedBy,
     this.validatedAt,
@@ -146,6 +150,9 @@ class Order {
           : OrderItem._toDouble(json['buyer_lng']),
       buyerAddress: json['buyer_address']?.toString(),
       courier: json['courier']?.toString(),
+      uniqueCode: json['unique_code'] == null
+          ? null
+          : (json['unique_code'] as num).toInt(),
       proofPath: json['proof_path']?.toString(),
       validatedBy: json['validated_by']?.toString(),
       validatedAt: _toDate(json['validated_at']),
@@ -176,6 +183,7 @@ class Order {
       'buyer_lng': buyerLng,
       'buyer_address': buyerAddress,
       'courier': courier,
+      'unique_code': uniqueCode,
       'proof_path': proofPath,
       'validated_by': validatedBy,
       'validated_at': validatedAt?.toIso8601String(),
@@ -204,6 +212,9 @@ class Order {
 
   bool get isPaid => paymentStatus == 'divalidasi';
   bool get isDelivery => fulfillment == 'delivery';
+
+  /// Nominal transfer persis = total + kode unik (untuk identifikasi mutasi).
+  double get payAmount => total + (uniqueCode ?? 0);
 
   String? get courierLabel {
     switch (courier) {

@@ -730,6 +730,36 @@ class _OnlineOrdersViewState extends ConsumerState<OnlineOrdersView>
                       fontSize: 15)),
             ],
           ),
+          if (o.uniqueCode != null)
+            Padding(
+              padding: const EdgeInsets.only(top: 6),
+              child: Container(
+                width: double.infinity,
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+                decoration: BoxDecoration(
+                  color: AppTheme.primaryColor.withValues(alpha: 0.08),
+                  borderRadius: BorderRadius.circular(AppTheme.radiusMedium),
+                ),
+                child: Row(
+                  children: [
+                    const Icon(Icons.pin_rounded,
+                        size: 14, color: AppTheme.primaryColor),
+                    const SizedBox(width: 6),
+                    Expanded(
+                      child: Text(
+                        'Transfer tepat ${Formatters.currency(o.payAmount)} '
+                        '(kode unik ${o.uniqueCode})',
+                        style: GoogleFonts.inter(
+                            color: AppTheme.textPrimary,
+                            fontSize: 11.5,
+                            fontWeight: FontWeight.w700),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
           if (o.note?.trim().isNotEmpty == true) ...[
             const SizedBox(height: 8),
             Container(

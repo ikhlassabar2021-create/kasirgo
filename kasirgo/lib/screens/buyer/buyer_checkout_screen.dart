@@ -187,9 +187,13 @@ class _BuyerCheckoutScreenState extends ConsumerState<BuyerCheckoutScreen> {
     final total = (o['total'] as num?)?.toDouble() ?? 0;
     final subtotal = (o['subtotal'] as num?)?.toDouble() ?? 0;
     final fee = (o['delivery_fee'] as num?)?.toDouble() ?? 0;
+    final uniqueCode = (o['unique_code'] as num?)?.toInt();
+    final payAmount = (o['pay_amount'] as num?)?.toDouble() ??
+        total + (uniqueCode ?? 0);
+    final code = '${o['code'] ?? o['order_id']}';
     final buffer = StringBuffer()
       ..writeln('Halo ${widget.outletName}, saya sudah pesan via aplikasi:')
-      ..writeln('Kode: ${o['code'] ?? o['order_id']}')
+      ..writeln('Kode: $code')
       ..writeln('Nama: ${_nameCtrl.text.trim()}')
       ..writeln('Tipe: ${_fulfillment == 'delivery' ? 'Diantar' : 'Ambil sendiri'}');
     if (_fulfillment == 'delivery' && _addressCtrl.text.trim().isNotEmpty) {
@@ -201,8 +205,14 @@ class _BuyerCheckoutScreenState extends ConsumerState<BuyerCheckoutScreen> {
     buffer
       ..writeln('Subtotal: ${Formatters.currency(subtotal)}')
       ..writeln('Ongkir: ${Formatters.currency(fee)}')
-      ..writeln('Total: ${Formatters.currency(total)}')
-      ..writeln('Status: Menunggu validasi kasir');
+      ..writeln('Total: ${Formatters.currency(total)}');
+    if (uniqueCode != null) {
+      buffer
+        ..writeln('Kode unik: $uniqueCode')
+        ..writeln('Transfer TEPAT: ${Formatters.currency(payAmount)}')
+        ..writeln('Catatan transfer WAJIB: $code');
+    }
+    buffer.writeln('Status: Menunggu validasi kasir');
     await WaHelper.sendWhatsAppMessage(phone: wa, message: buffer.toString());
   }
 
@@ -459,6 +469,10 @@ class _BuyerCheckoutScreenState extends ConsumerState<BuyerCheckoutScreen> {
     final total = (o['total'] as num?)?.toDouble() ?? 0;
     final subtotal = (o['subtotal'] as num?)?.toDouble() ?? 0;
     final fee = (o['delivery_fee'] as num?)?.toDouble() ?? 0;
+    final uniqueCode = (o['unique_code'] as num?)?.toInt();
+    final payAmount =
+        (o['pay_amount'] as num?)?.toDouble() ?? total + (uniqueCode ?? 0);
+    final orderCode = '${o['code'] ?? ''}';
     final bank = _str(_payment, 'bank_wallet');
     final account = _str(_payment, 'account_number');
     final merchant = _str(_payment, 'merchant_name');
@@ -507,7 +521,14 @@ class _BuyerCheckoutScreenState extends ConsumerState<BuyerCheckoutScreen> {
               _row('Subtotal', Formatters.currency(subtotal)),
               if (_fulfillment == 'delivery')
                 _row('Ongkir', Formatters.currency(fee)),
-              _row('Total', Formatters.currency(total), bold: true),
+              _row('Total', Formatters.currency(total)),
+              if (uniqueCode != null) ...[
+                _row('Kode unik', '+$uniqueCode'),
+                const SizedBox(height: 4),
+                _row('Transfer tepat', Formatters.currency(payAmount),
+                    bold: true),
+              ] else
+                _row('Transfer', Formatters.currency(total), bold: true),
             ],
           ),
         ),
@@ -565,7 +586,7 @@ class _BuyerCheckoutScreenState extends ConsumerState<BuyerCheckoutScreen> {
                           Expanded(
                             child: Text(
                               'Scan QRIS ${merchant.isNotEmpty ? merchant : widget.outletName} '
-                              'senilai ${Formatters.currency(total)}, lalu tekan '
+                              'senilai ${Formatters.currency(payAmount)}, lalu tekan '
                               '"Saya Sudah Bayar".',
                               style: GoogleFonts.inter(
                                 fontSize: 11.5,
@@ -582,6 +603,42 @@ class _BuyerCheckoutScreenState extends ConsumerState<BuyerCheckoutScreen> {
               ] else if (hasBank) ...[
                 if (bank.isNotEmpty) _row('Bank / E-Wallet', bank),
                 if (account.isNotEmpty) _row('No. Rekening', account),
+                if (uniqueCode != null) ...[
+                  const SizedBox(height: 8),
+                  Container(
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: AppTheme.backgroundColor,
+                      borderRadius:
+                          BorderRadius.circular(AppTheme.radiusMedium),
+                      border: Border.all(color: AppTheme.borderColor),
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'Transfer TEPAT ${Formatters.currency(payAmount)}',
+                          style: GoogleFonts.inter(
+                            fontSize: 13,
+                            fontWeight: FontWeight.w800,
+                            color: AppTheme.textPrimary,
+                          ),
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          'Jangan dibulatkan (nominal unik agar kasir mudah '
+                          'mencocokkan). Isi catatan/berita transfer dengan '
+                          'kode: $orderCode',
+                          style: GoogleFonts.inter(
+                            fontSize: 11.5,
+                            height: 1.35,
+                            color: AppTheme.textSecondary,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
               ] else
                 Text(
                   'Warung belum mengatur info pembayaran. Bayar tunai di kasir.',
