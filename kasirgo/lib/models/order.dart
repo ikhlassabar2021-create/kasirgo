@@ -55,7 +55,7 @@ class Order {
   final String? buyerId;
   final String? code;
 
-  /// baru | diproses | siap | selesai | dibatalkan
+  /// baru | diproses | siap | diantar | terkirim | selesai | dibatalkan
   final String status;
 
   /// belum_konfirmasi | divalidasi | ditolak
@@ -80,6 +80,16 @@ class Order {
 
   /// Kode unik 3 digit (100-999) untuk membedakan nominal transfer yang sama.
   final int? uniqueCode;
+
+  /// Kode penerima 4 digit (hanya pesanan antar). Pembeli membacakan kode ini
+  /// ke kurir/kasir sebagai bukti barang diterima.
+  final String? receiverCode;
+
+  /// Waktu pesanan ditandai diterima (diantar pihak ketiga / kurir warung).
+  final DateTime? deliveredAt;
+
+  /// Waktu pembeli menandai sendiri pesanan sudah diterima (Grab/Gojek).
+  final DateTime? receiverConfirmedAt;
 
   final String? proofPath;
   final String? validatedBy;
@@ -109,6 +119,9 @@ class Order {
     this.buyerAddress,
     this.courier,
     this.uniqueCode,
+    this.receiverCode,
+    this.deliveredAt,
+    this.receiverConfirmedAt,
     this.proofPath,
     this.validatedBy,
     this.validatedAt,
@@ -153,6 +166,9 @@ class Order {
       uniqueCode: json['unique_code'] == null
           ? null
           : (json['unique_code'] as num).toInt(),
+      receiverCode: json['receiver_code']?.toString(),
+      deliveredAt: _toDate(json['delivered_at']),
+      receiverConfirmedAt: _toDate(json['receiver_confirmed_at']),
       proofPath: json['proof_path']?.toString(),
       validatedBy: json['validated_by']?.toString(),
       validatedAt: _toDate(json['validated_at']),
@@ -184,6 +200,9 @@ class Order {
       'buyer_address': buyerAddress,
       'courier': courier,
       'unique_code': uniqueCode,
+      'receiver_code': receiverCode,
+      'delivered_at': deliveredAt?.toIso8601String(),
+      'receiver_confirmed_at': receiverConfirmedAt?.toIso8601String(),
       'proof_path': proofPath,
       'validated_by': validatedBy,
       'validated_at': validatedAt?.toIso8601String(),
@@ -201,6 +220,10 @@ class Order {
         return 'Diproses';
       case 'siap':
         return 'Siap';
+      case 'diantar':
+        return 'Sedang Diantar';
+      case 'terkirim':
+        return 'Terkirim';
       case 'selesai':
         return 'Selesai';
       case 'dibatalkan':
@@ -212,6 +235,17 @@ class Order {
 
   bool get isPaid => paymentStatus == 'divalidasi';
   bool get isDelivery => fulfillment == 'delivery';
+
+  /// Pesanan antar sedang dalam perjalanan (kurir sudah jalan).
+  bool get isOutForDelivery => status == 'diantar';
+
+  /// Pesanan sudah diterima pembeli (PoD selesai).
+  bool get isDelivered => status == 'terkirim';
+
+  /// Pembeli boleh menandai sendiri sudah menerima HANYA bila dikirim lewat
+  /// pihak ketiga (Grab/Gojek) dan pesanan sedang diantar.
+  bool get canBuyerConfirmReceived =>
+      isDelivery && isOutForDelivery && (courier == 'grab' || courier == 'gojek');
 
   /// Nominal transfer persis = total + kode unik (untuk identifikasi mutasi).
   double get payAmount => total + (uniqueCode ?? 0);

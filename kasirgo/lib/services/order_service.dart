@@ -168,7 +168,41 @@ class OrderService {
     }
   }
 
-  /// Ubah status pesanan (baru/diproses/siap/selesai/dibatalkan).
+  /// Tandai pesanan antar sedang diantar (kurir sudah jalan).
+  Future<Map<String, dynamic>> markOutForDelivery(String orderId) async {
+    try {
+      final res = await _client.rpc('mark_order_out_for_delivery', params: {
+        'p_order': orderId,
+      });
+      if (res is Map) return Map<String, dynamic>.from(res);
+      return {'success': false, 'error': 'UNKNOWN'};
+    } catch (e) {
+      debugPrint('OrderService.markOutForDelivery error: $e');
+      return {'success': false, 'error': e.toString()};
+    }
+  }
+
+  /// Konfirmasi pesanan diterima (Proof of Delivery).
+  /// - Kasir/kurir: sertakan [receiverCode] (kode 4 digit dari pembeli).
+  /// - Pembeli (Grab/Gojek): panggil tanpa kode.
+  Future<Map<String, dynamic>> confirmReceived({
+    required String orderId,
+    String? receiverCode,
+  }) async {
+    try {
+      final res = await _client.rpc('confirm_order_received', params: {
+        'p_order': orderId,
+        'p_receiver_code': receiverCode,
+      });
+      if (res is Map) return Map<String, dynamic>.from(res);
+      return {'success': false, 'error': 'UNKNOWN'};
+    } catch (e) {
+      debugPrint('OrderService.confirmReceived error: $e');
+      return {'success': false, 'error': e.toString()};
+    }
+  }
+
+  /// Ubah status pesanan (baru/diproses/siap/diantar/terkirim/selesai/dibatalkan).
   Future<bool> setOrderStatus(String orderId, String status) async {
     try {
       await _client

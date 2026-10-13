@@ -193,6 +193,128 @@ class _OnlineOrdersViewState extends ConsumerState<OnlineOrdersView>
     }
   }
 
+  /// PoD langkah 1: tandai pesanan antar sedang diantar (kurir jalan).
+  Future<void> _markOutForDelivery(Order order) async {
+    if (_busyOrders.contains(order.id)) return;
+    setState(() => _busyOrders.add(order.id));
+    try {
+      final res = await _service.markOutForDelivery(order.id);
+      if (!mounted) return;
+      final ok = res['success'] == true;
+      ScaffoldMessenger.of(context)
+        ..hideCurrentSnackBar()
+        ..showSnackBar(SnackBar(
+          content: Text(ok
+              ? 'Pesanan ditandai sedang diantar.'
+              : 'Gagal: ${_podError(res['error'])}'),
+          backgroundColor: ok ? AppTheme.successColor : AppTheme.errorColor,
+        ));
+      if (ok) await _load(silent: true);
+    } finally {
+      if (mounted) setState(() => _busyOrders.remove(order.id));
+    }
+  }
+
+  /// PoD langkah 2: tandai pesanan sudah diterima (terkirim).
+  /// Kurir warung wajib memasukkan kode penerima dari pembeli; Grab/Gojek
+  /// boleh tanpa kode (barang diserahkan ke pihak ketiga).
+  Future<void> _confirmReceived(Order order, {String? receiverCode}) async {
+    if (_busyOrders.contains(order.id)) return;
+    setState(() => _busyOrders.add(order.id));
+    try {
+      final res = await _service.confirmReceived(
+        orderId: order.id,
+        receiverCode: receiverCode,
+      );
+      if (!mounted) return;
+      final ok = res['success'] == true;
+      ScaffoldMessenger.of(context)
+        ..hideCurrentSnackBar()
+        ..showSnackBar(SnackBar(
+          content: Text(ok
+              ? 'Pesanan ditandai terkirim.'
+              : 'Gagal: ${_podError(res['error'])}'),
+          backgroundColor: ok ? AppTheme.successColor : AppTheme.errorColor,
+        ));
+      if (ok) await _load(silent: true);
+    } finally {
+      if (mounted) setState(() => _busyOrders.remove(order.id));
+    }
+  }
+
+  /// Minta kode penerima 4 digit dari pembeli sebelum menandai terkirim.
+  Future<void> _askReceiverCode(Order order) async {
+    final ctrl = TextEditingController();
+    final code = await showDialog<String>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: Text('Kode Penerima',
+            style: GoogleFonts.inter(fontWeight: FontWeight.w800)),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'Minta kode 4 digit dari pembeli sebagai bukti barang diterima.',
+              style: GoogleFonts.inter(
+                  fontSize: 12.5, color: AppTheme.textSecondary),
+            ),
+            const SizedBox(height: 14),
+            TextField(
+              controller: ctrl,
+              autofocus: true,
+              keyboardType: TextInputType.number,
+              maxLength: 4,
+              textAlign: TextAlign.center,
+              inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+              style: GoogleFonts.inter(
+                  fontSize: 24,
+                  fontWeight: FontWeight.w800,
+                  letterSpacing: 10),
+              decoration: const InputDecoration(
+                hintText: '0000',
+                counterText: '',
+              ),
+              onSubmitted: (v) => Navigator.of(ctx).pop(v.trim()),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(),
+            child: const Text('Batal'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.of(ctx).pop(ctrl.text.trim()),
+            child: const Text('Konfirmasi'),
+          ),
+        ],
+      ),
+    );
+    if (code != null && code.isNotEmpty) {
+      await _confirmReceived(order, receiverCode: code);
+    }
+  }
+
+  String _podError(dynamic err) {
+    switch (err?.toString()) {
+      case 'WRONG_RECEIVER_CODE':
+        return 'Kode penerima salah.';
+      case 'PAYMENT_NOT_VALIDATED':
+        return 'Pembayaran belum divalidasi.';
+      case 'NOT_DELIVERY':
+        return 'Pesanan ini bukan pesanan antar.';
+      case 'INVALID_STATUS':
+        return 'Status pesanan tidak sesuai.';
+      case 'BUYER_CONFIRM_NOT_ALLOWED':
+        return 'Konfirmasi pembeli tidak diizinkan untuk kurir ini.';
+      case 'ORDER_NOT_FOUND':
+        return 'Pesanan tidak ditemukan.';
+      default:
+        return err?.toString() ?? 'unknown';
+    }
+  }
+
   Future<void> _setCourier(Order order, String courier) async {
     if (_busyOrders.contains(order.id) || order.courier == courier) return;
     setState(() => _busyOrders.add(order.id));
@@ -514,7 +636,18 @@ class _OnlineOrdersViewState extends ConsumerState<OnlineOrdersView>
 
   Widget _orderCard(Order o) {
     final pending = o.paymentStatus == 'belum_konfirmasi' && o.status != 'dibatalkan';
-    final canComplete = o.paymentStatus == 'divalidasi' && o.status != 'selesai';
+    final active = o.paymentStatus == 'divalidasi' &&
+        o.status != 'selesai' &&
+        o.status != 'dibatalkan';
+    // Pesanan antar harus melewati PoD: diantar -> terkirim -> selesai.
+    final canMarkOut = o.isDelivery &&
+        active &&
+        (o.status == 'baru' || o.status == 'diproses' || o.status == 'siap');
+    final canMarkReceived = o.isDelivery && active && o.isOutForDelivery;
+    final canComplete = o.paymentStatus == 'divalidasi' &&
+        o.status != 'selesai' &&
+        o.status != 'dibatalkan' &&
+        (!o.isDelivery || o.isDelivered);
     final color = _statusColor(o.status);
 
     return Container(
@@ -798,6 +931,45 @@ class _OnlineOrdersViewState extends ConsumerState<OnlineOrdersView>
                 ),
               ],
             ),
+          ] else if (canMarkOut) ...[
+            const SizedBox(height: 12),
+            Row(
+              children: [
+                Expanded(
+                  child: _actionBtn(
+                      'Tandai Diantar',
+                      AppTheme.accentColor,
+                      () => _markOutForDelivery(o),
+                      busy: _busyOrders.contains(o.id)),
+                ),
+              ],
+            ),
+          ] else if (canMarkReceived) ...[
+            const SizedBox(height: 12),
+            if (o.courier == 'kurir_warung')
+              Row(
+                children: [
+                  Expanded(
+                    child: _actionBtn(
+                        'Sudah Diterima (Kode)',
+                        AppTheme.successColor,
+                        () => _askReceiverCode(o),
+                        busy: _busyOrders.contains(o.id)),
+                  ),
+                ],
+              )
+            else
+              Row(
+                children: [
+                  Expanded(
+                    child: _actionBtn(
+                        'Sudah Diterima',
+                        AppTheme.successColor,
+                        () => _confirmReceived(o),
+                        busy: _busyOrders.contains(o.id)),
+                  ),
+                ],
+              ),
           ] else if (canComplete) ...[
             const SizedBox(height: 12),
             Row(

@@ -65,10 +65,31 @@ class _BuyerOrderTrackingScreenState extends State<BuyerOrderTrackingScreen> {
     });
   }
 
+  List<Map<String, dynamic>> get _steps {
+    final delivery = _order?.isDelivery ?? false;
+    return [
+      {'label': 'Pesanan dibuat', 'icon': Icons.receipt_long_rounded},
+      {'label': 'Menunggu validasi kasir', 'icon': Icons.verified_rounded},
+      {'label': 'Disiapkan', 'icon': Icons.inventory_2_rounded},
+      {'label': 'Siap', 'icon': Icons.shopping_bag_rounded},
+      if (delivery) ...[
+        {'label': 'Sedang diantar', 'icon': Icons.delivery_dining_rounded},
+        {'label': 'Terkirim', 'icon': Icons.where_to_vote_rounded},
+      ],
+      {'label': 'Selesai', 'icon': Icons.check_circle_rounded},
+    ];
+  }
+
   int get _stepIndex {
     final o = _order;
     if (o == null) return 0;
-    if (o.status == 'selesai') return 4;
+    if (o.isDelivery) {
+      if (o.status == 'selesai') return 6;
+      if (o.status == 'terkirim') return 5;
+      if (o.status == 'diantar') return 4;
+    } else {
+      if (o.status == 'selesai') return 4;
+    }
     if (o.status == 'siap') return 3;
     if (o.status == 'diproses') return 2;
     if (o.paymentStatus == 'divalidasi') return 1;
@@ -81,8 +102,50 @@ class _BuyerOrderTrackingScreenState extends State<BuyerOrderTrackingScreen> {
     if (o.status == 'selesai') return 'Pesanan selesai';
     if (o.paymentStatus == 'ditolak') return 'Pembayaran ditolak kasir';
     if (o.paymentStatus != 'divalidasi') return 'Menunggu validasi kasir';
+    if (o.status == 'terkirim') return 'Pesanan sudah diterima';
+    if (o.status == 'diantar') return 'Pesanan sedang diantar';
     if (o.status == 'siap') return 'Pesanan siap';
     return 'Pesanan sedang disiapkan';
+  }
+
+  Future<void> _confirmReceived() async {
+    final o = _order;
+    if (o == null) return;
+    final ok = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: Text('Konfirmasi Terima',
+            style: GoogleFonts.inter(fontWeight: FontWeight.w800)),
+        content: Text(
+          'Tandai pesanan ini sudah Anda terima dari kurir?',
+          style: GoogleFonts.inter(fontSize: 13, color: AppTheme.textSecondary),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(false),
+            child: const Text('Belum'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.of(ctx).pop(true),
+            child: const Text('Ya, Sudah Diterima'),
+          ),
+        ],
+      ),
+    );
+    if (ok != true) return;
+    final res = await _service.confirmReceived(orderId: o.id);
+    if (!mounted) return;
+    final success = res['success'] == true;
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+      content: Text(success
+          ? 'Terima kasih, pesanan ditandai sudah diterima.'
+          : 'Gagal: ${res['error'] ?? 'unknown'}'),
+      backgroundColor: success ? AppTheme.successColor : AppTheme.errorColor,
+    ));
+    if (success) {
+      final fresh = await _service.getOrder(o.id);
+      if (mounted && fresh != null) setState(() => _order = fresh);
+    }
   }
 
   Future<void> _sendWaSummary() async {
@@ -138,9 +201,23 @@ class _BuyerOrderTrackingScreenState extends State<BuyerOrderTrackingScreen> {
                   _buildHeader(),
                   const SizedBox(height: 16),
                   _buildStepper(),
+                  if (_order != null &&
+                      _order!.isDelivery &&
+                      _order!.receiverCode != null) ...[
+                    const SizedBox(height: 16),
+                    _buildReceiverCodeCard(_order!),
+                  ],
                   const SizedBox(height: 16),
                   if (_order != null) _buildSummary(_order!),
                   const SizedBox(height: 16),
+                  if (_order != null && _order!.canBuyerConfirmReceived) ...[
+                    AppButton(
+                      label: 'Pesanan Sudah Saya Terima',
+                      icon: Icons.where_to_vote_rounded,
+                      onPressed: _confirmReceived,
+                    ),
+                    const SizedBox(height: 12),
+                  ],
                   if (_order != null)
                     AppButton(
                       label: 'Kirim Ringkasan ke WA Warung',
@@ -214,13 +291,7 @@ class _BuyerOrderTrackingScreenState extends State<BuyerOrderTrackingScreen> {
 
   Widget _buildStepper() {
     final current = _stepIndex;
-    final steps = <Map<String, dynamic>>[
-      {'label': 'Pesanan dibuat', 'icon': Icons.receipt_long_rounded},
-      {'label': 'Menunggu validasi kasir', 'icon': Icons.verified_rounded},
-      {'label': 'Disiapkan', 'icon': Icons.inventory_2_rounded},
-      {'label': 'Siap', 'icon': Icons.shopping_bag_rounded},
-      {'label': 'Selesai', 'icon': Icons.check_circle_rounded},
-    ];
+    final steps = _steps;
     return AppCard(
       child: Column(
         children: List.generate(steps.length, (i) {
@@ -276,6 +347,66 @@ class _BuyerOrderTrackingScreenState extends State<BuyerOrderTrackingScreen> {
     );
   }
 
+  Widget _buildReceiverCodeCard(Order o) {
+    final code = o.receiverCode ?? '';
+    final done = o.isDelivered || o.status == 'selesai';
+    return AppCard(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              const Icon(Icons.lock_rounded,
+                  size: 16, color: AppTheme.primaryColor),
+              const SizedBox(width: 8),
+              Text(
+                'Kode Penerima',
+                style: GoogleFonts.inter(
+                  fontSize: 14,
+                  fontWeight: FontWeight.w700,
+                  color: AppTheme.textPrimary,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          Text(
+            done
+                ? 'Pesanan sudah diterima.'
+                : 'Bacakan kode ini ke kurir saat barang diserahkan sebagai bukti '
+                    'bahwa Anda menerima pesanan.',
+            style: GoogleFonts.inter(
+              fontSize: 12.5,
+              color: AppTheme.textSecondary,
+              height: 1.35,
+            ),
+          ),
+          const SizedBox(height: 12),
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.symmetric(vertical: 14),
+            decoration: BoxDecoration(
+              color: AppTheme.primaryColor.withValues(alpha: 0.08),
+              borderRadius: BorderRadius.circular(AppTheme.radiusMedium),
+              border: Border.all(
+                  color: AppTheme.primaryColor.withValues(alpha: 0.35)),
+            ),
+            child: Text(
+              code,
+              textAlign: TextAlign.center,
+              style: GoogleFonts.inter(
+                fontSize: 30,
+                fontWeight: FontWeight.w800,
+                letterSpacing: 12,
+                color: AppTheme.primaryColor,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   Widget _buildSummary(Order o) {
     return AppCard(
       child: Column(
@@ -325,6 +456,12 @@ class _BuyerOrderTrackingScreenState extends State<BuyerOrderTrackingScreen> {
             o.isPaid ? 'Sudah divalidasi' : 'Menunggu validasi kasir',
           ),
           _row('Tipe', o.isDelivery ? 'Diantar' : 'Ambil sendiri'),
+          if (o.isDelivery && o.courierLabel != null)
+            _row('Kurir', o.courierLabel!),
+          if (o.isDelivery && o.isOutForDelivery)
+            _row('Pengiriman', 'Sedang diantar'),
+          if (o.isDelivery && o.isDelivered)
+            _row('Pengiriman', 'Terkirim'),
           if (o.note != null && o.note!.trim().isNotEmpty)
             _row('Catatan', o.note!),
         ],
