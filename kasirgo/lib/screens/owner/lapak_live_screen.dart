@@ -45,12 +45,69 @@ class _LapakLiveScreenState extends ConsumerState<LapakLiveScreen> {
   bool _manualOngkir = false;
   final TextEditingController _manualCtrl = TextEditingController();
 
+  List<String> _allCategories = [];
+  Set<String> _activeCategories = {};
+
   double? _lat;
   double? _lng;
   DateTime? _locationUpdatedAt;
 
   StreamSubscription<List<ServiceQueueEntry>>? _queueSub;
   List<ServiceQueueEntry> _queue = const [];
+
+  Future<List<String>> _fetchUniqueCategories(String outletId) async {
+    if (outletId.isEmpty) return const [];
+    try {
+      final result = await _supabase._client
+          .from('products')
+          .select('category')
+          .eq('outlet_id', outletId)
+          .neq('category', '')
+          .notEquals('category', ''); // avoid 'is' keyword
+      
+      final categories = <String>{};
+      for (final item in result) {
+        final cat = item['category'] as String?;
+        if (cat != null && cat.isNotEmpty) {
+          categories.add(cat);
+        }
+      }
+      return categories.toList()..sort();
+    } catch (e) {
+      print('Error fetching categories: $e');
+      return const ['Makanan', 'Minuman']; // fallback
+    }
+  }
+
+  void _toggleCategory(String category, bool checked) {
+    setState(() {
+      if (checked) {
+        _activeCategories.add(category);
+      } else {
+        _activeCategories.remove(category);
+      }
+    });
+  }
+
+  Future<void> _saveCategories() async {
+    if (_allCategories.isEmpty) return;
+    final outletId = _outletId;
+
+    if (outletId.isEmpty) return;
+
+    setState(() => _saving = true);
+    final ok = await _supabase.saveOutletCategories(
+      outletId: outletId,
+      categories: _activeCategories.toList(),
+    );
+    if (!mounted) return;
+    setState(() => _saving = false);
+
+    _snack(
+      ok ? 'Kategori aktif disimpan.' : 'Gagal menyimpan kategori.',
+      ok ? AppTheme.successColor : AppTheme.errorColor,
+    );
+  }
 
   Timer? _broadcastTimer;
 
@@ -83,6 +140,10 @@ class _LapakLiveScreenState extends ConsumerState<LapakLiveScreen> {
     if (!mounted) return;
 
     final manualValue = (rules['manual_value'] as num?)?.toDouble() ?? 0;
+    final activeCats = (rules['categories'] as List<dynamic>?)?.map((e) => e.toString()).toSet() ?? {};
+
+    // Fetch unique product categories for this outlet
+    final allCats = await _fetchUniqueCategories(outletId);
 
     setState(() {
       _isOpen = cfg?['is_open'] == true;
@@ -90,6 +151,8 @@ class _LapakLiveScreenState extends ConsumerState<LapakLiveScreen> {
       _queueEnabled = cfg?['service_queue_enabled'] == true;
       _manualOngkir = rules['manual'] == true;
       _manualCtrl.text = manualValue > 0 ? manualValue.toStringAsFixed(0) : '';
+      _allCategories = allCats;
+      _activeCategories = activeCats.isNotEmpty ? activeCats : {'Makanan', 'Minuman'}; // default
       _lat = loc?.latitude;
       _lng = loc?.longitude;
       _locationUpdatedAt = loc?.updatedAt;
@@ -356,15 +419,17 @@ class _LapakLiveScreenState extends ConsumerState<LapakLiveScreen> {
           ? const Center(child: CircularProgressIndicator())
           : ListView(
               padding: const EdgeInsets.all(16),
-              children: [
-                _statusCard(),
-                const SizedBox(height: 16),
-                _locationCard(),
-                const SizedBox(height: 16),
-                _deliveryCard(),
-                const SizedBox(height: 16),
-                _queueCard(),
-              ],
+               children: [
+                 _statusCard(),
+                 const SizedBox(height: 16),
+                 _locationCard(),
+                 const SizedBox(height: 16),
+                 _deliveryCard(),
+                 const SizedBox(height: 16),
+                 _categoryCard(),
+                 const SizedBox(height: 16),
+                 _queueCard(),
+               ],
             ),
     );
   }
@@ -511,6 +576,80 @@ class _LapakLiveScreenState extends ConsumerState<LapakLiveScreen> {
                     fontSize: 12, color: AppTheme.textSecondary),
               ),
             ),
+        ],
+      ),
+    );
+  }
+
+  Widget _categoryCard() {
+    return AppCard(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const AppSectionTitle(
+            title: 'Kategori Produk Aktif',
+            subtitle: 'Pilih kategori yang tampil saat lapak live',
+            icon: Icons.category_rounded,
+          ),
+          if (_allCategories.isEmpty)
+            Padding(
+              padding: const EdgeInsets.symmetric(vertical: 8),
+              child: Text(
+                'Belum ada produk atau semua kategori sudah dipilih.',
+                style: GoogleFonts.inter(
+                    fontSize: 12, color: AppTheme.textSecondary),
+              ),
+            )
+          else
+            Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              children: _allCategories.map((cat) {
+                final active = _activeCategories.contains(cat);
+                return GestureDetector(
+                  onTap: () => _toggleCategory(cat, !active),
+                  child: AnimatedContainer(
+                    duration: const Duration(milliseconds: 200),
+                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                    decoration: BoxDecoration(
+                      color: active ? AppTheme.primaryColor.withValues(alpha: 0.15) : Colors.transparent,
+                      borderRadius: BorderRadius.circular(AppTheme.radiusMedium),
+                      border: Border.all(
+                        color: active ? AppTheme.primaryColor : AppTheme.borderColor,
+                        width: 1.5,
+                      ),
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(
+                          Icons.check_circle_rounded,
+                          size: 16,
+                          color: active ? AppTheme.primaryColor : AppTheme.textSecondary,
+                        ),
+                        const SizedBox(width: 6),
+                        Text(
+                          cat,
+                          style: GoogleFonts.inter(
+                            fontSize: 13,
+                            fontWeight: FontWeight.w600,
+                            color: active ? AppTheme.textPrimary : AppTheme.textSecondary,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                );
+              }).toList(),
+            ),
+          const SizedBox(height: 16),
+          AppButton(
+            label: 'Simpan Kategori',
+            icon: Icons.save_rounded,
+            isLoading: _saving,
+            onPressed: _saving ? null : _saveCategories,
+            expanded: true,
+          ),
         ],
       ),
     );

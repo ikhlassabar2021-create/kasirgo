@@ -1944,6 +1944,27 @@ class SupabaseService {
     }
   }
 
+  /// Simpan kategori aktif untuk lapak live (outlet).
+  /// Menyimpan ke delivery_rules.categories agar persisten.
+  Future<bool> saveOutletCategories({
+    required String outletId,
+    required List<String> categories,
+  }) async {
+    try {
+      final existing = await getOutletDeliveryRules(outletId);
+      await _client.from('outlets').update({
+        'delivery_rules': {
+          ...existing,
+          'categories': categories,
+        },
+      }).eq('id', outletId);
+      return true;
+    } catch (e) {
+      debugPrint('saveOutletCategories error: $e');
+      return false;
+    }
+  }
+
   /// Menu publik untuk pelanggan QR meja (tanpa login).
   Future<List<Product>> getPublicMenu(String outletId) async {
     try {
