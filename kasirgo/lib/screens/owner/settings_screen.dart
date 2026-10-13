@@ -958,7 +958,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
             final currentUser = ref.read(currentUserProvider);
             _showEditProfileDialog(currentUser);
           }),
-          _buildMenuRow(Icons.qr_code_2_rounded, 'QRIS Toko (Manual / Statis)', () {
+          _buildMenuRow(Icons.qr_code_2_rounded, 'QRIS Toko (Upload Gambar QRIS)', () {
             _showQrisConfigDialog();
           }),
           _buildMenuRow(Icons.delivery_dining_rounded, 'Pengiriman / Diantar', () {
@@ -1195,6 +1195,39 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                         ],
                       ),
                     ),
+                    if (decodedImage() == null) ...[
+                      const SizedBox(height: 12),
+                      Container(
+                        padding: const EdgeInsets.all(12),
+                        decoration: BoxDecoration(
+                          color: AppTheme.warningColor.withValues(alpha: 0.08),
+                          borderRadius: BorderRadius.circular(12),
+                          border: Border.all(
+                            color: AppTheme.warningColor.withValues(alpha: 0.4),
+                          ),
+                        ),
+                        child: Row(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            const Icon(Icons.info_outline,
+                                size: 18, color: AppTheme.warningColor),
+                            const SizedBox(width: 8),
+                            Expanded(
+                              child: Text(
+                                'Wajib upload gambar QRIS agar pelanggan bisa scan '
+                                'langsung dari HP. Tanpa gambar, pelanggan hanya '
+                                'melihat info bank/tunai.',
+                                style: TextStyle(
+                                  fontSize: 12,
+                                  height: 1.35,
+                                  color: AppTheme.textSecondary,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
                     const SizedBox(height: 16),
                     TextField(
                       controller: nameController,

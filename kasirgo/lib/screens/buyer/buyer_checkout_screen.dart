@@ -434,13 +434,10 @@ class _BuyerCheckoutScreenState extends ConsumerState<BuyerCheckoutScreen> {
     final total = (o['total'] as num?)?.toDouble() ?? 0;
     final subtotal = (o['subtotal'] as num?)?.toDouble() ?? 0;
     final fee = (o['delivery_fee'] as num?)?.toDouble() ?? 0;
-    final nmid = _str(_payment, 'nmid');
     final bank = _str(_payment, 'bank_wallet');
     final account = _str(_payment, 'account_number');
     final merchant = _str(_payment, 'merchant_name');
     final qrisImage = _str(_payment, 'qris_image');
-    final hasQris = nmid.isNotEmpty || qrisImage.isNotEmpty;
-    final hasBank = account.isNotEmpty;
 
     Uint8List? qrisBytes;
     if (qrisImage.trim().isNotEmpty) {
@@ -450,6 +447,10 @@ class _BuyerCheckoutScreenState extends ConsumerState<BuyerCheckoutScreen> {
         qrisBytes = null;
       }
     }
+    // QRIS hanya bisa discan bila gambar benar-benar ada. NMID tanpa gambar
+    // tidak cukup — jangan tampilkan blok "Scan QRIS" yang menyesatkan.
+    final hasQris = qrisBytes != null;
+    final hasBank = account.isNotEmpty || bank.isNotEmpty;
 
     return ListView(
       padding: const EdgeInsets.all(16),
@@ -517,19 +518,17 @@ class _BuyerCheckoutScreenState extends ConsumerState<BuyerCheckoutScreen> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      if (qrisBytes != null) ...[
-                        Center(
-                          child: ClipRRect(
-                            borderRadius: BorderRadius.circular(8),
-                            child: Image.memory(
-                              qrisBytes,
-                              height: 220,
-                              fit: BoxFit.contain,
-                            ),
+                      Center(
+                        child: ClipRRect(
+                          borderRadius: BorderRadius.circular(8),
+                          child: Image.memory(
+                            qrisBytes,
+                            height: 220,
+                            fit: BoxFit.contain,
                           ),
                         ),
-                        const SizedBox(height: 12),
-                      ],
+                      ),
+                      const SizedBox(height: 12),
                       Row(
                         children: [
                           const Icon(
@@ -556,8 +555,8 @@ class _BuyerCheckoutScreenState extends ConsumerState<BuyerCheckoutScreen> {
                   ),
                 ),
               ] else if (hasBank) ...[
-                _row('Bank / E-Wallet', bank),
-                _row('No. Rekening', account),
+                if (bank.isNotEmpty) _row('Bank / E-Wallet', bank),
+                if (account.isNotEmpty) _row('No. Rekening', account),
               ] else
                 Text(
                   'Warung belum mengatur info pembayaran. Bayar tunai di kasir.',
