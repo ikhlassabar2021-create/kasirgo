@@ -13,6 +13,7 @@ import '../models/recipe.dart';
 import '../models/variant.dart';
 import '../models/ppob.dart';
 import '../models/restock.dart';
+import '../models/marketplace_result.dart';
 
 class SupabaseService {
   SupabaseService({SupabaseClient? client})
@@ -271,6 +272,33 @@ class SupabaseService {
           .toList();
     } catch (e) {
       debugPrint('getPublicCatalog error: $e');
+      return [];
+    }
+  }
+
+  /// Phase 17E: cari produk publik di seluruh outlet (marketplace).
+  /// [lat]/[lng] opsional; bila diberikan hasil dibatasi radius.
+  Future<List<MarketplaceResult>> searchMarketplace({
+    required String query,
+    double? lat,
+    double? lng,
+    double? radiusKm,
+  }) async {
+    final q = query.trim();
+    if (q.isEmpty) return const [];
+    try {
+      final res = await _client.rpc('search_marketplace', params: {
+        'p_query': q,
+        'p_lat': lat,
+        'p_lng': lng,
+        'p_radius_km': radiusKm,
+      });
+      return (res as List)
+          .map((j) =>
+              MarketplaceResult.fromJson(Map<String, dynamic>.from(j as Map)))
+          .toList();
+    } catch (e) {
+      debugPrint('searchMarketplace error: $e');
       return [];
     }
   }

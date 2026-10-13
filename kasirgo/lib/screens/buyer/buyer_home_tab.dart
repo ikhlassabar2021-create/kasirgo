@@ -10,6 +10,7 @@ import '../../config/app_theme.dart';
 import '../../models/app_customer.dart';
 import '../../models/cart.dart';
 import '../../models/geo_position.dart';
+import '../../models/marketplace_result.dart';
 import '../../models/outlet_location.dart';
 import '../../models/product.dart';
 import '../../providers/cart_provider.dart';
@@ -52,6 +53,12 @@ class _BuyerHomeTabState extends ConsumerState<BuyerHomeTab> {
   bool _loadingCatalog = false;
   List<Product> _catalog = const [];
 
+  final _searchCtrl = TextEditingController();
+  Timer? _searchDebounce;
+  String _searchQuery = '';
+  bool _searching = false;
+  List<MarketplaceResult> _searchResults = const [];
+
   StreamSubscription<OutletLocation>? _liveSub;
   OutletLocation? _livePosition;
 
@@ -67,7 +74,59 @@ class _BuyerHomeTabState extends ConsumerState<BuyerHomeTab> {
   @override
   void dispose() {
     _liveSub?.cancel();
+    _searchDebounce?.cancel();
+    _searchCtrl.dispose();
     super.dispose();
+  }
+
+  void _onSearchChanged(String value) {
+    _searchDebounce?.cancel();
+    final q = value.trim();
+    if (q.isEmpty) {
+      setState(() {
+        _searchQuery = '';
+        _searchResults = const [];
+        _searching = false;
+      });
+      return;
+    }
+    setState(() => _searchQuery = q);
+    _searchDebounce = Timer(const Duration(milliseconds: 350), _runSearch);
+  }
+
+  Future<void> _runSearch() async {
+    final q = _searchQuery;
+    if (q.isEmpty) return;
+    setState(() => _searching = true);
+    final results = await _supabase.searchMarketplace(
+      query: q,
+      lat: _location?.lat,
+      lng: _location?.lng,
+    );
+    if (!mounted || _searchQuery != q) return;
+    setState(() {
+      _searchResults = results;
+      _searching = false;
+    });
+  }
+
+  void _clearSearch() {
+    _searchDebounce?.cancel();
+    _searchCtrl.clear();
+    setState(() {
+      _searchQuery = '';
+      _searchResults = const [];
+      _searching = false;
+    });
+  }
+
+  void _openSearchResult(MarketplaceResult r) {
+    _clearSearch();
+    _openOutlet(r.toOutlet());
+  }
+
+  void _addSearchResultToCart(MarketplaceResult r) {
+    _addToCart(r.toOutlet(), r.toProduct());
   }
 
   Future<void> _init() async {
@@ -370,9 +429,16 @@ class _BuyerHomeTabState extends ConsumerState<BuyerHomeTab> {
             children: [
               _buildWelcomeCard(),
               const SizedBox(height: 16),
+              _buildSearchBar(),
+              const SizedBox(height: 16),
               _buildLocationCard(),
               const SizedBox(height: 20),
-              if (_selected == null) ..._buildRadarSection() else ..._buildCatalogSection(),
+              if (_searchQuery.isNotEmpty)
+                ..._buildSearchResults()
+              else if (_selected == null)
+                ..._buildRadarSection()
+              else
+                ..._buildCatalogSection(),
             ],
           ),
         ),
@@ -408,6 +474,194 @@ class _BuyerHomeTabState extends ConsumerState<BuyerHomeTab> {
             style: GoogleFonts.inter(
               fontSize: 13,
               color: Colors.white.withValues(alpha: 0.9),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildSearchBar() {
+    return AppTextField(
+      controller: _searchCtrl,
+      hint: 'Cari produk atau warung (mis. kopi, roti)...',
+      prefixIcon: Icons.search_rounded,
+      onChanged: _onSearchChanged,
+      suffixIcon: _searchQuery.isEmpty
+          ? null
+          : IconButton(
+              onPressed: _clearSearch,
+              icon: const Icon(Icons.close_rounded, size: 20),
+              tooltip: 'Bersihkan',
+            ),
+    );
+  }
+
+  List<Widget> _buildSearchResults() {
+    return [
+      AppSectionTitle(
+        title: 'Hasil Pencarian',
+        subtitle: 'Untuk $_searchQuery',
+        icon: Icons.search_rounded,
+        trailing: IconButton(
+          onPressed: _searching ? null : _runSearch,
+          icon: const Icon(Icons.refresh_rounded),
+          tooltip: 'Cari ulang',
+        ),
+      ),
+      const SizedBox(height: 12),
+      if (_searching)
+        const Padding(
+          padding: EdgeInsets.symmetric(vertical: 40),
+          child: Center(child: CircularProgressIndicator()),
+        )
+      else if (_searchResults.isEmpty)
+        AppCard(
+          child: Column(
+            children: [
+              const Icon(Icons.search_off_rounded,
+                  size: 40, color: AppTheme.textSecondary),
+              const SizedBox(height: 10),
+              Text(
+                'Produk tidak ditemukan',
+                style: GoogleFonts.inter(
+                  fontWeight: FontWeight.w700,
+                  fontSize: 15,
+                ),
+              ),
+              const SizedBox(height: 4),
+              Text(
+                'Coba kata kunci lain, atau aktifkan lokasi agar hasil lebih dekat.',
+                textAlign: TextAlign.center,
+                style: GoogleFonts.inter(
+                  fontSize: 12.5,
+                  color: AppTheme.textSecondary,
+                ),
+              ),
+            ],
+          ),
+        )
+      else
+        for (final r in _searchResults)
+          Padding(
+            padding: const EdgeInsets.only(bottom: 10),
+            child: _buildSearchResultCard(r),
+          ),
+    ];
+  }
+
+  Widget _buildSearchResultCard(MarketplaceResult r) {
+    final cart = ref.watch(cartProvider);
+    final qty = cart.outletId == r.outletId ? cart.qtyOf(r.productId) : 0;
+    final isOut = r.stock <= 0;
+    return AppCard(
+      onTap: () => _openSearchResult(r),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Container(
+            height: 52,
+            width: 52,
+            decoration: BoxDecoration(
+              color: AppTheme.primaryColor.withValues(alpha: 0.08),
+              borderRadius: BorderRadius.circular(AppTheme.radiusMedium),
+            ),
+            child: Center(
+              child: Text(
+                r.productName.isNotEmpty
+                    ? r.productName[0].toUpperCase()
+                    : '?',
+                style: GoogleFonts.inter(
+                  fontSize: 22,
+                  fontWeight: FontWeight.w800,
+                  color: AppTheme.primaryColor.withValues(alpha: 0.5),
+                ),
+              ),
+            ),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  r.productName,
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                  style: GoogleFonts.inter(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w700,
+                    color: AppTheme.textPrimary,
+                  ),
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  r.outletName,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: GoogleFonts.inter(
+                    fontSize: 12,
+                    color: AppTheme.textSecondary,
+                  ),
+                ),
+                const SizedBox(height: 6),
+                Text(
+                  Formatters.currency(r.price),
+                  style: GoogleFonts.inter(
+                    fontSize: 13.5,
+                    fontWeight: FontWeight.w800,
+                    color: AppTheme.primaryColor,
+                  ),
+                ),
+                const SizedBox(height: 6),
+                Wrap(
+                  spacing: 8,
+                  runSpacing: 6,
+                  children: [
+                    _MetaChip(
+                      icon: Icons.place_rounded,
+                      label: r.distanceLabel,
+                    ),
+                    if (r.hasDelivery)
+                      const _MetaChip(
+                          icon: Icons.delivery_dining_rounded,
+                          label: 'Bisa diantar'),
+                    _MetaChip(
+                      icon: isOut
+                          ? Icons.remove_shopping_cart_rounded
+                          : Icons.inventory_2_rounded,
+                      label: isOut ? 'Stok habis' : 'Stok ${r.stock}',
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(width: 8),
+          SizedBox(
+            width: 44,
+            child: Column(
+              children: [
+                if (qty > 0)
+                  Padding(
+                    padding: const EdgeInsets.only(bottom: 4),
+                    child: Text(
+                      'x$qty',
+                      style: GoogleFonts.inter(
+                        fontSize: 12,
+                        fontWeight: FontWeight.w700,
+                        color: AppTheme.primaryColor,
+                      ),
+                    ),
+                  ),
+                IconButton(
+                  onPressed:
+                      isOut ? null : () => _addSearchResultToCart(r),
+                  icon: const Icon(Icons.add_shopping_cart_rounded),
+                  color: AppTheme.primaryColor,
+                  tooltip: 'Tambah ke keranjang',
+                ),
+              ],
             ),
           ),
         ],
