@@ -8,6 +8,7 @@ import '../../models/app_customer.dart';
 import '../../models/buyer_profile.dart';
 import '../../models/order.dart';
 import '../../providers/app_mode_provider.dart';
+import '../../services/buyer_order_history_service.dart';
 import '../../services/order_service.dart';
 import '../../utils/formatters.dart';
 import '../../widgets/common/app_button.dart';
@@ -17,6 +18,7 @@ import '../../widgets/common/centennial_background.dart';
 import '../../widgets/common/responsive.dart';
 import 'buyer_home_tab.dart';
 import 'buyer_onboarding_screen.dart';
+import 'buyer_order_tracking_screen.dart';
 
 /// ST17-4 (Phase 17 - Ekosistem Hyper-Local): shell Pembeli.
 ///
@@ -212,8 +214,10 @@ class BuyerOrdersTab extends ConsumerStatefulWidget {
 
 class _BuyerOrdersTabState extends ConsumerState<BuyerOrdersTab> {
   final _service = OrderService();
+  final _history = BuyerOrderHistoryService();
   List<Order> _orders = [];
   bool _loading = true;
+  OrderHistoryPeriod _period = OrderHistoryPeriod.all;
 
   @override
   void initState() {
@@ -222,13 +226,84 @@ class _BuyerOrdersTabState extends ConsumerState<BuyerOrdersTab> {
   }
 
   Future<void> _load() async {
-    setState(() => _loading = true);
-    final orders = await _service.myOrders();
+    // 1) Tampilkan snapshot lokal lebih dulu (offline-first).
+    final local = await _history.load();
+    if (mounted) {
+      setState(() {
+        _orders = local;
+        _loading = false;
+      });
+    }
+    // 2) Sinkronkan dari server bila online, lalu gabung ke snapshot lokal.
+    final server = await _service.myOrders();
+    if (!mounted || server.isEmpty) return;
+    final merged = await _history.mergeFromServer(server);
     if (!mounted) return;
-    setState(() {
-      _orders = orders;
-      _loading = false;
-    });
+    setState(() => _orders = merged);
+  }
+
+  Future<void> _deleteOrder(Order order) async {
+    final ok = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Hapus pesanan?'),
+        content: Text(
+          'Riwayat ${order.code ?? 'pesanan ini'} akan dihapus dari perangkat ini.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text('Batal'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            child: const Text('Hapus'),
+          ),
+        ],
+      ),
+    );
+    if (ok != true) return;
+    final updated = await _history.deleteOrder(order.id);
+    if (!mounted) return;
+    setState(() => _orders = updated);
+  }
+
+  Future<void> _deletePeriod() async {
+    final period = _period;
+    final label = period.label.toLowerCase();
+    final ok = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: Text('Hapus riwayat $label?'),
+        content: Text(
+          period == OrderHistoryPeriod.all
+              ? 'Seluruh riwayat pesanan akan dihapus dari perangkat ini.'
+              : 'Riwayat pesanan periode $label akan dihapus dari perangkat ini.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text('Batal'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            child: const Text('Hapus'),
+          ),
+        ],
+      ),
+    );
+    if (ok != true) return;
+    final updated = await _history.deleteByPeriod(period);
+    if (!mounted) return;
+    setState(() => _orders = updated);
+  }
+
+  void _openTracking(Order order) {
+    Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (_) => BuyerOrderTrackingScreen(orderId: order.id),
+      ),
+    );
   }
 
   @override
@@ -236,46 +311,133 @@ class _BuyerOrdersTabState extends ConsumerState<BuyerOrdersTab> {
     if (_loading) {
       return const Center(child: CircularProgressIndicator());
     }
-    if (_orders.isEmpty) {
-      return ListView(
-        padding: const EdgeInsets.all(16),
+    final filtered =
+        BuyerOrderHistoryService.filterByPeriod(_orders, _period);
+    return Column(
+      children: [
+        _buildFilterBar(),
+        Expanded(
+          child: filtered.isEmpty
+              ? _buildEmpty()
+              : RefreshIndicator(
+                  onRefresh: _load,
+                  child: ListView.separated(
+                    padding: const EdgeInsets.all(16),
+                    itemCount: filtered.length,
+                    separatorBuilder: (_, _) => const SizedBox(height: 12),
+                    itemBuilder: (_, i) => _OrderCard(
+                      order: filtered[i],
+                      onTap: () => _openTracking(filtered[i]),
+                      onDelete: () => _deleteOrder(filtered[i]),
+                    ),
+                  ),
+                ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildFilterBar() {
+    return Container(
+      color: AppTheme.surfaceColor,
+      padding: const EdgeInsets.fromLTRB(16, 12, 8, 12),
+      child: Row(
         children: [
-          const SizedBox(height: 60),
-          Center(
-            child: Column(
-              children: [
-                const Icon(Icons.receipt_long_rounded,
-                    size: 48, color: AppTheme.textSecondary),
-                const SizedBox(height: 12),
-                Text(
-                  'Belum ada pesanan',
-                  style: GoogleFonts.inter(
-                    fontSize: 16,
-                    fontWeight: FontWeight.w700,
-                    color: AppTheme.textPrimary,
-                  ),
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  'Pesananmu akan muncul di sini.',
-                  style: GoogleFonts.inter(
-                    fontSize: 13,
-                    color: AppTheme.textSecondary,
-                  ),
-                ),
-              ],
+          Expanded(
+            child: SingleChildScrollView(
+              scrollDirection: Axis.horizontal,
+              child: Row(
+                children: OrderHistoryPeriod.values
+                    .map((p) => _PeriodChip(
+                          label: p.label,
+                          selected: _period == p,
+                          onTap: () => setState(() => _period = p),
+                        ))
+                    .toList(),
+              ),
             ),
           ),
+          IconButton(
+            tooltip: 'Hapus riwayat periode ini',
+            onPressed: _orders.isEmpty ? null : _deletePeriod,
+            icon: const Icon(Icons.delete_outline_rounded,
+                color: AppTheme.errorColor),
+          ),
         ],
-      );
-    }
-    return RefreshIndicator(
-      onRefresh: _load,
-      child: ListView.separated(
-        padding: const EdgeInsets.all(16),
-        itemCount: _orders.length,
-        separatorBuilder: (_, _) => const SizedBox(height: 12),
-        itemBuilder: (_, i) => _OrderCard(order: _orders[i]),
+      ),
+    );
+  }
+
+  Widget _buildEmpty() {
+    return ListView(
+      padding: const EdgeInsets.all(16),
+      children: [
+        const SizedBox(height: 60),
+        Center(
+          child: Column(
+            children: [
+              const Icon(Icons.receipt_long_rounded,
+                  size: 48, color: AppTheme.textSecondary),
+              const SizedBox(height: 12),
+              Text(
+                'Belum ada pesanan',
+                style: GoogleFonts.inter(
+                  fontSize: 16,
+                  fontWeight: FontWeight.w700,
+                  color: AppTheme.textPrimary,
+                ),
+              ),
+              const SizedBox(height: 4),
+              Text(
+                'Pesananmu akan muncul di sini.',
+                style: GoogleFonts.inter(
+                  fontSize: 13,
+                  color: AppTheme.textSecondary,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _PeriodChip extends StatelessWidget {
+  final String label;
+  final bool selected;
+  final VoidCallback onTap;
+
+  const _PeriodChip({
+    required this.label,
+    required this.selected,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.only(right: 8),
+      child: GestureDetector(
+        onTap: onTap,
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+          decoration: BoxDecoration(
+            color: selected ? AppTheme.primaryColor : AppTheme.backgroundColor,
+            borderRadius: BorderRadius.circular(20),
+            border: Border.all(
+              color: selected ? AppTheme.primaryColor : AppTheme.borderColor,
+            ),
+          ),
+          child: Text(
+            label,
+            style: GoogleFonts.inter(
+              fontSize: 12,
+              fontWeight: FontWeight.w600,
+              color: selected ? Colors.white : AppTheme.textSecondary,
+            ),
+          ),
+        ),
       ),
     );
   }
@@ -283,12 +445,15 @@ class _BuyerOrdersTabState extends ConsumerState<BuyerOrdersTab> {
 
 class _OrderCard extends StatelessWidget {
   final Order order;
+  final VoidCallback? onTap;
+  final VoidCallback? onDelete;
 
-  const _OrderCard({required this.order});
+  const _OrderCard({required this.order, this.onTap, this.onDelete});
 
   @override
   Widget build(BuildContext context) {
     return AppCard(
+      onTap: onTap,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -319,6 +484,15 @@ class _OrderCard extends StatelessWidget {
                   ),
                 ),
               ),
+              if (onDelete != null)
+                GestureDetector(
+                  onTap: onDelete,
+                  child: const Padding(
+                    padding: EdgeInsets.only(left: 6),
+                    child: Icon(Icons.delete_outline_rounded,
+                        size: 20, color: AppTheme.errorColor),
+                  ),
+                ),
             ],
           ),
           const SizedBox(height: 8),
