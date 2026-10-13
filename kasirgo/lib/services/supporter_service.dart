@@ -136,7 +136,7 @@ class SupporterService {
   /// Fitur yang dibuka oleh Program Pendukung (sisanya gratis selamanya).
   static const Set<String> premiumFeatures = {
     'wa_marketing',
-    'social_sync',
+    // 'social_sync', // HIDDEN per Item 14
     'online_catalog',
     'qr_table',
     'ai_pro',
@@ -156,7 +156,7 @@ class SupporterService {
 
   static const Map<String, String> featureLabels = {
     'wa_marketing': 'WA Marketing (broadcast + retensi)',
-    'social_sync': 'Social Commerce Sync',
+    // 'social_sync': 'Social Commerce Sync', // HIDDEN per Item 14
     'online_catalog': 'Katalog Online',
     'qr_table': 'QR Meja Dine-in',
     'ai_pro': 'AI Co-Pilot Pro',
@@ -524,7 +524,7 @@ class SupporterService {
   @visibleForTesting
   static const List<String> allFeatureKeys = [
     'wa_marketing',
-    'social_sync',
+    // 'social_sync', // HIDDEN per Item 14
     'online_catalog',
     'qr_table',
     'ai_pro',

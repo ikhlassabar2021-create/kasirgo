@@ -19,7 +19,7 @@ import '../../widgets/common/app_drawer.dart';
 import '../../widgets/common/glass_card.dart';
 import '../../widgets/common/centennial_background.dart';
 import '../../widgets/common/supporter_gate.dart';
-import 'social_commerce_screen.dart';
+// import 'social_commerce_screen.dart'; // HIDDEN per Item 14
 import 'whatsapp_broadcast_screen.dart';
 import 'qr_table_screen.dart';
 import 'online_catalog_screen.dart';
@@ -972,16 +972,16 @@ class _OwnerHomeScreenState extends ConsumerState<OwnerHomeScreen> {
       ),
     );
 
-    quickActionItems.add(
-      _ModuleCard(
-        icon: Icons.hub_rounded,
-        title: 'Social Commerce',
-        subtitle: 'Sync Marketplace',
-        color: AppTheme.secondaryColor,
-        onTap: () => _pushGated('social_sync', const SocialCommerceScreen(),
-            title: 'Social Commerce'),
-      ),
-    );
+    // quickActionItems.add(
+    //   _ModuleCard(
+    //     icon: Icons.hub_rounded,
+    //     title: 'Social Commerce',
+    //     subtitle: 'Sync Marketplace',
+    //     color: AppTheme.secondaryColor,
+    //     onTap: () => _pushGated('social_sync', const SocialCommerceScreen(),
+    //         title: 'Social Commerce'),
+    //   ),
+    // ); // Hidden per Item 14
 
     if (isFoodBusiness && modules.contains(BusinessModule.tableManagement)) {
       quickActionItems.add(
