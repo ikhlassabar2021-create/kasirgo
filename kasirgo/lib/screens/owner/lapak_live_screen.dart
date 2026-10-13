@@ -42,6 +42,9 @@ class _LapakLiveScreenState extends ConsumerState<LapakLiveScreen> {
   bool _isMobile = false;
   bool _queueEnabled = false;
 
+  bool _manualOngkir = false;
+  final TextEditingController _manualCtrl = TextEditingController();
+
   double? _lat;
   double? _lng;
   DateTime? _locationUpdatedAt;
@@ -63,6 +66,7 @@ class _LapakLiveScreenState extends ConsumerState<LapakLiveScreen> {
   void dispose() {
     _broadcastTimer?.cancel();
     _queueSub?.cancel();
+    _manualCtrl.dispose();
     super.dispose();
   }
 
@@ -75,12 +79,17 @@ class _LapakLiveScreenState extends ConsumerState<LapakLiveScreen> {
 
     final cfg = await _supabase.getOutletLiveConfig(outletId);
     final loc = await _loc.getOutletLocation(outletId);
+    final rules = await _supabase.getOutletDeliveryRules(outletId);
     if (!mounted) return;
+
+    final manualValue = (rules['manual_value'] as num?)?.toDouble() ?? 0;
 
     setState(() {
       _isOpen = cfg?['is_open'] == true;
       _isMobile = cfg?['is_mobile'] == true;
       _queueEnabled = cfg?['service_queue_enabled'] == true;
+      _manualOngkir = rules['manual'] == true;
+      _manualCtrl.text = manualValue > 0 ? manualValue.toStringAsFixed(0) : '';
       _lat = loc?.latitude;
       _lng = loc?.longitude;
       _locationUpdatedAt = loc?.updatedAt;
@@ -260,6 +269,62 @@ class _LapakLiveScreenState extends ConsumerState<LapakLiveScreen> {
     }
   }
 
+  double get _manualValue =>
+      double.tryParse(_manualCtrl.text.replaceAll(RegExp(r'[^0-9]'), '')) ?? 0;
+
+  Future<void> _setManualOngkir(bool enabled) async {
+    final outletId = _outletId;
+    if (outletId.isEmpty) return;
+
+    setState(() {
+      _manualOngkir = enabled;
+      _saving = true;
+    });
+
+    final ok = await _supabase.saveOutletManualOngkir(
+      outletId: outletId,
+      enabled: enabled,
+      value: _manualValue,
+    );
+    if (!mounted) return;
+    setState(() => _saving = false);
+
+    if (!ok) {
+      _snack('Gagal menyimpan ongkir manual.', AppTheme.errorColor);
+      _load();
+      return;
+    }
+    _snack(
+      enabled
+          ? 'Ongkir manual aktif: ${Formatters.currency(_manualValue)}.'
+          : 'Ongkir manual dimatikan (otomatis).',
+      AppTheme.successColor,
+    );
+  }
+
+  Future<void> _saveManualValue() async {
+    if (_manualValue <= 0) {
+      _snack('Isi nominal ongkir manual.', AppTheme.errorColor);
+      return;
+    }
+    final outletId = _outletId;
+    if (outletId.isEmpty) return;
+
+    setState(() => _saving = true);
+    final ok = await _supabase.saveOutletManualOngkir(
+      outletId: outletId,
+      enabled: true,
+      value: _manualValue,
+    );
+    if (!mounted) return;
+    setState(() => _saving = false);
+
+    _snack(
+      ok ? 'Ongkir manual disimpan.' : 'Gagal menyimpan ongkir manual.',
+      ok ? AppTheme.successColor : AppTheme.errorColor,
+    );
+  }
+
   Future<void> _setQueueStatus(ServiceQueueEntry entry, String status) async {
     final ok = await _loc.setQueueStatus(entry.id, status);
     if (!mounted) return;
@@ -295,6 +360,8 @@ class _LapakLiveScreenState extends ConsumerState<LapakLiveScreen> {
                 _statusCard(),
                 const SizedBox(height: 16),
                 _locationCard(),
+                const SizedBox(height: 16),
+                _deliveryCard(),
                 const SizedBox(height: 16),
                 _queueCard(),
               ],
@@ -390,6 +457,60 @@ class _LapakLiveScreenState extends ConsumerState<LapakLiveScreen> {
               ),
             ],
           ),
+        ],
+      ),
+    );
+  }
+
+  Widget _deliveryCard() {
+    return AppCard(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const AppSectionTitle(
+            title: 'Ongkir Pengiriman',
+            subtitle: 'Atur ongkir pesanan "Diantar"',
+            icon: Icons.delivery_dining_rounded,
+          ),
+          SwitchListTile(
+            contentPadding: EdgeInsets.zero,
+            activeThumbColor: AppTheme.primaryColor,
+            value: _manualOngkir,
+            title: Text('Ongkir Manual',
+                style: GoogleFonts.inter(
+                    fontWeight: FontWeight.w600,
+                    color: AppTheme.textPrimary)),
+            subtitle: Text('Nominal tetap untuk semua pesanan antar',
+                style: GoogleFonts.inter(
+                    fontSize: 12, color: AppTheme.textSecondary)),
+            onChanged: _saving ? null : _setManualOngkir,
+          ),
+          if (_manualOngkir) ...[
+            const Divider(height: 1, color: AppTheme.borderColor),
+            const SizedBox(height: 12),
+            AppTextField(
+              controller: _manualCtrl,
+              label: 'Nominal ongkir (Rp)',
+              hint: '5000',
+              prefixIcon: Icons.payments_rounded,
+              keyboardType: TextInputType.number,
+            ),
+            const SizedBox(height: 12),
+            AppButton(
+              label: 'Simpan Ongkir',
+              icon: Icons.save_rounded,
+              isLoading: _saving,
+              onPressed: _saving ? null : _saveManualValue,
+            ),
+          ] else
+            Padding(
+              padding: const EdgeInsets.only(top: 4),
+              child: Text(
+                'Ongkir dihitung otomatis dari Pengaturan > Pengiriman.',
+                style: GoogleFonts.inter(
+                    fontSize: 12, color: AppTheme.textSecondary),
+              ),
+            ),
         ],
       ),
     );

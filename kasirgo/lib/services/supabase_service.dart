@@ -1797,6 +1797,10 @@ class SupabaseService {
 
   /// Simpan aturan ongkir/pengiriman outlet (owner). Pembeli hanya melihat
   /// opsi "Diantar" bila [enabled] true.
+  ///
+  /// Menggabung dengan aturan yang ada agar pengaturan ongkir manual
+  /// (`manual` / `manual_value`) tidak terhapus saat owner menyimpan
+  /// pengaturan pengiriman standar.
   Future<bool> saveOutletDeliveryRules({
     required String outletId,
     required bool enabled,
@@ -1806,8 +1810,10 @@ class SupabaseService {
     required double maxKm,
   }) async {
     try {
+      final existing = await getOutletDeliveryRules(outletId);
       await _client.from('outlets').update({
         'delivery_rules': {
+          ...existing,
           'enabled': enabled,
           'mode': mode,
           'value': value,
@@ -1818,6 +1824,31 @@ class SupabaseService {
       return true;
     } catch (e) {
       debugPrint('saveOutletDeliveryRules error: $e');
+      return false;
+    }
+  }
+
+  /// Aktifkan/nonaktifkan ongkir manual (nominal tetap) dari Lapak Live.
+  /// Saat [enabled] true, [value] dipakai sebagai ongkir untuk semua pesanan
+  /// antar; saat false, ongkir kembali dihitung otomatis dari aturan
+  /// pengiriman standar.
+  Future<bool> saveOutletManualOngkir({
+    required String outletId,
+    required bool enabled,
+    required double value,
+  }) async {
+    try {
+      final existing = await getOutletDeliveryRules(outletId);
+      await _client.from('outlets').update({
+        'delivery_rules': {
+          ...existing,
+          'manual': enabled,
+          'manual_value': value,
+        },
+      }).eq('id', outletId);
+      return true;
+    } catch (e) {
+      debugPrint('saveOutletManualOngkir error: $e');
       return false;
     }
   }
