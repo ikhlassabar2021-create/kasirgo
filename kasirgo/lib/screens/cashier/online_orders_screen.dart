@@ -49,6 +49,10 @@ class _OnlineOrdersViewState extends ConsumerState<OnlineOrdersView>
   final Set<String> _busyOrders = {};
   late final AnimationController _blink;
 
+  List<Map<String, dynamic>> _blocked = [];
+  bool _blockedLoading = false;
+  final Set<String> _blockBusy = {};
+
   @override
   void initState() {
     super.initState();
@@ -348,6 +352,118 @@ class _OnlineOrdersViewState extends ConsumerState<OnlineOrdersView>
     }
   }
 
+  Future<void> _loadBlocked() async {
+    final outletId = ref.read(currentUserProvider)?.outletId;
+    if (outletId == null) return;
+    if (mounted) setState(() => _blockedLoading = true);
+    final list = await _service.listBlockedBuyers(outletId);
+    if (!mounted) return;
+    setState(() {
+      _blocked = list;
+      _blockedLoading = false;
+    });
+  }
+
+  /// Blokir pembeli online agar tidak bisa membuat pesanan baru di outlet ini.
+  Future<void> _blockBuyer(Order o) async {
+    final buyerId = o.buyerId;
+    final outletId = ref.read(currentUserProvider)?.outletId;
+    if (buyerId == null || outletId == null) return;
+    final reasonCtrl = TextEditingController();
+    final name = o.buyerName?.trim().isNotEmpty == true ? o.buyerName! : 'Pembeli';
+    final ok = await showDialog<bool>(
+      context: context,
+      builder: (dialogCtx) => AlertDialog(
+        backgroundColor: AppTheme.surfaceColor,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: const Text('Blokir Pembeli'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text('$name tidak akan bisa membuat pesanan online baru di toko ini.'),
+            const SizedBox(height: 14),
+            TextField(
+              controller: reasonCtrl,
+              maxLines: 2,
+              decoration: const InputDecoration(
+                labelText: 'Alasan (opsional)',
+                hintText: 'mis. sering tidak bayar',
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialogCtx, false),
+            child: const Text('Batal'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(dialogCtx, true),
+            style: TextButton.styleFrom(foregroundColor: AppTheme.errorColor),
+            child: const Text('Blokir'),
+          ),
+        ],
+      ),
+    );
+    if (ok != true || !mounted) return;
+    setState(() => _blockBusy.add(buyerId));
+    final res = await _service.blockBuyer(
+      outletId: outletId,
+      buyerId: buyerId,
+      reason: reasonCtrl.text.trim().isEmpty ? null : reasonCtrl.text.trim(),
+    );
+    if (!mounted) return;
+    setState(() => _blockBusy.remove(buyerId));
+    final success = res['success'] == true;
+    ScaffoldMessenger.of(context)
+      ..hideCurrentSnackBar()
+      ..showSnackBar(SnackBar(
+        content: Text(success ? '$name diblokir.' : 'Gagal memblokir pembeli.'),
+        backgroundColor: success ? AppTheme.successColor : AppTheme.errorColor,
+      ));
+    if (success && _filter == 'diblokir') await _loadBlocked();
+  }
+
+  /// Buka blokir pembeli.
+  Future<void> _unblockBuyer(String buyerId, String name) async {
+    final outletId = ref.read(currentUserProvider)?.outletId;
+    if (outletId == null) return;
+    final ok = await showDialog<bool>(
+      context: context,
+      builder: (dialogCtx) => AlertDialog(
+        backgroundColor: AppTheme.surfaceColor,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: const Text('Buka Blokir'),
+        content: Text('Izinkan $name membuat pesanan online lagi?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialogCtx, false),
+            child: const Text('Batal'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(dialogCtx, true),
+            style: TextButton.styleFrom(foregroundColor: AppTheme.successColor),
+            child: const Text('Buka Blokir'),
+          ),
+        ],
+      ),
+    );
+    if (ok != true || !mounted) return;
+    setState(() => _blockBusy.add(buyerId));
+    final res = await _service.unblockBuyer(outletId: outletId, buyerId: buyerId);
+    if (!mounted) return;
+    setState(() => _blockBusy.remove(buyerId));
+    final success = res['success'] == true;
+    ScaffoldMessenger.of(context)
+      ..hideCurrentSnackBar()
+      ..showSnackBar(SnackBar(
+        content: Text(success ? '$name dibuka blokirnya.' : 'Gagal membuka blokir.'),
+        backgroundColor: success ? AppTheme.successColor : AppTheme.errorColor,
+      ));
+    if (success) await _loadBlocked();
+  }
+
   List<Order> get _filtered {
     switch (_filter) {
       case 'menunggu':
@@ -409,27 +525,137 @@ class _OnlineOrdersViewState extends ConsumerState<OnlineOrdersView>
               _chip('Selesai', 'selesai'),
               const SizedBox(width: 8),
               _chip('Semua', 'semua'),
+              const SizedBox(width: 8),
+              _chip('Diblokir', 'diblokir'),
             ],
           ),
         ),
         Expanded(
-          child: _isLoading
-              ? const Center(
-                  child: CircularProgressIndicator(color: AppTheme.primaryColor))
-              : filtered.isEmpty
-                  ? _empty()
-                  : RefreshIndicator(
-                      onRefresh: () => _load(),
-                      color: AppTheme.primaryColor,
-                      child: ListView.separated(
-                        padding: const EdgeInsets.fromLTRB(12, 8, 12, 24),
-                        itemCount: filtered.length,
-                        separatorBuilder: (_, _) => const SizedBox(height: 10),
-                        itemBuilder: (context, i) => _orderCard(filtered[i]),
-                      ),
-                    ),
+          child: _filter == 'diblokir'
+              ? _blockedBody()
+              : _isLoading
+                  ? const Center(
+                      child:
+                          CircularProgressIndicator(color: AppTheme.primaryColor))
+                  : filtered.isEmpty
+                      ? _empty()
+                      : RefreshIndicator(
+                          onRefresh: () => _load(),
+                          color: AppTheme.primaryColor,
+                          child: ListView.separated(
+                            padding: const EdgeInsets.fromLTRB(12, 8, 12, 24),
+                            itemCount: filtered.length,
+                            separatorBuilder: (_, _) => const SizedBox(height: 10),
+                            itemBuilder: (context, i) => _orderCard(filtered[i]),
+                          ),
+                        ),
         ),
       ],
+    );
+  }
+
+  Widget _blockedBody() {
+    if (_blockedLoading) {
+      return const Center(
+          child: CircularProgressIndicator(color: AppTheme.primaryColor));
+    }
+    if (_blocked.isEmpty) {
+      return Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            const Icon(Icons.block_rounded, size: 56, color: AppTheme.borderColor),
+            const SizedBox(height: 10),
+            Text('Belum ada pembeli diblokir',
+                style: GoogleFonts.inter(
+                    color: AppTheme.textSecondary, fontSize: 13)),
+          ],
+        ),
+      );
+    }
+    return RefreshIndicator(
+      onRefresh: _loadBlocked,
+      color: AppTheme.primaryColor,
+      child: ListView.separated(
+        padding: const EdgeInsets.fromLTRB(12, 8, 12, 24),
+        itemCount: _blocked.length,
+        separatorBuilder: (_, _) => const SizedBox(height: 10),
+        itemBuilder: (context, i) => _blockedCard(_blocked[i]),
+      ),
+    );
+  }
+
+  Widget _blockedCard(Map<String, dynamic> b) {
+    final buyerId = b['buyer_id']?.toString() ?? '';
+    final name = (b['name']?.toString().trim().isNotEmpty ?? false)
+        ? b['name'].toString()
+        : 'Pembeli';
+    final phone = b['phone']?.toString();
+    final reason = b['reason']?.toString();
+    final busy = _blockBusy.contains(buyerId);
+    return Container(
+      decoration: BoxDecoration(
+        color: AppTheme.surfaceColor,
+        borderRadius: BorderRadius.circular(AppTheme.radiusLarge),
+        border: Border.all(color: AppTheme.errorColor.withValues(alpha: 0.4)),
+      ),
+      padding: const EdgeInsets.all(14),
+      child: Row(
+        children: [
+          Container(
+            width: 40,
+            height: 40,
+            decoration: BoxDecoration(
+              color: AppTheme.errorColor.withValues(alpha: 0.12),
+              shape: BoxShape.circle,
+            ),
+            child: const Icon(Icons.block_rounded,
+                color: AppTheme.errorColor, size: 20),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(name,
+                    style: GoogleFonts.inter(
+                        color: AppTheme.textPrimary,
+                        fontWeight: FontWeight.w700,
+                        fontSize: 13.5)),
+                if (phone != null && phone.trim().isNotEmpty)
+                  Text(phone,
+                      style: GoogleFonts.inter(
+                          color: AppTheme.textSecondary, fontSize: 11.5)),
+                if (reason != null && reason.trim().isNotEmpty)
+                  Padding(
+                    padding: const EdgeInsets.only(top: 2),
+                    child: Text('Alasan: $reason',
+                        style: GoogleFonts.inter(
+                            color: AppTheme.textSecondary,
+                            fontSize: 11,
+                            fontStyle: FontStyle.italic)),
+                  ),
+              ],
+            ),
+          ),
+          const SizedBox(width: 8),
+          busy
+              ? const SizedBox(
+                  width: 20,
+                  height: 20,
+                  child: CircularProgressIndicator(strokeWidth: 2))
+              : OutlinedButton(
+                  onPressed: () => _unblockBuyer(buyerId, name),
+                  style: OutlinedButton.styleFrom(
+                    foregroundColor: AppTheme.successColor,
+                    side: const BorderSide(color: AppTheme.successColor),
+                    padding: const EdgeInsets.symmetric(horizontal: 12),
+                    minimumSize: const Size(0, 36),
+                  ),
+                  child: const Text('Buka', style: TextStyle(fontSize: 12)),
+                ),
+        ],
+      ),
     );
   }
 
@@ -492,7 +718,7 @@ class _OnlineOrdersViewState extends ConsumerState<OnlineOrdersView>
 
   Widget _chip(String label, String value) {
     final sel = _filter == value;
-    final count = _countFor(value);
+    final count = value == 'diblokir' ? 0 : _countFor(value);
     final warn = value == 'menunggu' && count > 0;
     return ChoiceChip(
       label: Text(count > 0 ? '$label ($count)' : label),
@@ -515,7 +741,10 @@ class _OnlineOrdersViewState extends ConsumerState<OnlineOrdersView>
         fontSize: 12,
         fontWeight: sel ? FontWeight.bold : FontWeight.w500,
       ),
-      onSelected: (_) => setState(() => _filter = value),
+      onSelected: (_) {
+        setState(() => _filter = value);
+        if (value == 'diblokir') _loadBlocked();
+      },
     );
   }
 
@@ -749,6 +978,29 @@ class _OnlineOrdersViewState extends ConsumerState<OnlineOrdersView>
                 Text('#${o.code}',
                     style: GoogleFonts.inter(
                         color: AppTheme.textSecondary, fontSize: 11)),
+              if (o.buyerId != null)
+                PopupMenuButton<String>(
+                  tooltip: 'Opsi pembeli',
+                  padding: EdgeInsets.zero,
+                  icon: const Icon(Icons.more_vert_rounded,
+                      size: 18, color: AppTheme.textSecondary),
+                  onSelected: (v) {
+                    if (v == 'block') _blockBuyer(o);
+                  },
+                  itemBuilder: (_) => const [
+                    PopupMenuItem(
+                      value: 'block',
+                      child: Row(
+                        children: [
+                          Icon(Icons.block_rounded,
+                              size: 16, color: AppTheme.errorColor),
+                          SizedBox(width: 8),
+                          Text('Blokir Pembeli'),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
             ],
           ),
           if (o.buyerPhone?.trim().isNotEmpty == true || o.distanceKm != null)

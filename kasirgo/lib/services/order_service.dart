@@ -229,4 +229,60 @@ class OrderService {
       return false;
     }
   }
+
+  // ---------------------------------------------------------------------------
+  // BLOKIR PEMBELI (owner/kasir)
+  // ---------------------------------------------------------------------------
+
+  /// Blokir pembeli online agar tidak bisa membuat pesanan baru di outlet ini.
+  Future<Map<String, dynamic>> blockBuyer({
+    required String outletId,
+    required String buyerId,
+    String? reason,
+  }) async {
+    try {
+      final res = await _client.rpc('block_buyer', params: {
+        'p_outlet': outletId,
+        'p_buyer': buyerId,
+        'p_reason': reason,
+      });
+      if (res is Map) return Map<String, dynamic>.from(res);
+      return {'success': false, 'error': 'UNKNOWN'};
+    } catch (e) {
+      debugPrint('OrderService.blockBuyer error: $e');
+      return {'success': false, 'error': e.toString()};
+    }
+  }
+
+  /// Buka blokir pembeli.
+  Future<Map<String, dynamic>> unblockBuyer({
+    required String outletId,
+    required String buyerId,
+  }) async {
+    try {
+      final res = await _client.rpc('unblock_buyer', params: {
+        'p_outlet': outletId,
+        'p_buyer': buyerId,
+      });
+      if (res is Map) return Map<String, dynamic>.from(res);
+      return {'success': false, 'error': 'UNKNOWN'};
+    } catch (e) {
+      debugPrint('OrderService.unblockBuyer error: $e');
+      return {'success': false, 'error': e.toString()};
+    }
+  }
+
+  /// Daftar pembeli yang diblokir di outlet ini.
+  Future<List<Map<String, dynamic>>> listBlockedBuyers(String outletId) async {
+    try {
+      final res =
+          await _client.rpc('list_blocked_buyers', params: {'p_outlet': outletId});
+      return (res as List)
+          .map((e) => Map<String, dynamic>.from(e as Map))
+          .toList();
+    } catch (e) {
+      debugPrint('OrderService.listBlockedBuyers error: $e');
+      return [];
+    }
+  }
 }
