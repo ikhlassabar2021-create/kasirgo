@@ -193,6 +193,39 @@ class _OnlineOrdersViewState extends ConsumerState<OnlineOrdersView>
     }
   }
 
+  Future<void> _setCourier(Order order, String courier) async {
+    if (_busyOrders.contains(order.id) || order.courier == courier) return;
+    setState(() => _busyOrders.add(order.id));
+    try {
+      final ok = await _service.setOrderCourier(order.id, courier);
+      if (!mounted) return;
+      ScaffoldMessenger.of(context)
+        ..hideCurrentSnackBar()
+        ..showSnackBar(SnackBar(
+          content: Text(ok
+              ? 'Kurir: ${_courierName(courier)}'
+              : 'Gagal memilih kurir'),
+          backgroundColor: ok ? AppTheme.successColor : AppTheme.errorColor,
+        ));
+      if (ok) await _load(silent: true);
+    } finally {
+      if (mounted) setState(() => _busyOrders.remove(order.id));
+    }
+  }
+
+  String _courierName(String c) {
+    switch (c) {
+      case 'kurir_warung':
+        return 'Kurir Warung';
+      case 'grab':
+        return 'Grab';
+      case 'gojek':
+        return 'Gojek';
+      default:
+        return c;
+    }
+  }
+
   List<Order> get _filtered {
     switch (_filter) {
       case 'menunggu':
@@ -415,6 +448,70 @@ class _OnlineOrdersViewState extends ConsumerState<OnlineOrdersView>
     );
   }
 
+  Widget _courierRow(Order o) {
+    const options = <List<Object>>[
+      ['kurir_warung', 'Kurir Warung', Icons.storefront_rounded],
+      ['grab', 'Grab', Icons.delivery_dining_rounded],
+      ['gojek', 'Gojek', Icons.two_wheeler_rounded],
+    ];
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          children: [
+            const Icon(Icons.local_shipping_rounded,
+                size: 14, color: AppTheme.textSecondary),
+            const SizedBox(width: 6),
+            Text('Antar via',
+                style: GoogleFonts.inter(
+                    color: AppTheme.textSecondary,
+                    fontSize: 11.5,
+                    fontWeight: FontWeight.w600)),
+          ],
+        ),
+        const SizedBox(height: 6),
+        Wrap(
+          spacing: 8,
+          runSpacing: 8,
+          children: options.map((opt) {
+            final value = opt[0] as String;
+            final label = opt[1] as String;
+            final icon = opt[2] as IconData;
+            final sel = o.courier == value;
+            final busy = _busyOrders.contains(o.id);
+            return GestureDetector(
+              onTap: busy ? null : () => _setCourier(o, value),
+              child: Container(
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                decoration: BoxDecoration(
+                  color: sel ? AppTheme.primaryColor : AppTheme.surfaceColor,
+                  borderRadius: BorderRadius.circular(AppTheme.radiusMedium),
+                  border: Border.all(
+                      color: sel ? AppTheme.primaryColor : AppTheme.borderColor),
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(icon,
+                        size: 14,
+                        color: sel ? Colors.white : AppTheme.primaryColor),
+                    const SizedBox(width: 6),
+                    Text(label,
+                        style: GoogleFonts.inter(
+                            color: sel ? Colors.white : AppTheme.textPrimary,
+                            fontSize: 11.5,
+                            fontWeight: FontWeight.w700)),
+                  ],
+                ),
+              ),
+            );
+          }).toList(),
+        ),
+      ],
+    );
+  }
+
   Widget _orderCard(Order o) {
     final pending = o.paymentStatus == 'belum_konfirmasi' && o.status != 'dibatalkan';
     final canComplete = o.paymentStatus == 'divalidasi' && o.status != 'selesai';
@@ -460,7 +557,12 @@ class _OnlineOrdersViewState extends ConsumerState<OnlineOrdersView>
                           : AppTheme.primaryColor,
                     ),
                     const SizedBox(width: 4),
-                    Text(o.isDelivery ? 'DIANTAR' : 'AMBIL',
+                    Text(
+                        o.isDelivery
+                            ? (o.courierLabel != null
+                                ? 'DIANTAR - ${o.courierLabel!.toUpperCase()}'
+                                : 'DIANTAR')
+                            : 'AMBIL',
                         style: GoogleFonts.inter(
                             color: o.isDelivery
                                 ? AppTheme.accentColor
@@ -641,6 +743,13 @@ class _OnlineOrdersViewState extends ConsumerState<OnlineOrdersView>
                   style: GoogleFonts.inter(
                       color: AppTheme.textSecondary, fontSize: 11.5)),
             ),
+          ],
+          if (o.isDelivery &&
+              o.paymentStatus == 'divalidasi' &&
+              o.status != 'selesai' &&
+              o.status != 'dibatalkan') ...[
+            const SizedBox(height: 12),
+            _courierRow(o),
           ],
           if (pending) ...[
             const SizedBox(height: 12),

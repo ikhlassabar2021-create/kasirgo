@@ -74,6 +74,10 @@ class Order {
   final double? buyerLat;
   final double? buyerLng;
   final String? buyerAddress;
+
+  /// kurir_warung | grab | gojek (pilihan owner saat memproses pesanan antar).
+  final String? courier;
+
   final String? proofPath;
   final String? validatedBy;
   final DateTime? validatedAt;
@@ -100,6 +104,7 @@ class Order {
     this.buyerLat,
     this.buyerLng,
     this.buyerAddress,
+    this.courier,
     this.proofPath,
     this.validatedBy,
     this.validatedAt,
@@ -140,6 +145,7 @@ class Order {
           ? null
           : OrderItem._toDouble(json['buyer_lng']),
       buyerAddress: json['buyer_address']?.toString(),
+      courier: json['courier']?.toString(),
       proofPath: json['proof_path']?.toString(),
       validatedBy: json['validated_by']?.toString(),
       validatedAt: _toDate(json['validated_at']),
@@ -169,6 +175,7 @@ class Order {
       'buyer_lat': buyerLat,
       'buyer_lng': buyerLng,
       'buyer_address': buyerAddress,
+      'courier': courier,
       'proof_path': proofPath,
       'validated_by': validatedBy,
       'validated_at': validatedAt?.toIso8601String(),
@@ -197,6 +204,19 @@ class Order {
 
   bool get isPaid => paymentStatus == 'divalidasi';
   bool get isDelivery => fulfillment == 'delivery';
+
+  String? get courierLabel {
+    switch (courier) {
+      case 'kurir_warung':
+        return 'Kurir Warung';
+      case 'grab':
+        return 'Grab';
+      case 'gojek':
+        return 'Gojek';
+      default:
+        return null;
+    }
+  }
 
   static DateTime? _toDate(dynamic v) {
     if (v == null) return null;

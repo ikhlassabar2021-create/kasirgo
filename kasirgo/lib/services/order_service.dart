@@ -181,4 +181,18 @@ class OrderService {
       return false;
     }
   }
+
+  /// Pilih kurir untuk pesanan antar (kurir_warung/grab/gojek).
+  Future<bool> setOrderCourier(String orderId, String courier) async {
+    try {
+      await _client.from('orders').update({
+        'courier': courier,
+        'updated_at': DateTime.now().toIso8601String(),
+      }).eq('id', orderId);
+      return true;
+    } catch (e) {
+      debugPrint('OrderService.setOrderCourier error: $e');
+      return false;
+    }
+  }
 }
