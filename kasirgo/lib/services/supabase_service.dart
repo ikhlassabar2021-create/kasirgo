@@ -1965,6 +1965,27 @@ class SupabaseService {
     }
   }
 
+  /// Ambil daftar kategori unik produk milik outlet (untuk Lapak Live).
+  Future<List<String>> getProductCategories(String outletId) async {
+    if (outletId.isEmpty) return const [];
+    try {
+      final res = await _client
+          .from('products')
+          .select('category')
+          .eq('outlet_id', outletId)
+          .not('category', 'is', null);
+      final categories = <String>{};
+      for (final row in res) {
+        final cat = (row['category'] as String?)?.trim() ?? '';
+        if (cat.isNotEmpty) categories.add(cat);
+      }
+      return categories.toList()..sort();
+    } catch (e) {
+      debugPrint('getProductCategories error: $e');
+      return const [];
+    }
+  }
+
   /// Menu publik untuk pelanggan QR meja (tanpa login).
   Future<List<Product>> getPublicMenu(String outletId) async {
     try {

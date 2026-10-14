@@ -56,25 +56,14 @@ class _LapakLiveScreenState extends ConsumerState<LapakLiveScreen> {
   List<ServiceQueueEntry> _queue = const [];
 
   Future<List<String>> _fetchUniqueCategories(String outletId) async {
-    if (outletId.isEmpty) return const [];
+    if (outletId.isEmpty) return const ['Makanan', 'Minuman'];
     try {
-      final result = await _supabase._client
-          .from('products')
-          .select('category')
-          .eq('outlet_id', outletId)
-          .neq('category', '')
-          .notEquals('category', ''); // avoid 'is' keyword
-      
-      final categories = <String>{};
-      for (final item in result) {
-        final cat = item['category'] as String?;
-        if (cat != null && cat.isNotEmpty) {
-          categories.add(cat);
-        }
-      }
-      return categories.toList()..sort();
+      final categories = await _supabase.getProductCategories(outletId);
+      return categories.isEmpty
+          ? const ['Makanan', 'Minuman']
+          : categories;
     } catch (e) {
-      print('Error fetching categories: $e');
+      debugPrint('Error fetching categories: $e');
       return const ['Makanan', 'Minuman']; // fallback
     }
   }
