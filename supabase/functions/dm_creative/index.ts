@@ -238,6 +238,24 @@ Deno.serve(async (req: Request) => {
       .from("platform_configs").select("value").eq("key", "digital_marketing_llm").maybeSingle();
     const globalCfg: Json = dcfg?.value ?? {};
 
+    // Item F: Squad DM default OFF. Superadmin nyalakan lewat Control Plane
+    // (digital_marketing_llm.aktif). Platform admin bypass.
+    if (!isPlatformAdmin && globalCfg?.aktif !== true) {
+      return json({
+        success: true,
+        gated: true,
+        blocks: [
+          {
+            type: "card",
+            tone: "warning",
+            title: "Squad DM belum tersedia",
+            body: "Fitur ini sedang disiapkan. Hubungi admin KasirGo untuk informasi lebih lanjut.",
+          },
+        ],
+        disclaimer: DISCLAIMER,
+      });
+    }
+
     const { data: override } = await admin
       .from("outlet_dm_configs")
       .select("provider, base_url, api_key_enc, model, temperature, max_tokens, is_active, unlimited_tokens, token_quota")

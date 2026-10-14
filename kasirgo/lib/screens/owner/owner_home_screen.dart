@@ -11,6 +11,7 @@ import '../../models/product.dart';
 import '../../providers/auth_provider.dart';
 import '../../providers/outlet_provider.dart';
 import '../../providers/module_provider.dart';
+import 'design_studio_screen.dart';
 import '../../services/supabase_service.dart';
 import '../../utils/formatters.dart';
 import '../../utils/ai_engine.dart';
@@ -960,6 +961,22 @@ class _OwnerHomeScreenState extends ConsumerState<OwnerHomeScreen> {
       ),
     );
 
+
+    // Squad DM (Digital Marketing AI) — default OFF, diaktifkan superadmin
+    // via Control Plane (platform_configs 'digital_marketing_llm'.aktif).
+    final dmEnabled = ref.watch(dmEnabledProvider).valueOrNull ?? false;
+    if (dmEnabled) {
+      quickActionItems.add(
+        _ModuleCard(
+          icon: Icons.campaign_rounded,
+          title: 'Squad DM',
+          subtitle: 'Desain & Promosi AI',
+          color: const Color(0xFFDB2777),
+          onTap: () => Navigator.push(context,
+              MaterialPageRoute(builder: (_) => const DesignStudioScreen())),
+        ),
+      );
+    }
 
     quickActionItems.add(
       _ModuleCard(
