@@ -15,6 +15,7 @@ class Entitlements {
   final DateTime? trialEndsAt;
   final DateTime? supporterEndDate;
   final String status; // none | trial | active | expired | cancelled
+  final bool kycVerified;
 
   const Entitlements({
     required this.outletId,
@@ -24,13 +25,14 @@ class Entitlements {
     this.trialEndsAt,
     this.supporterEndDate,
     this.status = 'none',
+    this.kycVerified = false,
   });
 
   bool get isTrialActive =>
       trialEndsAt != null && DateTime.now().isBefore(trialEndsAt!);
 
-  /// Akses premium terbuka bila status aktif atau sedang masa trial.
-  bool get hasAccess => isSupporter || isTrialActive;
+  /// Akses premium terbuka bila verified KYC atau (trial/active).
+  bool get hasAccess => kycVerified || (isSupporter || isTrialActive);
 
   int get trialDaysLeft {
     if (!isTrialActive) return 0;
@@ -44,6 +46,7 @@ class Entitlements {
     DateTime? trialEndsAt,
     DateTime? supporterEndDate,
     String? status,
+    bool? kycVerified,
   }) {
     return Entitlements(
       outletId: outletId,
@@ -53,6 +56,7 @@ class Entitlements {
       trialEndsAt: trialEndsAt ?? this.trialEndsAt,
       supporterEndDate: supporterEndDate ?? this.supporterEndDate,
       status: status ?? this.status,
+      kycVerified: kycVerified ?? this.kycVerified,
     );
   }
 }
@@ -263,7 +267,6 @@ class SupporterService {
   // ---------------------------------------------------------------------------
 
   Future<Entitlements> getEntitlements(String outletId) async {
-    final billing = await getBillingConfig();
     Entitlements ent = Entitlements(outletId: outletId);
 
     try {
@@ -283,6 +286,7 @@ class SupporterService {
           trialEndsAt: res['trial_ends_at'] != null
               ? DateTime.tryParse(res['trial_ends_at'].toString())
               : null,
+          kycVerified: false, // will be loaded below
         );
       }
     } catch (_) {}
@@ -312,8 +316,24 @@ class SupporterService {
       }
     } catch (_) {}
 
+    // Load KYC verified status from outlet_kyc
+    try {
+      final kyc = await _client
+          .from('outlet_kyc')
+          .select('auto_verified, status')
+          .eq('outlet_id', outletId)
+          .maybeSingle();
+      if (kyc != null) {
+        final bool? autoVerified = kyc['auto_verified'];
+        final String? status = kyc['status'];
+        final kycVerified = (autoVerified == true || status == 'verified');
+        ent = ent.copyWith(kycVerified: kycVerified);
+      }
+    } catch (_) {}
+
     if (ent.status == 'none' && ent.isTrialActive) ent = ent.copyWith(status: 'trial');
     // Trial memberi akses premium (ad_free mengikuti harga config).
+    final billing = await getConfig('billing');
     if (ent.isTrialActive && billing['ad_free_for_supporter'] != false) {
       ent = ent.copyWith(adFree: ent.adFree);
     }

@@ -181,13 +181,8 @@ class _SupporterFeatureGateState extends ConsumerState<SupporterFeatureGate> {
     }
   }
 
-  Future<void> _startTrial() async {
-    final outletId = ref.read(currentUserProvider)?.outletId;
-    if (outletId == null || outletId.isEmpty) return;
-    setState(() => _loading = true);
-    await SupporterService().ensureTrial(outletId);
-    await _check();
-  }
+  // Removed: Trial button gone (Item 15) - force KYC now required
+  // Future<void> _startTrial() async { ... }
 
   @override
   Widget build(BuildContext context) {
@@ -199,12 +194,16 @@ class _SupporterFeatureGateState extends ConsumerState<SupporterFeatureGate> {
       );
     }
     if (_allowed) return widget.child;
+    
+    // Check if KYC not verified - show appropriate message
+    final kycNotVerified = _ent != null && !_ent!.kycVerified;
+    
     return _LockedScaffold(
       title: widget.title ??
           SupporterService.featureLabels[widget.featureKey] ??
           'Fitur Pendukung',
       trialDaysLeft: _ent?.trialDaysLeft ?? 0,
-      onTrial: _startTrial,
+      kycNotVerified: kycNotVerified,
       onUpgrade: () => _openSupporter(context),
     );
   }
@@ -214,14 +213,14 @@ class _LockedScaffold extends StatelessWidget {
   const _LockedScaffold({
     required this.title,
     required this.onUpgrade,
-    required this.onTrial,
     this.trialDaysLeft = 0,
+    this.kycNotVerified = false,
   });
 
   final String title;
   final VoidCallback onUpgrade;
-  final VoidCallback onTrial;
   final int trialDaysLeft;
+  final bool kycNotVerified;
 
   @override
   Widget build(BuildContext context) {
@@ -239,73 +238,83 @@ class _LockedScaffold extends StatelessWidget {
                 Container(
                   padding: const EdgeInsets.all(20),
                   decoration: BoxDecoration(
-                    color: AppTheme.warningColor.withValues(alpha: 0.12),
+                    color: kycNotVerified 
+                        ? AppTheme.warningColor.withValues(alpha: 0.15)
+                        : AppTheme.primaryColor.withValues(alpha: 0.12),
                     shape: BoxShape.circle,
                   ),
-                  child: const Icon(Icons.lock_rounded,
-                      color: AppTheme.warningColor, size: 38),
+                  child: Icon(Icons.lock_rounded,
+                      color: kycNotVerified 
+                          ? AppTheme.warningColor
+                          : AppTheme.primaryColor, size: 38),
                 ),
                 const SizedBox(height: 18),
-                Text(title,
-                    textAlign: TextAlign.center,
-                    style: const TextStyle(
-                        fontSize: 18,
-                        fontWeight: FontWeight.w800,
-                        color: AppTheme.textPrimary)),
+                if (kycNotVerified)
+                  Text('Verifikasi KYC Diperlukan',
+                      textAlign: TextAlign.center,
+                      style: const TextStyle(
+                          fontSize: 18, fontWeight: FontWeight.w800, color: AppTheme.warningColor))
+                else
+                  Text(title,
+                      textAlign: TextAlign.center,
+                      style: const TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.w800,
+                          color: AppTheme.textPrimary)),
                 const SizedBox(height: 10),
-                const Text(
-                  'Fitur ini bagian dari Program Pendukung KasirGo '
-                  '(Rp50.000/bulan). Fitur inti tetap gratis selamanya.',
-                  textAlign: TextAlign.center,
-                  style: TextStyle(
-                      fontSize: 13, color: AppTheme.textSecondary, height: 1.5),
-                ),
-                if (trialDaysLeft > 0) ...[
+                if (kycNotVerified)
+                  const Text(
+                    'Verifikasi KYC diperlukan untuk menggunakan fitur ini.\nSilakan hubungi admin KasirGo untuk verifikasi.',
+                    textAlign: TextAlign.center,
+                    style: TextStyle(
+                        fontSize: 13, color: AppTheme.textSecondary, height: 1.5),
+                  )
+                else
+                  const Text(
+                    'Fitur ini bagian dari Program Pendukung KasirGo '
+                    '(Rp50.000/bulan). Fitur inti tetap gratis selamanya.',
+                    textAlign: TextAlign.center,
+                    style: TextStyle(
+                        fontSize: 13, color: AppTheme.textSecondary, height: 1.5),
+                  ),
+                if (!kycNotVerified && trialDaysLeft > 0) ...[
                   const SizedBox(height: 8),
                   Text('Masa trial Anda tersisa $trialDaysLeft hari.',
                       style: const TextStyle(
                           fontSize: 12, color: AppTheme.successColor)),
                 ],
                 const SizedBox(height: 22),
-                SizedBox(
-                  width: double.infinity,
-                  height: 48,
-                  child: ElevatedButton.icon(
-                    onPressed: onTrial,
-                    icon: const Icon(Icons.rocket_launch_rounded, size: 18),
-                    label: const Text('Coba Trial Gratis',
-                        style: TextStyle(fontWeight: FontWeight.bold)),
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: AppTheme.secondaryColor,
-                      foregroundColor: Colors.white,
-                      shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(12)),
-                    ),
-                  ),
-                ),
-                const SizedBox(height: 10),
-                SizedBox(
-                  width: double.infinity,
-                  height: 48,
-                  child: ElevatedButton.icon(
+                if (kycNotVerified)
+                  ElevatedButton.icon(
                     onPressed: onUpgrade,
-                    icon: const Icon(Icons.favorite_rounded, size: 18),
-                    label: const Text('Upgrade ke Pendukung',
+                    icon: const Icon(Icons.check_circle_rounded, size: 18),
+                    label: const Text('Hubungi Admin',
                         style: TextStyle(fontWeight: FontWeight.bold)),
                     style: ElevatedButton.styleFrom(
-                      backgroundColor: AppTheme.primaryColor,
+                      backgroundColor: AppTheme.warningColor,
                       foregroundColor: Colors.white,
+                      minimumSize: const Size(double.infinity, 48),
                       shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(12)),
                     ),
+                  )
+                else
+                  SizedBox(
+                    width: double.infinity,
+                    height: 48,
+                    child: ElevatedButton.icon(
+                      onPressed: onUpgrade,
+                      icon: const Icon(Icons.shopping_cart_rounded, size: 18),
+                      label: const Text('Beli Sekarang',
+                          style: TextStyle(fontWeight: FontWeight.bold)),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: AppTheme.primaryColor,
+                        foregroundColor: Colors.white,
+                        shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12)),
+                      ),
+                    ),
                   ),
-                ),
-                const SizedBox(height: 10),
-                TextButton(
-                  onPressed: () => Navigator.of(context).maybePop(),
-                  child: const Text('Kembali',
-                      style: TextStyle(color: AppTheme.textSecondary)),
-                ),
               ],
             ),
           ),
