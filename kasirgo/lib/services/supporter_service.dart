@@ -127,6 +127,8 @@ class SupporterService {
     'period': 'monthly',
     'trial_days': 14,
     'auto_renew_default': true,
+    // Item 4: trial default OFF. Diatur superadmin via Control Plane.
+    'trial_enabled': false,
   };
 
   static const Map<String, dynamic> fallbackAds = {
@@ -358,7 +360,22 @@ class SupporterService {
   /// Reverse trial: 14 hari otomatis setelah KYC verified (idempotent).
   /// Dijalankan server-side via RPC `ensure_supporter_trial` (RLS owner
   /// tidak boleh menulis supporters/entitlements langsung).
+  ///
+  /// Item 4: trial HANYA diberikan bila superadmin mengaktifkan flag
+  /// `billing.trial_enabled` (default OFF). Bila OFF, pemanggilan di-skip.
+  Future<bool> isTrialEnabled() async {
+    try {
+      final cfg = await getBillingConfig();
+      return cfg['trial_enabled'] == true;
+    } catch (_) {
+      return false;
+    }
+  }
+
   Future<Entitlements> ensureTrial(String outletId) async {
+    if (!await isTrialEnabled()) {
+      return getEntitlements(outletId);
+    }
     try {
       await _client.rpc('ensure_supporter_trial', params: {'p_outlet': outletId});
       await _invalidateCache();

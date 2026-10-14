@@ -90,6 +90,7 @@ type TabId =
   | 'report'
   | 'kyc'
   | 'quota'
+  | 'billing'
   | 'flags'
   | 'automation'
   | 'override'
@@ -112,6 +113,7 @@ const TABS: { id: TabId; name: string; icon: any }[] = [
   { id: 'report', name: 'Laporan', icon: ScrollText },
   { id: 'kyc', name: 'KYC', icon: ShieldCheck },
   { id: 'quota', name: 'Kuota & Limit', icon: Users },
+  { id: 'billing', name: 'Program Pendukung', icon: Wallet },
   { id: 'flags', name: 'Feature Flags', icon: Flag },
   { id: 'automation', name: 'Otomatisasi', icon: Zap },
   { id: 'override', name: 'Override & Riwayat', icon: Layers },
@@ -3125,6 +3127,12 @@ export function ControlPlanePage() {
             { key: 'max_admin', label: 'Maks Admin Gratis', type: 'number' },
             { key: 'max_cashier', label: 'Maks Kasir Gratis', type: 'number' },
             { key: 'extra_from_supporter', label: 'Slot Tambahan via Pendukung', type: 'boolean', hint: 'Buka slot ekstra untuk Pendukung' },
+          ]} />}
+          {activeId === 'billing' && <StructuredConfigTab configKey="billing" title="Program Pendukung" subtitle="Harga langganan & kebijakan trial. Trial default OFF: outlet baru hanya mendapat masa coba bila diaktifkan di sini." fields={[
+            { key: 'supporter_price', label: 'Harga Pendukung (Rp/bulan)', type: 'number', hint: 'Satu harga untuk semua fitur premium.' },
+            { key: 'trial_days', label: 'Durasi Trial (hari)', type: 'number', hint: 'Dipakai hanya bila trial diaktifkan.' },
+            { key: 'trial_enabled', label: 'Aktifkan Trial Gratis', type: 'boolean', hint: 'OFF (default): outlet baru langsung mengikuti program gratis (fitur inti) tanpa trial. ON: outlet baru otomatis mendapat trial.' },
+            { key: 'auto_renew_default', label: 'Auto-Renew Default', type: 'boolean', hint: 'Aktifkan perpanjangan otomatis secara default.' },
           ]} />}
           {activeId === 'flags' && <FlagsTab />}
           {activeId === 'automation' && <AutomationTab />}

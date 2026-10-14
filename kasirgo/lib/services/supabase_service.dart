@@ -278,20 +278,24 @@ class SupabaseService {
 
   /// Phase 17E: cari produk publik di seluruh outlet (marketplace).
   /// [lat]/[lng] opsional; bila diberikan hasil dibatasi radius.
+  /// Item 2: [businessType] (tipe usaha outlet) opsional sebagai filter.
   Future<List<MarketplaceResult>> searchMarketplace({
     required String query,
     double? lat,
     double? lng,
     double? radiusKm,
+    String? businessType,
   }) async {
     final q = query.trim();
-    if (q.isEmpty) return const [];
+    final type = (businessType ?? '').trim();
+    if (q.isEmpty && type.isEmpty) return const [];
     try {
       final res = await _client.rpc('search_marketplace', params: {
         'p_query': q,
         'p_lat': lat,
         'p_lng': lng,
         'p_radius_km': radiusKm,
+        'p_business_type': type.isEmpty ? null : type,
       });
       return (res as List)
           .map((j) =>
@@ -1823,7 +1827,7 @@ class SupabaseService {
       final response = await _client
           .from('outlets')
           .select(
-              'id, is_open, is_mobile, service_queue_enabled, latitude, longitude, delivery_rules')
+              'id, type, is_open, is_mobile, service_queue_enabled, latitude, longitude, delivery_rules')
           .eq('id', outletId)
           .maybeSingle();
       return response == null ? null : Map<String, dynamic>.from(response);

@@ -7,6 +7,7 @@ import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
 
 import '../../config/app_theme.dart';
+import '../../config/constants.dart';
 import '../../models/app_customer.dart';
 import '../../models/cart.dart';
 import '../../models/geo_position.dart';
@@ -59,6 +60,9 @@ class _BuyerHomeTabState extends ConsumerState<BuyerHomeTab> {
   bool _searching = false;
   List<MarketplaceResult> _searchResults = const [];
 
+  /// Item 2: filter tipe usaha pada pencarian marketplace (null = semua).
+  String? _typeFilter;
+
   StreamSubscription<OutletLocation>? _liveSub;
   OutletLocation? _livePosition;
 
@@ -82,7 +86,7 @@ class _BuyerHomeTabState extends ConsumerState<BuyerHomeTab> {
   void _onSearchChanged(String value) {
     _searchDebounce?.cancel();
     final q = value.trim();
-    if (q.isEmpty) {
+    if (q.isEmpty && _typeFilter == null) {
       setState(() {
         _searchQuery = '';
         _searchResults = const [];
@@ -94,14 +98,31 @@ class _BuyerHomeTabState extends ConsumerState<BuyerHomeTab> {
     _searchDebounce = Timer(const Duration(milliseconds: 350), _runSearch);
   }
 
+  /// Item 2: pilih / lepas filter tipe usaha lalu cari ulang.
+  void _setTypeFilter(String? type) {
+    _searchDebounce?.cancel();
+    setState(() => _typeFilter = type);
+    if (_searchQuery.isEmpty && type == null) {
+      setState(() {
+        _searchResults = const [];
+        _searching = false;
+      });
+      return;
+    }
+    _runSearch();
+  }
+
+  bool get _searchActive => _searchQuery.isNotEmpty || _typeFilter != null;
+
   Future<void> _runSearch() async {
     final q = _searchQuery;
-    if (q.isEmpty) return;
+    if (q.isEmpty && _typeFilter == null) return;
     setState(() => _searching = true);
     final results = await _supabase.searchMarketplace(
       query: q,
       lat: _location?.lat,
       lng: _location?.lng,
+      businessType: _typeFilter,
     );
     if (!mounted || _searchQuery != q) return;
     setState(() {
@@ -115,6 +136,7 @@ class _BuyerHomeTabState extends ConsumerState<BuyerHomeTab> {
     _searchCtrl.clear();
     setState(() {
       _searchQuery = '';
+      _typeFilter = null;
       _searchResults = const [];
       _searching = false;
     });
@@ -456,10 +478,12 @@ class _BuyerHomeTabState extends ConsumerState<BuyerHomeTab> {
               _buildWelcomeCard(),
               const SizedBox(height: 16),
               _buildSearchBar(),
+              const SizedBox(height: 10),
+              _buildTypeFilter(),
               const SizedBox(height: 16),
               _buildLocationCard(),
               const SizedBox(height: 20),
-              if (_searchQuery.isNotEmpty)
+              if (_searchActive)
                 ..._buildSearchResults()
               else if (_selected == null)
                 ..._buildRadarSection()
@@ -523,11 +547,68 @@ class _BuyerHomeTabState extends ConsumerState<BuyerHomeTab> {
     );
   }
 
+  /// Item 2: chip filter tipe usaha untuk pencarian.
+  Widget _buildTypeFilter() {
+    final types = AppConstants.businessTypes;
+    return SizedBox(
+      height: 36,
+      child: ListView.separated(
+        scrollDirection: Axis.horizontal,
+        itemCount: types.length + 1,
+        separatorBuilder: (_, _) => const SizedBox(width: 8),
+        itemBuilder: (context, i) {
+          if (i == 0) {
+            final active = _typeFilter == null;
+            return _typeChip('Semua', active, () => _setTypeFilter(null));
+          }
+          final t = types[i - 1];
+          final active = _typeFilter?.toLowerCase() == t.toLowerCase();
+          return _typeChip(t, active, () => _setTypeFilter(active ? null : t));
+        },
+      ),
+    );
+  }
+
+  Widget _typeChip(String label, bool active, VoidCallback onTap) {
+    return GestureDetector(
+      onTap: onTap,
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 150),
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+        decoration: BoxDecoration(
+          color: active
+              ? AppTheme.primaryColor
+              : AppTheme.primaryColor.withValues(alpha: 0.08),
+          borderRadius: BorderRadius.circular(18),
+          border: Border.all(
+            color: active ? AppTheme.primaryColor : AppTheme.borderColor,
+          ),
+        ),
+        child: Center(
+          child: Text(
+            label,
+            style: GoogleFonts.inter(
+              fontSize: 12.5,
+              fontWeight: FontWeight.w600,
+              color: active ? Colors.white : AppTheme.primaryColor,
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
   List<Widget> _buildSearchResults() {
     return [
       AppSectionTitle(
         title: 'Hasil Pencarian',
-        subtitle: 'Untuk $_searchQuery',
+        subtitle: _searchQuery.isEmpty
+            ? (_typeFilter == null
+                ? 'Semua produk'
+                : 'Tipe usaha: $_typeFilter')
+            : (_typeFilter == null
+                ? 'Untuk $_searchQuery'
+                : 'Untuk "$_searchQuery" - tipe: $_typeFilter'),
         icon: Icons.search_rounded,
         trailing: IconButton(
           onPressed: _searching ? null : _runSearch,
@@ -648,6 +729,10 @@ class _BuyerHomeTabState extends ConsumerState<BuyerHomeTab> {
                       icon: Icons.place_rounded,
                       label: r.distanceLabel,
                     ),
+                    if ((r.outletType ?? '').isNotEmpty)
+                      _MetaChip(
+                          icon: Icons.storefront_rounded,
+                          label: r.outletType!),
                     if (r.hasDelivery)
                       const _MetaChip(
                           icon: Icons.delivery_dining_rounded,

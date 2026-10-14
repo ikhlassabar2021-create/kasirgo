@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 
 import '../../config/app_theme.dart';
+import '../../config/constants.dart';
 import '../../models/outlet_location.dart';
 import '../../providers/auth_provider.dart';
 import '../../services/location_service.dart';
@@ -46,7 +47,9 @@ class _LapakLiveScreenState extends ConsumerState<LapakLiveScreen> {
   final TextEditingController _manualCtrl = TextEditingController();
 
   List<String> _allCategories = [];
-  Set<String> _activeCategories = {};
+
+  /// Item 1: tipe usaha outlet (menggantikan "Kategori Produk Aktif").
+  String _businessType = '';
 
   double? _lat;
   double? _lng;
@@ -55,45 +58,25 @@ class _LapakLiveScreenState extends ConsumerState<LapakLiveScreen> {
   StreamSubscription<List<ServiceQueueEntry>>? _queueSub;
   List<ServiceQueueEntry> _queue = const [];
 
-  Future<List<String>> _fetchUniqueCategories(String outletId) async {
-    if (outletId.isEmpty) return const ['Makanan', 'Minuman'];
-    try {
-      final categories = await _supabase.getProductCategories(outletId);
-      return categories.isEmpty
-          ? const ['Makanan', 'Minuman']
-          : categories;
-    } catch (e) {
-      debugPrint('Error fetching categories: $e');
-      return const ['Makanan', 'Minuman']; // fallback
-    }
+  /// Item 1: pilih tipe usaha (satu pilihan).
+  void _selectBusinessType(String type) {
+    setState(() => _businessType = type);
   }
 
-  void _toggleCategory(String category, bool checked) {
-    setState(() {
-      if (checked) {
-        _activeCategories.add(category);
-      } else {
-        _activeCategories.remove(category);
-      }
-    });
-  }
-
-  Future<void> _saveCategories() async {
-    if (_allCategories.isEmpty) return;
+  Future<void> _saveBusinessType() async {
     final outletId = _outletId;
-
-    if (outletId.isEmpty) return;
+    if (outletId.isEmpty || _businessType.isEmpty) return;
 
     setState(() => _saving = true);
-    final ok = await _supabase.saveOutletCategories(
+    final ok = await _supabase.updateOutletType(
       outletId: outletId,
-      categories: _activeCategories.toList(),
+      businessType: _businessType,
     );
     if (!mounted) return;
     setState(() => _saving = false);
 
     _snack(
-      ok ? 'Kategori aktif disimpan.' : 'Gagal menyimpan kategori.',
+      ok ? 'Tipe usaha disimpan.' : 'Gagal menyimpan tipe usaha.',
       ok ? AppTheme.successColor : AppTheme.errorColor,
     );
   }
@@ -129,10 +112,14 @@ class _LapakLiveScreenState extends ConsumerState<LapakLiveScreen> {
     if (!mounted) return;
 
     final manualValue = (rules['manual_value'] as num?)?.toDouble() ?? 0;
-    final activeCats = (rules['categories'] as List<dynamic>?)?.map((e) => e.toString()).toSet() ?? {};
 
-    // Fetch unique product categories for this outlet
-    final allCats = await _fetchUniqueCategories(outletId);
+    // Item 1: tipe usaha outlet (kanonik, case-insensitive match ke daftar).
+    final rawType = (cfg?['type'] as String?)?.trim() ?? '';
+    final businessTypes = AppConstants.businessTypes;
+    final matchedType = businessTypes.firstWhere(
+      (t) => t.toLowerCase() == rawType.toLowerCase(),
+      orElse: () => rawType.isEmpty ? businessTypes.first : rawType,
+    );
 
     setState(() {
       _isOpen = cfg?['is_open'] == true;
@@ -140,8 +127,8 @@ class _LapakLiveScreenState extends ConsumerState<LapakLiveScreen> {
       _queueEnabled = cfg?['service_queue_enabled'] == true;
       _manualOngkir = rules['manual'] == true;
       _manualCtrl.text = manualValue > 0 ? manualValue.toStringAsFixed(0) : '';
-      _allCategories = allCats;
-      _activeCategories = activeCats.isNotEmpty ? activeCats : {'Makanan', 'Minuman'}; // default
+      _allCategories = businessTypes;
+      _businessType = matchedType;
       _lat = loc?.latitude;
       _lng = loc?.longitude;
       _locationUpdatedAt = loc?.updatedAt;
@@ -415,7 +402,7 @@ class _LapakLiveScreenState extends ConsumerState<LapakLiveScreen> {
                  const SizedBox(height: 16),
                  _deliveryCard(),
                  const SizedBox(height: 16),
-                 _categoryCard(),
+                 _businessTypeCard(),
                  const SizedBox(height: 16),
                  _queueCard(),
                ],
@@ -570,21 +557,21 @@ class _LapakLiveScreenState extends ConsumerState<LapakLiveScreen> {
     );
   }
 
-  Widget _categoryCard() {
+  Widget _businessTypeCard() {
     return AppCard(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           const AppSectionTitle(
-            title: 'Kategori Produk Aktif',
-            subtitle: 'Pilih kategori yang tampil saat lapak live',
-            icon: Icons.category_rounded,
+            title: 'Tipe Usaha',
+            subtitle: 'Tipe usaha ini tampil di lapak & pencarian pembeli',
+            icon: Icons.storefront_rounded,
           ),
           if (_allCategories.isEmpty)
             Padding(
               padding: const EdgeInsets.symmetric(vertical: 8),
               child: Text(
-                'Belum ada produk atau semua kategori sudah dipilih.',
+                'Tipe usaha belum tersedia.',
                 style: GoogleFonts.inter(
                     fontSize: 12, color: AppTheme.textSecondary),
               ),
@@ -593,10 +580,10 @@ class _LapakLiveScreenState extends ConsumerState<LapakLiveScreen> {
             Wrap(
               spacing: 8,
               runSpacing: 8,
-              children: _allCategories.map((cat) {
-                final active = _activeCategories.contains(cat);
+              children: _allCategories.map((type) {
+                final active = _businessType.toLowerCase() == type.toLowerCase();
                 return GestureDetector(
-                  onTap: () => _toggleCategory(cat, !active),
+                  onTap: () => _selectBusinessType(type),
                   child: AnimatedContainer(
                     duration: const Duration(milliseconds: 200),
                     padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
@@ -612,13 +599,15 @@ class _LapakLiveScreenState extends ConsumerState<LapakLiveScreen> {
                       mainAxisSize: MainAxisSize.min,
                       children: [
                         Icon(
-                          Icons.check_circle_rounded,
+                          active
+                              ? Icons.radio_button_checked_rounded
+                              : Icons.radio_button_unchecked_rounded,
                           size: 16,
                           color: active ? AppTheme.primaryColor : AppTheme.textSecondary,
                         ),
                         const SizedBox(width: 6),
                         Text(
-                          cat,
+                          type,
                           style: GoogleFonts.inter(
                             fontSize: 13,
                             fontWeight: FontWeight.w600,
@@ -633,10 +622,10 @@ class _LapakLiveScreenState extends ConsumerState<LapakLiveScreen> {
             ),
           const SizedBox(height: 16),
           AppButton(
-            label: 'Simpan Kategori',
+            label: 'Simpan Tipe Usaha',
             icon: Icons.save_rounded,
             isLoading: _saving,
-            onPressed: _saving ? null : _saveCategories,
+            onPressed: _saving ? null : _saveBusinessType,
             expanded: true,
           ),
         ],

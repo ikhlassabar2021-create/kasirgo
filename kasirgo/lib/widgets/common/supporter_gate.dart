@@ -21,6 +21,9 @@ Future<void> showSupporterLockedDialog(
   String featureKey,
 ) async {
   final label = SupporterService.featureLabels[featureKey] ?? 'Fitur ini';
+  // Item 4: tombol trial hanya muncul bila superadmin mengaktifkan trial.
+  final trialEnabled = await SupporterService().isTrialEnabled();
+  if (!context.mounted) return;
   await showModalBottomSheet<void>(
     context: context,
     backgroundColor: AppTheme.surfaceColor,
@@ -56,33 +59,39 @@ Future<void> showSupporterLockedDialog(
           ),
           const SizedBox(height: 14),
           Text(
-            '$label tersedia untuk Pendukung KasirGo (Rp50.000/bulan). '
-            'Fitur inti tetap gratis selamanya. Coba trial gratis dulu bila '
-            'belum pernah, atau langsung upgrade via QRIS otomatis.',
+            trialEnabled
+                ? '$label tersedia untuk Pendukung KasirGo (Rp50.000/bulan). '
+                    'Fitur inti tetap gratis selamanya. Coba trial gratis dulu '
+                    'bila belum pernah, atau langsung upgrade via QRIS otomatis.'
+                : '$label tersedia untuk Pendukung KasirGo (Rp50.000/bulan). '
+                    'Fitur inti tetap gratis selamanya. Upgrade kapan saja via '
+                    'QRIS otomatis.',
             style: const TextStyle(
                 fontSize: 13, color: AppTheme.textSecondary, height: 1.5),
           ),
           const SizedBox(height: 20),
-          SizedBox(
-            width: double.infinity,
-            height: 48,
-            child: ElevatedButton.icon(
-              onPressed: () {
-                Navigator.pop(ctx);
-                _openSupporter(context);
-              },
-              icon: const Icon(Icons.rocket_launch_rounded, size: 18),
-              label: const Text('Coba Trial Gratis',
-                  style: TextStyle(fontWeight: FontWeight.bold)),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: AppTheme.secondaryColor,
-                foregroundColor: Colors.white,
-                shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12)),
+          if (trialEnabled) ...[
+            SizedBox(
+              width: double.infinity,
+              height: 48,
+              child: ElevatedButton.icon(
+                onPressed: () {
+                  Navigator.pop(ctx);
+                  _openSupporter(context);
+                },
+                icon: const Icon(Icons.rocket_launch_rounded, size: 18),
+                label: const Text('Coba Trial Gratis',
+                    style: TextStyle(fontWeight: FontWeight.bold)),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: AppTheme.secondaryColor,
+                  foregroundColor: Colors.white,
+                  shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12)),
+                ),
               ),
             ),
-          ),
-          const SizedBox(height: 10),
+            const SizedBox(height: 10),
+          ],
           SizedBox(
             width: double.infinity,
             height: 48,

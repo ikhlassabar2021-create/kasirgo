@@ -11,6 +11,7 @@ double _toDouble(dynamic v) {
 class MarketplaceResult {
   final String outletId;
   final String outletName;
+  final String? outletType;
   final String productId;
   final String productName;
   final String? category;
@@ -24,6 +25,7 @@ class MarketplaceResult {
   const MarketplaceResult({
     required this.outletId,
     required this.outletName,
+    this.outletType,
     required this.productId,
     required this.productName,
     this.category,
@@ -39,6 +41,7 @@ class MarketplaceResult {
     return MarketplaceResult(
       outletId: json['outlet_id']?.toString() ?? '',
       outletName: json['outlet_name']?.toString() ?? '',
+      outletType: json['outlet_type']?.toString(),
       productId: json['product_id']?.toString() ?? '',
       productName: json['product_name']?.toString() ?? '',
       category: json['category']?.toString(),

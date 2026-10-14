@@ -50,6 +50,8 @@ class _KycGateState extends ConsumerState<KycGate> {
     _isOwner = user?.role == 'owner';
     final ok = await _kyc.refreshIfStale(outletId);
     // Reverse trial 14 hari otomatis (idempotent) setelah KYC verified.
+    // Item 4: hanya berjalan bila superadmin mengaktifkan trial_enabled;
+    // `ensureTrial` sendiri sudah memeriksa flag tersebut.
     if (ok) {
       // ignore: unawaited_futures
       SupporterService().ensureTrial(outletId);
