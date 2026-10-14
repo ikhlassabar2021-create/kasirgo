@@ -1,0 +1,13 @@
+{
+  "name": "kasirgo-e2e",
+  "private": true,
+  "version": "1.0.0",
+  "description": "Audit E2E KasirGo (Playwright)",
+  "scripts": {
+    "test": "playwright test",
+    "report": "playwright show-report"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.63.0"
+  }
+}

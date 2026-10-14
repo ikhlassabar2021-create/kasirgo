@@ -20,12 +20,48 @@ class SupabaseService {
       : _client = client ?? Supabase.instance.client;
   final SupabaseClient _client;
 
+  // ---------------------------------------------------------------------------
+  // Tahap 2: In-memory cache (khusus Web) agar pindah tab instan.
+  // Di Web, SQLite adalah no-op stub -> tanpa cache tiap tab re-fetch.
+  // TTL 120 detik; di-invalidate saat produk berubah / transaksi selesai.
+  // ---------------------------------------------------------------------------
+  static const Duration _cacheTtl = Duration(seconds: 120);
+  static final Map<String, _CacheEntry> _cache = {};
+
+  static bool _cacheFresh(String key) {
+    final e = _cache[key];
+    if (e == null) return false;
+    return DateTime.now().difference(e.at) < _cacheTtl;
+  }
+
+  static void _cachePut(String key, Object value) {
+    _cache[key] = _CacheEntry(value, DateTime.now());
+  }
+
+  /// Bersihkan cache produk (panggil saat tambah/edit/hapus produk atau
+  /// saat transaksi selesai). Aman dipanggil di semua platform.
+  static void invalidateProductCache() {
+    _cache.removeWhere((k, _) =>
+        k.startsWith('products:') || k.startsWith('categories:'));
+  }
+
+  /// Bersihkan cache profil outlet.
+  static void invalidateOutletCache() {
+    _cache.removeWhere((k, _) => k.startsWith('outlet:'));
+  }
+
   /// Panggil RPC Postgres (untuk fitur yang tidak butuh method khusus).
   Future<dynamic> rpc(String fn, {Map<String, dynamic>? params}) {
     return params == null ? _client.rpc(fn) : _client.rpc(fn, params: params);
   }
 
   Future<List<Product>> getProducts(String outletId) async {
+    final cacheKey = 'products:$outletId';
+    // Cache hanya di Web (mobile punya SQLite lokal sebagai sumber cepat).
+    if (kIsWeb && _cacheFresh(cacheKey)) {
+      final cached = _cache[cacheKey]!.value;
+      return (cached as List).cast<Product>();
+    }
     try {
       final response = await _client
           .from('products')
@@ -33,9 +69,11 @@ class SupabaseService {
           .eq('outlet_id', outletId)
           .order('name');
 
-      return (response as List)
+      final products = (response as List)
           .map((json) => Product.fromJson(json as Map<String, dynamic>))
           .toList();
+      if (kIsWeb) _cachePut(cacheKey, products);
+      return products;
     } catch (e) {
       return [];
     }
@@ -118,6 +156,7 @@ class SupabaseService {
           .select()
           .single();
 
+      invalidateProductCache();
       return Product.fromJson(response);
     } catch (e) {
       debugPrint('createProduct error: $e');
@@ -134,6 +173,7 @@ class SupabaseService {
           .select()
           .single();
 
+      invalidateProductCache();
       return Product.fromJson(response);
     } catch (e) {
       debugPrint('updateProduct error: $e');
@@ -159,6 +199,7 @@ class SupabaseService {
   Future<bool> deleteProduct(String id) async {
     try {
       await _client.from('products').delete().eq('id', id);
+      invalidateProductCache();
       return true;
     } catch (e) {
       return false;
@@ -1791,6 +1832,10 @@ class SupabaseService {
   }
 
   Future<Outlet?> getOutlet(String outletId) async {
+    final cacheKey = 'outlet:$outletId';
+    if (kIsWeb && _cacheFresh(cacheKey)) {
+      return _cache[cacheKey]!.value as Outlet?;
+    }
     try {
       final response = await _client
           .from('outlets')
@@ -1798,7 +1843,9 @@ class SupabaseService {
           .eq('id', outletId)
           .single();
 
-      return Outlet.fromJson(response);
+      final outlet = Outlet.fromJson(response);
+      if (kIsWeb) _cachePut(cacheKey, outlet);
+      return outlet;
     } catch (e) {
       return null;
     }
@@ -1815,6 +1862,7 @@ class SupabaseService {
           .from('outlets')
           .update({'type': businessType})
           .eq('id', outletId);
+      invalidateOutletCache();
       return true;
     } catch (e) {
       return false;
@@ -1972,6 +2020,10 @@ class SupabaseService {
   /// Ambil daftar kategori unik produk milik outlet (untuk Lapak Live).
   Future<List<String>> getProductCategories(String outletId) async {
     if (outletId.isEmpty) return const [];
+    final cacheKey = 'categories:$outletId';
+    if (kIsWeb && _cacheFresh(cacheKey)) {
+      return (_cache[cacheKey]!.value as List).cast<String>();
+    }
     try {
       final res = await _client
           .from('products')
@@ -1983,7 +2035,9 @@ class SupabaseService {
         final cat = (row['category'] as String?)?.trim() ?? '';
         if (cat.isNotEmpty) categories.add(cat);
       }
-      return categories.toList()..sort();
+      final sorted = categories.toList()..sort();
+      if (kIsWeb) _cachePut(cacheKey, sorted);
+      return sorted;
     } catch (e) {
       debugPrint('getProductCategories error: $e');
       return const [];
@@ -2227,4 +2281,11 @@ class SupabaseService {
     } catch (_) {}
     return null;
   }
+}
+
+/// Entri cache in-memory (Tahap 2) — nilai + waktu simpan.
+class _CacheEntry {
+  final Object value;
+  final DateTime at;
+  _CacheEntry(this.value, this.at);
 }

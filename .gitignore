@@ -7,3 +7,6 @@ node_modules/
 !docs/migrations/*.sql
 supabase/.temp/
 supabase/supabase/
+e2e/test-results/
+e2e/playwright-report/
+e2e/.playwright/

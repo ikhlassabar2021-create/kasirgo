@@ -2,33 +2,36 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 
 class AppTheme {
-  static const Color primaryColor = Color(0xFF0284C7); // Sky blue
-  static const Color secondaryColor = Color(0xFF0EA5E9); // Ocean blue
-  static const Color accentColor = Color(0xFF06B6D4); // Cyan
-  static const Color backgroundColor = Color(0xFFF8FAFC); // Clean white background
-  static const Color surfaceColor = Color(0xFFFFFFFF); // Pure white card
-  static const Color surfaceMutedColor = Color(0xFFF1F5F9); // Slate 100
-  static const Color errorColor = Color(0xFFEF4444);
-  static const Color successColor = Color(0xFF10B981);
+  // ---------------------------------------------------------------------------
+  // Design System v3 - "GoPay Merchant Clean UI"
+  // ---------------------------------------------------------------------------
+  static const Color primaryColor = Color(0xFF00AED6); // GoPay Cyan Blue
+  static const Color secondaryColor = Color(0xFF00AA13); // Gojek Green (CTA)
+  static const Color accentColor = Color(0xFF0081A0); // Cyan gelap (aksen)
+  static const Color backgroundColor = Color(0xFFF4F5F7); // Background utama
+  static const Color surfaceColor = Color(0xFFFFFFFF); // Kartu putih
+  static const Color surfaceMutedColor = Color(0xFFF0F2F4);
+  static const Color errorColor = Color(0xFFE02424);
+  static const Color successColor = Color(0xFF00AA13); // Gojek Green
   static const Color warningColor = Color(0xFFF59E0B);
-  static const Color textPrimary = Color(0xFF0F172A); // Slate 900
-  static const Color textSecondary = Color(0xFF64748B); // Slate 500
-  static const Color borderColor = Color(0xFFE2E8F0); // Slate 200
+  static const Color textPrimary = Color(0xFF101820); // Asphalt Black
+  static const Color textSecondary = Color(0xFF626E7A);
+  static const Color borderColor = Color(0xFFE8ECEF); // Border tipis kartu
 
   static const LinearGradient primaryGradient = LinearGradient(
     begin: Alignment.topLeft,
     end: Alignment.bottomRight,
-    colors: [Color(0xFF06B6D4), Color(0xFF0284C7)],
+    colors: [Color(0xFF00AED6), Color(0xFF0081A0)],
   );
 
   static const LinearGradient aiBadgeGradient = LinearGradient(
     begin: Alignment.topLeft,
     end: Alignment.bottomRight,
-    colors: [Color(0xFF06B6D4), Color(0xFF4F46E5)],
+    colors: [Color(0xFF00AED6), Color(0xFF0081A0)],
   );
 
   static const Color whatsAppColor = Color(0xFF25D366);
-  static const Color qrInkColor = Color(0xFF0F172A);
+  static const Color qrInkColor = Color(0xFF101820);
   static const Color scrimColor = Color(0x40000000);
 
   static const double radiusLarge = 16;
@@ -82,7 +85,7 @@ class AppTheme {
         surface: surfaceColor,
         error: errorColor,
       ),
-      textTheme: GoogleFonts.interTextTheme(
+      textTheme: GoogleFonts.plusJakartaSansTextTheme(
         ThemeData.light().textTheme,
       ).apply(
         bodyColor: textPrimary,
@@ -101,15 +104,15 @@ class AppTheme {
       ),
       elevatedButtonTheme: ElevatedButtonThemeData(
         style: ElevatedButton.styleFrom(
-          backgroundColor: primaryColor,
+          backgroundColor: secondaryColor,
           foregroundColor: Colors.white,
-          minimumSize: const Size(double.infinity, 44),
+          minimumSize: const Size(double.infinity, 52),
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(12),
           ),
           textStyle: const TextStyle(
             fontSize: 14,
-            fontWeight: FontWeight.w600,
+            fontWeight: FontWeight.w700,
           ),
         ),
       ),
@@ -138,10 +141,19 @@ class AppTheme {
       ),
       cardTheme: CardThemeData(
         color: surfaceColor,
-        elevation: 0,
+        elevation: 1,
+        shadowColor: const Color(0x14000000),
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(16),
           side: const BorderSide(color: borderColor),
+        ),
+      ),
+      bottomSheetTheme: const BottomSheetThemeData(
+        backgroundColor: surfaceColor,
+        surfaceTintColor: Colors.transparent,
+        showDragHandle: true,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
         ),
       ),
       bottomNavigationBarTheme: const BottomNavigationBarThemeData(

@@ -1,10 +1,8 @@
-import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../config/app_theme.dart';
 import '../../models/transaction.dart';
 import '../common/app_badge.dart';
-import '../common/app_button.dart';
 
 /// Isi keranjang murni (tanpa wrapper sheet) — dipakai di mobile sheet & tablet panel.
 class CartContent extends StatelessWidget {
@@ -40,9 +38,7 @@ class CartContent extends StatelessWidget {
       ),
       child: ClipRRect(
         borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
-        child: BackdropFilter(
-          filter: ImageFilter.blur(sigmaX: 18, sigmaY: 18),
-          child: Column(
+        child: Column(
             children: [
               if (showDragHandle)
                 Container(
@@ -114,12 +110,12 @@ class CartContent extends StatelessWidget {
               _CheckoutBar(
                 discountAmount: discountAmount,
                 total: total,
+                itemCount: items.length,
                 enabled: items.isNotEmpty,
                 onCheckout: onCheckout,
               ),
             ],
           ),
-        ),
       ),
     );
   }
@@ -311,65 +307,101 @@ class _QtyButton extends StatelessWidget {
 class _CheckoutBar extends StatelessWidget {
   final double discountAmount;
   final double total;
+  final int itemCount;
   final bool enabled;
   final VoidCallback onCheckout;
 
   const _CheckoutBar({
     required this.discountAmount,
     required this.total,
+    required this.itemCount,
     required this.enabled,
     required this.onCheckout,
   });
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.fromLTRB(16, 12, 16, 12),
-      decoration: const BoxDecoration(
-        color: AppTheme.surfaceColor,
-        border: Border(top: BorderSide(color: AppTheme.borderColor)),
-      ),
-      child: SafeArea(
-        top: false,
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            if (discountAmount > 0)
-              Padding(
-                padding: const EdgeInsets.only(bottom: 6),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Text('Diskon', style: GoogleFonts.inter(color: AppTheme.errorColor, fontSize: 12)),
-                    Text('- Rp ${discountAmount.toStringAsFixed(0)}',
-                        style: GoogleFonts.inter(color: AppTheme.errorColor, fontSize: 12)),
-                  ],
-                ),
+    // Design System v3: floating pill bar hijau (Gojek Green).
+    final active = enabled;
+    return SafeArea(
+      top: false,
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(12, 8, 12, 12),
+        child: Material(
+          color: Colors.transparent,
+          child: InkWell(
+            onTap: active ? onCheckout : null,
+            borderRadius: BorderRadius.circular(28),
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 12),
+              decoration: BoxDecoration(
+                color: active ? AppTheme.secondaryColor : AppTheme.textSecondary,
+                borderRadius: BorderRadius.circular(28),
+                boxShadow: active
+                    ? [
+                        BoxShadow(
+                          color:
+                              AppTheme.secondaryColor.withValues(alpha: 0.35),
+                          blurRadius: 14,
+                          offset: const Offset(0, 6),
+                        ),
+                      ]
+                    : null,
               ),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              crossAxisAlignment: CrossAxisAlignment.end,
-              children: [
-                Text(
-                  'TOTAL',
-                  style: GoogleFonts.inter(
-                    color: AppTheme.textSecondary,
-                    fontWeight: FontWeight.w700,
-                    fontSize: 11,
-                    letterSpacing: 1.0,
+              child: Row(
+                children: [
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        '$itemCount item',
+                        style: GoogleFonts.plusJakartaSans(
+                          color: Colors.white.withValues(alpha: 0.85),
+                          fontSize: 11,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                      if (discountAmount > 0)
+                        Text(
+                          '- Rp ${discountAmount.toStringAsFixed(0)}',
+                          style: GoogleFonts.plusJakartaSans(
+                            color: Colors.white.withValues(alpha: 0.85),
+                            fontSize: 10,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      Text(
+                        'Rp ${total.toStringAsFixed(0)}',
+                        style: GoogleFonts.plusJakartaSans(
+                          color: Colors.white,
+                          fontSize: 19,
+                          fontWeight: FontWeight.w800,
+                          letterSpacing: -0.4,
+                          fontFeatures: const [FontFeature.tabularFigures()],
+                        ),
+                      ),
+                    ],
                   ),
-                ),
-                _MoneyInline(value: total, size: 24, color: AppTheme.accentColor),
-              ],
+                  const Spacer(),
+                  Row(
+                    children: [
+                      Text(
+                        'Bayar',
+                        style: GoogleFonts.plusJakartaSans(
+                          color: Colors.white,
+                          fontSize: 15,
+                          fontWeight: FontWeight.w800,
+                        ),
+                      ),
+                      const SizedBox(width: 6),
+                      const Icon(Icons.arrow_forward_rounded,
+                          color: Colors.white, size: 20),
+                    ],
+                  ),
+                ],
+              ),
             ),
-            const SizedBox(height: 10),
-            AppButton(
-              label: 'Bayar Sekarang',
-              icon: Icons.lock_rounded,
-              height: AppTheme.touchTargetLarge,
-              onPressed: enabled ? onCheckout : null,
-            ),
-          ],
+          ),
         ),
       ),
     );
@@ -379,13 +411,11 @@ class _CheckoutBar extends StatelessWidget {
 class _MoneyInline extends StatelessWidget {
   final double value;
   final double size;
-  final Color color;
   final bool bold;
 
   const _MoneyInline({
     required this.value,
     required this.size,
-    this.color = AppTheme.textPrimary,
     this.bold = false,
   });
 
@@ -397,7 +427,7 @@ class _MoneyInline extends StatelessWidget {
       overflow: TextOverflow.ellipsis,
       textAlign: TextAlign.end,
       style: GoogleFonts.inter(
-        color: color,
+        color: AppTheme.textPrimary,
         fontSize: size,
         fontWeight: bold ? FontWeight.w800 : FontWeight.w800,
         letterSpacing: -0.4,

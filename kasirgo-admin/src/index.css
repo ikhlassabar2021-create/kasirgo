@@ -1,53 +1,53 @@
 @import "tailwindcss";
 
 @theme {
-  --color-bg: #F8FAFC;
+  --color-bg: #F4F5F7;
   --color-surface: #FFFFFF;
-  --color-border: #E2E8F0;
-  --color-primary: #0284C7;
-  --color-primary-light: #06B6D4;
-  --color-ink: #0F172A;
-  --color-muted: #64748B;
-  --color-success: #10B981;
+  --color-border: #E8ECEF;
+  --color-primary: #00AED6;
+  --color-primary-light: #0081A0;
+  --color-ink: #101820;
+  --color-muted: #626E7A;
+  --color-success: #00AA13;
   --color-warning: #F59E0B;
-  --color-danger: #EF4444;
-  --color-ai-from: #06B6D4;
-  --color-ai-to: #4F46E5;
+  --color-danger: #E02424;
+  --color-ai-from: #00AED6;
+  --color-ai-to: #0081A0;
 
   --radius-card: 16px;
   --radius-control: 12px;
   --radius-pill: 9999px;
 
-  --font-sans: 'Inter', system-ui, sans-serif;
+  --font-sans: 'Plus Jakarta Sans', system-ui, sans-serif;
 }
 
 * {
-  font-family: 'Inter', system-ui, -apple-system, sans-serif;
+  font-family: 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif;
 }
 
 body {
-  background-color: #F8FAFC;
-  color: #0F172A;
+  background-color: #F4F5F7;
+  color: #101820;
 }
 
-/* Ocean White surfaces */
+/* GoPay Merchant Clean UI surfaces */
 .card-surface {
   background: #FFFFFF;
-  border: 1px solid #E2E8F0;
+  border: 1px solid #E8ECEF;
   border-radius: 16px;
-  box-shadow: 0 1px 2px 0 rgba(15, 23, 42, 0.04);
+  box-shadow: 0 1px 2px 0 rgba(16, 24, 32, 0.04);
 }
 
 .card-shadow {
-  box-shadow: 0 1px 2px 0 rgba(15, 23, 42, 0.04);
+  box-shadow: 0 1px 2px 0 rgba(16, 24, 32, 0.04);
 }
 
 .ocean-gradient {
-  background: linear-gradient(135deg, #06B6D4 0%, #0284C7 100%);
+  background: linear-gradient(135deg, #00AED6 0%, #0081A0 100%);
 }
 
 .ai-gradient {
-  background: linear-gradient(135deg, #06B6D4 0%, #4F46E5 100%);
+  background: linear-gradient(135deg, #00AED6 0%, #0081A0 100%);
 }
 
 /* Smooth transitions */

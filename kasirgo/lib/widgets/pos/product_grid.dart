@@ -1,6 +1,7 @@
 import 'dart:io';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/rendering.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../config/app_theme.dart';
 import '../../models/product.dart';
@@ -50,6 +51,8 @@ class ProductGrid extends StatelessWidget {
                     : 2;
         return GridView.builder(
           padding: EdgeInsets.fromLTRB(10, 10, 10, bottomPadding),
+          scrollCacheExtent: const ScrollCacheExtent.pixels(500),
+          addRepaintBoundaries: true,
           gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
             crossAxisCount: crossAxis,
             childAspectRatio: 0.95,
@@ -57,14 +60,16 @@ class ProductGrid extends StatelessWidget {
             mainAxisSpacing: 8,
           ),
           itemCount: products.length,
-          itemBuilder: (context, index) => _ProductCard(
-            product: products[index],
-            inCartQty: cartQuantities[products[index].id] ?? 0,
-            displayPrice: customPrices?[products[index].id] ?? products[index].price,
-            originalPrice: originalPrices?[products[index].id],
-            discountBadge: discountBadges?[products[index].id],
-            onTap: onProductTap,
-            buildImage: _buildImage,
+          itemBuilder: (context, index) => RepaintBoundary(
+            child: _ProductCard(
+              product: products[index],
+              inCartQty: cartQuantities[products[index].id] ?? 0,
+              displayPrice: customPrices?[products[index].id] ?? products[index].price,
+              originalPrice: originalPrices?[products[index].id],
+              discountBadge: discountBadges?[products[index].id],
+              onTap: onProductTap,
+              buildImage: _buildImage,
+            ),
           ),
         );
       },

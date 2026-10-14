@@ -1,5 +1,3 @@
-import 'dart:ui';
-
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:fl_chart/fl_chart.dart';
@@ -727,7 +725,13 @@ class _OwnerHomeScreenState extends ConsumerState<OwnerHomeScreen> {
               _OutletTypeSetupBanner(outletId: userOutletId()),
               _QrisSetupBanner(outletId: userOutletId()),
               const SizedBox(height: 16),
-              _HeroSalesCard(sales: todaySales, txCount: todayCount),
+              _HeroSalesCard(
+                sales: todaySales,
+                txCount: todayCount,
+                onKasir: () => setState(() => _currentIndex = 2),
+                onOrders: () => setState(() => _currentIndex = 2),
+                onReport: () => setState(() => _currentIndex = 3),
+              ),
               const SizedBox(height: 12),
               _TargetProgressCard(sales: todaySales, outletId: userOutletId()),
               const SizedBox(height: 12),
@@ -1082,35 +1086,151 @@ class _OwnerHomeScreenState extends ConsumerState<OwnerHomeScreen> {
   }
 
   Widget _buildBottomNav() {
-    return ClipRRect(
-      child: BackdropFilter(
-        filter: ImageFilter.blur(sigmaX: 20, sigmaY: 20),
-        child: Container(
-          decoration: BoxDecoration(
-            color: AppTheme.surfaceColor.withValues(alpha: 0.72),
-            border: Border(top: BorderSide(color: Colors.white.withValues(alpha: 0.06))),
-          ),
-          child: BottomNavigationBar(
-            currentIndex: _currentIndex,
-            onTap: (index) => setState(() => _currentIndex = index),
-            type: BottomNavigationBarType.fixed,
-            backgroundColor: Colors.transparent,
-            elevation: 0,
-            selectedItemColor: AppTheme.accentColor,
-            unselectedItemColor: AppTheme.textSecondary,
-            selectedFontSize: 10.5,
-            unselectedFontSize: 10,
-            selectedLabelStyle: GoogleFonts.inter(fontWeight: FontWeight.w700, fontSize: 10.5),
-            unselectedLabelStyle: GoogleFonts.inter(fontWeight: FontWeight.w500, fontSize: 10),
-            items: const [
-              BottomNavigationBarItem(icon: Icon(Icons.dashboard_rounded), label: 'Dashboard'),
-              BottomNavigationBarItem(icon: Icon(Icons.inventory_2_rounded), label: 'Produk'),
-              BottomNavigationBarItem(icon: Icon(Icons.point_of_sale_rounded), label: 'Kasir'),
-              BottomNavigationBarItem(icon: Icon(Icons.bar_chart_rounded), label: 'Laporan'),
+    // Design System v3: Bottom nav solid putih (tanpa blur) 5 titik ala GoPay
+    // Merchant: Beranda, Produk, [Kasir menonjol], Laporan, Lainnya.
+    return Container(
+      decoration: const BoxDecoration(
+        color: AppTheme.surfaceColor,
+        border: Border(top: BorderSide(color: AppTheme.borderColor)),
+      ),
+      child: SafeArea(
+        top: false,
+        child: SizedBox(
+          height: 62,
+          child: Row(
+            children: [
+              _navItem(0, Icons.home_rounded, 'Beranda'),
+              _navItem(1, Icons.inventory_2_rounded, 'Produk'),
+              _centerPosButton(),
+              _navItem(3, Icons.bar_chart_rounded, 'Laporan'),
+              _navItem(-1, Icons.grid_view_rounded, 'Lainnya'),
             ],
           ),
         ),
       ),
+    );
+  }
+
+  Widget _navItem(int index, IconData icon, String label) {
+    final selected = index >= 0 && _currentIndex == index;
+    final color = selected ? AppTheme.primaryColor : AppTheme.textSecondary;
+    return Expanded(
+      child: InkWell(
+        onTap: () {
+          if (index == -1) {
+            _openMoreMenu();
+          } else {
+            setState(() => _currentIndex = index);
+          }
+        },
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(icon, size: 22, color: color),
+            const SizedBox(height: 3),
+            Text(
+              label,
+              style: GoogleFonts.plusJakartaSans(
+                fontSize: 10.5,
+                fontWeight: selected ? FontWeight.w700 : FontWeight.w500,
+                color: color,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _centerPosButton() {
+    final selected = _currentIndex == 2;
+    return Expanded(
+      child: InkWell(
+        onTap: () => setState(() => _currentIndex = 2),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Container(
+              width: 44,
+              height: 32,
+              decoration: BoxDecoration(
+                color: AppTheme.secondaryColor,
+                borderRadius: BorderRadius.circular(10),
+                boxShadow: selected
+                    ? [
+                        BoxShadow(
+                          color: AppTheme.secondaryColor.withValues(alpha: 0.4),
+                          blurRadius: 10,
+                          offset: const Offset(0, 4),
+                        ),
+                      ]
+                    : null,
+              ),
+              child: const Icon(Icons.point_of_sale_rounded,
+                  size: 20, color: Colors.white),
+            ),
+            const SizedBox(height: 3),
+            Text(
+              'Kasir',
+              style: GoogleFonts.plusJakartaSans(
+                fontSize: 10.5,
+                fontWeight: FontWeight.w700,
+                color: AppTheme.secondaryColor,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  /// Modal "Lainnya": sisa menu (Pelanggan, Karyawan, Pengaturan, Panduan).
+  void _openMoreMenu() {
+    showModalBottomSheet<void>(
+      context: context,
+      builder: (ctx) => SafeArea(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const SizedBox(height: 8),
+            _moreTile(ctx, Icons.people_rounded, 'Pelanggan', () {
+              Navigator.pop(ctx);
+              Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                      builder: (_) => const CustomerListScreen()));
+            }),
+            _moreTile(ctx, Icons.badge_rounded, 'Karyawan', () {
+              Navigator.pop(ctx);
+              Navigator.push(context,
+                  MaterialPageRoute(builder: (_) => const EmployeeScreen()));
+            }),
+            _moreTile(ctx, Icons.settings_rounded, 'Pengaturan', () {
+              Navigator.pop(ctx);
+              Navigator.push(context,
+                  MaterialPageRoute(builder: (_) => const SettingsScreen()));
+            }),
+            _moreTile(ctx, Icons.menu_book_rounded, 'Panduan', () {
+              Navigator.pop(ctx);
+              Navigator.push(context,
+                  MaterialPageRoute(builder: (_) => const GuideScreen()));
+            }),
+            const SizedBox(height: 8),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _moreTile(
+      BuildContext ctx, IconData icon, String label, VoidCallback onTap) {
+    return ListTile(
+      leading: Icon(icon, color: AppTheme.primaryColor),
+      title: Text(
+        label,
+        style: GoogleFonts.plusJakartaSans(fontWeight: FontWeight.w600),
+      ),
+      onTap: onTap,
     );
   }
 }
@@ -1462,82 +1582,125 @@ class _OutletTypeSetupBannerState
 class _HeroSalesCard extends StatelessWidget {
   final double sales;
   final int txCount;
+  final VoidCallback? onKasir;
+  final VoidCallback? onOrders;
+  final VoidCallback? onReport;
 
-  const _HeroSalesCard({required this.sales, required this.txCount});
+  const _HeroSalesCard({
+    required this.sales,
+    required this.txCount,
+    this.onKasir,
+    this.onOrders,
+    this.onReport,
+  });
 
   @override
   Widget build(BuildContext context) {
+    // Design System v3 - "GoPay Balance Card": kartu putih, aksen atas cyan.
     return Container(
       decoration: BoxDecoration(
+        color: AppTheme.surfaceColor,
         borderRadius: BorderRadius.circular(24),
-        gradient: LinearGradient(
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-          colors: [
-            AppTheme.primaryColor.withValues(alpha: 0.55),
-            AppTheme.secondaryColor.withValues(alpha: 0.35),
-          ],
-        ),
-        border: Border.all(color: Colors.white.withValues(alpha: 0.14)),
-        boxShadow: [
-          BoxShadow(
-            color: AppTheme.primaryColor.withValues(alpha: 0.25),
-            blurRadius: 30,
-            offset: const Offset(0, 12),
-          ),
-        ],
+        border: Border.all(color: AppTheme.borderColor),
+        boxShadow: AppTheme.shadowSoft,
       ),
       child: ClipRRect(
         borderRadius: BorderRadius.circular(24),
-        child: BackdropFilter(
-          filter: ImageFilter.blur(sigmaX: 18, sigmaY: 18),
-          child: Padding(
-            padding: const EdgeInsets.all(20),
-            child: Row(
-              children: [
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Container(
+              height: 5,
+              decoration: const BoxDecoration(gradient: AppTheme.primaryGradient),
+            ),
+            Padding(
+              padding: const EdgeInsets.all(20),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
                     children: [
+                      const Icon(Icons.storefront_rounded,
+                          size: 16, color: AppTheme.primaryColor),
+                      const SizedBox(width: 6),
                       Text(
-                        'PENJUALAN HARI INI',
-                        style: GoogleFonts.inter(
+                        'OMZET HARI INI',
+                        style: GoogleFonts.plusJakartaSans(
                           fontSize: 11,
                           fontWeight: FontWeight.w700,
                           letterSpacing: 1.2,
-                          color: Colors.white.withValues(alpha: 0.75),
-                        ),
-                      ),
-                      const SizedBox(height: 8),
-                      MoneyText(value: Formatters.currency(sales), size: 32),
-                      const SizedBox(height: 6),
-                      Text(
-                        '$txCount transaksi masuk',
-                        style: GoogleFonts.inter(
-                          fontSize: 12.5,
-                          fontWeight: FontWeight.w500,
-                          color: AppTheme.accentColor,
+                          color: AppTheme.textSecondary,
                         ),
                       ),
                     ],
                   ),
-                ),
-                Container(
-                  width: 64,
-                  height: 64,
-                  decoration: BoxDecoration(
-                    shape: BoxShape.circle,
-                    color: Colors.white.withValues(alpha: 0.10),
-                    border: Border.all(color: Colors.white.withValues(alpha: 0.18)),
+                  const SizedBox(height: 8),
+                  Text(
+                    Formatters.currency(sales),
+                    style: GoogleFonts.plusJakartaSans(
+                      fontSize: 28,
+                      fontWeight: FontWeight.w800,
+                      color: AppTheme.textPrimary,
+                      letterSpacing: -0.5,
+                    ),
                   ),
-                  child: const Icon(
-                    Icons.payments_rounded,
-                    color: AppTheme.textPrimary,
-                    size: 30,
+                  const SizedBox(height: 6),
+                  Text(
+                    '$txCount produk terjual hari ini',
+                    style: GoogleFonts.plusJakartaSans(
+                      fontSize: 12.5,
+                      fontWeight: FontWeight.w500,
+                      color: AppTheme.textSecondary,
+                    ),
                   ),
-                ),
-              ],
+                  const SizedBox(height: 16),
+                  Row(
+                    children: [
+                      _quickAction(Icons.point_of_sale_rounded, 'Buka Kasir',
+                          AppTheme.secondaryColor, onKasir),
+                      const SizedBox(width: 8),
+                      _quickAction(Icons.receipt_long_rounded, 'Pesanan Masuk',
+                          AppTheme.primaryColor, onOrders),
+                      const SizedBox(width: 8),
+                      _quickAction(Icons.bar_chart_rounded, 'Laporan',
+                          AppTheme.accentColor, onReport),
+                    ],
+                  ),
+                ],
+              ),
             ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _quickAction(
+      IconData icon, String label, Color color, VoidCallback? onTap) {
+    return Expanded(
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(12),
+        child: Container(
+          padding: const EdgeInsets.symmetric(vertical: 10),
+          decoration: BoxDecoration(
+            color: color.withValues(alpha: 0.10),
+            borderRadius: BorderRadius.circular(12),
+          ),
+          child: Column(
+            children: [
+              Icon(icon, size: 20, color: color),
+              const SizedBox(height: 4),
+              Text(
+                label,
+                textAlign: TextAlign.center,
+                style: GoogleFonts.plusJakartaSans(
+                  fontSize: 10.5,
+                  fontWeight: FontWeight.w700,
+                  color: color,
+                ),
+              ),
+            ],
           ),
         ),
       ),
@@ -1951,38 +2114,53 @@ class _KpiCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return GlassCard(
-      blur: 10,
-      padding: const EdgeInsets.all(16),
-      borderColor: color.withValues(alpha: 0.28),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
+    // Design System v3: kartu putih ringkas - ikon bulat 40dp di kiri.
+    return Container(
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: AppTheme.surfaceColor,
+        borderRadius: BorderRadius.circular(AppTheme.radiusLarge),
+        border: Border.all(color: AppTheme.borderColor),
+        boxShadow: AppTheme.shadowSoft,
+      ),
+      child: Row(
         children: [
           Container(
-            width: 38,
-            height: 38,
+            width: 40,
+            height: 40,
             decoration: BoxDecoration(
-              color: color.withValues(alpha: 0.14),
-              borderRadius: BorderRadius.circular(11),
-              border: Border.all(color: color.withValues(alpha: 0.3)),
+              color: color.withValues(alpha: 0.12),
+              shape: BoxShape.circle,
             ),
-            child: Icon(icon, color: color, size: 19),
+            child: Icon(icon, color: color, size: 20),
           ),
-          const SizedBox(height: 12),
-          Text(
-            value,
-            style: GoogleFonts.inter(
-              fontSize: 22,
-              fontWeight: FontWeight.w800,
-              letterSpacing: -0.5,
-              color: AppTheme.textPrimary,
-              fontFeatures: const [FontFeature.tabularFigures()],
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  label,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: GoogleFonts.plusJakartaSans(
+                      fontSize: 12,
+                      fontWeight: FontWeight.w500,
+                      color: AppTheme.textSecondary),
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  value,
+                  style: GoogleFonts.plusJakartaSans(
+                    fontSize: 20,
+                    fontWeight: FontWeight.w800,
+                    letterSpacing: -0.5,
+                    color: AppTheme.textPrimary,
+                    fontFeatures: const [FontFeature.tabularFigures()],
+                  ),
+                ),
+              ],
             ),
-          ),
-          const SizedBox(height: 2),
-          Text(
-            label,
-            style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.w500, color: AppTheme.textSecondary),
           ),
         ],
       ),
@@ -2113,58 +2291,62 @@ class _ModuleCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return GlassCard(
-      blur: 8,
-      borderRadius: 14,
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
-      borderColor: color.withValues(alpha: 0.25),
+    // Design System v3: gaya ikon super-app GoPay - ikon dalam lingkaran
+    // pastel lembut, label di bawahnya.
+    return InkWell(
       onTap: onTap,
-      child: Row(
-        children: [
-          Container(
-            width: 34,
-            height: 34,
-            decoration: BoxDecoration(
-              gradient: LinearGradient(
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-                colors: [color.withValues(alpha: 0.28), color.withValues(alpha: 0.10)],
+      borderRadius: BorderRadius.circular(AppTheme.radiusLarge),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+        decoration: BoxDecoration(
+          color: AppTheme.surfaceColor,
+          borderRadius: BorderRadius.circular(AppTheme.radiusLarge),
+          border: Border.all(color: AppTheme.borderColor),
+          boxShadow: AppTheme.shadowSoft,
+        ),
+        child: Row(
+          children: [
+            Container(
+              width: 48,
+              height: 48,
+              decoration: BoxDecoration(
+                color: color.withValues(alpha: 0.12),
+                shape: BoxShape.circle,
               ),
-              borderRadius: BorderRadius.circular(10),
-              border: Border.all(color: color.withValues(alpha: 0.35)),
+              child: Icon(icon, color: color, size: 24),
             ),
-            child: Icon(icon, color: color, size: 16),
-          ),
-          const SizedBox(width: 8),
-          Expanded(
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  title,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: GoogleFonts.inter(
-                    fontSize: 11.5,
-                    fontWeight: FontWeight.w700,
-                    color: AppTheme.textPrimary,
+            const SizedBox(width: 10),
+            Expanded(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    title,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: GoogleFonts.plusJakartaSans(
+                      fontSize: 12,
+                      fontWeight: FontWeight.w700,
+                      color: AppTheme.textPrimary,
+                    ),
                   ),
-                ),
-                Text(
-                  subtitle,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: GoogleFonts.inter(
-                    fontSize: 9.5,
-                    fontWeight: FontWeight.w500,
-                    color: AppTheme.textSecondary,
+                  const SizedBox(height: 2),
+                  Text(
+                    subtitle,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: GoogleFonts.plusJakartaSans(
+                      fontSize: 10,
+                      fontWeight: FontWeight.w500,
+                      color: AppTheme.textSecondary,
+                    ),
                   ),
-                ),
-              ],
+                ],
+              ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }
