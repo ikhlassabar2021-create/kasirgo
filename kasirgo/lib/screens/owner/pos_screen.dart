@@ -722,7 +722,7 @@ class _PosScreenState extends ConsumerState<PosScreen> {
               label: b['name']?.toString() ?? 'Paket',
               sub: Formatters.currency(
                   (b['bundle_price'] as num?)?.toDouble() ?? 0),
-              color: const Color(0xFF7C3AED),
+              color: AppTheme.moduleAccentViolet,
               onTap: () => _addBundleToCart(b),
             ),
           for (final c in _crossSellChips)

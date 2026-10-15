@@ -77,7 +77,7 @@ class _DoctorScalingScreenState extends ConsumerState<DoctorScalingScreen> {
             Container(
               padding: const EdgeInsets.all(20),
               decoration: const BoxDecoration(
-                color: Color(0xFFEFF6FF),
+                color: AppTheme.infoSoftColor,
                 shape: BoxShape.circle,
               ),
               child: const Icon(
@@ -258,9 +258,9 @@ class _DoctorScalingScreenState extends ConsumerState<DoctorScalingScreen> {
               margin: const EdgeInsets.only(bottom: 8),
               padding: const EdgeInsets.all(10),
               decoration: BoxDecoration(
-                color: const Color(0xFFF8FAFC),
+                color: AppTheme.surfaceMutedColor,
                 borderRadius: BorderRadius.circular(8),
-                border: Border.all(color: const Color(0xFFE2E8F0)),
+                border: Border.all(color: AppTheme.borderColor),
               ),
               child: Row(
                 crossAxisAlignment: CrossAxisAlignment.start,

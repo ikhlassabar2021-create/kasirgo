@@ -203,7 +203,7 @@ class _EmptyBundles extends StatelessWidget {
             Container(
               padding: const EdgeInsets.all(20),
               decoration: const BoxDecoration(
-                color: Color(0xFFEFF6FF),
+                color: AppTheme.infoSoftColor,
                 shape: BoxShape.circle,
               ),
               child: const Icon(Icons.inventory_2_rounded,
@@ -304,7 +304,7 @@ class _BundleCard extends StatelessWidget {
                   padding:
                       const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                   decoration: BoxDecoration(
-                    color: const Color(0xFFF1F5F9),
+                    color: AppTheme.surfaceMutedColor,
                     borderRadius: BorderRadius.circular(6),
                   ),
                   child: Text(
@@ -338,13 +338,13 @@ class _BundleCard extends StatelessWidget {
                   padding:
                       const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                   decoration: BoxDecoration(
-                    color: const Color(0xFFDCFCE7),
+                    color: AppTheme.successChipColor,
                     borderRadius: BorderRadius.circular(4),
                   ),
                   child: Text(
                     'Hemat ${Formatters.currency(saving)}',
                     style: const TextStyle(
-                        fontSize: 10, color: Color(0xFF15803D)),
+                        fontSize: 10, color: AppTheme.successTextColor),
                   ),
                 ),
               ],
@@ -354,8 +354,8 @@ class _BundleCard extends StatelessWidget {
                     const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                 decoration: BoxDecoration(
                   color: isActive
-                      ? const Color(0xFFDCFCE7)
-                      : const Color(0xFFFEF3C7),
+                      ? AppTheme.successChipColor
+                      : AppTheme.warningSoftColor,
                   borderRadius: BorderRadius.circular(6),
                 ),
                 child: Text(
@@ -364,8 +364,8 @@ class _BundleCard extends StatelessWidget {
                     fontSize: 10,
                     fontWeight: FontWeight.w800,
                     color: isActive
-                        ? const Color(0xFF15803D)
-                        : const Color(0xFFB45309),
+                        ? AppTheme.successTextColor
+                        : AppTheme.warningTextColor,
                   ),
                 ),
               ),
@@ -508,7 +508,7 @@ class _BundleFormSheetState extends State<_BundleFormSheet> {
                 Container(
                   padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
                   decoration: BoxDecoration(
-                    color: const Color(0xFFF1F5F9),
+                    color: AppTheme.surfaceMutedColor,
                     borderRadius: BorderRadius.circular(AppTheme.radiusMedium),
                   ),
                   child: Column(

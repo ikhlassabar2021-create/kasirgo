@@ -233,9 +233,9 @@ class _ReferralScreenState extends ConsumerState<ReferralScreen> {
                 padding:
                     const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
                 decoration: BoxDecoration(
-                  color: const Color(0xFFEFF6FF),
+                  color: AppTheme.infoSoftColor,
                   borderRadius: BorderRadius.circular(8),
-                  border: Border.all(color: const Color(0xFFBFDBFE)),
+                  border: Border.all(color: AppTheme.infoSoftBorderColor),
                 ),
                 child: Text(
                   kode,
@@ -285,8 +285,8 @@ class _ReferralScreenState extends ConsumerState<ReferralScreen> {
                   icon: const Icon(Icons.share_rounded, size: 16),
                   label: const Text('Bagikan via WA', style: TextStyle(fontSize: 12)),
                   style: OutlinedButton.styleFrom(
-                    foregroundColor: const Color(0xFF25D366),
-                    side: const BorderSide(color: Color(0xFF25D366)),
+                    foregroundColor: AppTheme.whatsAppColor,
+                    side: const BorderSide(color: AppTheme.whatsAppColor),
                     shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(8)),
                   ),

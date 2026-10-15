@@ -160,9 +160,9 @@ class _CustomerCatalogScreenState extends State<CustomerCatalogScreen> {
         width: 210,
         padding: const EdgeInsets.all(12),
         decoration: BoxDecoration(
-          color: const Color(0xFFF5F3FF),
+          color: AppTheme.violetSoftColor,
           borderRadius: BorderRadius.circular(AppTheme.radiusLarge),
-          border: Border.all(color: const Color(0xFFDDD6FE)),
+          border: Border.all(color: AppTheme.violetSoftBorderColor),
         ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -181,7 +181,7 @@ class _CustomerCatalogScreenState extends State<CustomerCatalogScreen> {
                     padding:
                         const EdgeInsets.symmetric(horizontal: 5, vertical: 2),
                     decoration: BoxDecoration(
-                      color: const Color(0xFFDCFCE7),
+                      color: AppTheme.successChipColor,
                       borderRadius: BorderRadius.circular(4),
                     ),
                     child: Text(
@@ -189,7 +189,7 @@ class _CustomerCatalogScreenState extends State<CustomerCatalogScreen> {
                       style: const TextStyle(
                           fontSize: 9,
                           fontWeight: FontWeight.w800,
-                          color: Color(0xFF15803D)),
+                          color: AppTheme.successTextColor),
                     ),
                   ),
               ],

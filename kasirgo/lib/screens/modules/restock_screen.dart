@@ -332,11 +332,7 @@ class _RestockScreenState extends ConsumerState<RestockScreen> {
     return Container(
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
-        gradient: const LinearGradient(
-          colors: [Color(0xFF10B981), AppTheme.successColor],
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-        ),
+        gradient: AppTheme.successGradient,
         borderRadius: BorderRadius.circular(AppTheme.radiusLarge),
       ),
       child: Column(

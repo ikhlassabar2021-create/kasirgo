@@ -20,12 +20,28 @@ class AppTheme {
 
   // Tint semantik (latar lembut + border + teks) untuk banner status
   static const Color infoSoftColor = Color(0xFFEFF6FF);
+  static const Color infoSoftBorderColor = Color(0xFFBFDBFE);
   static const Color successSoftColor = Color(0xFFF0FDF4);
   static const Color successSoftBorderColor = Color(0xFFBBF7D0);
+  static const Color successChipColor = Color(0xFFDCFCE7);
   static const Color successTextColor = Color(0xFF15803D);
   static const Color warningSoftColor = Color(0xFFFEF3C7);
   static const Color warningSoftBorderColor = Color(0xFFFDE68A);
   static const Color warningTextColor = Color(0xFF92400E);
+  static const Color violetSoftColor = Color(0xFFF5F3FF);
+  static const Color violetSoftBorderColor = Color(0xFFDDD6FE);
+
+  // Aksen warna identitas kartu pintasan modul (dipakai bersama owner/POS)
+  static const Color moduleAccentIndigo = Color(0xFF4F46E5);
+  static const Color moduleAccentViolet = Color(0xFF7C3AED);
+  static const Color moduleAccentTeal = Color(0xFF0D9488);
+  static const Color moduleAccentPink = Color(0xFFDB2777);
+
+  static const LinearGradient successGradient = LinearGradient(
+    begin: Alignment.topLeft,
+    end: Alignment.bottomRight,
+    colors: [Color(0xFF10B981), Color(0xFF00AA13)],
+  );
 
   static const LinearGradient primaryGradient = LinearGradient(
     begin: Alignment.topLeft,
