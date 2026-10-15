@@ -1761,7 +1761,7 @@ class _TargetProgressCardState extends State<_TargetProgressCard> {
             Container(
               padding: const EdgeInsets.all(8),
               decoration: BoxDecoration(
-                color: const Color(0xFFEFF6FF),
+                color: AppTheme.infoSoftColor,
                 borderRadius: BorderRadius.circular(10),
               ),
               child: const Icon(Icons.flag_rounded, color: AppTheme.primaryColor, size: 20),
@@ -1829,17 +1829,17 @@ class _TargetProgressCardState extends State<_TargetProgressCard> {
                 Container(
                   padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                   decoration: BoxDecoration(
-                    color: const Color(0xFFFEF3C7),
+                    color: AppTheme.warningSoftColor,
                     borderRadius: BorderRadius.circular(6),
                   ),
                   child: const Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      Icon(Icons.warning_amber_rounded, size: 12, color: Color(0xFFD97706)),
+                      Icon(Icons.warning_amber_rounded, size: 12, color: AppTheme.warningTextColor),
                       SizedBox(width: 4),
                       Text(
                         'Pace Alert: Laju Lambat',
-                        style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: Color(0xFFD97706)),
+                        style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: AppTheme.warningTextColor),
                       ),
                     ],
                   ),
@@ -1857,7 +1857,7 @@ class _TargetProgressCardState extends State<_TargetProgressCard> {
             child: LinearProgressIndicator(
               value: progress,
               minHeight: 8,
-              backgroundColor: const Color(0xFFF1F5F9),
+              backgroundColor: AppTheme.surfaceMutedColor,
               valueColor: AlwaysStoppedAnimation<Color>(
                 isPaceAlert ? AppTheme.warningColor : (progress >= 1.0 ? AppTheme.successColor : AppTheme.primaryColor),
               ),
@@ -1926,9 +1926,9 @@ class _MarketIntelCardState extends State<_MarketIntelCard> {
 
     return Container(
       decoration: BoxDecoration(
-        color: const Color(0xFFF0FDF4),
+        color: AppTheme.successSoftColor,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: const Color(0xFFBBF7D0)),
+        border: Border.all(color: AppTheme.successSoftBorderColor),
       ),
       padding: const EdgeInsets.all(16),
       child: Column(
@@ -1944,14 +1944,14 @@ class _MarketIntelCardState extends State<_MarketIntelCard> {
                   style: const TextStyle(
                     fontSize: 13,
                     fontWeight: FontWeight.bold,
-                    color: Color(0xFF166534),
+                    color: AppTheme.successTextColor,
                   ),
                 ),
               ),
               if (dateStr.isNotEmpty)
                 Text(
                   dateStr,
-                  style: const TextStyle(fontSize: 10, color: Color(0xFF15803D)),
+                  style: const TextStyle(fontSize: 10, color: AppTheme.successTextColor),
                 ),
             ],
           ),
@@ -1961,7 +1961,7 @@ class _MarketIntelCardState extends State<_MarketIntelCard> {
               content,
               maxLines: 3,
               overflow: TextOverflow.ellipsis,
-              style: const TextStyle(fontSize: 12, color: Color(0xFF166534)),
+              style: const TextStyle(fontSize: 12, color: AppTheme.successTextColor),
             ),
           ],
           const SizedBox(height: 10),
@@ -2027,9 +2027,9 @@ class _CrossSellCard extends StatelessWidget {
 
     return Container(
       decoration: BoxDecoration(
-        color: const Color(0xFFFFFBEB),
+        color: AppTheme.warningSoftColor,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: const Color(0xFFFDE68A)),
+        border: Border.all(color: AppTheme.warningSoftBorderColor),
       ),
       padding: const EdgeInsets.all(16),
       child: Column(
@@ -2038,7 +2038,7 @@ class _CrossSellCard extends StatelessWidget {
           Row(
             children: [
               const Icon(Icons.auto_awesome_rounded,
-                  size: 18, color: Color(0xFFD97706)),
+                  size: 18, color: AppTheme.warningTextColor),
               const SizedBox(width: 8),
               Expanded(
                 child: Text(
@@ -2046,7 +2046,7 @@ class _CrossSellCard extends StatelessWidget {
                   style: GoogleFonts.plusJakartaSans(
                     fontSize: 13,
                     fontWeight: FontWeight.bold,
-                    color: const Color(0xFF92400E),
+                    color: AppTheme.warningTextColor,
                   ),
                 ),
               ),
@@ -2054,14 +2054,14 @@ class _CrossSellCard extends StatelessWidget {
                 padding:
                     const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                 decoration: BoxDecoration(
-                  color: const Color(0xFFFEF3C7),
+                  color: AppTheme.warningSoftColor,
                   borderRadius: BorderRadius.circular(6),
                 ),
                 child: const Text('AI',
                     style: TextStyle(
                         fontSize: 9,
                         fontWeight: FontWeight.w800,
-                        color: Color(0xFFD97706))),
+                        color: AppTheme.warningTextColor)),
               ),
             ],
           ),
@@ -2075,20 +2075,20 @@ class _CrossSellCard extends StatelessWidget {
               child: Row(
                 children: [
                   const Icon(Icons.arrow_forward_rounded,
-                      size: 14, color: Color(0xFFD97706)),
+                      size: 14, color: AppTheme.warningTextColor),
                   const SizedBox(width: 8),
                   Expanded(
                     child: Text(
                       'Beli "$from" → tawarkan "$to"',
                       style: const TextStyle(
-                          fontSize: 12, color: Color(0xFF92400E)),
+                          fontSize: 12, color: AppTheme.warningTextColor),
                     ),
                   ),
                   Text('$conf%',
                       style: const TextStyle(
                           fontSize: 11,
                           fontWeight: FontWeight.w700,
-                          color: Color(0xFFD97706))),
+                          color: AppTheme.warningTextColor)),
                 ],
               ),
             );

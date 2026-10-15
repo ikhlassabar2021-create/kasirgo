@@ -18,6 +18,15 @@ class AppTheme {
   static const Color textSecondary = Color(0xFF626E7A);
   static const Color borderColor = Color(0xFFE8ECEF); // Border tipis kartu
 
+  // Tint semantik (latar lembut + border + teks) untuk banner status
+  static const Color infoSoftColor = Color(0xFFEFF6FF);
+  static const Color successSoftColor = Color(0xFFF0FDF4);
+  static const Color successSoftBorderColor = Color(0xFFBBF7D0);
+  static const Color successTextColor = Color(0xFF15803D);
+  static const Color warningSoftColor = Color(0xFFFEF3C7);
+  static const Color warningSoftBorderColor = Color(0xFFFDE68A);
+  static const Color warningTextColor = Color(0xFF92400E);
+
   static const LinearGradient primaryGradient = LinearGradient(
     begin: Alignment.topLeft,
     end: Alignment.bottomRight,
