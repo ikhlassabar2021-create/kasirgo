@@ -66,6 +66,10 @@ class _BuyerHomeTabState extends ConsumerState<BuyerHomeTab> {
   StreamSubscription<OutletLocation>? _liveSub;
   OutletLocation? _livePosition;
 
+  /// Item 3: kategori (tipe usaha) menggulir ke daftar TOKO terdekat.
+  final _scrollCtrl = ScrollController();
+  final _storeSectionKey = GlobalKey();
+
   ServiceQueueEntry? _myQueue;
   bool _takingQueue = false;
 
@@ -80,13 +84,14 @@ class _BuyerHomeTabState extends ConsumerState<BuyerHomeTab> {
     _liveSub?.cancel();
     _searchDebounce?.cancel();
     _searchCtrl.dispose();
+    _scrollCtrl.dispose();
     super.dispose();
   }
 
   void _onSearchChanged(String value) {
     _searchDebounce?.cancel();
     final q = value.trim();
-    if (q.isEmpty && _typeFilter == null) {
+    if (q.isEmpty) {
       setState(() {
         _searchQuery = '';
         _searchResults = const [];
@@ -98,25 +103,57 @@ class _BuyerHomeTabState extends ConsumerState<BuyerHomeTab> {
     _searchDebounce = Timer(const Duration(milliseconds: 350), _runSearch);
   }
 
-  /// Item 2: pilih / lepas filter tipe usaha lalu cari ulang.
-  void _setTypeFilter(String? type) {
+  /// Item 3: pilih / lepas kategori (tipe usaha).
+  ///
+  /// Bila ada kata kunci -> cari produk (seperti sebelumnya). Bila hanya
+  /// kategori -> saring daftar TOKO terdekat lalu gulir ke section TOKO.
+  void _selectCategory(String? type) {
     _searchDebounce?.cancel();
-    setState(() => _typeFilter = type);
-    if (_searchQuery.isEmpty && type == null) {
-      setState(() {
+    setState(() {
+      _typeFilter = type;
+      if (_searchQuery.isEmpty) {
+        // Kembali ke daftar TOKO (tutup katalog outlet bila sedang dibuka).
+        _selected = null;
         _searchResults = const [];
         _searching = false;
-      });
-      return;
+      }
+    });
+    if (_searchQuery.isNotEmpty) {
+      _runSearch();
+    } else {
+      _scrollToStores();
     }
-    _runSearch();
   }
 
-  bool get _searchActive => _searchQuery.isNotEmpty || _typeFilter != null;
+  /// Item 3: gulir halus ke section daftar TOKO terdekat.
+  void _scrollToStores() {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final ctx = _storeSectionKey.currentContext;
+      if (ctx != null) {
+        Scrollable.ensureVisible(
+          ctx,
+          duration: const Duration(milliseconds: 350),
+          curve: Curves.easeInOut,
+        );
+      }
+    });
+  }
+
+  bool get _searchActive => _searchQuery.isNotEmpty;
+
+  /// Item 3: daftar TOKO terdekat yang sudah disaring kategori (bila ada).
+  List<NearbyOutlet> get _visibleOutlets {
+    final t = _typeFilter;
+    if (t == null) return _outlets;
+    final lower = t.toLowerCase();
+    return _outlets
+        .where((o) => (o.type ?? '').toLowerCase() == lower)
+        .toList();
+  }
 
   Future<void> _runSearch() async {
     final q = _searchQuery;
-    if (q.isEmpty && _typeFilter == null) return;
+    if (q.isEmpty) return;
     setState(() => _searching = true);
     final results = await _supabase.searchMarketplace(
       query: q,
@@ -473,6 +510,7 @@ class _BuyerHomeTabState extends ConsumerState<BuyerHomeTab> {
         RefreshIndicator(
           onRefresh: _location == null ? () async {} : _loadOutlets,
           child: ListView(
+            controller: _scrollCtrl,
             padding: EdgeInsets.fromLTRB(16, 16, 16, cart.isNotEmpty ? 100 : 16),
             children: [
               _buildWelcomeCard(),
@@ -547,7 +585,8 @@ class _BuyerHomeTabState extends ConsumerState<BuyerHomeTab> {
     );
   }
 
-  /// Item 2: chip filter tipe usaha untuk pencarian.
+  /// Item 2/3: chip kategori (tipe usaha). Menyaring TOKO terdekat lalu
+  /// menggulir ke section TOKO; bila ada kata kunci tetap mencari produk.
   Widget _buildTypeFilter() {
     final types = AppConstants.businessTypes;
     return SizedBox(
@@ -559,11 +598,11 @@ class _BuyerHomeTabState extends ConsumerState<BuyerHomeTab> {
         itemBuilder: (context, i) {
           if (i == 0) {
             final active = _typeFilter == null;
-            return _typeChip('Semua', active, () => _setTypeFilter(null));
+            return _typeChip('Semua', active, () => _selectCategory(null));
           }
           final t = types[i - 1];
           final active = _typeFilter?.toLowerCase() == t.toLowerCase();
-          return _typeChip(t, active, () => _setTypeFilter(active ? null : t));
+          return _typeChip(t, active, () => _selectCategory(active ? null : t));
         },
       ),
     );
@@ -842,13 +881,18 @@ class _BuyerHomeTabState extends ConsumerState<BuyerHomeTab> {
   }
 
   List<Widget> _buildRadarSection() {
+    final outlets = _visibleOutlets;
+    final filter = _typeFilter;
     return [
+      SizedBox(key: _storeSectionKey, height: 0),
       AppSectionTitle(
-        title: 'Radar Warung Terdekat',
+        title: 'Toko Terdekat',
         subtitle: _location == null
-            ? 'Atur lokasi untuk melihat warung sekitar'
-            : 'Dalam radius 1-3 km dari lokasimu',
-        icon: Icons.radar_rounded,
+            ? 'Atur lokasi untuk melihat toko sekitar'
+            : (filter == null
+                ? 'Dalam radius 1-3 km dari lokasimu'
+                : 'Kategori: $filter'),
+        icon: Icons.storefront_rounded,
         trailing: _location == null
             ? null
             : IconButton(
@@ -867,8 +911,10 @@ class _BuyerHomeTabState extends ConsumerState<BuyerHomeTab> {
         )
       else if (_outlets.isEmpty)
         _buildNoOutlets()
+      else if (outlets.isEmpty)
+        _buildNoCategoryOutlets(filter)
       else ...[
-        _RadarSketch(outlets: _outlets),
+        _RadarSketch(outlets: outlets),
         const SizedBox(height: 8),
         Text(
           'Sebaran skematis berdasarkan jarak (bukan arah sebenarnya).',
@@ -879,7 +925,7 @@ class _BuyerHomeTabState extends ConsumerState<BuyerHomeTab> {
           ),
         ),
         const SizedBox(height: 14),
-        for (final o in _outlets)
+        for (final o in outlets)
           Padding(
             padding: const EdgeInsets.only(bottom: 10),
             child: _buildOutletCard(o),
@@ -893,6 +939,37 @@ class _BuyerHomeTabState extends ConsumerState<BuyerHomeTab> {
         onPressed: () => context.push('/customer'),
       ),
     ];
+  }
+
+  /// Item 3: kategori terpilih tidak punya toko dalam radius.
+  Widget _buildNoCategoryOutlets(String? filter) {
+    return AppCard(
+      child: Column(
+        children: [
+          const Icon(Icons.storefront_rounded,
+              size: 40, color: AppTheme.textSecondary),
+          const SizedBox(height: 10),
+          Text(
+            'Belum ada toko kategori ini',
+            style: GoogleFonts.plusJakartaSans(
+              fontWeight: FontWeight.w700,
+              fontSize: 15,
+            ),
+          ),
+          const SizedBox(height: 4),
+          Text(
+            filter == null
+                ? 'Coba pilih kategori lain.'
+                : 'Tidak ada toko "$filter" dalam radius 1-3 km. Coba kategori lain atau perluas area.',
+            textAlign: TextAlign.center,
+            style: GoogleFonts.plusJakartaSans(
+              fontSize: 12.5,
+              color: AppTheme.textSecondary,
+            ),
+          ),
+        ],
+      ),
+    );
   }
 
   Widget _buildRadarEmpty() {
