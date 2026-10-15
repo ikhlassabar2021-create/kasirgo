@@ -321,7 +321,7 @@ class _CheckoutBar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // Design System v3: floating pill bar hijau (Gojek Green).
+    // Design System v3: floating pill bar biru (aksen CTA).
     final active = enabled;
     return SafeArea(
       top: false,

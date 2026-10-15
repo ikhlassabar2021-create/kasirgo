@@ -6,7 +6,7 @@ class AppTheme {
   // Design System v3 - "GoPay Merchant Clean UI"
   // ---------------------------------------------------------------------------
   static const Color primaryColor = Color(0xFF00AED6); // GoPay Cyan Blue
-  static const Color secondaryColor = Color(0xFF00AA13); // Gojek Green (CTA)
+  static const Color secondaryColor = Color(0xFF0081A0); // Biru aksen CTA (v3, biru-only)
   static const Color accentColor = Color(0xFF0081A0); // Cyan gelap (aksen)
   static const Color backgroundColor = Color(0xFFF4F5F7); // Background utama
   static const Color surfaceColor = Color(0xFFFFFFFF); // Kartu putih
