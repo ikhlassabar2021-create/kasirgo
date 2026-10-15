@@ -201,7 +201,7 @@ class _OwnerHomeScreenState extends ConsumerState<OwnerHomeScreen> {
                       children: [
                         Text(
                           'Notifikasi',
-                          style: GoogleFonts.inter(
+                          style: GoogleFonts.plusJakartaSans(
                             fontSize: 18,
                             fontWeight: FontWeight.w800,
                             color: AppTheme.textPrimary,
@@ -342,7 +342,7 @@ class _OwnerHomeScreenState extends ConsumerState<OwnerHomeScreen> {
                             children: [
                               Text(
                                 'KasirGo',
-                                style: GoogleFonts.inter(
+                                style: GoogleFonts.plusJakartaSans(
                                   fontSize: 18,
                                   fontWeight: FontWeight.w800,
                                   color: AppTheme.textPrimary,
@@ -351,7 +351,7 @@ class _OwnerHomeScreenState extends ConsumerState<OwnerHomeScreen> {
                               ),
                               Text(
                                 'POS & Management',
-                                style: GoogleFonts.inter(
+                                style: GoogleFonts.plusJakartaSans(
                                   fontSize: 11,
                                   color: AppTheme.textSecondary,
                                   fontWeight: FontWeight.w500,
@@ -470,7 +470,7 @@ class _OwnerHomeScreenState extends ConsumerState<OwnerHomeScreen> {
                                                 : _currentIndex == 5
                                                     ? 'Data Karyawan'
                                                     : 'Pengaturan Outlet',
-                            style: GoogleFonts.inter(
+                            style: GoogleFonts.plusJakartaSans(
                               fontSize: 16,
                               fontWeight: FontWeight.w700,
                               color: AppTheme.textPrimary,
@@ -522,7 +522,7 @@ class _OwnerHomeScreenState extends ConsumerState<OwnerHomeScreen> {
         shape: const Border(bottom: BorderSide(color: AppTheme.borderColor)),
         title: Text(
           'KasirGo',
-          style: GoogleFonts.inter(
+          style: GoogleFonts.plusJakartaSans(
             fontSize: 20,
             fontWeight: FontWeight.w800,
             letterSpacing: -0.3,
@@ -619,7 +619,7 @@ class _OwnerHomeScreenState extends ConsumerState<OwnerHomeScreen> {
           leading: Icon(icon, size: 20, color: AppTheme.textSecondary),
           title: Text(
             label,
-            style: GoogleFonts.inter(
+            style: GoogleFonts.plusJakartaSans(
               fontSize: 13,
               fontWeight: FontWeight.w500,
               color: AppTheme.textPrimary,
@@ -652,7 +652,7 @@ class _OwnerHomeScreenState extends ConsumerState<OwnerHomeScreen> {
         ),
         title: Text(
           label,
-          style: GoogleFonts.inter(
+          style: GoogleFonts.plusJakartaSans(
             fontSize: 13,
             fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
             color: isSelected ? AppTheme.primaryColor : AppTheme.textPrimary,
@@ -691,7 +691,7 @@ class _OwnerHomeScreenState extends ConsumerState<OwnerHomeScreen> {
             children: [
               RichText(
                 text: TextSpan(
-                  style: GoogleFonts.inter(
+                  style: GoogleFonts.plusJakartaSans(
                     color: AppTheme.textSecondary,
                     fontSize: 14,
                     fontWeight: FontWeight.w400,
@@ -710,7 +710,7 @@ class _OwnerHomeScreenState extends ConsumerState<OwnerHomeScreen> {
                 children: [
                   Text(
                     'Dashboard Owner',
-                    style: GoogleFonts.inter(
+                    style: GoogleFonts.plusJakartaSans(
                       fontSize: 26,
                       fontWeight: FontWeight.w800,
                       letterSpacing: -0.6,
@@ -1332,7 +1332,7 @@ class _SectionHeader extends StatelessWidget {
         const SizedBox(width: 10),
         Text(
           title,
-          style: GoogleFonts.inter(
+          style: GoogleFonts.plusJakartaSans(
             fontSize: 16,
             fontWeight: FontWeight.w800,
             letterSpacing: -0.2,
@@ -2043,7 +2043,7 @@ class _CrossSellCard extends StatelessWidget {
               Expanded(
                 child: Text(
                   'Peluang Cross-Sell',
-                  style: GoogleFonts.inter(
+                  style: GoogleFonts.plusJakartaSans(
                     fontSize: 13,
                     fontWeight: FontWeight.bold,
                     color: const Color(0xFF92400E),
@@ -2203,12 +2203,12 @@ class _KpiWideCard extends StatelessWidget {
           Expanded(
             child: Text(
               label,
-              style: GoogleFonts.inter(fontSize: 13, fontWeight: FontWeight.w500, color: AppTheme.textSecondary),
+              style: GoogleFonts.plusJakartaSans(fontSize: 13, fontWeight: FontWeight.w500, color: AppTheme.textSecondary),
             ),
           ),
           Text(
             value,
-            style: GoogleFonts.inter(
+            style: GoogleFonts.plusJakartaSans(
               fontSize: 22,
               fontWeight: FontWeight.w800,
               letterSpacing: -0.5,

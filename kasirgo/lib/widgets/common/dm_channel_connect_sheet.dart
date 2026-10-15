@@ -214,7 +214,7 @@ class _DmChannelConnectSheetState extends State<DmChannelConnectSheet> {
                 const SizedBox(width: 8),
                 Expanded(
                   child: Text(widget.title,
-                      style: GoogleFonts.inter(
+                      style: GoogleFonts.plusJakartaSans(
                           fontSize: 16,
                           fontWeight: FontWeight.w700,
                           color: AppTheme.textPrimary)),
@@ -249,7 +249,7 @@ class _DmChannelConnectSheetState extends State<DmChannelConnectSheet> {
                 Text(
                   'Catatan: KasirGo TIDAK menyimpan password akun Anda. '
                   'Token (bila diisi) hanya dipakai server untuk menghubungkan akun dan tidak bisa dilihat lagi.',
-                  style: GoogleFonts.inter(
+                  style: GoogleFonts.plusJakartaSans(
                       fontSize: 11, color: AppTheme.textSecondary),
                 ),
               ],
@@ -277,7 +277,7 @@ class _DmChannelConnectSheetState extends State<DmChannelConnectSheet> {
         border: Border.all(color: color.withValues(alpha: 0.4)),
       ),
       child: Text(text,
-          style: GoogleFonts.inter(
+          style: GoogleFonts.plusJakartaSans(
               fontSize: 11, fontWeight: FontWeight.w600, color: color)),
     );
   }
@@ -299,7 +299,7 @@ class _DmChannelConnectSheetState extends State<DmChannelConnectSheet> {
                   color: AppTheme.warningColor, size: 18),
               const SizedBox(width: 6),
               Text('Cara pakai (mudah)',
-                  style: GoogleFonts.inter(
+                  style: GoogleFonts.plusJakartaSans(
                       fontSize: 13,
                       fontWeight: FontWeight.w700,
                       color: AppTheme.textPrimary)),
@@ -317,7 +317,7 @@ class _DmChannelConnectSheetState extends State<DmChannelConnectSheet> {
           Text(
             'Posting manual (salin caption + buka WhatsApp/Website) selalu bisa '
             'meski akun belum dihubungkan.',
-            style: GoogleFonts.inter(
+            style: GoogleFonts.plusJakartaSans(
                 fontSize: 11, color: AppTheme.textSecondary),
           ),
         ],
@@ -340,7 +340,7 @@ class _DmChannelConnectSheetState extends State<DmChannelConnectSheet> {
               borderRadius: BorderRadius.circular(9),
             ),
             child: Text(n,
-                style: GoogleFonts.inter(
+                style: GoogleFonts.plusJakartaSans(
                     fontSize: 11,
                     fontWeight: FontWeight.w700,
                     color: Colors.white)),
@@ -348,7 +348,7 @@ class _DmChannelConnectSheetState extends State<DmChannelConnectSheet> {
           const SizedBox(width: 8),
           Expanded(
             child: Text(text,
-                style: GoogleFonts.inter(
+                style: GoogleFonts.plusJakartaSans(
                     fontSize: 12, color: AppTheme.textPrimary)),
           ),
         ],
@@ -394,7 +394,7 @@ class _DmChannelConnectSheetState extends State<DmChannelConnectSheet> {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(e.value,
-                          style: GoogleFonts.inter(
+                          style: GoogleFonts.plusJakartaSans(
                               fontSize: 14,
                               fontWeight: FontWeight.w600,
                               color: AppTheme.textPrimary)),
@@ -402,7 +402,7 @@ class _DmChannelConnectSheetState extends State<DmChannelConnectSheet> {
                         isConnected
                             ? 'Terhubung${name != null ? ' - $name' : ''}'
                             : 'Belum dihubungkan',
-                        style: GoogleFonts.inter(
+                        style: GoogleFonts.plusJakartaSans(
                             fontSize: 12,
                             color: isConnected
                                 ? AppTheme.successColor
@@ -488,7 +488,7 @@ class _ChannelFormSheetState extends State<_ChannelFormSheet> {
                   children: [
                     Expanded(
                       child: Text(widget.label,
-                          style: GoogleFonts.inter(
+                          style: GoogleFonts.plusJakartaSans(
                               fontSize: 16,
                               fontWeight: FontWeight.w700,
                               color: AppTheme.textPrimary)),
@@ -510,7 +510,7 @@ class _ChannelFormSheetState extends State<_ChannelFormSheet> {
                           context, <String, String>{'action': 'oauth'}),
                       icon: const Icon(Icons.login_rounded, size: 20),
                       label: Text('Hubungkan Otomatis (Login ${widget.label})',
-                          style: GoogleFonts.inter(
+                          style: GoogleFonts.plusJakartaSans(
                               fontWeight: FontWeight.w700)),
                       style: FilledButton.styleFrom(
                         backgroundColor: AppTheme.primaryColor,
@@ -525,7 +525,7 @@ class _ChannelFormSheetState extends State<_ChannelFormSheet> {
                   Text(
                     'Disarankan: login langsung ke platform. Akun langsung '
                     'terhubung dan lebih aman (tanpa menempel token).',
-                    style: GoogleFonts.inter(
+                    style: GoogleFonts.plusJakartaSans(
                         fontSize: 11, color: AppTheme.textSecondary),
                   ),
                   const SizedBox(height: 14),
@@ -535,7 +535,7 @@ class _ChannelFormSheetState extends State<_ChannelFormSheet> {
                       Padding(
                         padding: const EdgeInsets.symmetric(horizontal: 8),
                         child: Text('atau isi manual',
-                            style: GoogleFonts.inter(
+                            style: GoogleFonts.plusJakartaSans(
                                 fontSize: 11,
                                 color: AppTheme.textSecondary)),
                       ),
@@ -578,7 +578,7 @@ class _ChannelFormSheetState extends State<_ChannelFormSheet> {
                 Text(
                   'Tidak punya token? Biarkan kosong. Akun tetap bisa ditandai '
                   'terhubung untuk pencatatan, dan Anda tetap bisa posting manual.',
-                  style: GoogleFonts.inter(
+                  style: GoogleFonts.plusJakartaSans(
                       fontSize: 11, color: AppTheme.textSecondary),
                 ),
                 const SizedBox(height: 16),
@@ -603,7 +603,7 @@ class _ChannelFormSheetState extends State<_ChannelFormSheet> {
                             ),
                           ),
                           child: Text('Hubungkan',
-                              style: GoogleFonts.inter(
+                              style: GoogleFonts.plusJakartaSans(
                                   fontWeight: FontWeight.w700)),
                         ),
                       ),
@@ -621,7 +621,7 @@ class _ChannelFormSheetState extends State<_ChannelFormSheet> {
                       icon: const Icon(Icons.link_off_rounded,
                           color: AppTheme.errorColor),
                       label: Text('Putuskan akun',
-                          style: GoogleFonts.inter(
+                          style: GoogleFonts.plusJakartaSans(
                               fontWeight: FontWeight.w600,
                               color: AppTheme.errorColor)),
                     ),

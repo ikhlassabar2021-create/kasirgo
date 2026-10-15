@@ -256,14 +256,14 @@ class _OnlineOrdersViewState extends ConsumerState<OnlineOrdersView>
       context: context,
       builder: (ctx) => AlertDialog(
         title: Text('Kode Penerima',
-            style: GoogleFonts.inter(fontWeight: FontWeight.w800)),
+            style: GoogleFonts.plusJakartaSans(fontWeight: FontWeight.w800)),
         content: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
               'Minta kode 4 digit dari pembeli sebagai bukti barang diterima.',
-              style: GoogleFonts.inter(
+              style: GoogleFonts.plusJakartaSans(
                   fontSize: 12.5, color: AppTheme.textSecondary),
             ),
             const SizedBox(height: 14),
@@ -274,7 +274,7 @@ class _OnlineOrdersViewState extends ConsumerState<OnlineOrdersView>
               maxLength: 4,
               textAlign: TextAlign.center,
               inputFormatters: [FilteringTextInputFormatter.digitsOnly],
-              style: GoogleFonts.inter(
+              style: GoogleFonts.plusJakartaSans(
                   fontSize: 24,
                   fontWeight: FontWeight.w800,
                   letterSpacing: 10),
@@ -570,7 +570,7 @@ class _OnlineOrdersViewState extends ConsumerState<OnlineOrdersView>
             const Icon(Icons.block_rounded, size: 56, color: AppTheme.borderColor),
             const SizedBox(height: 10),
             Text('Belum ada pembeli diblokir',
-                style: GoogleFonts.inter(
+                style: GoogleFonts.plusJakartaSans(
                     color: AppTheme.textSecondary, fontSize: 13)),
           ],
         ),
@@ -621,19 +621,19 @@ class _OnlineOrdersViewState extends ConsumerState<OnlineOrdersView>
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(name,
-                    style: GoogleFonts.inter(
+                    style: GoogleFonts.plusJakartaSans(
                         color: AppTheme.textPrimary,
                         fontWeight: FontWeight.w700,
                         fontSize: 13.5)),
                 if (phone != null && phone.trim().isNotEmpty)
                   Text(phone,
-                      style: GoogleFonts.inter(
+                      style: GoogleFonts.plusJakartaSans(
                           color: AppTheme.textSecondary, fontSize: 11.5)),
                 if (reason != null && reason.trim().isNotEmpty)
                   Padding(
                     padding: const EdgeInsets.only(top: 2),
                     child: Text('Alasan: $reason',
-                        style: GoogleFonts.inter(
+                        style: GoogleFonts.plusJakartaSans(
                             color: AppTheme.textSecondary,
                             fontSize: 11,
                             fontStyle: FontStyle.italic)),
@@ -679,7 +679,7 @@ class _OnlineOrdersViewState extends ConsumerState<OnlineOrdersView>
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text('Pesanan Online',
-                    style: GoogleFonts.inter(
+                    style: GoogleFonts.plusJakartaSans(
                         fontSize: 16,
                         fontWeight: FontWeight.w800,
                         color: AppTheme.textPrimary)),
@@ -693,7 +693,7 @@ class _OnlineOrdersViewState extends ConsumerState<OnlineOrdersView>
                     ),
                     const SizedBox(width: 6),
                     Text('Live - $_pendingCount menunggu pengecekan',
-                        style: GoogleFonts.inter(
+                        style: GoogleFonts.plusJakartaSans(
                             fontSize: 11, color: AppTheme.textSecondary)),
                   ],
                 ),
@@ -718,7 +718,7 @@ class _OnlineOrdersViewState extends ConsumerState<OnlineOrdersView>
           const Icon(Icons.storefront_rounded, size: 56, color: AppTheme.borderColor),
           const SizedBox(height: 10),
           Text('Belum ada pesanan online',
-              style: GoogleFonts.inter(
+              style: GoogleFonts.plusJakartaSans(
                   color: AppTheme.textSecondary, fontSize: 13)),
         ],
       ),
@@ -798,7 +798,7 @@ class _OnlineOrdersViewState extends ConsumerState<OnlineOrdersView>
                 size: 12, color: AppTheme.warningColor),
             const SizedBox(width: 4),
             Text(text,
-                style: GoogleFonts.inter(
+                style: GoogleFonts.plusJakartaSans(
                     color: AppTheme.warningColor,
                     fontWeight: FontWeight.w800,
                     fontSize: 10.5)),
@@ -823,7 +823,7 @@ class _OnlineOrdersViewState extends ConsumerState<OnlineOrdersView>
                 size: 14, color: AppTheme.textSecondary),
             const SizedBox(width: 6),
             Text('Antar via',
-                style: GoogleFonts.inter(
+                style: GoogleFonts.plusJakartaSans(
                     color: AppTheme.textSecondary,
                     fontSize: 11.5,
                     fontWeight: FontWeight.w600)),
@@ -858,7 +858,7 @@ class _OnlineOrdersViewState extends ConsumerState<OnlineOrdersView>
                         color: sel ? Colors.white : AppTheme.primaryColor),
                     const SizedBox(width: 6),
                     Text(label,
-                        style: GoogleFonts.inter(
+                        style: GoogleFonts.plusJakartaSans(
                             color: sel ? Colors.white : AppTheme.textPrimary,
                             fontSize: 11.5,
                             fontWeight: FontWeight.w700)),
@@ -934,7 +934,7 @@ class _OnlineOrdersViewState extends ConsumerState<OnlineOrdersView>
                                 ? 'DIANTAR - ${o.courierLabel!.toUpperCase()}'
                                 : 'DIANTAR')
                             : 'AMBIL',
-                        style: GoogleFonts.inter(
+                        style: GoogleFonts.plusJakartaSans(
                             color: o.isDelivery
                                 ? AppTheme.accentColor
                                 : AppTheme.primaryColor,
@@ -951,14 +951,14 @@ class _OnlineOrdersViewState extends ConsumerState<OnlineOrdersView>
                   borderRadius: BorderRadius.circular(9),
                 ),
                 child: Text(o.statusLabel.toUpperCase(),
-                    style: GoogleFonts.inter(
+                    style: GoogleFonts.plusJakartaSans(
                         color: color,
                         fontWeight: FontWeight.w800,
                         fontSize: 10.5)),
               ),
               const Spacer(),
               Text(_timeAgo(o.createdAt),
-                  style: GoogleFonts.inter(
+                  style: GoogleFonts.plusJakartaSans(
                       color: AppTheme.textSecondary, fontSize: 11)),
             ],
           ),
@@ -977,7 +977,7 @@ class _OnlineOrdersViewState extends ConsumerState<OnlineOrdersView>
                   o.buyerName?.trim().isNotEmpty == true
                       ? o.buyerName!
                       : 'Pembeli',
-                  style: GoogleFonts.inter(
+                  style: GoogleFonts.plusJakartaSans(
                       color: AppTheme.textPrimary,
                       fontWeight: FontWeight.w700,
                       fontSize: 13),
@@ -985,7 +985,7 @@ class _OnlineOrdersViewState extends ConsumerState<OnlineOrdersView>
               ),
               if (o.code != null && o.code!.isNotEmpty)
                 Text('#${o.code}',
-                    style: GoogleFonts.inter(
+                    style: GoogleFonts.plusJakartaSans(
                         color: AppTheme.textSecondary, fontSize: 11)),
               if (o.buyerId != null)
                 PopupMenuButton<String>(
@@ -1022,7 +1022,7 @@ class _OnlineOrdersViewState extends ConsumerState<OnlineOrdersView>
                         size: 13, color: AppTheme.textSecondary),
                     const SizedBox(width: 4),
                     Text(o.buyerPhone!,
-                        style: GoogleFonts.inter(
+                        style: GoogleFonts.plusJakartaSans(
                             color: AppTheme.textSecondary, fontSize: 11.5)),
                   ],
                   if (o.buyerPhone?.trim().isNotEmpty == true &&
@@ -1033,7 +1033,7 @@ class _OnlineOrdersViewState extends ConsumerState<OnlineOrdersView>
                         size: 13, color: AppTheme.textSecondary),
                     const SizedBox(width: 4),
                     Text('${o.distanceKm!.toStringAsFixed(1)} km',
-                        style: GoogleFonts.inter(
+                        style: GoogleFonts.plusJakartaSans(
                             color: AppTheme.textSecondary, fontSize: 11.5)),
                   ],
                 ],
@@ -1058,7 +1058,7 @@ class _OnlineOrdersViewState extends ConsumerState<OnlineOrdersView>
                     Expanded(
                       child: Text(
                         o.buyerAddress!,
-                        style: GoogleFonts.inter(
+                        style: GoogleFonts.plusJakartaSans(
                             color: AppTheme.textPrimary,
                             fontSize: 11.5,
                             height: 1.35),
@@ -1074,19 +1074,19 @@ class _OnlineOrdersViewState extends ConsumerState<OnlineOrdersView>
                 child: Row(
                   children: [
                     Text('${_qty(it.qty)}x ',
-                        style: GoogleFonts.inter(
+                        style: GoogleFonts.plusJakartaSans(
                             color: AppTheme.primaryColor,
                             fontWeight: FontWeight.w800,
                             fontSize: 12.5)),
                     Expanded(
                       child: Text(it.nameSnapshot,
-                          style: GoogleFonts.inter(
+                          style: GoogleFonts.plusJakartaSans(
                               color: AppTheme.textPrimary,
                               fontSize: 12.5,
                               fontWeight: FontWeight.w600)),
                     ),
                     Text(Formatters.currency(it.lineTotal),
-                        style: GoogleFonts.inter(
+                        style: GoogleFonts.plusJakartaSans(
                             color: AppTheme.textSecondary, fontSize: 11.5)),
                   ],
                 ),
@@ -1099,11 +1099,11 @@ class _OnlineOrdersViewState extends ConsumerState<OnlineOrdersView>
                 children: [
                   Expanded(
                     child: Text('Ongkir (titipan kurir)',
-                        style: GoogleFonts.inter(
+                        style: GoogleFonts.plusJakartaSans(
                             color: AppTheme.textSecondary, fontSize: 11.5)),
                   ),
                   Text(Formatters.currency(o.deliveryFee),
-                      style: GoogleFonts.inter(
+                      style: GoogleFonts.plusJakartaSans(
                           color: AppTheme.textSecondary, fontSize: 11.5)),
                 ],
               ),
@@ -1112,13 +1112,13 @@ class _OnlineOrdersViewState extends ConsumerState<OnlineOrdersView>
             children: [
               Expanded(
                 child: Text('Total',
-                    style: GoogleFonts.inter(
+                    style: GoogleFonts.plusJakartaSans(
                         color: AppTheme.textPrimary,
                         fontWeight: FontWeight.w700,
                         fontSize: 13)),
               ),
               Text(Formatters.currency(o.total),
-                  style: GoogleFonts.inter(
+                  style: GoogleFonts.plusJakartaSans(
                       color: AppTheme.textPrimary,
                       fontWeight: FontWeight.w800,
                       fontSize: 15)),
@@ -1144,7 +1144,7 @@ class _OnlineOrdersViewState extends ConsumerState<OnlineOrdersView>
                       child: Text(
                         'Transfer tepat ${Formatters.currency(o.payAmount)} '
                         '(kode unik ${o.uniqueCode})',
-                        style: GoogleFonts.inter(
+                        style: GoogleFonts.plusJakartaSans(
                             color: AppTheme.textPrimary,
                             fontSize: 11.5,
                             fontWeight: FontWeight.w700),
@@ -1164,7 +1164,7 @@ class _OnlineOrdersViewState extends ConsumerState<OnlineOrdersView>
                 borderRadius: BorderRadius.circular(AppTheme.radiusMedium),
               ),
               child: Text('Catatan: ${o.note}',
-                  style: GoogleFonts.inter(
+                  style: GoogleFonts.plusJakartaSans(
                       color: AppTheme.textSecondary, fontSize: 11.5)),
             ),
           ],
@@ -1274,7 +1274,7 @@ class _OnlineOrdersViewState extends ConsumerState<OnlineOrdersView>
               )
             : Text(label,
                 textAlign: TextAlign.center,
-                style: GoogleFonts.inter(
+                style: GoogleFonts.plusJakartaSans(
                     fontWeight: FontWeight.w700, fontSize: 12)),
       ),
     );

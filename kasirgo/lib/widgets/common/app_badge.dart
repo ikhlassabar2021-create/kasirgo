@@ -59,7 +59,7 @@ class AppBadge extends StatelessWidget {
           ],
           Text(
             label,
-            style: GoogleFonts.inter(
+            style: GoogleFonts.plusJakartaSans(
               color: isAi ? Colors.white : fg,
               fontSize: compact ? 10 : 11,
               fontWeight: FontWeight.w800,

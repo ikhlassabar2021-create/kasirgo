@@ -88,7 +88,7 @@ class _DynamicQrisSheetState extends State<DynamicQrisSheet> {
             const SizedBox(height: 14),
             Text(_paid ? 'Pembayaran Berhasil' : 'Pembayaran QRIS',
                 textAlign: TextAlign.center,
-                style: GoogleFonts.inter(
+                style: GoogleFonts.plusJakartaSans(
                     fontSize: 17,
                     fontWeight: FontWeight.w800,
                     color: AppTheme.textPrimary)),
@@ -96,7 +96,7 @@ class _DynamicQrisSheetState extends State<DynamicQrisSheet> {
             Text(
                 'Order: ${widget.result.providerOrderId ?? widget.result.orderId}',
                 textAlign: TextAlign.center,
-                style: GoogleFonts.inter(
+                style: GoogleFonts.plusJakartaSans(
                     fontSize: 11, color: AppTheme.textSecondary)),
             const SizedBox(height: 12),
             Container(
@@ -110,13 +110,13 @@ class _DynamicQrisSheetState extends State<DynamicQrisSheet> {
               child: Column(
                 children: [
                   Text(Formatters.currency(total),
-                      style: GoogleFonts.inter(
+                      style: GoogleFonts.plusJakartaSans(
                           fontSize: 24,
                           fontWeight: FontWeight.w800,
                           color: AppTheme.secondaryColor)),
                   const SizedBox(height: 4),
                   Text('Program Pendukung - ${widget.result.periodDays} hari',
-                      style: GoogleFonts.inter(
+                      style: GoogleFonts.plusJakartaSans(
                           fontSize: 12, color: AppTheme.textSecondary)),
                   const SizedBox(height: 12),
                   if (_paid)
@@ -163,7 +163,7 @@ class _DynamicQrisSheetState extends State<DynamicQrisSheet> {
                   else
                     Text('Terima kasih! Program Pendukung Anda sudah aktif.',
                         textAlign: TextAlign.center,
-                        style: GoogleFonts.inter(
+                        style: GoogleFonts.plusJakartaSans(
                             fontSize: 12, color: AppTheme.textSecondary)),
                 ],
               ),

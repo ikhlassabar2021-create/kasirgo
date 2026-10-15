@@ -115,10 +115,10 @@ class _BuyerOrderTrackingScreenState extends State<BuyerOrderTrackingScreen> {
       context: context,
       builder: (ctx) => AlertDialog(
         title: Text('Konfirmasi Terima',
-            style: GoogleFonts.inter(fontWeight: FontWeight.w800)),
+            style: GoogleFonts.plusJakartaSans(fontWeight: FontWeight.w800)),
         content: Text(
           'Tandai pesanan ini sudah Anda terima dari kurir?',
-          style: GoogleFonts.inter(fontSize: 13, color: AppTheme.textSecondary),
+          style: GoogleFonts.plusJakartaSans(fontSize: 13, color: AppTheme.textSecondary),
         ),
         actions: [
           TextButton(
@@ -185,7 +185,7 @@ class _BuyerOrderTrackingScreenState extends State<BuyerOrderTrackingScreen> {
         elevation: 0,
         title: Text(
           'Lacak Pesanan',
-          style: GoogleFonts.inter(
+          style: GoogleFonts.plusJakartaSans(
             fontSize: 16,
             fontWeight: FontWeight.w700,
             color: AppTheme.textPrimary,
@@ -266,7 +266,7 @@ class _BuyerOrderTrackingScreenState extends State<BuyerOrderTrackingScreen> {
               children: [
                 Text(
                   _statusHeadline(o),
-                  style: GoogleFonts.inter(
+                  style: GoogleFonts.plusJakartaSans(
                     fontSize: 15,
                     fontWeight: FontWeight.w700,
                     color: AppTheme.textPrimary,
@@ -276,7 +276,7 @@ class _BuyerOrderTrackingScreenState extends State<BuyerOrderTrackingScreen> {
                 Text(
                   '${o?.code ?? '-'}'
                   '${widget.outletName != null ? ' - ${widget.outletName}' : ''}',
-                  style: GoogleFonts.inter(
+                  style: GoogleFonts.plusJakartaSans(
                     fontSize: 12.5,
                     color: AppTheme.textSecondary,
                   ),
@@ -332,7 +332,7 @@ class _BuyerOrderTrackingScreenState extends State<BuyerOrderTrackingScreen> {
                 padding: const EdgeInsets.only(top: 5),
                 child: Text(
                   steps[i]['label'] as String,
-                  style: GoogleFonts.inter(
+                  style: GoogleFonts.plusJakartaSans(
                     fontSize: 13.5,
                     fontWeight: active ? FontWeight.w600 : FontWeight.w400,
                     color:
@@ -361,7 +361,7 @@ class _BuyerOrderTrackingScreenState extends State<BuyerOrderTrackingScreen> {
               const SizedBox(width: 8),
               Text(
                 'Kode Penerima',
-                style: GoogleFonts.inter(
+                style: GoogleFonts.plusJakartaSans(
                   fontSize: 14,
                   fontWeight: FontWeight.w700,
                   color: AppTheme.textPrimary,
@@ -375,7 +375,7 @@ class _BuyerOrderTrackingScreenState extends State<BuyerOrderTrackingScreen> {
                 ? 'Pesanan sudah diterima.'
                 : 'Bacakan kode ini ke kurir saat barang diserahkan sebagai bukti '
                     'bahwa Anda menerima pesanan.',
-            style: GoogleFonts.inter(
+            style: GoogleFonts.plusJakartaSans(
               fontSize: 12.5,
               color: AppTheme.textSecondary,
               height: 1.35,
@@ -394,7 +394,7 @@ class _BuyerOrderTrackingScreenState extends State<BuyerOrderTrackingScreen> {
             child: Text(
               code,
               textAlign: TextAlign.center,
-              style: GoogleFonts.inter(
+              style: GoogleFonts.plusJakartaSans(
                 fontSize: 30,
                 fontWeight: FontWeight.w800,
                 letterSpacing: 12,
@@ -414,7 +414,7 @@ class _BuyerOrderTrackingScreenState extends State<BuyerOrderTrackingScreen> {
         children: [
           Text(
             'Rincian',
-            style: GoogleFonts.inter(
+            style: GoogleFonts.plusJakartaSans(
               fontSize: 14,
               fontWeight: FontWeight.w700,
               color: AppTheme.textPrimary,
@@ -429,7 +429,7 @@ class _BuyerOrderTrackingScreenState extends State<BuyerOrderTrackingScreen> {
                   Expanded(
                     child: Text(
                       '${item.nameSnapshot} x${item.qty.toInt()}',
-                      style: GoogleFonts.inter(
+                      style: GoogleFonts.plusJakartaSans(
                         fontSize: 13,
                         color: AppTheme.textPrimary,
                       ),
@@ -437,7 +437,7 @@ class _BuyerOrderTrackingScreenState extends State<BuyerOrderTrackingScreen> {
                   ),
                   Text(
                     Formatters.currency(item.lineTotal),
-                    style: GoogleFonts.inter(
+                    style: GoogleFonts.plusJakartaSans(
                       fontSize: 13,
                       color: AppTheme.textPrimary,
                     ),
@@ -478,7 +478,7 @@ class _BuyerOrderTrackingScreenState extends State<BuyerOrderTrackingScreen> {
           Expanded(
             child: Text(
               label,
-              style: GoogleFonts.inter(
+              style: GoogleFonts.plusJakartaSans(
                 fontSize: 12.5,
                 color: AppTheme.textSecondary,
               ),
@@ -489,7 +489,7 @@ class _BuyerOrderTrackingScreenState extends State<BuyerOrderTrackingScreen> {
             child: Text(
               value,
               textAlign: TextAlign.right,
-              style: GoogleFonts.inter(
+              style: GoogleFonts.plusJakartaSans(
                 fontSize: bold ? 14 : 12.5,
                 fontWeight: bold ? FontWeight.w800 : FontWeight.w500,
                 color: AppTheme.textPrimary,

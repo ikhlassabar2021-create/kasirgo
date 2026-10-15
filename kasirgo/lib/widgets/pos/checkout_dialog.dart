@@ -284,7 +284,7 @@ class _CheckoutDialogState extends State<CheckoutDialog> {
                           const SizedBox(height: 18),
                           Text(
                             'Metode Pembayaran',
-                            style: GoogleFonts.inter(
+                            style: GoogleFonts.plusJakartaSans(
                               color: AppTheme.textPrimary,
                               fontSize: 14,
                               fontWeight: FontWeight.w700,
@@ -313,7 +313,7 @@ class _CheckoutDialogState extends State<CheckoutDialog> {
                                   Expanded(
                                     child: Text(
                                       'Mode QRIS Statis (sesuai kebijakan pembayaran)',
-                                      style: GoogleFonts.inter(
+                                      style: GoogleFonts.plusJakartaSans(
                                         color: AppTheme.textSecondary,
                                         fontSize: 12,
                                         fontWeight: FontWeight.w600,
@@ -396,7 +396,7 @@ class _CheckoutDialogState extends State<CheckoutDialog> {
           const SizedBox(width: 12),
           Text(
             'Pembayaran',
-            style: GoogleFonts.inter(
+            style: GoogleFonts.plusJakartaSans(
               color: AppTheme.textPrimary,
               fontSize: 18,
               fontWeight: FontWeight.w800,
@@ -433,7 +433,7 @@ class _CheckoutDialogState extends State<CheckoutDialog> {
         children: [
           Text(
             'TOTAL TAGIHAN',
-            style: GoogleFonts.inter(
+            style: GoogleFonts.plusJakartaSans(
               color: AppTheme.textSecondary,
               fontSize: 11,
               fontWeight: FontWeight.w700,
@@ -443,7 +443,7 @@ class _CheckoutDialogState extends State<CheckoutDialog> {
           const SizedBox(height: 6),
           Text(
             'Rp ${widget.totalAmount.toStringAsFixed(0)}',
-            style: GoogleFonts.inter(
+            style: GoogleFonts.plusJakartaSans(
               color: AppTheme.textPrimary,
               fontSize: 30,
               fontWeight: FontWeight.w800,
@@ -481,7 +481,7 @@ class _CheckoutDialogState extends State<CheckoutDialog> {
               Expanded(
                 child: Text(
                   label,
-                  style: GoogleFonts.inter(
+                  style: GoogleFonts.plusJakartaSans(
                     color: isSelected ? AppTheme.textPrimary : AppTheme.textSecondary,
                     fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
                     fontSize: 14,
@@ -503,7 +503,7 @@ class _CheckoutDialogState extends State<CheckoutDialog> {
       children: [
         Text(
           'Nominal Diterima',
-          style: GoogleFonts.inter(color: AppTheme.textPrimary, fontSize: 13, fontWeight: FontWeight.w700),
+          style: GoogleFonts.plusJakartaSans(color: AppTheme.textPrimary, fontSize: 13, fontWeight: FontWeight.w700),
         ),
         const SizedBox(height: 8),
         TextField(
@@ -511,7 +511,7 @@ class _CheckoutDialogState extends State<CheckoutDialog> {
           keyboardType: TextInputType.number,
           inputFormatters: [FilteringTextInputFormatter.digitsOnly],
           onChanged: (text) => setState(() {}),
-          style: GoogleFonts.inter(color: AppTheme.textPrimary, fontSize: 18, fontWeight: FontWeight.w800),
+          style: GoogleFonts.plusJakartaSans(color: AppTheme.textPrimary, fontSize: 18, fontWeight: FontWeight.w800),
           decoration: const InputDecoration(
             prefixText: 'Rp ',
             prefixStyle: TextStyle(color: AppTheme.textSecondary),
@@ -542,10 +542,10 @@ class _CheckoutDialogState extends State<CheckoutDialog> {
           child: Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Text('Kembalian', style: GoogleFonts.inter(color: AppTheme.textSecondary, fontSize: 13)),
+              Text('Kembalian', style: GoogleFonts.plusJakartaSans(color: AppTheme.textSecondary, fontSize: 13)),
               Text(
                 'Rp ${_change.toStringAsFixed(0)}',
-                style: GoogleFonts.inter(
+                style: GoogleFonts.plusJakartaSans(
                   color: AppTheme.successColor,
                   fontWeight: FontWeight.w800,
                   fontSize: 18,
@@ -621,13 +621,13 @@ class _CheckoutDialogState extends State<CheckoutDialog> {
       const SizedBox(height: 10),
       Text(
         merchant,
-        style: GoogleFonts.inter(color: AppTheme.textPrimary, fontSize: 13, fontWeight: FontWeight.w700),
+        style: GoogleFonts.plusJakartaSans(color: AppTheme.textPrimary, fontSize: 13, fontWeight: FontWeight.w700),
       ),
       if (wallet.isNotEmpty) ...[
         const SizedBox(height: 2),
         Text(
           wallet,
-          style: GoogleFonts.inter(color: AppTheme.textSecondary, fontSize: 12),
+          style: GoogleFonts.plusJakartaSans(color: AppTheme.textSecondary, fontSize: 12),
         ),
       ],
       const SizedBox(height: 10),
@@ -1025,7 +1025,7 @@ class _QuickAmountChip extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return ActionChip(
-      label: Text(label, style: GoogleFonts.inter(fontSize: 11, fontWeight: FontWeight.w600)),
+      label: Text(label, style: GoogleFonts.plusJakartaSans(fontSize: 11, fontWeight: FontWeight.w600)),
       onPressed: onTap,
       backgroundColor: AppTheme.primaryColor.withValues(alpha: 0.12),
       side: BorderSide(color: AppTheme.primaryColor.withValues(alpha: 0.35)),

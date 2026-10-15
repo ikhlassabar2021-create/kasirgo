@@ -59,7 +59,7 @@ class _BuyerShellState extends ConsumerState<BuyerShell> {
           onIndexChanged: (i) => setState(() => _index = i),
           mobileTitle: Text(
             _titles[_index],
-            style: GoogleFonts.inter(
+            style: GoogleFonts.plusJakartaSans(
               fontSize: 16,
               fontWeight: FontWeight.w700,
               color: AppTheme.textPrimary,
@@ -99,7 +99,7 @@ class _BuyerShellState extends ConsumerState<BuyerShell> {
                   Expanded(
                     child: Text(
                       customer.displayName,
-                      style: GoogleFonts.inter(
+                      style: GoogleFonts.plusJakartaSans(
                         fontSize: 15,
                         fontWeight: FontWeight.w700,
                         color: AppTheme.textPrimary,
@@ -118,7 +118,7 @@ class _BuyerShellState extends ConsumerState<BuyerShell> {
                 ),
                 title: Text(
                   _navItems[i].label,
-                  style: GoogleFonts.inter(
+                  style: GoogleFonts.plusJakartaSans(
                     fontSize: 14,
                     fontWeight: _index == i ? FontWeight.w700 : FontWeight.w500,
                     color: AppTheme.textPrimary,
@@ -168,7 +168,7 @@ class _BrandMark extends StatelessWidget {
         const SizedBox(width: 8),
         Text(
           'KasirGo',
-          style: GoogleFonts.inter(
+          style: GoogleFonts.plusJakartaSans(
             fontSize: 16,
             fontWeight: FontWeight.w700,
             color: AppTheme.textPrimary,
@@ -381,7 +381,7 @@ class _BuyerOrdersTabState extends ConsumerState<BuyerOrdersTab> {
               const SizedBox(height: 12),
               Text(
                 'Belum ada pesanan',
-                style: GoogleFonts.inter(
+                style: GoogleFonts.plusJakartaSans(
                   fontSize: 16,
                   fontWeight: FontWeight.w700,
                   color: AppTheme.textPrimary,
@@ -390,7 +390,7 @@ class _BuyerOrdersTabState extends ConsumerState<BuyerOrdersTab> {
               const SizedBox(height: 4),
               Text(
                 'Pesananmu akan muncul di sini.',
-                style: GoogleFonts.inter(
+                style: GoogleFonts.plusJakartaSans(
                   fontSize: 13,
                   color: AppTheme.textSecondary,
                 ),
@@ -431,7 +431,7 @@ class _PeriodChip extends StatelessWidget {
           ),
           child: Text(
             label,
-            style: GoogleFonts.inter(
+            style: GoogleFonts.plusJakartaSans(
               fontSize: 12,
               fontWeight: FontWeight.w600,
               color: selected ? Colors.white : AppTheme.textSecondary,
@@ -462,7 +462,7 @@ class _OrderCard extends StatelessWidget {
               Expanded(
                 child: Text(
                   order.code ?? 'Pesanan',
-                  style: GoogleFonts.inter(
+                  style: GoogleFonts.plusJakartaSans(
                     fontSize: 14,
                     fontWeight: FontWeight.w700,
                     color: AppTheme.textPrimary,
@@ -477,7 +477,7 @@ class _OrderCard extends StatelessWidget {
                 ),
                 child: Text(
                   order.statusLabel,
-                  style: GoogleFonts.inter(
+                  style: GoogleFonts.plusJakartaSans(
                     fontSize: 11,
                     fontWeight: FontWeight.w600,
                     color: AppTheme.primaryColor,
@@ -499,19 +499,19 @@ class _OrderCard extends StatelessWidget {
           Text(
             '${order.isDelivery ? 'Diantar' : 'Ambil sendiri'}'
             '${order.createdAt != null ? ' - ${Formatters.date(order.createdAt!)}' : ''}',
-            style: GoogleFonts.inter(fontSize: 12, color: AppTheme.textSecondary),
+            style: GoogleFonts.plusJakartaSans(fontSize: 12, color: AppTheme.textSecondary),
           ),
           const SizedBox(height: 10),
           Row(
             children: [
               Text(
                 'Total',
-                style: GoogleFonts.inter(fontSize: 12, color: AppTheme.textSecondary),
+                style: GoogleFonts.plusJakartaSans(fontSize: 12, color: AppTheme.textSecondary),
               ),
               const Spacer(),
               Text(
                 Formatters.currency(order.total),
-                style: GoogleFonts.inter(
+                style: GoogleFonts.plusJakartaSans(
                   fontSize: 14,
                   fontWeight: FontWeight.w700,
                   color: AppTheme.textPrimary,
@@ -562,7 +562,7 @@ class BuyerProfileView extends ConsumerWidget {
                   children: [
                     Text(
                       customer.displayName,
-                      style: GoogleFonts.inter(
+                      style: GoogleFonts.plusJakartaSans(
                         fontSize: 16,
                         fontWeight: FontWeight.w700,
                         color: AppTheme.textPrimary,
@@ -571,7 +571,7 @@ class BuyerProfileView extends ConsumerWidget {
                     const SizedBox(height: 2),
                     Text(
                       customer.phone ?? 'Belum ada nomor',
-                      style: GoogleFonts.inter(
+                      style: GoogleFonts.plusJakartaSans(
                         fontSize: 13,
                         color: AppTheme.textSecondary,
                       ),
@@ -659,7 +659,7 @@ class BuyerProfileView extends ConsumerWidget {
         Text(
           'Data Anda hanya dipakai untuk memproses pesanan pada warung tujuan.',
           textAlign: TextAlign.center,
-          style: GoogleFonts.inter(fontSize: 11.5, color: AppTheme.textSecondary),
+          style: GoogleFonts.plusJakartaSans(fontSize: 11.5, color: AppTheme.textSecondary),
         ),
       ],
     );
@@ -746,14 +746,14 @@ class _InfoRow extends StatelessWidget {
         const SizedBox(width: 12),
         Text(
           label,
-          style: GoogleFonts.inter(fontSize: 13, color: AppTheme.textSecondary),
+          style: GoogleFonts.plusJakartaSans(fontSize: 13, color: AppTheme.textSecondary),
         ),
         const SizedBox(width: 12),
         Expanded(
           child: Text(
             value,
             textAlign: TextAlign.right,
-            style: GoogleFonts.inter(
+            style: GoogleFonts.plusJakartaSans(
               fontSize: 13,
               fontWeight: FontWeight.w600,
               color: AppTheme.textPrimary,
@@ -845,7 +845,7 @@ class _EditBuyerProfileSheetState
             children: [
               Text(
                 'Ubah Data Akun',
-                style: GoogleFonts.inter(
+                style: GoogleFonts.plusJakartaSans(
                   fontSize: 18,
                   fontWeight: FontWeight.w700,
                   color: AppTheme.textPrimary,

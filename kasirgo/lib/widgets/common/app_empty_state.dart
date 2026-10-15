@@ -42,7 +42,7 @@ class AppEmptyState extends StatelessWidget {
             Text(
               title,
               textAlign: TextAlign.center,
-              style: GoogleFonts.inter(
+              style: GoogleFonts.plusJakartaSans(
                 color: AppTheme.textPrimary,
                 fontSize: 15,
                 fontWeight: FontWeight.w700,
@@ -53,7 +53,7 @@ class AppEmptyState extends StatelessWidget {
               Text(
                 subtitle!,
                 textAlign: TextAlign.center,
-                style: GoogleFonts.inter(
+                style: GoogleFonts.plusJakartaSans(
                   color: AppTheme.textSecondary,
                   fontSize: 13,
                 ),

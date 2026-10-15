@@ -114,7 +114,7 @@ class _OnlineCatalogScreenState extends ConsumerState<OnlineCatalogScreen> {
       appBar: AppBar(
         title: Text(
           'Katalog Toko Online',
-          style: GoogleFonts.inter(fontSize: 18, fontWeight: FontWeight.w700, color: AppTheme.textPrimary),
+          style: GoogleFonts.plusJakartaSans(fontSize: 18, fontWeight: FontWeight.w700, color: AppTheme.textPrimary),
         ),
         actions: [
           IconButton(
@@ -162,15 +162,15 @@ class _OnlineCatalogScreenState extends ConsumerState<OnlineCatalogScreen> {
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            Text('Link Toko Online', style: GoogleFonts.inter(fontWeight: FontWeight.w700, fontSize: 13, color: AppTheme.textPrimary)),
+                            Text('Link Toko Online', style: GoogleFonts.plusJakartaSans(fontWeight: FontWeight.w700, fontSize: 13, color: AppTheme.textPrimary)),
                             const SizedBox(height: 2),
-                            Text(catalogUrl, maxLines: 1, overflow: TextOverflow.ellipsis, style: GoogleFonts.inter(fontSize: 11, color: AppTheme.textSecondary)),
+                            Text(catalogUrl, maxLines: 1, overflow: TextOverflow.ellipsis, style: GoogleFonts.plusJakartaSans(fontSize: 11, color: AppTheme.textSecondary)),
                           ],
                         ),
                       ),
                       TextButton.icon(
                         icon: const Icon(Icons.copy_rounded, size: 14, color: AppTheme.primaryColor),
-                        label: Text('Salin', style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.w600, color: AppTheme.primaryColor)),
+                        label: Text('Salin', style: GoogleFonts.plusJakartaSans(fontSize: 12, fontWeight: FontWeight.w600, color: AppTheme.primaryColor)),
                         onPressed: () {
                           Clipboard.setData(ClipboardData(text: catalogUrl));
                           ScaffoldMessenger.of(context).showSnackBar(
@@ -195,12 +195,12 @@ class _OnlineCatalogScreenState extends ConsumerState<OnlineCatalogScreen> {
                       return Padding(
                         padding: const EdgeInsets.only(right: 8),
                         child: ChoiceChip(
-                          label: Text(cat, style: GoogleFonts.inter(fontSize: 12)),
+                          label: Text(cat, style: GoogleFonts.plusJakartaSans(fontSize: 12)),
                           selected: isSelected,
                           selectedColor: AppTheme.primaryColor.withValues(alpha: 0.12),
                           backgroundColor: AppTheme.surfaceColor,
                           side: BorderSide(color: isSelected ? AppTheme.primaryColor : AppTheme.borderColor),
-                          labelStyle: GoogleFonts.inter(
+                          labelStyle: GoogleFonts.plusJakartaSans(
                             fontSize: 12,
                             fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
                             color: isSelected ? AppTheme.primaryColor : AppTheme.textSecondary,
@@ -218,7 +218,7 @@ class _OnlineCatalogScreenState extends ConsumerState<OnlineCatalogScreen> {
                       ? Center(
                           child: Text(
                             'Belum ada produk untuk ditampilkan di katalog',
-                            style: GoogleFonts.inter(color: AppTheme.textSecondary),
+                            style: GoogleFonts.plusJakartaSans(color: AppTheme.textSecondary),
                           ),
                         )
                       : GridView.builder(
@@ -285,11 +285,11 @@ class _OnlineCatalogScreenState extends ConsumerState<OnlineCatalogScreen> {
                                             p.name,
                                             maxLines: 1,
                                             overflow: TextOverflow.ellipsis,
-                                            style: GoogleFonts.inter(fontWeight: FontWeight.w700, fontSize: 11, color: AppTheme.textPrimary),
+                                            style: GoogleFonts.plusJakartaSans(fontWeight: FontWeight.w700, fontSize: 11, color: AppTheme.textPrimary),
                                           ),
                                           Text(
                                             Formatters.currency(p.price),
-                                            style: GoogleFonts.inter(
+                                            style: GoogleFonts.plusJakartaSans(
                                               color: AppTheme.primaryColor,
                                               fontWeight: FontWeight.w700,
                                               fontSize: 10.5,
@@ -343,19 +343,19 @@ class _OnlineCatalogScreenState extends ConsumerState<OnlineCatalogScreen> {
               const SizedBox(width: 8),
               Text(
                 'Kontrol Publikasi Katalog',
-                style: GoogleFonts.inter(fontWeight: FontWeight.w700, fontSize: 13, color: AppTheme.textPrimary),
+                style: GoogleFonts.plusJakartaSans(fontWeight: FontWeight.w700, fontSize: 13, color: AppTheme.textPrimary),
               ),
               const Spacer(),
               Text(
                 '${_publishedIds.length}/${_products.length} publik',
-                style: GoogleFonts.inter(fontSize: 11, color: AppTheme.textSecondary),
+                style: GoogleFonts.plusJakartaSans(fontSize: 11, color: AppTheme.textSecondary),
               ),
             ],
           ),
           const SizedBox(height: 4),
           Text(
             'Thumbnail online diunggah opt-in ke Cloudflare R2 (WebP) hanya untuk produk yang dipublikasikan.',
-            style: GoogleFonts.inter(fontSize: 11, color: AppTheme.textSecondary, height: 1.3),
+            style: GoogleFonts.plusJakartaSans(fontSize: 11, color: AppTheme.textSecondary, height: 1.3),
           ),
           const SizedBox(height: 10),
           ..._products.take(4).map((p) {
@@ -369,10 +369,10 @@ class _OnlineCatalogScreenState extends ConsumerState<OnlineCatalogScreen> {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text(p.name, maxLines: 1, overflow: TextOverflow.ellipsis, style: GoogleFonts.inter(fontWeight: FontWeight.w600, fontSize: 12, color: AppTheme.textPrimary)),
+                        Text(p.name, maxLines: 1, overflow: TextOverflow.ellipsis, style: GoogleFonts.plusJakartaSans(fontWeight: FontWeight.w600, fontSize: 12, color: AppTheme.textPrimary)),
                         Text(
                           isPublished ? 'Publik + thumbnail R2' : 'Tidak dipublikasikan',
-                          style: GoogleFonts.inter(fontSize: 10, color: isPublished ? AppTheme.successColor : AppTheme.textSecondary),
+                          style: GoogleFonts.plusJakartaSans(fontSize: 10, color: isPublished ? AppTheme.successColor : AppTheme.textSecondary),
                         ),
                       ],
                     ),

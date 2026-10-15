@@ -47,7 +47,7 @@ class _ModeSelectScreenState extends ConsumerState<ModeSelectScreen> {
                     Text(
                       'Mau pakai KasirGo untuk apa?',
                       textAlign: TextAlign.center,
-                      style: GoogleFonts.inter(
+                      style: GoogleFonts.plusJakartaSans(
                         fontSize: 20,
                         fontWeight: FontWeight.w700,
                         color: AppTheme.textPrimary,
@@ -57,7 +57,7 @@ class _ModeSelectScreenState extends ConsumerState<ModeSelectScreen> {
                     Text(
                       'Pilih satu. Anda bisa ganti mode kapan saja di Pengaturan.',
                       textAlign: TextAlign.center,
-                      style: GoogleFonts.inter(
+                      style: GoogleFonts.plusJakartaSans(
                         fontSize: 13,
                         color: AppTheme.textSecondary,
                       ),
@@ -84,7 +84,7 @@ class _ModeSelectScreenState extends ConsumerState<ModeSelectScreen> {
                     Text(
                       'Satu aplikasi, dua peran. Data pembeli terpisah dari data toko.',
                       textAlign: TextAlign.center,
-                      style: GoogleFonts.inter(
+                      style: GoogleFonts.plusJakartaSans(
                         fontSize: 12,
                         color: AppTheme.textSecondary,
                       ),
@@ -121,7 +121,7 @@ class _ModeSelectScreenState extends ConsumerState<ModeSelectScreen> {
         const SizedBox(height: 16),
         Text(
           'KasirGo',
-          style: GoogleFonts.inter(
+          style: GoogleFonts.plusJakartaSans(
             fontSize: 26,
             fontWeight: FontWeight.w800,
             color: AppTheme.textPrimary,
@@ -130,7 +130,7 @@ class _ModeSelectScreenState extends ConsumerState<ModeSelectScreen> {
         const SizedBox(height: 2),
         Text(
           'Warung lebih untung, pembeli lebih mudah',
-          style: GoogleFonts.inter(fontSize: 13, color: AppTheme.textSecondary),
+          style: GoogleFonts.plusJakartaSans(fontSize: 13, color: AppTheme.textSecondary),
         ),
       ],
     );
@@ -179,7 +179,7 @@ class _ModeCard extends StatelessWidget {
               children: [
                 Text(
                   title,
-                  style: GoogleFonts.inter(
+                  style: GoogleFonts.plusJakartaSans(
                     fontSize: 16,
                     fontWeight: FontWeight.w700,
                     color: AppTheme.textPrimary,
@@ -188,7 +188,7 @@ class _ModeCard extends StatelessWidget {
                 const SizedBox(height: 4),
                 Text(
                   subtitle,
-                  style: GoogleFonts.inter(fontSize: 12.5, color: AppTheme.textSecondary),
+                  style: GoogleFonts.plusJakartaSans(fontSize: 12.5, color: AppTheme.textSecondary),
                 ),
               ],
             ),

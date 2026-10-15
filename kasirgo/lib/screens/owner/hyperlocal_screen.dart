@@ -72,7 +72,7 @@ class _HyperlocalScreenState extends ConsumerState<HyperlocalScreen> {
           shape: RoundedRectangleBorder(
               borderRadius: BorderRadius.circular(AppTheme.radiusLarge)),
           title: Text('Izin Bagikan Data Anonim',
-              style: GoogleFonts.inter(
+              style: GoogleFonts.plusJakartaSans(
                   fontSize: 16,
                   fontWeight: FontWeight.w800,
                   color: AppTheme.textPrimary)),
@@ -82,18 +82,18 @@ class _HyperlocalScreenState extends ConsumerState<HyperlocalScreen> {
               'insight wilayah?\n\nTIDAK ADA nama, nomor, atau identitas '
               'pelanggan yang dikirim (sesuai UU PDP). Bisa dimatikan '
               'kapan saja.',
-              style: GoogleFonts.inter(
+              style: GoogleFonts.plusJakartaSans(
                   fontSize: 12.5, color: AppTheme.textSecondary)),
           actions: [
             TextButton(
                 onPressed: () => Navigator.pop(ctx, false),
                 child: Text('Tidak',
                     style:
-                        GoogleFonts.inter(color: AppTheme.textSecondary))),
+                        GoogleFonts.plusJakartaSans(color: AppTheme.textSecondary))),
             TextButton(
                 onPressed: () => Navigator.pop(ctx, true),
                 child: Text('Setuju',
-                    style: GoogleFonts.inter(
+                    style: GoogleFonts.plusJakartaSans(
                         color: AppTheme.primaryColor,
                         fontWeight: FontWeight.w800))),
           ],
@@ -146,7 +146,7 @@ class _HyperlocalScreenState extends ConsumerState<HyperlocalScreen> {
       backgroundColor: AppTheme.backgroundColor,
       appBar: AppBar(
         title: Text('Tren Wilayah',
-            style: GoogleFonts.inter(
+            style: GoogleFonts.plusJakartaSans(
                 fontSize: 18,
                 fontWeight: FontWeight.w700,
                 color: AppTheme.textPrimary)),
@@ -201,7 +201,7 @@ class _HyperlocalScreenState extends ConsumerState<HyperlocalScreen> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text('Bagikan Data Anonim (Opt-in)',
-                    style: GoogleFonts.inter(
+                    style: GoogleFonts.plusJakartaSans(
                         fontSize: 13.5,
                         fontWeight: FontWeight.w800,
                         color: AppTheme.textPrimary)),
@@ -209,7 +209,7 @@ class _HyperlocalScreenState extends ConsumerState<HyperlocalScreen> {
                 Text(
                   'Hanya agregat: omzet, transaksi, produk terlaris. '
                   'Tanpa identitas pelanggan (UU PDP).',
-                  style: GoogleFonts.inter(
+                  style: GoogleFonts.plusJakartaSans(
                       fontSize: 11.5, color: AppTheme.textSecondary),
                 ),
               ],
@@ -237,7 +237,7 @@ class _HyperlocalScreenState extends ConsumerState<HyperlocalScreen> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text('WILAYAH TOKO',
-              style: GoogleFonts.inter(
+              style: GoogleFonts.plusJakartaSans(
                   fontSize: 11,
                   fontWeight: FontWeight.w800,
                   letterSpacing: 0.5,
@@ -246,11 +246,11 @@ class _HyperlocalScreenState extends ConsumerState<HyperlocalScreen> {
           TextField(
             controller: _regionCtl,
             textCapitalization: TextCapitalization.words,
-            style: GoogleFonts.inter(
+            style: GoogleFonts.plusJakartaSans(
                 fontSize: 14, color: AppTheme.textPrimary),
             decoration: InputDecoration(
               hintText: 'cth: Kec. Larangan, Kel. Cengkareng',
-              hintStyle: GoogleFonts.inter(
+              hintStyle: GoogleFonts.plusJakartaSans(
                   fontSize: 12.5, color: AppTheme.textSecondary),
               isDense: true,
               border: OutlineInputBorder(
@@ -273,7 +273,7 @@ class _HyperlocalScreenState extends ConsumerState<HyperlocalScreen> {
                   : const Icon(Icons.upload_rounded, size: 18),
               label: Text(
                   _sending ? 'Mengirim...' : 'Kirim Laporan Bulan Ini',
-                  style: GoogleFonts.inter(
+                  style: GoogleFonts.plusJakartaSans(
                       fontSize: 13, fontWeight: FontWeight.w700)),
               style: ElevatedButton.styleFrom(
                 backgroundColor: AppTheme.primaryColor,
@@ -288,7 +288,7 @@ class _HyperlocalScreenState extends ConsumerState<HyperlocalScreen> {
           if (!_consent) ...[
             const SizedBox(height: 6),
             Text('Aktifkan izin dulu untuk bisa mengirim.',
-                style: GoogleFonts.inter(
+                style: GoogleFonts.plusJakartaSans(
                     fontSize: 10.5, color: AppTheme.textSecondary)),
           ],
         ],
@@ -321,7 +321,7 @@ class _HyperlocalScreenState extends ConsumerState<HyperlocalScreen> {
                     'INSIGHT WILAYAH'
                     '${_insights.region.isEmpty ? '' : ' - ${_insights.region.toUpperCase()}'}',
                     overflow: TextOverflow.ellipsis,
-                    style: GoogleFonts.inter(
+                    style: GoogleFonts.plusJakartaSans(
                         fontSize: 10.5,
                         fontWeight: FontWeight.w800,
                         letterSpacing: 0.5,
@@ -334,14 +334,14 @@ class _HyperlocalScreenState extends ConsumerState<HyperlocalScreen> {
             Text(
               'Belum ada data wilayah. Kirim laporan anonim, lalu insight '
               'akan muncul saat toko lain di wilayah yang sama ikut berbagi.',
-              style: GoogleFonts.inter(
+              style: GoogleFonts.plusJakartaSans(
                   fontSize: 12, color: Colors.white.withValues(alpha: 0.9)),
             )
           else ...[
             Text(
                 '${_insights.participantStores} toko berpartisipasi (anonim) - '
                 'periode ${_insights.period}',
-                style: GoogleFonts.inter(
+                style: GoogleFonts.plusJakartaSans(
                     fontSize: 11, color: Colors.white70)),
             const SizedBox(height: 10),
             Row(
@@ -353,7 +353,7 @@ class _HyperlocalScreenState extends ConsumerState<HyperlocalScreen> {
             ),
             const SizedBox(height: 10),
             Text('PRODUK TERLARIS WILAYAH',
-                style: GoogleFonts.inter(
+                style: GoogleFonts.plusJakartaSans(
                     fontSize: 10, fontWeight: FontWeight.w800, color: Colors.white70)),
             const SizedBox(height: 4),
             ..._insights.topProducts.map(
@@ -366,7 +366,7 @@ class _HyperlocalScreenState extends ConsumerState<HyperlocalScreen> {
                     Expanded(
                       child: Text(p,
                           overflow: TextOverflow.ellipsis,
-                          style: GoogleFonts.inter(
+                          style: GoogleFonts.plusJakartaSans(
                               fontSize: 12, color: Colors.white)),
                     ),
                   ],
@@ -376,21 +376,21 @@ class _HyperlocalScreenState extends ConsumerState<HyperlocalScreen> {
             if (_insights.busyHours.isNotEmpty) ...[
               const SizedBox(height: 10),
               Text('JAM RAMAI (gabungan wilayah)',
-                  style: GoogleFonts.inter(
+                  style: GoogleFonts.plusJakartaSans(
                       fontSize: 10,
                       fontWeight: FontWeight.w800,
                       color: Colors.white70)),
               const SizedBox(height: 4),
               Text(
                 _busyHoursLabel(_insights.busyHours),
-                style: GoogleFonts.inter(
+                style: GoogleFonts.plusJakartaSans(
                     fontSize: 12, color: Colors.white),
               ),
             ],
           ],
           const SizedBox(height: 6),
           Text('Data agregat anonim - tidak ada data pelanggan.',
-              style: GoogleFonts.inter(
+              style: GoogleFonts.plusJakartaSans(
                   fontSize: 10, color: Colors.white.withValues(alpha: 0.75))),
         ],
       ),
@@ -403,12 +403,12 @@ class _HyperlocalScreenState extends ConsumerState<HyperlocalScreen> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(label,
-              style: GoogleFonts.inter(
+              style: GoogleFonts.plusJakartaSans(
                   fontSize: 10, color: Colors.white70)),
           Text(value,
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
-              style: GoogleFonts.inter(
+              style: GoogleFonts.plusJakartaSans(
                   fontSize: 14,
                   fontWeight: FontWeight.w800,
                   color: Colors.white)),

@@ -187,7 +187,7 @@ class _IncomingOrdersScreenState extends ConsumerState<IncomingOrdersScreen>
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text('Pesanan Masuk',
-                style: GoogleFonts.inter(
+                style: GoogleFonts.plusJakartaSans(
                     fontSize: 16,
                     fontWeight: FontWeight.w800,
                     color: AppTheme.textPrimary)),
@@ -201,7 +201,7 @@ class _IncomingOrdersScreenState extends ConsumerState<IncomingOrdersScreen>
                 ),
                 const SizedBox(width: 6),
                 Text('Live - pantau pesanan masuk',
-                    style: GoogleFonts.inter(
+                    style: GoogleFonts.plusJakartaSans(
                         fontSize: 11, color: AppTheme.textSecondary)),
               ],
             ),
@@ -213,7 +213,7 @@ class _IncomingOrdersScreenState extends ConsumerState<IncomingOrdersScreen>
           unselectedLabelColor: AppTheme.textSecondary,
           indicatorColor: AppTheme.primaryColor,
           labelStyle:
-              GoogleFonts.inter(fontWeight: FontWeight.w700, fontSize: 13),
+              GoogleFonts.plusJakartaSans(fontWeight: FontWeight.w700, fontSize: 13),
           tabs: const [
             Tab(text: 'Dine-in'),
             Tab(text: 'Online'),
@@ -273,7 +273,7 @@ class _IncomingOrdersScreenState extends ConsumerState<IncomingOrdersScreen>
                                 size: 56, color: AppTheme.borderColor),
                             const SizedBox(height: 10),
                             Text('Belum ada pesanan masuk',
-                                style: GoogleFonts.inter(
+                                style: GoogleFonts.plusJakartaSans(
                                     color: AppTheme.textSecondary,
                                     fontSize: 13)),
                           ],
@@ -416,7 +416,7 @@ class _IncomingOrdersScreenState extends ConsumerState<IncomingOrdersScreen>
                 ),
                 child: Text(
                   table,
-                  style: GoogleFonts.inter(
+                  style: GoogleFonts.plusJakartaSans(
                       color: AppTheme.primaryColor,
                       fontWeight: FontWeight.w800,
                       fontSize: 12.5),
@@ -432,7 +432,7 @@ class _IncomingOrdersScreenState extends ConsumerState<IncomingOrdersScreen>
                 ),
                 child: Text(
                   _statusLabel(tx.orderStatus),
-                  style: GoogleFonts.inter(
+                  style: GoogleFonts.plusJakartaSans(
                       color: color, fontWeight: FontWeight.w800, fontSize: 10.5),
                 ),
               ),
@@ -449,7 +449,7 @@ class _IncomingOrdersScreenState extends ConsumerState<IncomingOrdersScreen>
                   ),
                   child: Text(
                     'MENUNGGU BAYAR',
-                    style: GoogleFonts.inter(
+                    style: GoogleFonts.plusJakartaSans(
                         color: AppTheme.warningColor,
                         fontWeight: FontWeight.w800,
                         fontSize: 10.5),
@@ -458,7 +458,7 @@ class _IncomingOrdersScreenState extends ConsumerState<IncomingOrdersScreen>
               ],
               const Spacer(),
               Text(_timeAgo(tx.createdAt),
-                  style: GoogleFonts.inter(
+                  style: GoogleFonts.plusJakartaSans(
                       color: AppTheme.textSecondary, fontSize: 11)),
             ],
           ),
@@ -468,21 +468,21 @@ class _IncomingOrdersScreenState extends ConsumerState<IncomingOrdersScreen>
                 child: Row(
                   children: [
                     Text('${it.quantity}x ',
-                        style: GoogleFonts.inter(
+                        style: GoogleFonts.plusJakartaSans(
                             color: AppTheme.primaryColor,
                             fontWeight: FontWeight.w800,
                             fontSize: 12.5)),
                     Expanded(
                       child: Text(
                         it.productName,
-                        style: GoogleFonts.inter(
+                        style: GoogleFonts.plusJakartaSans(
                             color: AppTheme.textPrimary,
                             fontSize: 12.5,
                             fontWeight: FontWeight.w600),
                       ),
                     ),
                     Text(Formatters.currency(it.subtotal),
-                        style: GoogleFonts.inter(
+                        style: GoogleFonts.plusJakartaSans(
                             color: AppTheme.textSecondary, fontSize: 11.5)),
                   ],
                 ),
@@ -498,7 +498,7 @@ class _IncomingOrdersScreenState extends ConsumerState<IncomingOrdersScreen>
                   isUnpaid
                       ? '${_methodLabel(tx.paymentMethod)} - ${tx.paymentMethod == 'qris' ? 'cek saldo QRIS masuk' : 'terima uang tunai'}'
                       : '${_methodLabel(tx.paymentMethod)} - dikonfirmasi pelanggan',
-                  style: GoogleFonts.inter(
+                  style: GoogleFonts.plusJakartaSans(
                       color: isUnpaid
                           ? AppTheme.warningColor
                           : AppTheme.textSecondary,
@@ -509,7 +509,7 @@ class _IncomingOrdersScreenState extends ConsumerState<IncomingOrdersScreen>
               ),
               Text(
                 Formatters.currency(tx.finalAmount),
-                style: GoogleFonts.inter(
+                style: GoogleFonts.plusJakartaSans(
                   color: AppTheme.textPrimary,
                   fontWeight: FontWeight.w800,
                   fontSize: 15,
@@ -567,7 +567,7 @@ class _IncomingOrdersScreenState extends ConsumerState<IncomingOrdersScreen>
         ),
         onPressed: onTap,
         child: Text(label,
-            style: GoogleFonts.inter(fontWeight: FontWeight.w700, fontSize: 13)),
+            style: GoogleFonts.plusJakartaSans(fontWeight: FontWeight.w700, fontSize: 13)),
       ),
     );
   }

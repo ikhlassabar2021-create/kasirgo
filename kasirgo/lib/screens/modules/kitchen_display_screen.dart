@@ -256,7 +256,7 @@ class _KitchenDisplayScreenState extends ConsumerState<KitchenDisplayScreen> {
                                 const SizedBox(height: 12),
                                 Text(
                                   'Semua Pesanan Dapur Selesai!',
-                                  style: GoogleFonts.inter(
+                                  style: GoogleFonts.plusJakartaSans(
                                     fontWeight: FontWeight.bold,
                                     fontSize: 16,
                                     color: AppTheme.textPrimary,
@@ -309,7 +309,7 @@ class _KitchenDisplayScreenState extends ConsumerState<KitchenDisplayScreen> {
                                             children: [
                                               Text(
                                                 order.orderNumber,
-                                                style: GoogleFonts.inter(
+                                                style: GoogleFonts.plusJakartaSans(
                                                   fontWeight: FontWeight.w800,
                                                   fontSize: 16,
                                                   color: AppTheme.textPrimary,
@@ -391,7 +391,7 @@ class _KitchenDisplayScreenState extends ConsumerState<KitchenDisplayScreen> {
                                                     alignment: Alignment.center,
                                                     child: Text(
                                                       '${it.quantity}x',
-                                                      style: GoogleFonts.inter(
+                                                      style: GoogleFonts.plusJakartaSans(
                                                         fontWeight: FontWeight.w800,
                                                         fontSize: 14,
                                                         color: AppTheme.primaryColor,
@@ -451,7 +451,7 @@ class _KitchenDisplayScreenState extends ConsumerState<KitchenDisplayScreen> {
                                                 : order.status == 'cooking'
                                                     ? 'TANDAI SIAP SAJI'
                                                     : 'SELESAIKAN ORDER',
-                                            style: GoogleFonts.inter(fontWeight: FontWeight.w800, fontSize: 13),
+                                            style: GoogleFonts.plusJakartaSans(fontWeight: FontWeight.w800, fontSize: 13),
                                           ),
                                         ),
                                       ),
@@ -477,7 +477,7 @@ class _KitchenDisplayScreenState extends ConsumerState<KitchenDisplayScreen> {
         scrolledUnderElevation: 0,
         title: Text(
           'Kitchen Display (KDS)',
-          style: GoogleFonts.inter(
+          style: GoogleFonts.plusJakartaSans(
             fontSize: 18,
             fontWeight: FontWeight.w800,
             color: AppTheme.textPrimary,

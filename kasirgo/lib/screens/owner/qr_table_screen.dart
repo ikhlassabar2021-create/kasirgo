@@ -91,25 +91,25 @@ class _QrTableScreenState extends ConsumerState<QrTableScreen> {
         shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(AppTheme.radiusLarge)),
         title: Text('Hapus $name?',
-            style: GoogleFonts.inter(
+            style: GoogleFonts.plusJakartaSans(
                 fontWeight: FontWeight.w700,
                 fontSize: 15,
                 color: AppTheme.textPrimary)),
         content: Text(
           'QR meja ini tidak bisa dipakai lagi. Riwayat pesanan lama tetap tersimpan.',
-          style: GoogleFonts.inter(
+          style: GoogleFonts.plusJakartaSans(
               fontSize: 12.5, color: AppTheme.textSecondary, height: 1.4),
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx, false),
             child: Text('Batal',
-                style: GoogleFonts.inter(color: AppTheme.textSecondary)),
+                style: GoogleFonts.plusJakartaSans(color: AppTheme.textSecondary)),
           ),
           TextButton(
             onPressed: () => Navigator.pop(ctx, true),
             child: Text('Hapus',
-                style: GoogleFonts.inter(
+                style: GoogleFonts.plusJakartaSans(
                     color: AppTheme.errorColor,
                     fontWeight: FontWeight.w700)),
           ),
@@ -167,7 +167,7 @@ class _QrTableScreenState extends ConsumerState<QrTableScreen> {
         title: Center(
           child: Text(
             'QR Code $table',
-            style: GoogleFonts.inter(fontWeight: FontWeight.w700, fontSize: 16, color: AppTheme.textPrimary),
+            style: GoogleFonts.plusJakartaSans(fontWeight: FontWeight.w700, fontSize: 16, color: AppTheme.textPrimary),
           ),
         ),
         content: Column(
@@ -192,19 +192,19 @@ class _QrTableScreenState extends ConsumerState<QrTableScreen> {
             Text(
               'Pelanggan scan QR ini di meja untuk melihat menu & kirim pesanan otomatis.',
               textAlign: TextAlign.center,
-              style: GoogleFonts.inter(fontSize: 12, color: AppTheme.textSecondary, height: 1.4),
+              style: GoogleFonts.plusJakartaSans(fontSize: 12, color: AppTheme.textSecondary, height: 1.4),
             ),
             const SizedBox(height: 8),
             SelectableText(
               qrData,
-              style: GoogleFonts.inter(fontSize: 11, color: AppTheme.primaryColor),
+              style: GoogleFonts.plusJakartaSans(fontSize: 11, color: AppTheme.primaryColor),
             ),
           ],
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx),
-            child: Text('Tutup', style: GoogleFonts.inter(color: AppTheme.textSecondary)),
+            child: Text('Tutup', style: GoogleFonts.plusJakartaSans(color: AppTheme.textSecondary)),
           ),
           OutlinedButton.icon(
             style: OutlinedButton.styleFrom(
@@ -261,7 +261,7 @@ class _QrTableScreenState extends ConsumerState<QrTableScreen> {
       appBar: AppBar(
         title: Text(
           'Manajemen QR Meja',
-          style: GoogleFonts.inter(fontSize: 18, fontWeight: FontWeight.w700, color: AppTheme.textPrimary),
+          style: GoogleFonts.plusJakartaSans(fontSize: 18, fontWeight: FontWeight.w700, color: AppTheme.textPrimary),
         ),
       ),
       body: SingleChildScrollView(
@@ -294,12 +294,12 @@ class _QrTableScreenState extends ConsumerState<QrTableScreen> {
                       children: [
                         Text(
                           'QR Order per Meja',
-                          style: GoogleFonts.inter(fontWeight: FontWeight.w700, fontSize: 14, color: AppTheme.textPrimary),
+                          style: GoogleFonts.plusJakartaSans(fontWeight: FontWeight.w700, fontSize: 14, color: AppTheme.textPrimary),
                         ),
                         const SizedBox(height: 3),
                         Text(
                           'Cetak QR untuk tiap meja. Pelanggan scan, pesan, dan bayar tanpa menunggu pelayan.',
-                          style: GoogleFonts.inter(fontSize: 12, color: AppTheme.textSecondary, height: 1.3),
+                          style: GoogleFonts.plusJakartaSans(fontSize: 12, color: AppTheme.textSecondary, height: 1.3),
                         ),
                       ],
                     ),
@@ -343,7 +343,7 @@ class _QrTableScreenState extends ConsumerState<QrTableScreen> {
                                 strokeWidth: 2, color: Colors.white),
                           )
                         : const Icon(Icons.add_rounded, size: 18),
-                    label: Text('Tambah', style: GoogleFonts.inter(fontWeight: FontWeight.w700, fontSize: 13)),
+                    label: Text('Tambah', style: GoogleFonts.plusJakartaSans(fontWeight: FontWeight.w700, fontSize: 13)),
                   ),
                 ),
               ],
@@ -351,7 +351,7 @@ class _QrTableScreenState extends ConsumerState<QrTableScreen> {
             const SizedBox(height: 24),
             Text(
               'Daftar Meja (${_tables.length})',
-              style: GoogleFonts.inter(fontWeight: FontWeight.w700, fontSize: 15, color: AppTheme.textPrimary),
+              style: GoogleFonts.plusJakartaSans(fontWeight: FontWeight.w700, fontSize: 15, color: AppTheme.textPrimary),
             ),
             const SizedBox(height: 12),
             if (_isLoading)
@@ -372,7 +372,7 @@ class _QrTableScreenState extends ConsumerState<QrTableScreen> {
                       const SizedBox(height: 10),
                       Text(
                         'Belum ada meja. Tambahkan meja pertama di atas.',
-                        style: GoogleFonts.inter(
+                        style: GoogleFonts.plusJakartaSans(
                             fontSize: 12.5, color: AppTheme.textSecondary),
                       ),
                     ],
@@ -429,7 +429,7 @@ class _QrTableScreenState extends ConsumerState<QrTableScreen> {
                             const SizedBox(height: 10),
                             Text(
                               table,
-                              style: GoogleFonts.inter(fontWeight: FontWeight.w700, fontSize: 15, color: AppTheme.textPrimary),
+                              style: GoogleFonts.plusJakartaSans(fontWeight: FontWeight.w700, fontSize: 15, color: AppTheme.textPrimary),
                             ),
                             const SizedBox(height: 6),
                             Row(
@@ -437,7 +437,7 @@ class _QrTableScreenState extends ConsumerState<QrTableScreen> {
                               children: [
                                 const Icon(Icons.qr_code_2_outlined, size: 14, color: AppTheme.primaryColor),
                                 const SizedBox(width: 4),
-                                Text('Lihat QR', style: GoogleFonts.inter(fontSize: 12, color: AppTheme.primaryColor, fontWeight: FontWeight.w600)),
+                                Text('Lihat QR', style: GoogleFonts.plusJakartaSans(fontSize: 12, color: AppTheme.primaryColor, fontWeight: FontWeight.w600)),
                               ],
                             ),
                           ],

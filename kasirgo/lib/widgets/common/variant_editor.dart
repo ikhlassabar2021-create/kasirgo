@@ -54,20 +54,20 @@ class VariantEditor extends StatelessWidget {
               const SizedBox(width: 8),
               Expanded(
                 child: Text('Daftar Varian',
-                    style: GoogleFonts.inter(
+                    style: GoogleFonts.plusJakartaSans(
                         fontSize: 13.5,
                         fontWeight: FontWeight.w700,
                         color: AppTheme.textPrimary)),
               ),
               Text('${variants.length} varian',
-                  style: GoogleFonts.inter(
+                  style: GoogleFonts.plusJakartaSans(
                       fontSize: 11, color: AppTheme.textSecondary)),
             ],
           ),
           const SizedBox(height: 4),
           Text(
             'Harga jual = harga dasar + selisih varian. Stok dihitung per varian.',
-            style: GoogleFonts.inter(
+            style: GoogleFonts.plusJakartaSans(
                 fontSize: 11, color: AppTheme.textSecondary),
           ),
           const SizedBox(height: 10),
@@ -76,7 +76,7 @@ class VariantEditor extends StatelessWidget {
             Padding(
               padding: const EdgeInsets.symmetric(vertical: 6),
               child: Text('Belum ada varian. Tambahkan minimal satu.',
-                  style: GoogleFonts.inter(
+                  style: GoogleFonts.plusJakartaSans(
                       fontSize: 11.5, color: AppTheme.textSecondary)),
             ),
           const SizedBox(height: 8),
@@ -120,7 +120,7 @@ class VariantEditor extends StatelessWidget {
                       labelText: 'Nama varian (mis. Pedas, Ice)',
                       border: OutlineInputBorder(),
                     ),
-                    style: GoogleFonts.inter(fontSize: 13),
+                    style: GoogleFonts.plusJakartaSans(fontSize: 13),
                     onChanged: (t) => _update(i, v.copyWith(name: t)),
                     validator: (t) =>
                         (t == null || t.trim().isEmpty) && variants.length > 1
@@ -147,7 +147,7 @@ class VariantEditor extends StatelessWidget {
                       labelText: 'SKU/Barcode (opsional)',
                       border: OutlineInputBorder(),
                     ),
-                    style: GoogleFonts.inter(fontSize: 13),
+                    style: GoogleFonts.plusJakartaSans(fontSize: 13),
                     onChanged: (t) => _update(
                         i,
                         v.copyWith(
@@ -164,7 +164,7 @@ class VariantEditor extends StatelessWidget {
                       labelText: 'Selisih harga (Rp)',
                       border: OutlineInputBorder(),
                     ),
-                    style: GoogleFonts.inter(fontSize: 13),
+                    style: GoogleFonts.plusJakartaSans(fontSize: 13),
                     keyboardType: TextInputType.number,
                     inputFormatters: [FilteringTextInputFormatter.digitsOnly],
                     onChanged: (t) =>
@@ -180,7 +180,7 @@ class VariantEditor extends StatelessWidget {
                       labelText: 'Stok',
                       border: OutlineInputBorder(),
                     ),
-                    style: GoogleFonts.inter(fontSize: 13),
+                    style: GoogleFonts.plusJakartaSans(fontSize: 13),
                     keyboardType: TextInputType.number,
                     inputFormatters: [FilteringTextInputFormatter.digitsOnly],
                     onChanged: (t) =>

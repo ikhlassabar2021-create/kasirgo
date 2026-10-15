@@ -625,7 +625,7 @@ class _PosScreenState extends ConsumerState<PosScreen> {
         scrolledUnderElevation: 0,
         title: Text(
           'Kasir POS',
-          style: GoogleFonts.inter(fontSize: 18, fontWeight: FontWeight.w800, color: AppTheme.textPrimary),
+          style: GoogleFonts.plusJakartaSans(fontSize: 18, fontWeight: FontWeight.w800, color: AppTheme.textPrimary),
         ),
         actions: [
           IconButton(
@@ -820,7 +820,7 @@ class _PosScreenState extends ConsumerState<PosScreen> {
           dropdownColor: AppTheme.surfaceColor,
           borderRadius: BorderRadius.circular(12),
           icon: const Icon(Icons.keyboard_arrow_down_rounded, color: AppTheme.accentColor),
-          style: GoogleFonts.inter(color: AppTheme.textPrimary, fontSize: 12, fontWeight: FontWeight.w700),
+          style: GoogleFonts.plusJakartaSans(color: AppTheme.textPrimary, fontSize: 12, fontWeight: FontWeight.w700),
           items: _channels
               .map((ch) => DropdownMenuItem(value: ch, child: Text(ch)))
               .toList(),
@@ -863,7 +863,7 @@ class _SyncingOverlay extends StatelessWidget {
                     const SizedBox(height: 12),
                     Text(
                       'Memproses pembayaran...',
-                      style: GoogleFonts.inter(color: AppTheme.textPrimary, fontSize: 13, fontWeight: FontWeight.w600),
+                      style: GoogleFonts.plusJakartaSans(color: AppTheme.textPrimary, fontSize: 13, fontWeight: FontWeight.w600),
                     ),
                   ],
                 ),
@@ -940,7 +940,7 @@ class _GrowthChip extends StatelessWidget {
                         label,
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
-                        style: GoogleFonts.inter(
+                        style: GoogleFonts.plusJakartaSans(
                           fontSize: 12,
                           fontWeight: FontWeight.w700,
                           color: AppTheme.textPrimary,

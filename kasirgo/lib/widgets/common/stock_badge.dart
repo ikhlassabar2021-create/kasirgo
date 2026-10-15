@@ -43,7 +43,7 @@ class StockBadge extends StatelessWidget {
       ),
       child: Text(
         _text,
-        style: GoogleFonts.inter(
+        style: GoogleFonts.plusJakartaSans(
           color: showLabel ? color : Colors.white,
           fontSize: showLabel ? 11 : (compact ? 8.5 : 10),
           fontWeight: FontWeight.w800,

@@ -205,7 +205,7 @@ class _StarAdminDashboardState extends ConsumerState<StarAdminDashboard>
                   children: [
                     Text(
                       'KasirGo',
-                      style: GoogleFonts.inter(
+                      style: GoogleFonts.plusJakartaSans(
                         fontSize: 20,
                         fontWeight: FontWeight.bold,
                         color: const Color(0xFF111827),
@@ -213,7 +213,7 @@ class _StarAdminDashboardState extends ConsumerState<StarAdminDashboard>
                     ),
                     Text(
                       '3.0 Enterprise',
-                      style: GoogleFonts.inter(
+                      style: GoogleFonts.plusJakartaSans(
                         fontSize: 12,
                         color: const Color(0xFF9CA3AF),
                       ),
@@ -265,7 +265,7 @@ class _StarAdminDashboardState extends ConsumerState<StarAdminDashboard>
             const SizedBox(width: 12),
             Text(
               label,
-              style: GoogleFonts.inter(
+              style: GoogleFonts.plusJakartaSans(
                 fontSize: 14,
                 fontWeight: isSelected ? FontWeight.w600 : FontWeight.w400,
                 color: isSelected ? const Color(0xFF111827) : const Color(0xFF6B7280),
@@ -295,7 +295,7 @@ class _StarAdminDashboardState extends ConsumerState<StarAdminDashboard>
           Expanded(
             child: Text(
               'Dashboard Overview',
-              style: GoogleFonts.inter(
+              style: GoogleFonts.plusJakartaSans(
                 fontSize: 20,
                 fontWeight: FontWeight.w600,
                 color: const Color(0xFF111827),
@@ -333,7 +333,7 @@ class _StarAdminDashboardState extends ConsumerState<StarAdminDashboard>
       children: [
         Text(
           'MARKET OVERVIEW',
-          style: GoogleFonts.inter(
+          style: GoogleFonts.plusJakartaSans(
             fontSize: 12,
             fontWeight: FontWeight.w600,
             color: const Color(0xFF6B7280),
@@ -372,7 +372,7 @@ class _StarAdminDashboardState extends ConsumerState<StarAdminDashboard>
             children: [
               Text(
                 'PENDAPATAN PARTNER (PHASE 10)',
-                style: GoogleFonts.inter(
+                style: GoogleFonts.plusJakartaSans(
                   fontSize: 12,
                   fontWeight: FontWeight.w600,
                   color: const Color(0xFF6B7280),
@@ -389,7 +389,7 @@ class _StarAdminDashboardState extends ConsumerState<StarAdminDashboard>
           const SizedBox(height: 12),
           if (_revenueSummary == null)
             Text('Memuat rekap...',
-                style: GoogleFonts.inter(
+                style: GoogleFonts.plusJakartaSans(
                     fontSize: 12, color: const Color(0xFF6B7280)))
           else
             Row(
@@ -426,7 +426,7 @@ class _StarAdminDashboardState extends ConsumerState<StarAdminDashboard>
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(title,
-            style: GoogleFonts.inter(
+            style: GoogleFonts.plusJakartaSans(
                 fontSize: 12.5,
                 fontWeight: FontWeight.w700,
                 color: const Color(0xFF111827))),
@@ -438,12 +438,12 @@ class _StarAdminDashboardState extends ConsumerState<StarAdminDashboard>
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
                 Text(r.$1,
-                    style: GoogleFonts.inter(
+                    style: GoogleFonts.plusJakartaSans(
                         fontSize: 11.5, color: const Color(0xFF6B7280))),
                 Flexible(
                   child: Text(r.$2,
                       textAlign: TextAlign.right,
-                      style: GoogleFonts.inter(
+                      style: GoogleFonts.plusJakartaSans(
                           fontSize: 11.5,
                           fontWeight: FontWeight.w700,
                           color: const Color(0xFF111827))),
@@ -488,7 +488,7 @@ class _StarAdminDashboardState extends ConsumerState<StarAdminDashboard>
                     const SizedBox(width: 4),
                     Text(
                       percentage,
-                      style: GoogleFonts.inter(
+                      style: GoogleFonts.plusJakartaSans(
                         fontSize: 11,
                         fontWeight: FontWeight.w600,
                         color: isPositive ? const Color(0xFF16A34A) : const Color(0xFFDC2626),
@@ -502,7 +502,7 @@ class _StarAdminDashboardState extends ConsumerState<StarAdminDashboard>
           const SizedBox(height: 16),
           Text(
             metric['title'] as String,
-            style: GoogleFonts.inter(
+            style: GoogleFonts.plusJakartaSans(
               fontSize: 12,
               fontWeight: FontWeight.w500,
               color: const Color(0xFF6B7280),
@@ -511,7 +511,7 @@ class _StarAdminDashboardState extends ConsumerState<StarAdminDashboard>
           const Spacer(),
           Text(
             metric['value'] as String,
-            style: GoogleFonts.inter(
+            style: GoogleFonts.plusJakartaSans(
               fontSize: 32,
               fontWeight: FontWeight.bold,
               color: const Color(0xFF111827),
@@ -528,7 +528,7 @@ class _StarAdminDashboardState extends ConsumerState<StarAdminDashboard>
       children: [
         Text(
           'QUICK ACTIONS',
-          style: GoogleFonts.inter(
+          style: GoogleFonts.plusJakartaSans(
             fontSize: 14,
             fontWeight: FontWeight.w600,
             color: const Color(0xFF111827),
@@ -584,7 +584,7 @@ class _StarAdminDashboardState extends ConsumerState<StarAdminDashboard>
           children: [
             Text(
               'REVENUE ANALYTICS',
-              style: GoogleFonts.inter(
+              style: GoogleFonts.plusJakartaSans(
                 fontSize: 14,
                 fontWeight: FontWeight.w600,
                 color: const Color(0xFF111827),
@@ -639,7 +639,7 @@ class _StarAdminDashboardState extends ConsumerState<StarAdminDashboard>
   Widget _buildLabel(String month) {
     return Text(
       month,
-      style: GoogleFonts.inter(
+      style: GoogleFonts.plusJakartaSans(
         fontSize: 12,
         color: const Color(0xFF9CA3AF),
       ),
@@ -655,7 +655,7 @@ class _StarAdminDashboardState extends ConsumerState<StarAdminDashboard>
           children: [
             Text(
               'OUTLET MANAGEMENT',
-              style: GoogleFonts.inter(
+              style: GoogleFonts.plusJakartaSans(
                 fontSize: 14,
                 fontWeight: FontWeight.w600,
                 color: const Color(0xFF111827),
@@ -665,7 +665,7 @@ class _StarAdminDashboardState extends ConsumerState<StarAdminDashboard>
               onPressed: () {},
               child: Text(
                 'Lihat Semua',
-                style: GoogleFonts.inter(
+                style: GoogleFonts.plusJakartaSans(
                   fontSize: 13,
                   color: const Color(0xFF0284C7),
                   fontWeight: FontWeight.w600,
@@ -719,7 +719,7 @@ class _StarAdminDashboardState extends ConsumerState<StarAdminDashboard>
                   children: [
                     Text(
                       outlet['name'] as String,
-                      style: GoogleFonts.inter(
+                      style: GoogleFonts.plusJakartaSans(
                         fontSize: 14,
                         fontWeight: FontWeight.w600,
                         color: const Color(0xFF111827),
@@ -728,7 +728,7 @@ class _StarAdminDashboardState extends ConsumerState<StarAdminDashboard>
                     const SizedBox(height: 2),
                     Text(
                       '${outlet['type']} • ${outlet['location']}',
-                      style: GoogleFonts.inter(
+                      style: GoogleFonts.plusJakartaSans(
                         fontSize: 11,
                         color: const Color(0xFF9CA3AF),
                       ),
@@ -768,7 +768,7 @@ class _StarAdminDashboardState extends ConsumerState<StarAdminDashboard>
       children: [
         Text(
           label,
-          style: GoogleFonts.inter(
+          style: GoogleFonts.plusJakartaSans(
             fontSize: 11,
             color: const Color(0xFF9CA3AF),
           ),
@@ -776,7 +776,7 @@ class _StarAdminDashboardState extends ConsumerState<StarAdminDashboard>
         const SizedBox(height: 4),
         Text(
           value,
-          style: GoogleFonts.inter(
+          style: GoogleFonts.plusJakartaSans(
             fontSize: 14,
             fontWeight: FontWeight.w600,
             color: const Color(0xFF111827),
@@ -805,7 +805,7 @@ class _StarAdminDashboardState extends ConsumerState<StarAdminDashboard>
               children: [
                 Text(
                   'Budi Santoso',
-                  style: GoogleFonts.inter(
+                  style: GoogleFonts.plusJakartaSans(
                     fontSize: 14,
                     fontWeight: FontWeight.w600,
                     color: const Color(0xFF111827),
@@ -813,7 +813,7 @@ class _StarAdminDashboardState extends ConsumerState<StarAdminDashboard>
                 ),
                 Text(
                   'budi@warung.com',
-                  style: GoogleFonts.inter(
+                  style: GoogleFonts.plusJakartaSans(
                     fontSize: 12,
                     color: const Color(0xFF9CA3AF),
                   ),

@@ -64,7 +64,7 @@ class _InsuranceScreenState extends ConsumerState<InsuranceScreen> {
         shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(AppTheme.radiusLarge)),
         title: Text('Ajukan ${product.name}',
-            style: GoogleFonts.inter(
+            style: GoogleFonts.plusJakartaSans(
                 fontSize: 16,
                 fontWeight: FontWeight.w800,
                 color: AppTheme.textPrimary)),
@@ -79,7 +79,7 @@ class _InsuranceScreenState extends ConsumerState<InsuranceScreen> {
                 'Pengajuan diteruskan ke ${_cfg.partnerName}. '
                 'Komisi platform (${_cfg.commissionPercent.toStringAsFixed(0)}%) '
                 'tidak dikenakan ke kamu.',
-                style: GoogleFonts.inter(
+                style: GoogleFonts.plusJakartaSans(
                     fontSize: 11.5, color: AppTheme.textSecondary)),
           ],
         ),
@@ -90,7 +90,7 @@ class _InsuranceScreenState extends ConsumerState<InsuranceScreen> {
           TextButton(
               onPressed: () => Navigator.pop(ctx, true),
               child: Text('Ajukan',
-                  style: GoogleFonts.inter(
+                  style: GoogleFonts.plusJakartaSans(
                       color: AppTheme.primaryColor,
                       fontWeight: FontWeight.w800))),
         ],
@@ -132,7 +132,7 @@ class _InsuranceScreenState extends ConsumerState<InsuranceScreen> {
       backgroundColor: AppTheme.backgroundColor,
       appBar: AppBar(
         title: Text('Asuransi Mikro',
-            style: GoogleFonts.inter(
+            style: GoogleFonts.plusJakartaSans(
                 fontSize: 18,
                 fontWeight: FontWeight.w700,
                 color: AppTheme.textPrimary)),
@@ -156,7 +156,7 @@ class _InsuranceScreenState extends ConsumerState<InsuranceScreen> {
                   const SizedBox(height: 20),
                   if (_policies.isNotEmpty) ...[
                     Text('POLIS AKTIF',
-                        style: GoogleFonts.inter(
+                        style: GoogleFonts.plusJakartaSans(
                             fontSize: 11,
                             fontWeight: FontWeight.w800,
                             letterSpacing: 0.5,
@@ -166,7 +166,7 @@ class _InsuranceScreenState extends ConsumerState<InsuranceScreen> {
                     const SizedBox(height: 16),
                   ],
                   Text('RIWAYAT PENGAJUAN',
-                      style: GoogleFonts.inter(
+                      style: GoogleFonts.plusJakartaSans(
                           fontSize: 11,
                           fontWeight: FontWeight.w800,
                           letterSpacing: 0.5,
@@ -182,7 +182,7 @@ class _InsuranceScreenState extends ConsumerState<InsuranceScreen> {
                         border: Border.all(color: AppTheme.borderColor),
                       ),
                       child: Text('Belum ada pengajuan asuransi.',
-                          style: GoogleFonts.inter(
+                          style: GoogleFonts.plusJakartaSans(
                               fontSize: 12.5,
                               color: AppTheme.textSecondary)),
                     )
@@ -209,7 +209,7 @@ class _InsuranceScreenState extends ConsumerState<InsuranceScreen> {
               size: 40, color: AppTheme.textSecondary),
           const SizedBox(height: 10),
           Text('Produk Asuransi Belum Tersedia',
-              style: GoogleFonts.inter(
+              style: GoogleFonts.plusJakartaSans(
                   fontSize: 15,
                   fontWeight: FontWeight.w800,
                   color: AppTheme.textPrimary)),
@@ -219,7 +219,7 @@ class _InsuranceScreenState extends ConsumerState<InsuranceScreen> {
             'Cek kembali nanti.',
             textAlign: TextAlign.center,
             style:
-                GoogleFonts.inter(fontSize: 12.5, color: AppTheme.textSecondary),
+                GoogleFonts.plusJakartaSans(fontSize: 12.5, color: AppTheme.textSecondary),
           ),
         ],
       ),
@@ -251,7 +251,7 @@ class _InsuranceScreenState extends ConsumerState<InsuranceScreen> {
               const SizedBox(width: 8),
               Expanded(
                 child: Text(p.name,
-                    style: GoogleFonts.inter(
+                    style: GoogleFonts.plusJakartaSans(
                         fontSize: 14,
                         fontWeight: FontWeight.w800,
                         color: AppTheme.textPrimary)),
@@ -264,7 +264,7 @@ class _InsuranceScreenState extends ConsumerState<InsuranceScreen> {
                   borderRadius: BorderRadius.circular(999),
                 ),
                 child: Text(typeLabel,
-                    style: GoogleFonts.inter(
+                    style: GoogleFonts.plusJakartaSans(
                         fontSize: 10,
                         fontWeight: FontWeight.w800,
                         color: AppTheme.primaryColor)),
@@ -274,7 +274,7 @@ class _InsuranceScreenState extends ConsumerState<InsuranceScreen> {
           if (p.note != null && p.note!.isNotEmpty) ...[
             const SizedBox(height: 6),
             Text(p.note!,
-                style: GoogleFonts.inter(
+                style: GoogleFonts.plusJakartaSans(
                     fontSize: 11.5, color: AppTheme.textSecondary)),
           ],
           const SizedBox(height: 10),
@@ -285,10 +285,10 @@ class _InsuranceScreenState extends ConsumerState<InsuranceScreen> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text('Premi / tahun',
-                        style: GoogleFonts.inter(
+                        style: GoogleFonts.plusJakartaSans(
                             fontSize: 10, color: AppTheme.textSecondary)),
                     Text(Formatters.currency(p.premi),
-                        style: GoogleFonts.inter(
+                        style: GoogleFonts.plusJakartaSans(
                             fontSize: 14,
                             fontWeight: FontWeight.w800,
                             color: AppTheme.textPrimary)),
@@ -300,10 +300,10 @@ class _InsuranceScreenState extends ConsumerState<InsuranceScreen> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text('Perlindungan s.d.',
-                        style: GoogleFonts.inter(
+                        style: GoogleFonts.plusJakartaSans(
                             fontSize: 10, color: AppTheme.textSecondary)),
                     Text(Formatters.currency(p.coverage),
-                        style: GoogleFonts.inter(
+                        style: GoogleFonts.plusJakartaSans(
                             fontSize: 14,
                             fontWeight: FontWeight.w800,
                             color: AppTheme.successColor)),
@@ -320,7 +320,7 @@ class _InsuranceScreenState extends ConsumerState<InsuranceScreen> {
               onPressed: () => _apply(p),
               icon: const Icon(Icons.send_rounded, size: 16),
               label: Text('Ajukan',
-                  style: GoogleFonts.inter(
+                  style: GoogleFonts.plusJakartaSans(
                       fontSize: 13, fontWeight: FontWeight.w700)),
               style: ElevatedButton.styleFrom(
                 backgroundColor: AppTheme.primaryColor,
@@ -357,7 +357,7 @@ class _InsuranceScreenState extends ConsumerState<InsuranceScreen> {
         leading: const Icon(Icons.verified_rounded,
             size: 22, color: AppTheme.successColor),
         title: Text(pol['product_code']?.toString() ?? 'Polis',
-            style: GoogleFonts.inter(
+            style: GoogleFonts.plusJakartaSans(
                 fontSize: 13.5,
                 fontWeight: FontWeight.w700,
                 color: AppTheme.textPrimary)),
@@ -367,11 +367,11 @@ class _InsuranceScreenState extends ConsumerState<InsuranceScreen> {
           '${expires != null ? ' s.d. ${expires.day}/${expires.month}/${expires.year}' : ''}',
           maxLines: 1,
           overflow: TextOverflow.ellipsis,
-          style: GoogleFonts.inter(fontSize: 11, color: AppTheme.textSecondary),
+          style: GoogleFonts.plusJakartaSans(fontSize: 11, color: AppTheme.textSecondary),
         ),
         trailing: Text(
           (pol['status'] ?? 'active').toString().toUpperCase(),
-          style: GoogleFonts.inter(
+          style: GoogleFonts.plusJakartaSans(
               fontSize: 10.5,
               fontWeight: FontWeight.w800,
               color: AppTheme.successColor),
@@ -406,7 +406,7 @@ class _InsuranceScreenState extends ConsumerState<InsuranceScreen> {
         leading: const Icon(Icons.description_rounded,
             size: 22, color: AppTheme.textSecondary),
         title: Text(lead['product_name']?.toString() ?? 'Asuransi',
-            style: GoogleFonts.inter(
+            style: GoogleFonts.plusJakartaSans(
                 fontSize: 13.5,
                 fontWeight: FontWeight.w700,
                 color: AppTheme.textPrimary)),
@@ -417,12 +417,12 @@ class _InsuranceScreenState extends ConsumerState<InsuranceScreen> {
             ' - ${createdAt.day}/${createdAt.month}',
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
-            style: GoogleFonts.inter(
+            style: GoogleFonts.plusJakartaSans(
                 fontSize: 11, color: AppTheme.textSecondary),
           ),
         ),
         trailing: Text(status.toUpperCase(),
-            style: GoogleFonts.inter(
+            style: GoogleFonts.plusJakartaSans(
                 fontSize: 10.5,
                 fontWeight: FontWeight.w800,
                 color: statusColor)),
@@ -437,10 +437,10 @@ class _InsuranceScreenState extends ConsumerState<InsuranceScreen> {
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
           Text(label,
-              style: GoogleFonts.inter(
+              style: GoogleFonts.plusJakartaSans(
                   fontSize: 12.5, color: AppTheme.textSecondary)),
           Text(value,
-              style: GoogleFonts.inter(
+              style: GoogleFonts.plusJakartaSans(
                   fontSize: 12.5,
                   fontWeight: FontWeight.w800,
                   color: AppTheme.textPrimary)),

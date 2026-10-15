@@ -252,7 +252,7 @@ class _MultiOutletScreenState extends ConsumerState<MultiOutletScreen> {
         foregroundColor: Colors.white,
         icon: const Icon(Icons.add_business_rounded),
         label: Text('Tambah Outlet',
-            style: GoogleFonts.inter(fontWeight: FontWeight.w800)),
+            style: GoogleFonts.plusJakartaSans(fontWeight: FontWeight.w800)),
       ),
       body: _isLoading
           ? const Center(child: CircularProgressIndicator())

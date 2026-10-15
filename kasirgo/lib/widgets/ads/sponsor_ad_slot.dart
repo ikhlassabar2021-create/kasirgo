@@ -159,7 +159,7 @@ class _SponsorAdSlotState extends State<SponsorAdSlot> {
                               borderRadius: BorderRadius.circular(4),
                             ),
                             child: Text('Iklan Sponsor',
-                                style: GoogleFonts.inter(
+                                style: GoogleFonts.plusJakartaSans(
                                     fontSize: 8.5,
                                     fontWeight: FontWeight.w700,
                                     color: AppTheme.textSecondary)),
@@ -171,7 +171,7 @@ class _SponsorAdSlotState extends State<SponsorAdSlot> {
                         ad.title,
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
-                        style: GoogleFonts.inter(
+                        style: GoogleFonts.plusJakartaSans(
                             fontSize: 13,
                             fontWeight: FontWeight.w700,
                             color: AppTheme.textPrimary),
@@ -181,7 +181,7 @@ class _SponsorAdSlotState extends State<SponsorAdSlot> {
                           ad.subtitle!,
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
-                          style: GoogleFonts.inter(
+                          style: GoogleFonts.plusJakartaSans(
                               fontSize: 11, color: AppTheme.textSecondary),
                         ),
                     ],
@@ -197,7 +197,7 @@ class _SponsorAdSlotState extends State<SponsorAdSlot> {
                       borderRadius: BorderRadius.circular(8),
                     ),
                     child: Text(ad.ctaLabel!,
-                        style: GoogleFonts.inter(
+                        style: GoogleFonts.plusJakartaSans(
                             fontSize: 11,
                             fontWeight: FontWeight.w700,
                             color: AppTheme.primaryColor)),
@@ -233,7 +233,7 @@ class _SponsorAdSlotState extends State<SponsorAdSlot> {
                 children: [
                   Text(
                     'Izinkan iklan sponsor?',
-                    style: GoogleFonts.inter(
+                    style: GoogleFonts.plusJakartaSans(
                         fontSize: 12.5,
                         fontWeight: FontWeight.w700,
                         color: AppTheme.textPrimary),
@@ -242,7 +242,7 @@ class _SponsorAdSlotState extends State<SponsorAdSlot> {
                   Text(
                     'Dengan izin Anda (UU PDP), kami menampilkan iklan sponsor lokal '
                     'yang wajar untuk mendukung aplikasi tetap gratis. Anda bisa menolak.',
-                    style: GoogleFonts.inter(
+                    style: GoogleFonts.plusJakartaSans(
                         fontSize: 11,
                         color: AppTheme.textSecondary,
                         height: 1.35),

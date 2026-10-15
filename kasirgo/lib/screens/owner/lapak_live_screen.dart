@@ -200,7 +200,7 @@ class _LapakLiveScreenState extends ConsumerState<LapakLiveScreen> {
         shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(AppTheme.radiusLarge)),
         title: Text('Koordinat Lapak',
-            style: GoogleFonts.inter(
+            style: GoogleFonts.plusJakartaSans(
                 fontWeight: FontWeight.w700,
                 fontSize: 15,
                 color: AppTheme.textPrimary)),
@@ -228,12 +228,12 @@ class _LapakLiveScreenState extends ConsumerState<LapakLiveScreen> {
           TextButton(
             onPressed: () => Navigator.pop(ctx, false),
             child: Text('Batal',
-                style: GoogleFonts.inter(color: AppTheme.textSecondary)),
+                style: GoogleFonts.plusJakartaSans(color: AppTheme.textSecondary)),
           ),
           TextButton(
             onPressed: () => Navigator.pop(ctx, true),
             child: Text('Simpan',
-                style: GoogleFonts.inter(
+                style: GoogleFonts.plusJakartaSans(
                     color: AppTheme.primaryColor,
                     fontWeight: FontWeight.w700)),
           ),
@@ -386,7 +386,7 @@ class _LapakLiveScreenState extends ConsumerState<LapakLiveScreen> {
       backgroundColor: AppTheme.backgroundColor,
       appBar: AppBar(
         title: Text('Lapak Live',
-            style: GoogleFonts.inter(
+            style: GoogleFonts.plusJakartaSans(
                 fontSize: 18,
                 fontWeight: FontWeight.w700,
                 color: AppTheme.textPrimary)),
@@ -424,11 +424,11 @@ class _LapakLiveScreenState extends ConsumerState<LapakLiveScreen> {
             activeThumbColor: AppTheme.primaryColor,
             value: _isOpen,
             title: Text('Buka Lapak',
-                style: GoogleFonts.inter(
+                style: GoogleFonts.plusJakartaSans(
                     fontWeight: FontWeight.w600,
                     color: AppTheme.textPrimary)),
             subtitle: Text('Pembeli bisa melihat & memesan',
-                style: GoogleFonts.inter(
+                style: GoogleFonts.plusJakartaSans(
                     fontSize: 12, color: AppTheme.textSecondary)),
             onChanged: _saving ? null : (v) => _setFlag(isOpen: v),
           ),
@@ -438,11 +438,11 @@ class _LapakLiveScreenState extends ConsumerState<LapakLiveScreen> {
             activeThumbColor: AppTheme.primaryColor,
             value: _isMobile,
             title: Text('Gerobak Keliling',
-                style: GoogleFonts.inter(
+                style: GoogleFonts.plusJakartaSans(
                     fontWeight: FontWeight.w600,
                     color: AppTheme.textPrimary)),
             subtitle: Text('Broadcast posisi lapak berkala',
-                style: GoogleFonts.inter(
+                style: GoogleFonts.plusJakartaSans(
                     fontSize: 12, color: AppTheme.textSecondary)),
             onChanged: _saving ? null : (v) => _setFlag(isMobile: v),
           ),
@@ -468,13 +468,13 @@ class _LapakLiveScreenState extends ConsumerState<LapakLiveScreen> {
             icon: Icons.my_location_rounded,
           ),
           Text(coords,
-              style: GoogleFonts.inter(
+              style: GoogleFonts.plusJakartaSans(
                   fontSize: 13,
                   fontWeight: FontWeight.w600,
                   color: AppTheme.textPrimary)),
           const SizedBox(height: 4),
           Text(updated,
-              style: GoogleFonts.inter(
+              style: GoogleFonts.plusJakartaSans(
                   fontSize: 12, color: AppTheme.textSecondary)),
           const SizedBox(height: 12),
           Row(
@@ -518,11 +518,11 @@ class _LapakLiveScreenState extends ConsumerState<LapakLiveScreen> {
             activeThumbColor: AppTheme.primaryColor,
             value: _manualOngkir,
             title: Text('Ongkir Manual',
-                style: GoogleFonts.inter(
+                style: GoogleFonts.plusJakartaSans(
                     fontWeight: FontWeight.w600,
                     color: AppTheme.textPrimary)),
             subtitle: Text('Nominal tetap untuk semua pesanan antar',
-                style: GoogleFonts.inter(
+                style: GoogleFonts.plusJakartaSans(
                     fontSize: 12, color: AppTheme.textSecondary)),
             onChanged: _saving ? null : _setManualOngkir,
           ),
@@ -548,7 +548,7 @@ class _LapakLiveScreenState extends ConsumerState<LapakLiveScreen> {
               padding: const EdgeInsets.only(top: 4),
               child: Text(
                 'Ongkir dihitung otomatis dari Pengaturan > Pengiriman.',
-                style: GoogleFonts.inter(
+                style: GoogleFonts.plusJakartaSans(
                     fontSize: 12, color: AppTheme.textSecondary),
               ),
             ),
@@ -572,7 +572,7 @@ class _LapakLiveScreenState extends ConsumerState<LapakLiveScreen> {
               padding: const EdgeInsets.symmetric(vertical: 8),
               child: Text(
                 'Tipe usaha belum tersedia.',
-                style: GoogleFonts.inter(
+                style: GoogleFonts.plusJakartaSans(
                     fontSize: 12, color: AppTheme.textSecondary),
               ),
             )
@@ -608,7 +608,7 @@ class _LapakLiveScreenState extends ConsumerState<LapakLiveScreen> {
                         const SizedBox(width: 6),
                         Text(
                           type,
-                          style: GoogleFonts.inter(
+                          style: GoogleFonts.plusJakartaSans(
                             fontSize: 13,
                             fontWeight: FontWeight.w600,
                             color: active ? AppTheme.textPrimary : AppTheme.textSecondary,
@@ -650,11 +650,11 @@ class _LapakLiveScreenState extends ConsumerState<LapakLiveScreen> {
             activeThumbColor: AppTheme.primaryColor,
             value: _queueEnabled,
             title: Text('Aktifkan Antrean',
-                style: GoogleFonts.inter(
+                style: GoogleFonts.plusJakartaSans(
                     fontWeight: FontWeight.w600,
                     color: AppTheme.textPrimary)),
             subtitle: Text('Pembeli dapat mengambil nomor',
-                style: GoogleFonts.inter(
+                style: GoogleFonts.plusJakartaSans(
                     fontSize: 12, color: AppTheme.textSecondary)),
             onChanged:
                 _saving ? null : (v) => _setFlag(serviceQueueEnabled: v),
@@ -666,7 +666,7 @@ class _LapakLiveScreenState extends ConsumerState<LapakLiveScreen> {
               Padding(
                 padding: const EdgeInsets.symmetric(vertical: 12),
                 child: Text('Belum ada antrean menunggu.',
-                    style: GoogleFonts.inter(
+                    style: GoogleFonts.plusJakartaSans(
                         fontSize: 12.5, color: AppTheme.textSecondary)),
               )
             else
@@ -694,7 +694,7 @@ class _LapakLiveScreenState extends ConsumerState<LapakLiveScreen> {
               borderRadius: BorderRadius.circular(AppTheme.radiusMedium),
             ),
             child: Text('#${e.number}',
-                style: GoogleFonts.inter(
+                style: GoogleFonts.plusJakartaSans(
                     fontWeight: FontWeight.w700,
                     color: isCalled
                         ? AppTheme.warningColor
@@ -703,7 +703,7 @@ class _LapakLiveScreenState extends ConsumerState<LapakLiveScreen> {
           const SizedBox(width: 12),
           Expanded(
             child: Text(isCalled ? 'Dipanggil' : 'Menunggu',
-                style: GoogleFonts.inter(
+                style: GoogleFonts.plusJakartaSans(
                     fontSize: 13,
                     fontWeight: FontWeight.w600,
                     color: AppTheme.textPrimary)),
@@ -712,14 +712,14 @@ class _LapakLiveScreenState extends ConsumerState<LapakLiveScreen> {
             TextButton(
               onPressed: () => _setQueueStatus(e, 'dipanggil'),
               child: Text('Panggil',
-                  style: GoogleFonts.inter(
+                  style: GoogleFonts.plusJakartaSans(
                       color: AppTheme.primaryColor,
                       fontWeight: FontWeight.w700)),
             ),
           TextButton(
             onPressed: () => _setQueueStatus(e, 'selesai'),
             child: Text('Selesai',
-                style: GoogleFonts.inter(
+                style: GoogleFonts.plusJakartaSans(
                     color: AppTheme.successColor,
                     fontWeight: FontWeight.w700)),
           ),

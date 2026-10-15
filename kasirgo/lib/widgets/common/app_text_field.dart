@@ -47,7 +47,7 @@ class AppTextField extends StatelessWidget {
       maxLines: maxLines,
       maxLength: maxLength,
       enabled: enabled,
-      style: GoogleFonts.inter(color: AppTheme.textPrimary, fontSize: 14),
+      style: GoogleFonts.plusJakartaSans(color: AppTheme.textPrimary, fontSize: 14),
       decoration: InputDecoration(
         labelText: label,
         hintText: hint,
@@ -77,8 +77,8 @@ class AppTextField extends StatelessWidget {
           borderSide: const BorderSide(color: AppTheme.errorColor, width: 2),
         ),
         contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
-        labelStyle: GoogleFonts.inter(color: AppTheme.textSecondary, fontSize: 13),
-        hintStyle: GoogleFonts.inter(color: AppTheme.textSecondary, fontSize: 13),
+        labelStyle: GoogleFonts.plusJakartaSans(color: AppTheme.textSecondary, fontSize: 13),
+        hintStyle: GoogleFonts.plusJakartaSans(color: AppTheme.textSecondary, fontSize: 13),
       ),
     );
   }

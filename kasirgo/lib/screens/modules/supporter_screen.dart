@@ -128,14 +128,14 @@ class _SupporterScreenState extends ConsumerState<SupporterScreen> {
               const SizedBox(height: 14),
               Text('Pembayaran QRIS',
                   textAlign: TextAlign.center,
-                  style: GoogleFonts.inter(
+                  style: GoogleFonts.plusJakartaSans(
                       fontSize: 17,
                       fontWeight: FontWeight.w800,
                       color: AppTheme.textPrimary)),
               const SizedBox(height: 4),
               Text('Order: ${result.orderId}',
                   textAlign: TextAlign.center,
-                  style: GoogleFonts.inter(
+                  style: GoogleFonts.plusJakartaSans(
                       fontSize: 11, color: AppTheme.textSecondary)),
               const SizedBox(height: 12),
               Container(
@@ -148,13 +148,13 @@ class _SupporterScreenState extends ConsumerState<SupporterScreen> {
                 child: Column(
                   children: [
                     Text(Formatters.currency(result.amount),
-                        style: GoogleFonts.inter(
+                        style: GoogleFonts.plusJakartaSans(
                             fontSize: 24,
                             fontWeight: FontWeight.w800,
                             color: AppTheme.secondaryColor)),
                     const SizedBox(height: 4),
                     Text('Program Pendukung - ${result.periodDays} hari',
-                        style: GoogleFonts.inter(
+                        style: GoogleFonts.plusJakartaSans(
                             fontSize: 12, color: AppTheme.textSecondary)),
                     const SizedBox(height: 12),
                     if (payload.isNotEmpty)
@@ -183,7 +183,7 @@ class _SupporterScreenState extends ConsumerState<SupporterScreen> {
                           ? 'Scan QRIS di atas dengan aplikasi bank/e-wallet apa pun (GOJEK, OVO, DANA, BCA, dll).'
                           : 'QRIS belum tersedia. Gunakan transfer manual di bawah, lalu konfirmasi.',
                       textAlign: TextAlign.center,
-                      style: GoogleFonts.inter(
+                      style: GoogleFonts.plusJakartaSans(
                           fontSize: 11.5,
                           color: AppTheme.textSecondary,
                           height: 1.4),
@@ -200,7 +200,7 @@ class _SupporterScreenState extends ConsumerState<SupporterScreen> {
                         child: Text(
                           'Transfer: ${transfer['bank']} ${transfer['account']} a.n. ${transfer['name']}',
                           textAlign: TextAlign.center,
-                          style: GoogleFonts.inter(
+                          style: GoogleFonts.plusJakartaSans(
                               fontSize: 12, fontWeight: FontWeight.w700),
                         ),
                       ),
@@ -289,7 +289,7 @@ class _SupporterScreenState extends ConsumerState<SupporterScreen> {
               isWaitingVerify
                   ? 'Pembayaran $ref (${Formatters.currency(amount)}) menunggu verifikasi admin, maks 1x24 jam.'
                   : 'Ada pembayaran belum diselesaikan ($ref). Buka lagi lewat tombol dukung di bawah.',
-              style: GoogleFonts.inter(
+              style: GoogleFonts.plusJakartaSans(
                   fontSize: 12, height: 1.35, color: AppTheme.textPrimary),
             ),
           ),
@@ -321,7 +321,7 @@ class _SupporterScreenState extends ConsumerState<SupporterScreen> {
         scrolledUnderElevation: 0,
         title: Text(
           'Program Pendukung',
-          style: GoogleFonts.inter(
+          style: GoogleFonts.plusJakartaSans(
             fontSize: 18,
             fontWeight: FontWeight.w800,
             color: AppTheme.textPrimary,
@@ -420,7 +420,7 @@ class _SupporterScreenState extends ConsumerState<SupporterScreen> {
                             child: Text(
                               'Trial gratis aktif - sisa ${ent?.trialDaysLeft ?? 0} hari. '
                               'Semua fitur premium terbuka tanpa biaya.',
-                              style: GoogleFonts.inter(
+                              style: GoogleFonts.plusJakartaSans(
                                   fontSize: 12.5,
                                   height: 1.35,
                                   fontWeight: FontWeight.w600,

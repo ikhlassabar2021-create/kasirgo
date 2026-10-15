@@ -74,7 +74,7 @@ class _RestockScreenState extends ConsumerState<RestockScreen> {
               const SizedBox(width: 8),
               Expanded(
                 child: Text('Katalog Belum Tersedia',
-                    style: GoogleFonts.inter(
+                    style: GoogleFonts.plusJakartaSans(
                         fontSize: 16,
                         fontWeight: FontWeight.w800,
                         color: AppTheme.textPrimary)),
@@ -84,14 +84,14 @@ class _RestockScreenState extends ConsumerState<RestockScreen> {
           content: Text(
             'Katalog kulakan B2B belum dikonfigurasi oleh admin KasirGo. '
             'Coba lagi nanti.',
-            style: GoogleFonts.inter(
+            style: GoogleFonts.plusJakartaSans(
                 fontSize: 12.5, color: AppTheme.textSecondary),
           ),
           actions: [
             TextButton(
                 onPressed: () => Navigator.pop(ctx),
                 child: Text('Tutup',
-                    style: GoogleFonts.inter(
+                    style: GoogleFonts.plusJakartaSans(
                         color: AppTheme.primaryColor,
                         fontWeight: FontWeight.w700))),
           ],
@@ -133,7 +133,7 @@ class _RestockScreenState extends ConsumerState<RestockScreen> {
         shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(AppTheme.radiusLarge)),
         title: Text('Catat Order Restock',
-            style: GoogleFonts.inter(
+            style: GoogleFonts.plusJakartaSans(
                 fontSize: 16,
                 fontWeight: FontWeight.w800,
                 color: AppTheme.textPrimary)),
@@ -144,7 +144,7 @@ class _RestockScreenState extends ConsumerState<RestockScreen> {
                 'Isi total belanja kulakan yang kamu order di '
                 '${_cfg.distributorName}. Komisi ${_cfg.commissionPercent.toStringAsFixed(0)}% '
                 'dicatat otomatis.',
-                style: GoogleFonts.inter(
+                style: GoogleFonts.plusJakartaSans(
                     fontSize: 12, color: AppTheme.textSecondary)),
             const SizedBox(height: 12),
             TextField(
@@ -152,7 +152,7 @@ class _RestockScreenState extends ConsumerState<RestockScreen> {
               keyboardType: TextInputType.number,
               autofocus: true,
               style:
-                  GoogleFonts.inter(fontSize: 15, color: AppTheme.textPrimary),
+                  GoogleFonts.plusJakartaSans(fontSize: 15, color: AppTheme.textPrimary),
               decoration: const InputDecoration(
                 labelText: 'Total belanja (Rp)',
                 prefixText: 'Rp ',
@@ -162,7 +162,7 @@ class _RestockScreenState extends ConsumerState<RestockScreen> {
             TextField(
               controller: noteCtl,
               style:
-                  GoogleFonts.inter(fontSize: 13, color: AppTheme.textPrimary),
+                  GoogleFonts.plusJakartaSans(fontSize: 13, color: AppTheme.textPrimary),
               decoration: const InputDecoration(
                 labelText: 'Catatan barang (opsional)',
                 hintText: 'cth: Minyak 2L x 24',
@@ -177,7 +177,7 @@ class _RestockScreenState extends ConsumerState<RestockScreen> {
           TextButton(
               onPressed: () => Navigator.pop(ctx, true),
               child: Text('Simpan',
-                  style: GoogleFonts.inter(
+                  style: GoogleFonts.plusJakartaSans(
                       color: AppTheme.primaryColor,
                       fontWeight: FontWeight.w800))),
         ],
@@ -233,7 +233,7 @@ class _RestockScreenState extends ConsumerState<RestockScreen> {
       backgroundColor: AppTheme.backgroundColor,
       appBar: AppBar(
         title: Text('Kulakan B2B (Restock)',
-            style: GoogleFonts.inter(
+            style: GoogleFonts.plusJakartaSans(
                 fontSize: 18,
                 fontWeight: FontWeight.w700,
                 color: AppTheme.textPrimary)),
@@ -256,7 +256,7 @@ class _RestockScreenState extends ConsumerState<RestockScreen> {
                   _buildHeaderCard(isOwner),
                   const SizedBox(height: 16),
                   Text('RIWAYAT RESTOCK',
-                      style: GoogleFonts.inter(
+                      style: GoogleFonts.plusJakartaSans(
                           fontSize: 11,
                           fontWeight: FontWeight.w800,
                           letterSpacing: 0.5,
@@ -272,7 +272,7 @@ class _RestockScreenState extends ConsumerState<RestockScreen> {
                         border: Border.all(color: AppTheme.borderColor),
                       ),
                       child: Text('Belum ada order restock.',
-                          style: GoogleFonts.inter(
+                          style: GoogleFonts.plusJakartaSans(
                               fontSize: 12.5,
                               color: AppTheme.textSecondary)),
                     )
@@ -290,7 +290,7 @@ class _RestockScreenState extends ConsumerState<RestockScreen> {
               onPressed: _recordOrder,
               icon: const Icon(Icons.fact_check_rounded),
               label: Text('Sudah Order',
-                  style: GoogleFonts.inter(
+                  style: GoogleFonts.plusJakartaSans(
                       fontSize: 13, fontWeight: FontWeight.w700)),
             )
           : null,
@@ -312,7 +312,7 @@ class _RestockScreenState extends ConsumerState<RestockScreen> {
                 size: 40, color: AppTheme.textSecondary),
             const SizedBox(height: 10),
             Text('Katalog Distributor Belum Aktif',
-                style: GoogleFonts.inter(
+                style: GoogleFonts.plusJakartaSans(
                     fontSize: 15,
                     fontWeight: FontWeight.w800,
                     color: AppTheme.textPrimary)),
@@ -321,7 +321,7 @@ class _RestockScreenState extends ConsumerState<RestockScreen> {
               'Pengelola aplikasi belum mengatur link distributor B2B. '
               'Setelah aktif, kamu bisa restock grosir langsung dari sini.',
               textAlign: TextAlign.center,
-              style: GoogleFonts.inter(
+              style: GoogleFonts.plusJakartaSans(
                   fontSize: 12.5, color: AppTheme.textSecondary),
             ),
           ],
@@ -350,7 +350,7 @@ class _RestockScreenState extends ConsumerState<RestockScreen> {
               Expanded(
                 child: Text(_cfg.distributorName.toUpperCase(),
                     overflow: TextOverflow.ellipsis,
-                    style: GoogleFonts.inter(
+                    style: GoogleFonts.plusJakartaSans(
                         fontSize: 10.5,
                         fontWeight: FontWeight.w800,
                         letterSpacing: 0.5,
@@ -360,7 +360,7 @@ class _RestockScreenState extends ConsumerState<RestockScreen> {
           ),
           const SizedBox(height: 6),
           Text('Restock grosir, harga distributor',
-              style: GoogleFonts.inter(
+              style: GoogleFonts.plusJakartaSans(
                   fontSize: 15,
                   fontWeight: FontWeight.w800,
                   color: Colors.white)),
@@ -368,7 +368,7 @@ class _RestockScreenState extends ConsumerState<RestockScreen> {
           Text(
             'Komisi platform ${_cfg.commissionPercent.toStringAsFixed(0)}% per order. '
             'Tracking_id outlet otomatis disertakan di katalog.',
-            style: GoogleFonts.inter(
+            style: GoogleFonts.plusJakartaSans(
                 fontSize: 11, color: Colors.white.withValues(alpha: 0.9)),
           ),
           const SizedBox(height: 10),
@@ -378,7 +378,7 @@ class _RestockScreenState extends ConsumerState<RestockScreen> {
               onPressed: _openCatalog,
               icon: const Icon(Icons.open_in_new_rounded, size: 18),
               label: Text('Buka Katalog Distributor',
-                  style: GoogleFonts.inter(
+                  style: GoogleFonts.plusJakartaSans(
                       fontSize: 13, fontWeight: FontWeight.w700)),
               style: ElevatedButton.styleFrom(
                 backgroundColor: Colors.white,
@@ -416,7 +416,7 @@ class _RestockScreenState extends ConsumerState<RestockScreen> {
         title: Text(o.itemsNote ?? o.distributor ?? 'Restock',
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
-            style: GoogleFonts.inter(
+            style: GoogleFonts.plusJakartaSans(
                 fontSize: 13.5,
                 fontWeight: FontWeight.w700,
                 color: AppTheme.textPrimary)),
@@ -427,7 +427,7 @@ class _RestockScreenState extends ConsumerState<RestockScreen> {
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
             style:
-                GoogleFonts.inter(fontSize: 11, color: AppTheme.textSecondary),
+                GoogleFonts.plusJakartaSans(fontSize: 11, color: AppTheme.textSecondary),
           ),
         ),
         trailing: Column(
@@ -435,15 +435,15 @@ class _RestockScreenState extends ConsumerState<RestockScreen> {
           crossAxisAlignment: CrossAxisAlignment.end,
           children: [
             Text(Formatters.currency(o.amount),
-                style: GoogleFonts.inter(
+                style: GoogleFonts.plusJakartaSans(
                     fontSize: 13,
                     fontWeight: FontWeight.w800,
                     color: AppTheme.textPrimary)),
             Text('Komisi ${Formatters.currency(o.commission)}',
-                style: GoogleFonts.inter(
+                style: GoogleFonts.plusJakartaSans(
                     fontSize: 10, color: AppTheme.successColor)),
             Text(o.status.toUpperCase(),
-                style: GoogleFonts.inter(
+                style: GoogleFonts.plusJakartaSans(
                     fontSize: 10,
                     fontWeight: FontWeight.w800,
                     color: statusColor)),
@@ -526,12 +526,12 @@ class _RestockWebViewScreenState extends State<RestockWebViewScreen> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(widget.distributorName,
-                style: GoogleFonts.inter(
+                style: GoogleFonts.plusJakartaSans(
                     fontSize: 15,
                     fontWeight: FontWeight.w700,
                     color: AppTheme.textPrimary)),
             Text('Tracking: ${widget.trackingId}',
-                style: GoogleFonts.inter(
+                style: GoogleFonts.plusJakartaSans(
                     fontSize: 10, color: AppTheme.textSecondary)),
           ],
         ),
@@ -552,7 +552,7 @@ class _RestockWebViewScreenState extends State<RestockWebViewScreen> {
             child: Text(
               'Mode terkunci: hanya ${widget.distributorName}. '
               'Setelah order, tekan tombol centang lalu "Sudah Order".',
-              style: GoogleFonts.inter(
+              style: GoogleFonts.plusJakartaSans(
                   fontSize: 11, color: AppTheme.textSecondary),
             ),
           ),
@@ -566,7 +566,7 @@ class _RestockWebViewScreenState extends State<RestockWebViewScreen> {
                             size: 40, color: AppTheme.textSecondary),
                         const SizedBox(height: 10),
                         Text('Gagal memuat katalog.',
-                            style: GoogleFonts.inter(
+                            style: GoogleFonts.plusJakartaSans(
                                 fontSize: 13,
                                 color: AppTheme.textSecondary)),
                         const SizedBox(height: 12),

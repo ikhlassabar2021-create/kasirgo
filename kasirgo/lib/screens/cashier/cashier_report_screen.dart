@@ -154,7 +154,7 @@ class _CashierReportScreenState extends ConsumerState<CashierReportScreen> {
       mobileActions: const [LogoutButton()],
       mobileTitle: Text(
         'LAPORAN • ${outletType.toUpperCase()}',
-        style: GoogleFonts.inter(
+        style: GoogleFonts.plusJakartaSans(
           fontSize: 13,
           fontWeight: FontWeight.w700,
           color: AppTheme.textPrimary,
@@ -230,7 +230,7 @@ class _CashierReportScreenState extends ConsumerState<CashierReportScreen> {
                   child: Text(
                     opt.$2,
                     textAlign: TextAlign.center,
-                    style: GoogleFonts.inter(
+                    style: GoogleFonts.plusJakartaSans(
                       fontSize: 13.5,
                       fontWeight: FontWeight.w700,
                       color: _period == opt.$1
@@ -252,7 +252,7 @@ class _CashierReportScreenState extends ConsumerState<CashierReportScreen> {
       children: [
         Text(
           'Ringkasan ${_periodLabel()}',
-          style: GoogleFonts.inter(
+          style: GoogleFonts.plusJakartaSans(
             fontSize: 14,
             fontWeight: FontWeight.w800,
             color: AppTheme.textPrimary,
@@ -266,7 +266,7 @@ class _CashierReportScreenState extends ConsumerState<CashierReportScreen> {
             children: [
               Text(
                 'TOTAL PENJUALAN',
-                style: GoogleFonts.inter(
+                style: GoogleFonts.plusJakartaSans(
                   fontSize: 11.5,
                   fontWeight: FontWeight.w700,
                   letterSpacing: 0.6,
@@ -276,7 +276,7 @@ class _CashierReportScreenState extends ConsumerState<CashierReportScreen> {
               const SizedBox(height: 6),
               Text(
                 Formatters.currency(_totalSales),
-                style: GoogleFonts.inter(
+                style: GoogleFonts.plusJakartaSans(
                   fontSize: 30,
                   fontWeight: FontWeight.w800,
                   color: AppTheme.primaryColor,
@@ -343,7 +343,7 @@ class _CashierReportScreenState extends ConsumerState<CashierReportScreen> {
       children: [
         Text(
           'Metode Pembayaran',
-          style: GoogleFonts.inter(
+          style: GoogleFonts.plusJakartaSans(
             fontSize: 14,
             fontWeight: FontWeight.w800,
             color: AppTheme.textPrimary,
@@ -354,7 +354,7 @@ class _CashierReportScreenState extends ConsumerState<CashierReportScreen> {
           GlassCard(
             child: Text(
               'Belum ada transaksi pada periode ini.',
-              style: GoogleFonts.inter(
+              style: GoogleFonts.plusJakartaSans(
                 fontSize: 13,
                 color: AppTheme.textSecondary,
               ),
@@ -387,7 +387,7 @@ class _CashierReportScreenState extends ConsumerState<CashierReportScreen> {
                         Expanded(
                           child: Text(
                             _labelForMethod(entries[i].key),
-                            style: GoogleFonts.inter(
+                            style: GoogleFonts.plusJakartaSans(
                               fontSize: 14,
                               fontWeight: FontWeight.w600,
                               color: AppTheme.textPrimary,
@@ -396,7 +396,7 @@ class _CashierReportScreenState extends ConsumerState<CashierReportScreen> {
                         ),
                         Text(
                           Formatters.currency(entries[i].value),
-                          style: GoogleFonts.inter(
+                          style: GoogleFonts.plusJakartaSans(
                             fontSize: 14,
                             fontWeight: FontWeight.w800,
                             color: AppTheme.textPrimary,
@@ -422,7 +422,7 @@ class _CashierReportScreenState extends ConsumerState<CashierReportScreen> {
       children: [
         Text(
           'Shift Aktif',
-          style: GoogleFonts.inter(
+          style: GoogleFonts.plusJakartaSans(
             fontSize: 14,
             fontWeight: FontWeight.w800,
             color: AppTheme.textPrimary,
@@ -440,7 +440,7 @@ class _CashierReportScreenState extends ConsumerState<CashierReportScreen> {
                     Expanded(
                       child: Text(
                         'Belum ada shift aktif. Buka shift dari Home Kasir.',
-                        style: GoogleFonts.inter(
+                        style: GoogleFonts.plusJakartaSans(
                           fontSize: 13,
                           color: AppTheme.textSecondary,
                         ),
@@ -464,7 +464,7 @@ class _CashierReportScreenState extends ConsumerState<CashierReportScreen> {
                         const SizedBox(width: 8),
                         Text(
                           'Shift dibuka',
-                          style: GoogleFonts.inter(
+                          style: GoogleFonts.plusJakartaSans(
                             fontSize: 13,
                             fontWeight: FontWeight.w700,
                             color: AppTheme.successColor,
@@ -473,7 +473,7 @@ class _CashierReportScreenState extends ConsumerState<CashierReportScreen> {
                         const Spacer(),
                         Text(
                           Formatters.dateTime(shift.openedAt),
-                          style: GoogleFonts.inter(
+                          style: GoogleFonts.plusJakartaSans(
                             fontSize: 12,
                             color: AppTheme.textSecondary,
                           ),
@@ -571,7 +571,7 @@ class _StatTile extends StatelessWidget {
             value,
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
-            style: GoogleFonts.inter(
+            style: GoogleFonts.plusJakartaSans(
               fontSize: 17,
               fontWeight: FontWeight.w800,
               color: AppTheme.textPrimary,
@@ -581,7 +581,7 @@ class _StatTile extends StatelessWidget {
           Text(
             label,
             maxLines: 2,
-            style: GoogleFonts.inter(
+            style: GoogleFonts.plusJakartaSans(
               fontSize: 11.5,
               color: AppTheme.textSecondary,
               fontWeight: FontWeight.w500,
@@ -613,7 +613,7 @@ class _ShiftRow extends StatelessWidget {
           Expanded(
             child: Text(
               label,
-              style: GoogleFonts.inter(
+              style: GoogleFonts.plusJakartaSans(
                 fontSize: emphasize ? 13.5 : 13,
                 fontWeight: emphasize ? FontWeight.w700 : FontWeight.w500,
                 color: emphasize
@@ -624,7 +624,7 @@ class _ShiftRow extends StatelessWidget {
           ),
           Text(
             value,
-            style: GoogleFonts.inter(
+            style: GoogleFonts.plusJakartaSans(
               fontSize: emphasize ? 15 : 13,
               fontWeight: emphasize ? FontWeight.w800 : FontWeight.w700,
               color: emphasize

@@ -1,4 +1,3 @@
-import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -56,7 +55,7 @@ class _CashierHomeScreenState extends ConsumerState<CashierHomeScreen> {
               Expanded(
                 child: Text(
                   'Buka Shift Baru',
-                  style: GoogleFonts.inter(fontWeight: FontWeight.w700, color: AppTheme.textPrimary),
+                  style: GoogleFonts.plusJakartaSans(fontWeight: FontWeight.w700, color: AppTheme.textPrimary),
                 ),
               ),
               AppCloseButton(onTap: () => Navigator.pop(ctx)),
@@ -120,7 +119,7 @@ class _CashierHomeScreenState extends ConsumerState<CashierHomeScreen> {
             Expanded(
               child: Text(
                 'Tutup Shift Kasir',
-                style: GoogleFonts.inter(fontWeight: FontWeight.w700, color: AppTheme.textPrimary),
+                style: GoogleFonts.plusJakartaSans(fontWeight: FontWeight.w700, color: AppTheme.textPrimary),
               ),
             ),
             AppCloseButton(onTap: () => Navigator.pop(ctx)),
@@ -200,7 +199,7 @@ class _CashierHomeScreenState extends ConsumerState<CashierHomeScreen> {
             Expanded(
               child: Text(
                 'Catat Tip Tunai/Kolektif',
-                style: GoogleFonts.inter(fontWeight: FontWeight.w700, color: AppTheme.textPrimary),
+                style: GoogleFonts.plusJakartaSans(fontWeight: FontWeight.w700, color: AppTheme.textPrimary),
               ),
             ),
             AppCloseButton(onTap: () => Navigator.pop(ctx)),
@@ -364,102 +363,95 @@ class _CashierHomeScreenState extends ConsumerState<CashierHomeScreen> {
 
   Widget _buildHero(BuildContext context, String email, Shift? activeShift) {
     final hasActiveShift = activeShift != null;
-    return ClipRRect(
-      borderRadius: BorderRadius.circular(20),
-      child: BackdropFilter(
-        filter: ImageFilter.blur(sigmaX: 18, sigmaY: 18),
-        child: Container(
-          padding: const EdgeInsets.all(20),
-          decoration: BoxDecoration(
-            gradient: AppTheme.primaryGradient,
-            borderRadius: BorderRadius.circular(20),
-            border: Border.all(color: Colors.white.withValues(alpha: 0.2)),
-            boxShadow: [
-              BoxShadow(
-                color: AppTheme.primaryColor.withValues(alpha: 0.25),
-                blurRadius: 20,
-                offset: const Offset(0, 8),
-              ),
-            ],
+    return Container(
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        gradient: AppTheme.primaryGradient,
+        borderRadius: BorderRadius.circular(20),
+        boxShadow: [
+          BoxShadow(
+            color: AppTheme.primaryColor.withValues(alpha: 0.22),
+            blurRadius: 20,
+            offset: const Offset(0, 8),
           ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
             children: [
-              Row(
-                children: [
-                  CircleAvatar(
-                    radius: 24,
-                    backgroundColor: Colors.white.withValues(alpha: 0.2),
-                    child: const Icon(Icons.person_rounded, color: Colors.white, size: 28),
-                  ),
-                  const SizedBox(width: 14),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
+              CircleAvatar(
+                radius: 24,
+                backgroundColor: Colors.white.withValues(alpha: 0.2),
+                child: const Icon(Icons.person_rounded, color: Colors.white, size: 28),
+              ),
+              const SizedBox(width: 14),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      email,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: GoogleFonts.plusJakartaSans(
+                        fontSize: 15,
+                        fontWeight: FontWeight.w800,
+                        color: Colors.white,
+                      ),
+                    ),
+                    const SizedBox(height: 3),
+                    Row(
                       children: [
-                        Text(
-                          email,
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: GoogleFonts.inter(
-                            fontSize: 15,
-                            fontWeight: FontWeight.w800,
-                            color: Colors.white,
+                        Container(
+                          width: 8,
+                          height: 8,
+                          decoration: BoxDecoration(
+                            color: hasActiveShift ? AppTheme.successColor : Colors.white70,
+                            shape: BoxShape.circle,
                           ),
                         ),
-                        const SizedBox(height: 3),
-                        Row(
-                          children: [
-                            Container(
-                              width: 8,
-                              height: 8,
-                              decoration: BoxDecoration(
-                                color: hasActiveShift ? AppTheme.successColor : Colors.white70,
-                                shape: BoxShape.circle,
-                              ),
-                            ),
-                            const SizedBox(width: 6),
-                            Text(
-                              hasActiveShift ? 'Shift Aktif' : 'Shift Belum Dibuka',
-                              style: GoogleFonts.inter(
-                                fontSize: 11.5,
-                                color: Colors.white,
-                                fontWeight: FontWeight.w600,
-                              ),
-                            ),
-                          ],
+                        const SizedBox(width: 6),
+                        Text(
+                          hasActiveShift ? 'Shift Aktif' : 'Shift Belum Dibuka',
+                          style: GoogleFonts.plusJakartaSans(
+                            fontSize: 11.5,
+                            color: Colors.white,
+                            fontWeight: FontWeight.w600,
+                          ),
                         ),
                       ],
                     ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 18),
-              SizedBox(
-                width: double.infinity,
-                height: 52,
-                child: ElevatedButton.icon(
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.white,
-                    foregroundColor: AppTheme.primaryColor,
-                    elevation: 0,
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-                  ),
-                  icon: const Icon(Icons.point_of_sale_rounded, size: 22),
-                  label: Text(
-                    'BUKA KASIR (POS)',
-                    style: GoogleFonts.inter(
-                      fontSize: 15,
-                      fontWeight: FontWeight.w800,
-                      letterSpacing: 0.5,
-                    ),
-                  ),
-                  onPressed: () => context.push('/cashier/pos'),
+                  ],
                 ),
               ),
             ],
           ),
-        ),
+          const SizedBox(height: 18),
+          SizedBox(
+            width: double.infinity,
+            height: 52,
+            child: ElevatedButton.icon(
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.white,
+                foregroundColor: AppTheme.primaryColor,
+                elevation: 0,
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+              ),
+              icon: const Icon(Icons.point_of_sale_rounded, size: 22),
+              label: Text(
+                'BUKA KASIR (POS)',
+                style: GoogleFonts.plusJakartaSans(
+                  fontSize: 15,
+                  fontWeight: FontWeight.w800,
+                  letterSpacing: 0.5,
+                ),
+              ),
+              onPressed: () => context.push('/cashier/pos'),
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -571,7 +563,7 @@ class _RoleBadge extends StatelessWidget {
           const SizedBox(width: 6),
           Text(
             label,
-            style: GoogleFonts.inter(
+            style: GoogleFonts.plusJakartaSans(
               fontSize: 11,
               fontWeight: FontWeight.w800,
               letterSpacing: 0.5,
@@ -658,7 +650,7 @@ class _SectionLabel extends StatelessWidget {
         const SizedBox(width: 10),
         Text(
           title,
-          style: GoogleFonts.inter(fontSize: 16, fontWeight: FontWeight.w800, color: AppTheme.textPrimary),
+          style: GoogleFonts.plusJakartaSans(fontSize: 16, fontWeight: FontWeight.w800, color: AppTheme.textPrimary),
         ),
       ],
     );
@@ -705,12 +697,12 @@ class _QuickActionCard extends StatelessWidget {
           const SizedBox(height: 12),
           Text(
             title,
-            style: GoogleFonts.inter(fontWeight: FontWeight.w800, fontSize: 14, color: AppTheme.textPrimary),
+            style: GoogleFonts.plusJakartaSans(fontWeight: FontWeight.w800, fontSize: 14, color: AppTheme.textPrimary),
           ),
           const SizedBox(height: 2),
           Text(
             subtitle,
-            style: GoogleFonts.inter(fontSize: 11, color: AppTheme.textSecondary),
+            style: GoogleFonts.plusJakartaSans(fontSize: 11, color: AppTheme.textSecondary),
           ),
         ],
       ),

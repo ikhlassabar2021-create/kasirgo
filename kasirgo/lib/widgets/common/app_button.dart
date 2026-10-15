@@ -50,7 +50,7 @@ class AppButton extends StatelessWidget {
               ],
               Text(
                 label,
-                style: GoogleFonts.inter(fontSize: 14, fontWeight: FontWeight.w700),
+                style: GoogleFonts.plusJakartaSans(fontSize: 14, fontWeight: FontWeight.w700),
               ),
             ],
           );

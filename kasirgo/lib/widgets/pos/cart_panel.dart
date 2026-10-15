@@ -68,7 +68,7 @@ class CartContent extends StatelessWidget {
                         const SizedBox(width: 10),
                         Text(
                           'Keranjang',
-                          style: GoogleFonts.inter(
+                          style: GoogleFonts.plusJakartaSans(
                             color: AppTheme.textPrimary,
                             fontSize: 16,
                             fontWeight: FontWeight.w800,
@@ -195,12 +195,12 @@ class _EmptyCart extends StatelessWidget {
           const SizedBox(height: 12),
           Text(
             'Keranjang masih kosong',
-            style: GoogleFonts.inter(color: AppTheme.textSecondary, fontSize: 13),
+            style: GoogleFonts.plusJakartaSans(color: AppTheme.textSecondary, fontSize: 13),
           ),
           const SizedBox(height: 2),
           Text(
             'Tap produk untuk menambahkan',
-            style: GoogleFonts.inter(color: AppTheme.textSecondary.withValues(alpha: 0.7), fontSize: 11),
+            style: GoogleFonts.plusJakartaSans(color: AppTheme.textSecondary.withValues(alpha: 0.7), fontSize: 11),
           ),
         ],
       ),
@@ -234,7 +234,7 @@ class _CartItemRow extends StatelessWidget {
                   item.productName,
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
-                  style: GoogleFonts.inter(
+                  style: GoogleFonts.plusJakartaSans(
                     color: AppTheme.textPrimary,
                     fontWeight: FontWeight.w700,
                     fontSize: 13,
@@ -243,7 +243,7 @@ class _CartItemRow extends StatelessWidget {
                 const SizedBox(height: 2),
                 Text(
                   'Rp ${item.price.toStringAsFixed(0)}',
-                  style: GoogleFonts.inter(color: AppTheme.textSecondary, fontSize: 11),
+                  style: GoogleFonts.plusJakartaSans(color: AppTheme.textSecondary, fontSize: 11),
                 ),
               ],
             ),
@@ -254,7 +254,7 @@ class _CartItemRow extends StatelessWidget {
             child: Text(
               '${item.quantity}',
               textAlign: TextAlign.center,
-              style: GoogleFonts.inter(
+              style: GoogleFonts.plusJakartaSans(
                 color: AppTheme.textPrimary,
                 fontWeight: FontWeight.w800,
                 fontSize: 14,
@@ -426,7 +426,7 @@ class _MoneyInline extends StatelessWidget {
       maxLines: 1,
       overflow: TextOverflow.ellipsis,
       textAlign: TextAlign.end,
-      style: GoogleFonts.inter(
+      style: GoogleFonts.plusJakartaSans(
         color: AppTheme.textPrimary,
         fontSize: size,
         fontWeight: bold ? FontWeight.w800 : FontWeight.w800,

@@ -177,7 +177,7 @@ class _ProductCard extends StatelessWidget {
                               product.name,
                               maxLines: 1,
                               overflow: TextOverflow.ellipsis,
-                              style: GoogleFonts.inter(
+                              style: GoogleFonts.plusJakartaSans(
                                 color: AppTheme.textPrimary,
                                 fontSize: 11,
                                 fontWeight: FontWeight.w700,
@@ -189,7 +189,7 @@ class _ProductCard extends StatelessWidget {
                                 children: [
                                   Text(
                                     'Rp ${displayPrice.toStringAsFixed(0)}',
-                                    style: GoogleFonts.inter(
+                                    style: GoogleFonts.plusJakartaSans(
                                       color: AppTheme.successColor,
                                       fontSize: 10.5,
                                       fontWeight: FontWeight.w800,
@@ -200,7 +200,7 @@ class _ProductCard extends StatelessWidget {
                                   Flexible(
                                     child: Text(
                                       'Rp ${originalPrice!.toStringAsFixed(0)}',
-                                      style: GoogleFonts.inter(
+                                      style: GoogleFonts.plusJakartaSans(
                                         color: AppTheme.textSecondary,
                                         fontSize: 8.5,
                                         decoration: TextDecoration.lineThrough,
@@ -213,7 +213,7 @@ class _ProductCard extends StatelessWidget {
                             ] else ...[
                               Text(
                                 'Rp ${displayPrice.toStringAsFixed(0)}',
-                                style: GoogleFonts.inter(
+                                style: GoogleFonts.plusJakartaSans(
                                   color: AppTheme.accentColor,
                                   fontSize: 10.5,
                                   fontWeight: FontWeight.w800,
@@ -226,7 +226,7 @@ class _ProductCard extends StatelessWidget {
                               isOutOfStock
                                   ? 'Habis'
                                   : 'Stok ${product.stock}',
-                              style: GoogleFonts.inter(
+                              style: GoogleFonts.plusJakartaSans(
                                 color: product.stock <= 0
                                     ? AppTheme.errorColor
                                     : product.stock <= 10
@@ -270,7 +270,7 @@ class _ProductCard extends StatelessWidget {
                         ),
                         child: Text(
                           '$inCartQty',
-                          style: GoogleFonts.inter(
+                          style: GoogleFonts.plusJakartaSans(
                             color: AppTheme.backgroundColor,
                             fontSize: 12,
                             fontWeight: FontWeight.w800,
@@ -292,7 +292,7 @@ class _ProductCard extends StatelessWidget {
                         ),
                         child: Text(
                           'STOK HABIS',
-                          style: GoogleFonts.inter(
+                          style: GoogleFonts.plusJakartaSans(
                             color: AppTheme.errorColor,
                             fontSize: 9,
                             fontWeight: FontWeight.w800,

@@ -589,7 +589,7 @@ class _BusinessDoctorScreenState extends ConsumerState<BusinessDoctorScreen> {
         title: Row(
           children: [
             Text('Dokter Bisnis',
-                style: GoogleFonts.inter(fontWeight: FontWeight.w700)),
+                style: GoogleFonts.plusJakartaSans(fontWeight: FontWeight.w700)),
             const SizedBox(width: 8),
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
@@ -599,7 +599,7 @@ class _BusinessDoctorScreenState extends ConsumerState<BusinessDoctorScreen> {
               ),
               child: Text(
                 'AI',
-                style: GoogleFonts.inter(
+                style: GoogleFonts.plusJakartaSans(
                   fontSize: 10,
                   fontWeight: FontWeight.w800,
                   color: Colors.white,
@@ -706,7 +706,7 @@ class _BusinessDoctorScreenState extends ConsumerState<BusinessDoctorScreen> {
           Text(
             _disclaimer!,
             textAlign: TextAlign.center,
-            style: GoogleFonts.inter(
+            style: GoogleFonts.plusJakartaSans(
               fontSize: 11,
               color: AppTheme.textSecondary,
             ),
@@ -748,7 +748,7 @@ class _BusinessDoctorScreenState extends ConsumerState<BusinessDoctorScreen> {
               Expanded(
                 child: Text(
                   'Kartu Identitas Bisnis',
-                  style: GoogleFonts.inter(
+                  style: GoogleFonts.plusJakartaSans(
                     fontSize: 14,
                     fontWeight: FontWeight.w800,
                     color: AppTheme.textPrimary,
@@ -765,7 +765,7 @@ class _BusinessDoctorScreenState extends ConsumerState<BusinessDoctorScreen> {
                   ),
                   child: Text(
                     'Sehat $score',
-                    style: GoogleFonts.inter(
+                    style: GoogleFonts.plusJakartaSans(
                       fontSize: 12,
                       fontWeight: FontWeight.w800,
                       color: scoreColor,
@@ -807,7 +807,7 @@ class _BusinessDoctorScreenState extends ConsumerState<BusinessDoctorScreen> {
       ),
       child: Text(
         label,
-        style: GoogleFonts.inter(
+        style: GoogleFonts.plusJakartaSans(
           fontSize: 12,
           fontWeight: FontWeight.w600,
           color: AppTheme.textPrimary,
@@ -839,7 +839,7 @@ class _BusinessDoctorScreenState extends ConsumerState<BusinessDoctorScreen> {
               Expanded(
                 child: Text(
                   'Laporan Mingguan',
-                  style: GoogleFonts.inter(
+                  style: GoogleFonts.plusJakartaSans(
                     fontSize: 14,
                     fontWeight: FontWeight.w800,
                     color: AppTheme.textPrimary,
@@ -857,7 +857,7 @@ class _BusinessDoctorScreenState extends ConsumerState<BusinessDoctorScreen> {
           const SizedBox(height: 6),
           Text(
             r['content']?.toString() ?? '',
-            style: GoogleFonts.inter(
+            style: GoogleFonts.plusJakartaSans(
               fontSize: 13,
               height: 1.45,
               color: AppTheme.textPrimary,
@@ -867,7 +867,7 @@ class _BusinessDoctorScreenState extends ConsumerState<BusinessDoctorScreen> {
             const SizedBox(height: 8),
             Text(
               'Terlaris: ${data['top_product']}',
-              style: GoogleFonts.inter(
+              style: GoogleFonts.plusJakartaSans(
                 fontSize: 12,
                 fontWeight: FontWeight.w700,
                 color: AppTheme.successColor,
@@ -899,7 +899,7 @@ class _BusinessDoctorScreenState extends ConsumerState<BusinessDoctorScreen> {
               Expanded(
                 child: Text(
                   'Perlu Persetujuan Anda',
-                  style: GoogleFonts.inter(
+                  style: GoogleFonts.plusJakartaSans(
                     fontSize: 14,
                     fontWeight: FontWeight.w800,
                     color: AppTheme.textPrimary,
@@ -911,7 +911,7 @@ class _BusinessDoctorScreenState extends ConsumerState<BusinessDoctorScreen> {
           const SizedBox(height: 8),
           Text(
             a['title']?.toString() ?? '',
-            style: GoogleFonts.inter(
+            style: GoogleFonts.plusJakartaSans(
               fontSize: 13,
               fontWeight: FontWeight.w700,
               color: AppTheme.textPrimary,
@@ -921,7 +921,7 @@ class _BusinessDoctorScreenState extends ConsumerState<BusinessDoctorScreen> {
             const SizedBox(height: 4),
             Text(
               a['body'].toString(),
-              style: GoogleFonts.inter(
+              style: GoogleFonts.plusJakartaSans(
                 fontSize: 13,
                 height: 1.4,
                 color: AppTheme.textSecondary,
@@ -931,7 +931,7 @@ class _BusinessDoctorScreenState extends ConsumerState<BusinessDoctorScreen> {
           const SizedBox(height: 6),
           Text(
             'AI mengusulkan aksi ini tetapi BELUM dijalankan. Anda yang memutuskan.',
-            style: GoogleFonts.inter(
+            style: GoogleFonts.plusJakartaSans(
               fontSize: 11,
               fontStyle: FontStyle.italic,
               color: AppTheme.textSecondary,
@@ -991,7 +991,7 @@ class _BusinessDoctorScreenState extends ConsumerState<BusinessDoctorScreen> {
               Expanded(
                 child: Text(
                   r['title']?.toString() ?? 'Pengingat Dokter Bisnis',
-                  style: GoogleFonts.inter(
+                  style: GoogleFonts.plusJakartaSans(
                     fontSize: 14,
                     fontWeight: FontWeight.w800,
                     color: AppTheme.textPrimary,
@@ -1009,7 +1009,7 @@ class _BusinessDoctorScreenState extends ConsumerState<BusinessDoctorScreen> {
           const SizedBox(height: 6),
           Text(
             r['content']?.toString() ?? '',
-            style: GoogleFonts.inter(
+            style: GoogleFonts.plusJakartaSans(
               fontSize: 13,
               height: 1.45,
               color: AppTheme.textPrimary,
@@ -1024,7 +1024,7 @@ class _BusinessDoctorScreenState extends ConsumerState<BusinessDoctorScreen> {
                 ActionChip(
                   label: Text(
                     reason,
-                    style: GoogleFonts.inter(
+                    style: GoogleFonts.plusJakartaSans(
                       fontSize: 12,
                       fontWeight: FontWeight.w600,
                       color: color,
@@ -1073,11 +1073,11 @@ class _BusinessDoctorScreenState extends ConsumerState<BusinessDoctorScreen> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(title,
-                    style: GoogleFonts.inter(
+                    style: GoogleFonts.plusJakartaSans(
                         fontWeight: FontWeight.w700, color: color)),
                 const SizedBox(height: 2),
                 Text(body,
-                    style: GoogleFonts.inter(
+                    style: GoogleFonts.plusJakartaSans(
                         fontSize: 12,
                         color: AppTheme.textSecondary,
                         height: 1.35)),
@@ -1120,13 +1120,13 @@ class _BusinessDoctorScreenState extends ConsumerState<BusinessDoctorScreen> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text('Halo, saya Dokter Bisnis AI',
-                        style: GoogleFonts.inter(
+                        style: GoogleFonts.plusJakartaSans(
                             fontSize: 15, fontWeight: FontWeight.w700)),
                     const SizedBox(height: 2),
                     Text(
                       'Tanya apa saja soal omzet, stok, promosi, atau arus kas '
                       'usaha Anda.',
-                      style: GoogleFonts.inter(
+                      style: GoogleFonts.plusJakartaSans(
                           fontSize: 12, color: AppTheme.textSecondary),
                     ),
                   ],
@@ -1184,12 +1184,12 @@ class _BusinessDoctorScreenState extends ConsumerState<BusinessDoctorScreen> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text('Cek Fisik Toko',
-                        style: GoogleFonts.inter(
+                        style: GoogleFonts.plusJakartaSans(
                             fontSize: 14, fontWeight: FontWeight.w700)),
                     const SizedBox(height: 2),
                     Text(
                       'Diagnosa lebih akurat dengan 3 langkah singkat.',
-                      style: GoogleFonts.inter(
+                      style: GoogleFonts.plusJakartaSans(
                           fontSize: 12, color: AppTheme.textSecondary),
                     ),
                   ],
@@ -1235,12 +1235,12 @@ class _BusinessDoctorScreenState extends ConsumerState<BusinessDoctorScreen> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text('Evaluasi Resep',
-                        style: GoogleFonts.inter(
+                        style: GoogleFonts.plusJakartaSans(
                             fontSize: 14, fontWeight: FontWeight.w700)),
                     const SizedBox(height: 2),
                     Text(
                       'Sudah dijalankan? Beri tahu hasilnya, Dokter perbaiki resepnya.',
-                      style: GoogleFonts.inter(
+                      style: GoogleFonts.plusJakartaSans(
                           fontSize: 12, color: AppTheme.textSecondary),
                     ),
                   ],
@@ -1293,7 +1293,7 @@ class _BusinessDoctorScreenState extends ConsumerState<BusinessDoctorScreen> {
               Flexible(
                 child: Text(
                   label,
-                  style: GoogleFonts.inter(
+                  style: GoogleFonts.plusJakartaSans(
                       fontSize: 12, fontWeight: FontWeight.w700, color: color),
                 ),
               ),
@@ -1332,7 +1332,7 @@ class _BusinessDoctorScreenState extends ConsumerState<BusinessDoctorScreen> {
               ),
               Text(
                 label,
-                style: GoogleFonts.inter(
+                style: GoogleFonts.plusJakartaSans(
                   fontSize: 13,
                   fontWeight: FontWeight.w700,
                   color: AppTheme.textPrimary,
@@ -1361,7 +1361,7 @@ class _BusinessDoctorScreenState extends ConsumerState<BusinessDoctorScreen> {
           ),
           child: Text(
             msg.text,
-            style: GoogleFonts.inter(
+            style: GoogleFonts.plusJakartaSans(
               fontSize: 14,
               height: 1.4,
               color: Colors.white,
@@ -1395,7 +1395,7 @@ class _BusinessDoctorScreenState extends ConsumerState<BusinessDoctorScreen> {
             child: msg.blocks.isEmpty
                 ? Text(
                     msg.text.isEmpty ? 'Maaf, tidak ada jawaban.' : msg.text,
-                    style: GoogleFonts.inter(
+                    style: GoogleFonts.plusJakartaSans(
                       fontSize: 14,
                       height: 1.45,
                       color: AppTheme.textPrimary,
@@ -1445,7 +1445,7 @@ class _BusinessDoctorScreenState extends ConsumerState<BusinessDoctorScreen> {
               ),
               const SizedBox(width: 8),
               Text('Dokter sedang menganalisa...',
-                  style: GoogleFonts.inter(
+                  style: GoogleFonts.plusJakartaSans(
                       fontSize: 12, color: AppTheme.textSecondary)),
             ],
           ),

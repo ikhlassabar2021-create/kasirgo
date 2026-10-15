@@ -212,7 +212,7 @@ class _BuyerOnboardingScreenState extends ConsumerState<BuyerOnboardingScreen> {
                       Text(
                         'Data Anda tersimpan aman dan hanya dipakai untuk pesanan.',
                         textAlign: TextAlign.center,
-                        style: GoogleFonts.inter(
+                        style: GoogleFonts.plusJakartaSans(
                           fontSize: 12,
                           color: AppTheme.textSecondary,
                         ),
@@ -243,7 +243,7 @@ class _BuyerOnboardingScreenState extends ConsumerState<BuyerOnboardingScreen> {
         const SizedBox(height: 14),
         Text(
           'Kenalan dulu, yuk',
-          style: GoogleFonts.inter(
+          style: GoogleFonts.plusJakartaSans(
             fontSize: 22,
             fontWeight: FontWeight.w700,
             color: AppTheme.textPrimary,
@@ -253,7 +253,7 @@ class _BuyerOnboardingScreenState extends ConsumerState<BuyerOnboardingScreen> {
         Text(
           'Isi data akun Anda. Tanpa password, langsung bisa belanja.',
           textAlign: TextAlign.center,
-          style: GoogleFonts.inter(fontSize: 13, color: AppTheme.textSecondary),
+          style: GoogleFonts.plusJakartaSans(fontSize: 13, color: AppTheme.textSecondary),
         ),
       ],
     );
@@ -284,7 +284,7 @@ class _ConsentTile extends StatelessWidget {
       activeColor: AppTheme.primaryColor,
       title: Text(
         title,
-        style: GoogleFonts.inter(
+        style: GoogleFonts.plusJakartaSans(
           fontSize: 13,
           fontWeight: FontWeight.w600,
           color: AppTheme.textPrimary,
@@ -292,7 +292,7 @@ class _ConsentTile extends StatelessWidget {
       ),
       subtitle: Text(
         subtitle,
-        style: GoogleFonts.inter(fontSize: 11.5, color: AppTheme.textSecondary),
+        style: GoogleFonts.plusJakartaSans(fontSize: 11.5, color: AppTheme.textSecondary),
       ),
     );
   }

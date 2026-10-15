@@ -128,7 +128,7 @@ class _CustomerCatalogScreenState extends State<CustomerCatalogScreen> {
                   size: 16, color: AppTheme.primaryColor),
               const SizedBox(width: 6),
               Text('Paket Hemat',
-                  style: GoogleFonts.inter(
+                  style: GoogleFonts.plusJakartaSans(
                       fontSize: 13, fontWeight: FontWeight.w800)),
             ],
           ),
@@ -173,7 +173,7 @@ class _CustomerCatalogScreenState extends State<CustomerCatalogScreen> {
                   child: Text(name,
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
-                      style: GoogleFonts.inter(
+                      style: GoogleFonts.plusJakartaSans(
                           fontSize: 13, fontWeight: FontWeight.w800)),
                 ),
                 if (original > price)
@@ -202,7 +202,7 @@ class _CustomerCatalogScreenState extends State<CustomerCatalogScreen> {
             Row(
               children: [
                 Text(Formatters.currency(price),
-                    style: GoogleFonts.inter(
+                    style: GoogleFonts.plusJakartaSans(
                         fontSize: 14,
                         fontWeight: FontWeight.w800,
                         color: AppTheme.primaryColor)),
@@ -283,14 +283,14 @@ class _CustomerCatalogScreenState extends State<CustomerCatalogScreen> {
               _outletName.isNotEmpty ? _outletName : 'Katalog Toko',
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
-              style: GoogleFonts.inter(
+              style: GoogleFonts.plusJakartaSans(
                   fontWeight: FontWeight.w700,
                   fontSize: 16,
                   color: AppTheme.textPrimary),
             ),
             Text(
               'Katalog Online',
-              style: GoogleFonts.inter(
+              style: GoogleFonts.plusJakartaSans(
                   fontSize: 11.5,
                   fontWeight: FontWeight.w600,
                   color: AppTheme.primaryColor),
@@ -421,7 +421,7 @@ class _CustomerCatalogScreenState extends State<CustomerCatalogScreen> {
       appBar: AppBar(
         title: Text(
           'Katalog Online',
-          style: GoogleFonts.inter(
+          style: GoogleFonts.plusJakartaSans(
               fontWeight: FontWeight.w700,
               fontSize: 17,
               color: AppTheme.textPrimary),
@@ -448,7 +448,7 @@ class _CustomerCatalogScreenState extends State<CustomerCatalogScreen> {
                 const SizedBox(height: 16),
                 Text(
                   'Buka Katalog Toko',
-                  style: GoogleFonts.inter(
+                  style: GoogleFonts.plusJakartaSans(
                       fontWeight: FontWeight.w800,
                       fontSize: 18,
                       color: AppTheme.textPrimary),
@@ -524,7 +524,7 @@ class _CustomerCatalogScreenState extends State<CustomerCatalogScreen> {
                         product.name.isNotEmpty
                             ? product.name[0].toUpperCase()
                             : '?',
-                        style: GoogleFonts.inter(
+                        style: GoogleFonts.plusJakartaSans(
                           fontSize: 32,
                           fontWeight: FontWeight.w800,
                           color: AppTheme.primaryColor.withValues(alpha: 0.35),
@@ -572,7 +572,7 @@ class _CustomerCatalogScreenState extends State<CustomerCatalogScreen> {
                       product.name,
                       maxLines: 2,
                       overflow: TextOverflow.ellipsis,
-                      style: GoogleFonts.inter(
+                      style: GoogleFonts.plusJakartaSans(
                         fontSize: 12.5,
                         fontWeight: FontWeight.w700,
                         color: AppTheme.textPrimary,
@@ -581,7 +581,7 @@ class _CustomerCatalogScreenState extends State<CustomerCatalogScreen> {
                     const Spacer(),
                     Text(
                       Formatters.currency(product.price),
-                      style: GoogleFonts.inter(
+                      style: GoogleFonts.plusJakartaSans(
                         color: AppTheme.primaryColor,
                         fontWeight: FontWeight.w800,
                         fontSize: 13,

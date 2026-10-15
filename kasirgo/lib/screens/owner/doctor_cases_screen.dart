@@ -101,7 +101,7 @@ class _DoctorCasesScreenState extends ConsumerState<DoctorCasesScreen> {
       backgroundColor: AppTheme.backgroundColor,
       appBar: AppBar(
         title: Text('Riwayat Kasus',
-            style: GoogleFonts.inter(fontWeight: FontWeight.w700)),
+            style: GoogleFonts.plusJakartaSans(fontWeight: FontWeight.w700)),
         backgroundColor: AppTheme.surfaceColor,
         foregroundColor: AppTheme.textPrimary,
         elevation: 0,
@@ -141,7 +141,7 @@ class _DoctorCasesScreenState extends ConsumerState<DoctorCasesScreen> {
                 const SizedBox(height: 8),
                 Text(_error!,
                     textAlign: TextAlign.center,
-                    style: GoogleFonts.inter(color: AppTheme.textSecondary)),
+                    style: GoogleFonts.plusJakartaSans(color: AppTheme.textSecondary)),
                 const SizedBox(height: 12),
                 TextButton(onPressed: _load, child: const Text('Coba lagi')),
               ],
@@ -163,7 +163,7 @@ class _DoctorCasesScreenState extends ConsumerState<DoctorCasesScreen> {
                 Text(
                   'Belum ada riwayat. Mulai konsultasi dengan Dokter Bisnis AI.',
                   textAlign: TextAlign.center,
-                  style: GoogleFonts.inter(color: AppTheme.textSecondary),
+                  style: GoogleFonts.plusJakartaSans(color: AppTheme.textSecondary),
                 ),
               ],
             ),
@@ -185,7 +185,7 @@ class _DoctorCasesScreenState extends ConsumerState<DoctorCasesScreen> {
               child: Text(
                 'Tidak ada riwayat pada periode ini.',
                 textAlign: TextAlign.center,
-                style: GoogleFonts.inter(color: AppTheme.textSecondary),
+                style: GoogleFonts.plusJakartaSans(color: AppTheme.textSecondary),
               ),
             ),
           ),
@@ -251,7 +251,7 @@ class _DoctorCasesScreenState extends ConsumerState<DoctorCasesScreen> {
           ),
           child: Text(
             label,
-            style: GoogleFonts.inter(
+            style: GoogleFonts.plusJakartaSans(
               fontSize: 12,
               fontWeight: FontWeight.w700,
               color: selected ? Colors.white : AppTheme.textSecondary,
@@ -266,7 +266,7 @@ class _DoctorCasesScreenState extends ConsumerState<DoctorCasesScreen> {
     return Padding(
       padding: const EdgeInsets.only(bottom: 10),
       child: Text(text,
-          style: GoogleFonts.inter(
+          style: GoogleFonts.plusJakartaSans(
               fontSize: 14,
               fontWeight: FontWeight.w700,
               color: AppTheme.textPrimary)),
@@ -293,7 +293,7 @@ class _DoctorCasesScreenState extends ConsumerState<DoctorCasesScreen> {
                     c['title']?.toString() ?? 'Konsultasi',
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
-                    style: GoogleFonts.inter(
+                    style: GoogleFonts.plusJakartaSans(
                         fontWeight: FontWeight.w700,
                         color: AppTheme.textPrimary),
                   ),
@@ -311,7 +311,7 @@ class _DoctorCasesScreenState extends ConsumerState<DoctorCasesScreen> {
                     size: 14, color: AppTheme.textSecondary),
                 const SizedBox(width: 4),
                 Text('Fase $phase',
-                    style: GoogleFonts.inter(
+                    style: GoogleFonts.plusJakartaSans(
                         fontSize: 12, color: AppTheme.textSecondary)),
                 if (level > 0) ...[
                   const SizedBox(width: 10),
@@ -319,12 +319,12 @@ class _DoctorCasesScreenState extends ConsumerState<DoctorCasesScreen> {
                       size: 14, color: AppTheme.warningColor),
                   const SizedBox(width: 4),
                   Text('Tingkat $level',
-                      style: GoogleFonts.inter(
+                      style: GoogleFonts.plusJakartaSans(
                           fontSize: 12, color: AppTheme.warningColor)),
                 ],
                 const Spacer(),
                 Text(updated,
-                    style: GoogleFonts.inter(
+                    style: GoogleFonts.plusJakartaSans(
                         fontSize: 12, color: AppTheme.textSecondary)),
               ],
             ),
@@ -348,14 +348,14 @@ class _DoctorCasesScreenState extends ConsumerState<DoctorCasesScreen> {
               _badge(_statusLabel(status), _statusColor(status)),
               const Spacer(),
               Text(_fmtDate(m['created_at']),
-                  style: GoogleFonts.inter(
+                  style: GoogleFonts.plusJakartaSans(
                       fontSize: 12, color: AppTheme.textSecondary)),
               _itemMenu(onDelete: () => _confirmDeleteMemory(m)),
             ],
           ),
           const SizedBox(height: 8),
           Text(m['title']?.toString() ?? '-',
-              style: GoogleFonts.inter(
+              style: GoogleFonts.plusJakartaSans(
                   fontWeight: FontWeight.w700, color: AppTheme.textPrimary)),
           if ((m['content']?.toString() ?? '').isNotEmpty) ...[
             const SizedBox(height: 4),
@@ -363,7 +363,7 @@ class _DoctorCasesScreenState extends ConsumerState<DoctorCasesScreen> {
               m['content'].toString(),
               maxLines: 4,
               overflow: TextOverflow.ellipsis,
-              style: GoogleFonts.inter(
+              style: GoogleFonts.plusJakartaSans(
                   fontSize: 13,
                   height: 1.4,
                   color: AppTheme.textSecondary),
@@ -482,12 +482,12 @@ class _DoctorCasesScreenState extends ConsumerState<DoctorCasesScreen> {
           borderRadius: BorderRadius.circular(AppTheme.radiusLarge),
         ),
         title: Text(title,
-            style: GoogleFonts.inter(
+            style: GoogleFonts.plusJakartaSans(
                 fontWeight: FontWeight.w800,
                 color: AppTheme.textPrimary,
                 fontSize: 17)),
         content: Text(body,
-            style: GoogleFonts.inter(
+            style: GoogleFonts.plusJakartaSans(
                 height: 1.45, color: AppTheme.textSecondary, fontSize: 13)),
         actions: [
           TextButton(
@@ -534,7 +534,7 @@ class _DoctorCasesScreenState extends ConsumerState<DoctorCasesScreen> {
         borderRadius: BorderRadius.circular(20),
       ),
       child: Text(text,
-          style: GoogleFonts.inter(
+          style: GoogleFonts.plusJakartaSans(
               fontSize: 11, fontWeight: FontWeight.w700, color: color)),
     );
   }

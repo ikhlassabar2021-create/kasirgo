@@ -1,4 +1,3 @@
-import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../config/app_theme.dart';
@@ -121,7 +120,7 @@ class AppShell extends StatelessWidget {
                       children: [
                         Text(
                           headerTitle,
-                          style: GoogleFonts.inter(
+                          style: GoogleFonts.plusJakartaSans(
                             fontSize: 16,
                             fontWeight: FontWeight.w700,
                             color: AppTheme.textPrimary,
@@ -166,7 +165,7 @@ class AppShell extends StatelessWidget {
         ),
         title: Text(
           item.label,
-          style: GoogleFonts.inter(
+          style: GoogleFonts.plusJakartaSans(
             fontSize: 13,
             fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
             color: isSelected ? AppTheme.primaryColor : AppTheme.textPrimary,
@@ -196,28 +195,29 @@ class AppShell extends StatelessWidget {
   }
 
   Widget _buildBottomNav() {
-    return ClipRRect(
-      child: BackdropFilter(
-        filter: ImageFilter.blur(sigmaX: 20, sigmaY: 20),
-        child: Container(
-          decoration: BoxDecoration(
-            color: AppTheme.surfaceColor.withValues(alpha: 0.85),
-            border: const Border(top: BorderSide(color: AppTheme.borderColor)),
-          ),
-          child: BottomNavigationBar(
-            backgroundColor: Colors.transparent,
-            elevation: 0,
-            currentIndex: currentIndex,
-            selectedItemColor: AppTheme.primaryColor,
-            unselectedItemColor: AppTheme.textSecondary,
-            selectedLabelStyle: GoogleFonts.inter(fontWeight: FontWeight.w700, fontSize: 12),
-            unselectedLabelStyle: GoogleFonts.inter(fontWeight: FontWeight.w500, fontSize: 11),
-            onTap: onIndexChanged,
-            items: [
-              for (final item in navItems)
-                BottomNavigationBarItem(icon: Icon(item.icon), label: item.label),
-            ],
-          ),
+    return Container(
+      decoration: const BoxDecoration(
+        color: AppTheme.surfaceColor,
+        border: Border(top: BorderSide(color: AppTheme.borderColor)),
+        boxShadow: [
+          BoxShadow(color: Color(0x0F101820), blurRadius: 12, offset: Offset(0, -2)),
+        ],
+      ),
+      child: SafeArea(
+        top: false,
+        child: BottomNavigationBar(
+          backgroundColor: Colors.transparent,
+          elevation: 0,
+          currentIndex: currentIndex,
+          selectedItemColor: AppTheme.primaryColor,
+          unselectedItemColor: AppTheme.textSecondary,
+          selectedLabelStyle: GoogleFonts.plusJakartaSans(fontWeight: FontWeight.w700, fontSize: 12),
+          unselectedLabelStyle: GoogleFonts.plusJakartaSans(fontWeight: FontWeight.w500, fontSize: 11),
+          onTap: onIndexChanged,
+          items: [
+            for (final item in navItems)
+              BottomNavigationBarItem(icon: Icon(item.icon), label: item.label),
+          ],
         ),
       ),
     );

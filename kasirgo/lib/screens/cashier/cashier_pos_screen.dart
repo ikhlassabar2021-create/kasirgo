@@ -450,7 +450,7 @@ class _CashierPosScreenState extends ConsumerState<CashierPosScreen> {
                             Expanded(
                               child: Text(
                                 '$_incomingCount pesanan pelanggan masuk - ketuk untuk lihat',
-                                style: GoogleFonts.inter(
+                                style: GoogleFonts.plusJakartaSans(
                                     fontSize: 12.5,
                                     fontWeight: FontWeight.w700,
                                     color: AppTheme.errorColor),

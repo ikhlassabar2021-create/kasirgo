@@ -258,7 +258,7 @@ class _BuyerCheckoutScreenState extends ConsumerState<BuyerCheckoutScreen> {
         elevation: 0,
         title: Text(
           _created == null ? 'Checkout' : 'Pesanan Dibuat',
-          style: GoogleFonts.inter(
+          style: GoogleFonts.plusJakartaSans(
             fontSize: 16,
             fontWeight: FontWeight.w700,
             color: AppTheme.textPrimary,
@@ -283,7 +283,7 @@ class _BuyerCheckoutScreenState extends ConsumerState<BuyerCheckoutScreen> {
             children: [
               Text(
                 widget.outletName,
-                style: GoogleFonts.inter(
+                style: GoogleFonts.plusJakartaSans(
                   fontSize: 16,
                   fontWeight: FontWeight.w700,
                   color: AppTheme.textPrimary,
@@ -298,7 +298,7 @@ class _BuyerCheckoutScreenState extends ConsumerState<BuyerCheckoutScreen> {
                       Expanded(
                         child: Text(
                           '${item.name} x${item.qty}',
-                          style: GoogleFonts.inter(
+                          style: GoogleFonts.plusJakartaSans(
                             fontSize: 13,
                             color: AppTheme.textPrimary,
                           ),
@@ -306,7 +306,7 @@ class _BuyerCheckoutScreenState extends ConsumerState<BuyerCheckoutScreen> {
                       ),
                       Text(
                         Formatters.currency(item.lineTotal),
-                        style: GoogleFonts.inter(
+                        style: GoogleFonts.plusJakartaSans(
                           fontSize: 13,
                           color: AppTheme.textPrimary,
                         ),
@@ -319,7 +319,7 @@ class _BuyerCheckoutScreenState extends ConsumerState<BuyerCheckoutScreen> {
                 children: [
                   Text(
                     'Subtotal',
-                    style: GoogleFonts.inter(
+                    style: GoogleFonts.plusJakartaSans(
                       fontSize: 14,
                       color: AppTheme.textSecondary,
                     ),
@@ -327,7 +327,7 @@ class _BuyerCheckoutScreenState extends ConsumerState<BuyerCheckoutScreen> {
                   const Spacer(),
                   Text(
                     Formatters.currency(cart.subtotal),
-                    style: GoogleFonts.inter(
+                    style: GoogleFonts.plusJakartaSans(
                       fontSize: 15,
                       fontWeight: FontWeight.w800,
                       color: AppTheme.textPrimary,
@@ -345,7 +345,7 @@ class _BuyerCheckoutScreenState extends ConsumerState<BuyerCheckoutScreen> {
             children: [
               Text(
                 'Cara Terima',
-                style: GoogleFonts.inter(
+                style: GoogleFonts.plusJakartaSans(
                   fontSize: 14,
                   fontWeight: FontWeight.w700,
                   color: AppTheme.textPrimary,
@@ -456,7 +456,7 @@ class _BuyerCheckoutScreenState extends ConsumerState<BuyerCheckoutScreen> {
                 children: [
                   Text(
                     title,
-                    style: GoogleFonts.inter(
+                    style: GoogleFonts.plusJakartaSans(
                       fontSize: 14,
                       fontWeight: FontWeight.w600,
                       color: AppTheme.textPrimary,
@@ -464,7 +464,7 @@ class _BuyerCheckoutScreenState extends ConsumerState<BuyerCheckoutScreen> {
                   ),
                   Text(
                     subtitle,
-                    style: GoogleFonts.inter(
+                    style: GoogleFonts.plusJakartaSans(
                       fontSize: 12,
                       color: AppTheme.textSecondary,
                     ),
@@ -527,7 +527,7 @@ class _BuyerCheckoutScreenState extends ConsumerState<BuyerCheckoutScreen> {
                   Expanded(
                     child: Text(
                       'Pesanan ${o['code'] ?? ''} dibuat',
-                      style: GoogleFonts.inter(
+                      style: GoogleFonts.plusJakartaSans(
                         fontSize: 15,
                         fontWeight: FontWeight.w700,
                         color: AppTheme.textPrimary,
@@ -558,7 +558,7 @@ class _BuyerCheckoutScreenState extends ConsumerState<BuyerCheckoutScreen> {
             children: [
               Text(
                 'Pembayaran',
-                style: GoogleFonts.inter(
+                style: GoogleFonts.plusJakartaSans(
                   fontSize: 14,
                   fontWeight: FontWeight.w700,
                   color: AppTheme.textPrimary,
@@ -607,7 +607,7 @@ class _BuyerCheckoutScreenState extends ConsumerState<BuyerCheckoutScreen> {
                               'Scan QRIS ${merchant.isNotEmpty ? merchant : widget.outletName} '
                               'senilai ${Formatters.currency(payAmount)}, lalu tekan '
                               '"Saya Sudah Bayar".',
-                              style: GoogleFonts.inter(
+                              style: GoogleFonts.plusJakartaSans(
                                 fontSize: 11.5,
                                 height: 1.35,
                                 color: AppTheme.textSecondary,
@@ -637,7 +637,7 @@ class _BuyerCheckoutScreenState extends ConsumerState<BuyerCheckoutScreen> {
                       children: [
                         Text(
                           'Transfer TEPAT ${Formatters.currency(payAmount)}',
-                          style: GoogleFonts.inter(
+                          style: GoogleFonts.plusJakartaSans(
                             fontSize: 13,
                             fontWeight: FontWeight.w800,
                             color: AppTheme.textPrimary,
@@ -648,7 +648,7 @@ class _BuyerCheckoutScreenState extends ConsumerState<BuyerCheckoutScreen> {
                           'Jangan dibulatkan (nominal unik agar kasir mudah '
                           'mencocokkan). Isi catatan/berita transfer dengan '
                           'kode: $orderCode',
-                          style: GoogleFonts.inter(
+                          style: GoogleFonts.plusJakartaSans(
                             fontSize: 11.5,
                             height: 1.35,
                             color: AppTheme.textSecondary,
@@ -661,7 +661,7 @@ class _BuyerCheckoutScreenState extends ConsumerState<BuyerCheckoutScreen> {
               ] else
                 Text(
                   'Warung belum mengatur info pembayaran. Bayar tunai di kasir.',
-                  style: GoogleFonts.inter(
+                  style: GoogleFonts.plusJakartaSans(
                     fontSize: 12.5,
                     color: AppTheme.textSecondary,
                   ),
@@ -703,7 +703,7 @@ class _BuyerCheckoutScreenState extends ConsumerState<BuyerCheckoutScreen> {
           Expanded(
             child: Text(
               label,
-              style: GoogleFonts.inter(
+              style: GoogleFonts.plusJakartaSans(
                 fontSize: 12.5,
                 color: AppTheme.textSecondary,
               ),
@@ -714,7 +714,7 @@ class _BuyerCheckoutScreenState extends ConsumerState<BuyerCheckoutScreen> {
             child: Text(
               value,
               textAlign: TextAlign.right,
-              style: GoogleFonts.inter(
+              style: GoogleFonts.plusJakartaSans(
                 fontSize: bold ? 14 : 12.5,
                 fontWeight: bold ? FontWeight.w800 : FontWeight.w500,
                 color: AppTheme.textPrimary,

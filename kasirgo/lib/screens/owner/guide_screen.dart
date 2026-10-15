@@ -126,7 +126,7 @@ class _GuideScreenState extends ConsumerState<GuideScreen> {
         elevation: 0,
         scrolledUnderElevation: 0,
         title: Text('Panduan',
-            style: GoogleFonts.inter(
+            style: GoogleFonts.plusJakartaSans(
                 fontSize: 18, fontWeight: FontWeight.w800, color: AppTheme.textPrimary)),
         actions: [
           IconButton(
@@ -271,7 +271,7 @@ class _GuideScreenState extends ConsumerState<GuideScreen> {
             Text(
               hasAny ? 'Tidak ada panduan cocok' : 'Belum ada panduan',
               textAlign: TextAlign.center,
-              style: GoogleFonts.inter(
+              style: GoogleFonts.plusJakartaSans(
                   fontSize: 16, fontWeight: FontWeight.w700, color: AppTheme.textPrimary),
             ),
             const SizedBox(height: 6),

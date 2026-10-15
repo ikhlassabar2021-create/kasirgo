@@ -103,7 +103,7 @@ class _PpobScreenState extends ConsumerState<PpobScreen> {
           children: [
             Expanded(
               child: Text('Setor QRIS ke Saldo',
-                  style: GoogleFonts.inter(
+                  style: GoogleFonts.plusJakartaSans(
                       fontSize: 16,
                       fontWeight: FontWeight.w800,
                       color: AppTheme.textPrimary)),
@@ -117,14 +117,14 @@ class _PpobScreenState extends ConsumerState<PpobScreen> {
             Text(
                 'Masukkan jumlah dana QRIS yang diterima di rekening. '
                 'Saldo ini otomatis dipakai untuk beli PPOB.',
-                style: GoogleFonts.inter(
+                style: GoogleFonts.plusJakartaSans(
                     fontSize: 12, color: AppTheme.textSecondary)),
             const SizedBox(height: 12),
             TextField(
               controller: amountCtl,
               keyboardType: TextInputType.number,
               autofocus: true,
-              style: GoogleFonts.inter(
+              style: GoogleFonts.plusJakartaSans(
                   fontSize: 15, color: AppTheme.textPrimary),
               decoration: const InputDecoration(
                 labelText: 'Jumlah (Rp)',
@@ -134,7 +134,7 @@ class _PpobScreenState extends ConsumerState<PpobScreen> {
             const SizedBox(height: 8),
             TextField(
               controller: noteCtl,
-              style: GoogleFonts.inter(
+              style: GoogleFonts.plusJakartaSans(
                   fontSize: 13, color: AppTheme.textPrimary),
               decoration: const InputDecoration(
                 labelText: 'Catatan (opsional)',
@@ -147,7 +147,7 @@ class _PpobScreenState extends ConsumerState<PpobScreen> {
           TextButton(
               onPressed: () => Navigator.pop(ctx, true),
               child: Text('Setor',
-                  style: GoogleFonts.inter(
+                  style: GoogleFonts.plusJakartaSans(
                       color: AppTheme.primaryColor,
                       fontWeight: FontWeight.w800))),
         ],
@@ -229,14 +229,14 @@ class _PpobScreenState extends ConsumerState<PpobScreen> {
                     ),
                     const SizedBox(height: 12),
                     Text(product.name,
-                        style: GoogleFonts.inter(
+                        style: GoogleFonts.plusJakartaSans(
                             fontSize: 15,
                             fontWeight: FontWeight.w800,
                             color: AppTheme.textPrimary)),
                     const SizedBox(height: 4),
                     Text(
                         'Harga: ${Formatters.currency(inquiry.sellPrice)}',
-                        style: GoogleFonts.inter(
+                        style: GoogleFonts.plusJakartaSans(
                             fontSize: 12.5, color: AppTheme.textSecondary)),
                     const SizedBox(height: 12),
                     TextField(
@@ -244,7 +244,7 @@ class _PpobScreenState extends ConsumerState<PpobScreen> {
                       keyboardType: TextInputType.number,
                       autofocus: true,
                       onChanged: (_) => setSheetState(() {}),
-                      style: GoogleFonts.inter(
+                      style: GoogleFonts.plusJakartaSans(
                           fontSize: 15, color: AppTheme.textPrimary),
                       decoration: InputDecoration(
                         labelText: 'Tujuan',
@@ -256,7 +256,7 @@ class _PpobScreenState extends ConsumerState<PpobScreen> {
                     ),
                     const SizedBox(height: 14),
                     Text('METODE PEMBAYARAN',
-                        style: GoogleFonts.inter(
+                        style: GoogleFonts.plusJakartaSans(
                             fontSize: 11,
                             fontWeight: FontWeight.w800,
                             letterSpacing: 0.5,
@@ -301,7 +301,7 @@ class _PpobScreenState extends ConsumerState<PpobScreen> {
                                               size: 18,
                                               color: AppTheme.textSecondary),
                                           Text('Saldo kurang',
-                                              style: GoogleFonts.inter(
+                                              style: GoogleFonts.plusJakartaSans(
                                                   fontSize: 10.5)),
                                         ],
                                       ),
@@ -355,7 +355,7 @@ class _PpobScreenState extends ConsumerState<PpobScreen> {
                                   AppTheme.radiusMedium)),
                         ),
                         child: Text('Bayar ${Formatters.currency(inquiry.sellPrice)}',
-                            style: GoogleFonts.inter(
+                            style: GoogleFonts.plusJakartaSans(
                                 fontSize: 14, fontWeight: FontWeight.w700)),
                       ),
                     ),
@@ -399,7 +399,7 @@ class _PpobScreenState extends ConsumerState<PpobScreen> {
                       : AppTheme.textSecondary),
               const SizedBox(width: 6),
               Text(label,
-                  style: GoogleFonts.inter(
+                  style: GoogleFonts.plusJakartaSans(
                       fontSize: 12.5,
                       fontWeight: FontWeight.w700,
                       color: selected
@@ -466,7 +466,7 @@ class _PpobScreenState extends ConsumerState<PpobScreen> {
                   color: AppTheme.errorColor, size: 44),
               const SizedBox(height: 8),
               Text('Transaksi Gagal',
-                  style: GoogleFonts.inter(
+                  style: GoogleFonts.plusJakartaSans(
                       fontSize: 16,
                       fontWeight: FontWeight.w800,
                       color: AppTheme.textPrimary)),
@@ -474,13 +474,13 @@ class _PpobScreenState extends ConsumerState<PpobScreen> {
           ),
           content: Text(errorMsg!,
               textAlign: TextAlign.center,
-              style: GoogleFonts.inter(
+              style: GoogleFonts.plusJakartaSans(
                   fontSize: 12.5, color: AppTheme.textSecondary)),
           actions: [
             TextButton(
                 onPressed: () => Navigator.pop(ctx),
                 child: Text('Tutup',
-                    style: GoogleFonts.inter(
+                    style: GoogleFonts.plusJakartaSans(
                         color: AppTheme.primaryColor,
                         fontWeight: FontWeight.w700))),
           ],
@@ -519,7 +519,7 @@ class _PpobScreenState extends ConsumerState<PpobScreen> {
                       : result.status == 'pending'
                           ? 'Menunggu Provider'
                           : 'Transaksi Gagal',
-              style: GoogleFonts.inter(
+              style: GoogleFonts.plusJakartaSans(
                   fontSize: 16,
                   fontWeight: FontWeight.w800,
                   color: AppTheme.textPrimary),
@@ -529,7 +529,7 @@ class _PpobScreenState extends ConsumerState<PpobScreen> {
         content: result == null
             ? Text('Transaksi tidak tersimpan. Coba lagi.',
                 textAlign: TextAlign.center,
-                style: GoogleFonts.inter(
+                style: GoogleFonts.plusJakartaSans(
                     fontSize: 12.5, color: AppTheme.textSecondary))
             : Column(
                 mainAxisSize: MainAxisSize.min,
@@ -549,7 +549,7 @@ class _PpobScreenState extends ConsumerState<PpobScreen> {
                     ok
                         ? 'Struk digital tersimpan di riwayat.'
                         : 'Status: ${result.status}. Cek riwayat untuk update.',
-                    style: GoogleFonts.inter(
+                    style: GoogleFonts.plusJakartaSans(
                         fontSize: 11.5, color: AppTheme.textSecondary),
                   ),
                 ],
@@ -558,7 +558,7 @@ class _PpobScreenState extends ConsumerState<PpobScreen> {
           TextButton(
               onPressed: () => Navigator.pop(ctx),
               child: Text('Tutup',
-                  style: GoogleFonts.inter(
+                  style: GoogleFonts.plusJakartaSans(
                       color: AppTheme.primaryColor,
                       fontWeight: FontWeight.w700))),
         ],
@@ -575,12 +575,12 @@ class _PpobScreenState extends ConsumerState<PpobScreen> {
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
           Text(label,
-              style: GoogleFonts.inter(
+              style: GoogleFonts.plusJakartaSans(
                   fontSize: 12.5, color: AppTheme.textSecondary)),
           Flexible(
             child: Text(value,
                 textAlign: TextAlign.right,
-                style: GoogleFonts.inter(
+                style: GoogleFonts.plusJakartaSans(
                     fontSize: 12.5,
                     fontWeight: FontWeight.w700,
                     color: AppTheme.textPrimary)),
@@ -602,7 +602,7 @@ class _PpobScreenState extends ConsumerState<PpobScreen> {
       backgroundColor: AppTheme.backgroundColor,
       appBar: AppBar(
         title: Text('PPOB & Tagihan',
-            style: GoogleFonts.inter(
+            style: GoogleFonts.plusJakartaSans(
                 fontSize: 18,
                 fontWeight: FontWeight.w700,
                 color: AppTheme.textPrimary)),
@@ -650,7 +650,7 @@ class _PpobScreenState extends ConsumerState<PpobScreen> {
                       child: Text(
                         'Belum ada produk PPOB di kategori ini.\nKatalog dikelola superadmin.',
                         textAlign: TextAlign.center,
-                        style: GoogleFonts.inter(
+                        style: GoogleFonts.plusJakartaSans(
                             fontSize: 12.5, color: AppTheme.textSecondary),
                       ),
                     )
@@ -690,13 +690,13 @@ class _PpobScreenState extends ConsumerState<PpobScreen> {
                                 Text(p.name,
                                     maxLines: 2,
                                     overflow: TextOverflow.ellipsis,
-                                    style: GoogleFonts.inter(
+                                    style: GoogleFonts.plusJakartaSans(
                                         fontSize: 11,
                                         fontWeight: FontWeight.w600,
                                         color: AppTheme.textPrimary)),
                                 const SizedBox(height: 2),
                                 Text(Formatters.currency(sell),
-                                    style: GoogleFonts.inter(
+                                    style: GoogleFonts.plusJakartaSans(
                                         fontSize: 11.5,
                                         fontWeight: FontWeight.w800,
                                         color: AppTheme.primaryColor)),
@@ -708,7 +708,7 @@ class _PpobScreenState extends ConsumerState<PpobScreen> {
                     ),
                   const SizedBox(height: 20),
                   Text('RIWAYAT TRANSAKSI',
-                      style: GoogleFonts.inter(
+                      style: GoogleFonts.plusJakartaSans(
                           fontSize: 11,
                           fontWeight: FontWeight.w800,
                           letterSpacing: 0.5,
@@ -724,7 +724,7 @@ class _PpobScreenState extends ConsumerState<PpobScreen> {
                         border: Border.all(color: AppTheme.borderColor),
                       ),
                       child: Text('Belum ada transaksi PPOB.',
-                          style: GoogleFonts.inter(
+                          style: GoogleFonts.plusJakartaSans(
                               fontSize: 12.5,
                               color: AppTheme.textSecondary)),
                     )
@@ -762,7 +762,7 @@ class _PpobScreenState extends ConsumerState<PpobScreen> {
                   size: 18, color: Colors.white70),
               const SizedBox(width: 6),
               Text('SALDO QRIS (CLOSED-LOOP)',
-                  style: GoogleFonts.inter(
+                  style: GoogleFonts.plusJakartaSans(
                       fontSize: 10.5,
                       fontWeight: FontWeight.w800,
                       letterSpacing: 0.5,
@@ -777,7 +777,7 @@ class _PpobScreenState extends ConsumerState<PpobScreen> {
             ],
           ),
           Text(Formatters.currency(_saldo),
-              style: GoogleFonts.inter(
+              style: GoogleFonts.plusJakartaSans(
                   fontSize: 24,
                   fontWeight: FontWeight.w800,
                   color: Colors.white)),
@@ -785,7 +785,7 @@ class _PpobScreenState extends ConsumerState<PpobScreen> {
           Text(
             'Saldo dari settlement QRIS. Otomatis dipakai saat beli PPOB '
             'dengan metode Saldo.',
-            style: GoogleFonts.inter(
+            style: GoogleFonts.plusJakartaSans(
                 fontSize: 11, color: Colors.white.withValues(alpha: 0.85)),
           ),
           if (isOwner) ...[
@@ -796,7 +796,7 @@ class _PpobScreenState extends ConsumerState<PpobScreen> {
                 onPressed: _addSaldo,
                 icon: const Icon(Icons.add_rounded, size: 18),
                 label: Text('Setor QRIS ke Saldo',
-                    style: GoogleFonts.inter(
+                    style: GoogleFonts.plusJakartaSans(
                         fontSize: 12.5, fontWeight: FontWeight.w700)),
                 style: OutlinedButton.styleFrom(
                   foregroundColor: Colors.white,
@@ -836,7 +836,7 @@ class _PpobScreenState extends ConsumerState<PpobScreen> {
                   size: 18, color: AppTheme.primaryColor),
               const SizedBox(width: 6),
               Text('LAPORAN PPOB',
-                  style: GoogleFonts.inter(
+                  style: GoogleFonts.plusJakartaSans(
                       fontSize: 10.5,
                       fontWeight: FontWeight.w800,
                       letterSpacing: 0.5,
@@ -846,7 +846,7 @@ class _PpobScreenState extends ConsumerState<PpobScreen> {
                 child: DropdownButton<String>(
                   value: _reportPeriod,
                   isDense: true,
-                  style: GoogleFonts.inter(
+                  style: GoogleFonts.plusJakartaSans(
                       fontSize: 12,
                       fontWeight: FontWeight.w700,
                       color: AppTheme.primaryColor),
@@ -903,11 +903,11 @@ class _PpobScreenState extends ConsumerState<PpobScreen> {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(label,
-            style: GoogleFonts.inter(
+            style: GoogleFonts.plusJakartaSans(
                 fontSize: 11, color: AppTheme.textSecondary)),
         const SizedBox(height: 2),
         Text(isCount ? value.toStringAsFixed(0) : Formatters.currency(value),
-            style: GoogleFonts.inter(
+            style: GoogleFonts.plusJakartaSans(
                 fontSize: 15,
                 fontWeight: FontWeight.w800,
                 color: color)),
@@ -930,7 +930,7 @@ class _PpobScreenState extends ConsumerState<PpobScreen> {
               size: 40, color: AppTheme.textSecondary),
           const SizedBox(height: 10),
           Text('PPOB Belum Diaktifkan',
-              style: GoogleFonts.inter(
+              style: GoogleFonts.plusJakartaSans(
                   fontSize: 15,
                   fontWeight: FontWeight.w800,
                   color: AppTheme.textPrimary)),
@@ -939,7 +939,7 @@ class _PpobScreenState extends ConsumerState<PpobScreen> {
             'Fitur PPOB sedang dinonaktifkan oleh pengelola aplikasi. '
             'Hubungi dukungan untuk informasi lebih lanjut.',
             textAlign: TextAlign.center,
-            style: GoogleFonts.inter(
+            style: GoogleFonts.plusJakartaSans(
                 fontSize: 12.5, color: AppTheme.textSecondary),
           ),
         ],
@@ -960,7 +960,7 @@ class _PpobScreenState extends ConsumerState<PpobScreen> {
             color: selected
                 ? AppTheme.primaryColor
                 : AppTheme.borderColor.withValues(alpha: 0.5)),
-        labelStyle: GoogleFonts.inter(
+        labelStyle: GoogleFonts.plusJakartaSans(
             fontSize: 12,
             fontWeight: FontWeight.w700,
             color: selected
@@ -993,7 +993,7 @@ class _PpobScreenState extends ConsumerState<PpobScreen> {
             const EdgeInsets.symmetric(horizontal: 14, vertical: 4),
         leading: Icon(_iconCat(null), size: 22, color: AppTheme.textSecondary),
         title: Text(tx.productName,
-            style: GoogleFonts.inter(
+            style: GoogleFonts.plusJakartaSans(
                 fontSize: 13.5,
                 fontWeight: FontWeight.w700,
                 color: AppTheme.textPrimary)),
@@ -1007,7 +1007,7 @@ class _PpobScreenState extends ConsumerState<PpobScreen> {
                 '${tx.providerRef != null ? ' - ${tx.providerRef}' : ''}',
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
-                style: GoogleFonts.inter(
+                style: GoogleFonts.plusJakartaSans(
                     fontSize: 11, color: AppTheme.textSecondary),
               ),
               const SizedBox(height: 2),
@@ -1015,7 +1015,7 @@ class _PpobScreenState extends ConsumerState<PpobScreen> {
                 'Modal ${Formatters.currency(tx.costAmount)} - Laba ${Formatters.currency(tx.profit)}',
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
-                style: GoogleFonts.inter(
+                style: GoogleFonts.plusJakartaSans(
                     fontSize: 10.5,
                     fontWeight: FontWeight.w600,
                     color: ok ? AppTheme.successColor : AppTheme.textSecondary),
@@ -1031,12 +1031,12 @@ class _PpobScreenState extends ConsumerState<PpobScreen> {
               crossAxisAlignment: CrossAxisAlignment.end,
               children: [
                 Text(Formatters.currency(tx.amount),
-                    style: GoogleFonts.inter(
+                    style: GoogleFonts.plusJakartaSans(
                         fontSize: 13,
                         fontWeight: FontWeight.w800,
                         color: AppTheme.textPrimary)),
                 Text(tx.status.toUpperCase(),
-                    style: GoogleFonts.inter(
+                    style: GoogleFonts.plusJakartaSans(
                         fontSize: 10,
                         fontWeight: FontWeight.w800,
                         color: color)),
@@ -1062,7 +1062,7 @@ class _PpobScreenState extends ConsumerState<PpobScreen> {
                   style: TextButton.styleFrom(
                       padding: const EdgeInsets.symmetric(horizontal: 8)),
                   child: Text('Cek',
-                      style: GoogleFonts.inter(
+                      style: GoogleFonts.plusJakartaSans(
                           fontSize: 11.5,
                           fontWeight: FontWeight.w800,
                           color: AppTheme.primaryColor)),

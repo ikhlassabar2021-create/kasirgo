@@ -93,7 +93,7 @@ class _DoctorPromotionLogScreenState
       backgroundColor: AppTheme.backgroundColor,
       appBar: AppBar(
         title: Text('Catat Hasil Promosi',
-            style: GoogleFonts.inter(fontWeight: FontWeight.w700)),
+            style: GoogleFonts.plusJakartaSans(fontWeight: FontWeight.w700)),
         backgroundColor: AppTheme.surfaceColor,
         foregroundColor: AppTheme.textPrimary,
         elevation: 0,
@@ -107,13 +107,13 @@ class _DoctorPromotionLogScreenState
               padding: const EdgeInsets.all(16),
               children: [
                 Text('Apa yang Anda lakukan?',
-                    style: GoogleFonts.inter(
+                    style: GoogleFonts.plusJakartaSans(
                         fontSize: 14, fontWeight: FontWeight.w700)),
                 const SizedBox(height: 10),
                 _chips(_types, _type, (v) => setState(() => _type = v)),
                 const SizedBox(height: 20),
                 Text('Lewat mana?',
-                    style: GoogleFonts.inter(
+                    style: GoogleFonts.plusJakartaSans(
                         fontSize: 14, fontWeight: FontWeight.w700)),
                 const SizedBox(height: 10),
                 _chips(_channels, _channel, (v) => setState(() => _channel = v)),
@@ -124,7 +124,7 @@ class _DoctorPromotionLogScreenState
                     'Misal: 150000'),
                 const SizedBox(height: 20),
                 Text('Hasilnya?',
-                    style: GoogleFonts.inter(
+                    style: GoogleFonts.plusJakartaSans(
                         fontSize: 14, fontWeight: FontWeight.w700)),
                 const SizedBox(height: 10),
                 _chips(_outcomes, _outcome, (v) => setState(() => _outcome = v)),
@@ -182,7 +182,7 @@ class _DoctorPromotionLogScreenState
                   ),
                 ),
                 child: Text(it,
-                    style: GoogleFonts.inter(
+                    style: GoogleFonts.plusJakartaSans(
                       fontSize: 13,
                       fontWeight:
                           it == selected ? FontWeight.w700 : FontWeight.w500,
@@ -232,7 +232,7 @@ class _DoctorPromotionLogScreenState
           const SizedBox(width: 10),
           Expanded(
             child: Text(text,
-                style: GoogleFonts.inter(
+                style: GoogleFonts.plusJakartaSans(
                     fontSize: 14, fontWeight: FontWeight.w700, color: color)),
           ),
         ],

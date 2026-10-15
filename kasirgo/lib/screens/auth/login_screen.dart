@@ -159,7 +159,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
         const SizedBox(height: 12),
         Text(
           'KasirGo',
-          style: GoogleFonts.inter(
+          style: GoogleFonts.plusJakartaSans(
             fontSize: 24,
             fontWeight: FontWeight.w800,
             color: AppTheme.textPrimary,
@@ -169,7 +169,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
         const SizedBox(height: 2),
         Text(
           'Aplikasi Kasir UMKM Super-App',
-          style: GoogleFonts.inter(
+          style: GoogleFonts.plusJakartaSans(
             fontSize: 13,
             color: AppTheme.textSecondary,
             fontWeight: FontWeight.w500,
@@ -204,7 +204,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
           children: [
             Text(
               'Masuk Akun Owner',
-              style: GoogleFonts.inter(
+              style: GoogleFonts.plusJakartaSans(
                 fontSize: 18,
                 fontWeight: FontWeight.w700,
                 color: AppTheme.textPrimary,
@@ -214,7 +214,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
             const SizedBox(height: 4),
             Text(
               'Kelola produk, pos kasir, laporan, dan karyawan',
-              style: GoogleFonts.inter(
+              style: GoogleFonts.plusJakartaSans(
                 fontSize: 12,
                 color: AppTheme.textSecondary,
               ),
@@ -261,7 +261,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                 const Expanded(child: Divider(color: AppTheme.borderColor)),
                 Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 10),
-                  child: Text('atau', style: GoogleFonts.inter(color: AppTheme.textSecondary, fontSize: 12)),
+                  child: Text('atau', style: GoogleFonts.plusJakartaSans(color: AppTheme.textSecondary, fontSize: 12)),
                 ),
                 const Expanded(child: Divider(color: AppTheme.borderColor)),
               ],
@@ -278,7 +278,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                 icon: const Icon(Icons.g_mobiledata, size: 28, color: AppTheme.primaryColor),
                 label: Text(
                   'Masuk dengan Google',
-                  style: GoogleFonts.inter(fontSize: 14, fontWeight: FontWeight.w600, color: AppTheme.textPrimary),
+                  style: GoogleFonts.plusJakartaSans(fontSize: 14, fontWeight: FontWeight.w600, color: AppTheme.textPrimary),
                 ),
               ),
             ),
@@ -288,7 +288,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
               children: [
                 Text(
                   'Belum punya outlet? ',
-                  style: GoogleFonts.inter(
+                  style: GoogleFonts.plusJakartaSans(
                     fontSize: 13,
                     color: AppTheme.textSecondary,
                   ),
@@ -299,7 +299,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                   },
                   child: Text(
                     'Daftar Sekarang',
-                    style: GoogleFonts.inter(
+                    style: GoogleFonts.plusJakartaSans(
                       fontSize: 13,
                       fontWeight: FontWeight.w700,
                       color: AppTheme.primaryColor,
@@ -390,7 +390,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
               )
             : Text(
                 text,
-                style: GoogleFonts.inter(
+                style: GoogleFonts.plusJakartaSans(
                   fontSize: 14,
                   fontWeight: FontWeight.w700,
                   letterSpacing: 0.3,
@@ -404,7 +404,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
     return Text(
       '100% Gratis Selamanya • Standar UMKM Indonesia',
       textAlign: TextAlign.center,
-      style: GoogleFonts.inter(
+      style: GoogleFonts.plusJakartaSans(
         fontSize: 11,
         color: AppTheme.textSecondary,
         fontWeight: FontWeight.w500,

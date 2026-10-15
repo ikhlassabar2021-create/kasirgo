@@ -69,7 +69,7 @@ class MetricText extends StatelessWidget {
       children: [
         Text(
           value,
-          style: GoogleFonts.inter(
+          style: GoogleFonts.plusJakartaSans(
             fontSize: fontSize,
             fontWeight: FontWeight.bold,
             color: color ?? const Color(0xFF111827),
@@ -99,7 +99,7 @@ class MetricText extends StatelessWidget {
                       const SizedBox(width: 2),
                       Text(
                         percentage!,
-                        style: GoogleFonts.inter(
+                        style: GoogleFonts.plusJakartaSans(
                           fontSize: 11,
                           fontWeight: FontWeight.w600,
                           color: isPositive ? const Color(0xFF16A34A) : const Color(0xFFDC2626),
@@ -112,7 +112,7 @@ class MetricText extends StatelessWidget {
               ],
               Text(
                 subtitle ?? '',
-                style: GoogleFonts.inter(
+                style: GoogleFonts.plusJakartaSans(
                   fontSize: 12,
                   color: const Color(0xFF9CA3AF),
                 ),
@@ -177,7 +177,7 @@ class RoyalBlueButton extends StatelessWidget {
                     ],
                     Text(
                       text,
-                      style: GoogleFonts.inter(
+                      style: GoogleFonts.plusJakartaSans(
                         fontSize: 16,
                         fontWeight: FontWeight.w600,
                         letterSpacing: 0.5,
@@ -233,7 +233,7 @@ class StatusBadge extends StatelessWidget {
           const SizedBox(width: 6),
           Text(
             label,
-            style: GoogleFonts.inter(
+            style: GoogleFonts.plusJakartaSans(
               fontSize: 12,
               fontWeight: FontWeight.w500,
               color: bgColor,
@@ -279,7 +279,7 @@ class ActionButton extends StatelessWidget {
               const SizedBox(width: 8),
               Text(
                 label,
-                style: GoogleFonts.inter(
+                style: GoogleFonts.plusJakartaSans(
                   fontSize: 13,
                   fontWeight: FontWeight.w500,
                   color: const Color(0xFF111827),

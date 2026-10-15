@@ -214,7 +214,7 @@ class _DoctorIntakeScreenState extends ConsumerState<DoctorIntakeScreen> {
       backgroundColor: AppTheme.backgroundColor,
       appBar: AppBar(
         title: Text('Cek Fisik Toko',
-            style: GoogleFonts.inter(fontWeight: FontWeight.w700)),
+            style: GoogleFonts.plusJakartaSans(fontWeight: FontWeight.w700)),
         backgroundColor: AppTheme.surfaceColor,
         foregroundColor: AppTheme.textPrimary,
         elevation: 0,
@@ -236,7 +236,7 @@ class _DoctorIntakeScreenState extends ConsumerState<DoctorIntakeScreen> {
                           Icon(step.icon, color: AppTheme.primaryColor),
                           const SizedBox(width: 8),
                           Text('Langkah ${_step + 1} dari ${_steps.length}',
-                              style: GoogleFonts.inter(
+                              style: GoogleFonts.plusJakartaSans(
                                   fontSize: 12,
                                   fontWeight: FontWeight.w600,
                                   color: AppTheme.textSecondary)),
@@ -261,11 +261,11 @@ class _DoctorIntakeScreenState extends ConsumerState<DoctorIntakeScreen> {
                     padding: const EdgeInsets.all(16),
                     children: [
                       Text(step.title,
-                          style: GoogleFonts.inter(
+                          style: GoogleFonts.plusJakartaSans(
                               fontSize: 20, fontWeight: FontWeight.w800)),
                       const SizedBox(height: 4),
                       Text(step.subtitle,
-                          style: GoogleFonts.inter(
+                          style: GoogleFonts.plusJakartaSans(
                               fontSize: 13, color: AppTheme.textSecondary)),
                       const SizedBox(height: 16),
                       for (final g in step.groups) ...[
@@ -291,7 +291,7 @@ class _DoctorIntakeScreenState extends ConsumerState<DoctorIntakeScreen> {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(group.question,
-            style: GoogleFonts.inter(
+            style: GoogleFonts.plusJakartaSans(
                 fontSize: 14, fontWeight: FontWeight.w700)),
         const SizedBox(height: 10),
         Wrap(
@@ -334,7 +334,7 @@ class _DoctorIntakeScreenState extends ConsumerState<DoctorIntakeScreen> {
                       : AppTheme.textSecondary),
               const SizedBox(height: 8),
               Text(o.label,
-                  style: GoogleFonts.inter(
+                  style: GoogleFonts.plusJakartaSans(
                     fontSize: 13,
                     fontWeight: selected ? FontWeight.w700 : FontWeight.w500,
                     color: selected
@@ -353,7 +353,7 @@ class _DoctorIntakeScreenState extends ConsumerState<DoctorIntakeScreen> {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text('Catatan tambahan (opsional)',
-            style: GoogleFonts.inter(
+            style: GoogleFonts.plusJakartaSans(
                 fontSize: 14, fontWeight: FontWeight.w700)),
         const SizedBox(height: 10),
         TextField(

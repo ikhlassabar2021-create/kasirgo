@@ -158,7 +158,7 @@ class _DoctorResultScreenState extends State<DoctorResultScreen> {
             children: [
               Text(
                 'Hasil Pemeriksaan',
-                style: GoogleFonts.inter(
+                style: GoogleFonts.plusJakartaSans(
                   fontSize: 18,
                   fontWeight: FontWeight.w800,
                   color: AppTheme.textPrimary,
@@ -167,7 +167,7 @@ class _DoctorResultScreenState extends State<DoctorResultScreen> {
               Text(
                 DateFormat('EEEE, d MMMM yyyy', 'id_ID')
                     .format(DateTime.now()),
-                style: GoogleFonts.inter(
+                style: GoogleFonts.plusJakartaSans(
                   fontSize: 12,
                   color: AppTheme.textSecondary,
                 ),
@@ -202,7 +202,7 @@ class _DoctorResultScreenState extends State<DoctorResultScreen> {
         children: [
           Text(
             'Skor Kesehatan Usaha',
-            style: GoogleFonts.inter(
+            style: GoogleFonts.plusJakartaSans(
               fontSize: 13,
               fontWeight: FontWeight.w700,
               color: AppTheme.textSecondary,
@@ -235,7 +235,7 @@ class _DoctorResultScreenState extends State<DoctorResultScreen> {
                     children: [
                       Text(
                         value.round().toString(),
-                        style: GoogleFonts.inter(
+                        style: GoogleFonts.plusJakartaSans(
                           fontSize: 40,
                           fontWeight: FontWeight.w800,
                           color: _scoreColor,
@@ -244,7 +244,7 @@ class _DoctorResultScreenState extends State<DoctorResultScreen> {
                       Text(
                         _verdictTone,
                         textAlign: TextAlign.center,
-                        style: GoogleFonts.inter(
+                        style: GoogleFonts.plusJakartaSans(
                           fontSize: 11,
                           fontWeight: FontWeight.w700,
                           color: _scoreColor,
@@ -261,7 +261,7 @@ class _DoctorResultScreenState extends State<DoctorResultScreen> {
             Text(
               scoreHint,
               textAlign: TextAlign.center,
-              style: GoogleFonts.inter(
+              style: GoogleFonts.plusJakartaSans(
                 fontSize: 12,
                 color: AppTheme.textSecondary,
               ),
@@ -291,7 +291,7 @@ class _DoctorResultScreenState extends State<DoctorResultScreen> {
               Expanded(
                 child: Text(
                   'VONIS DOKTER',
-                  style: GoogleFonts.inter(
+                  style: GoogleFonts.plusJakartaSans(
                     fontSize: 12,
                     fontWeight: FontWeight.w800,
                     letterSpacing: 1,
@@ -304,7 +304,7 @@ class _DoctorResultScreenState extends State<DoctorResultScreen> {
           const SizedBox(height: 10),
           Text(
             verdictTitle,
-            style: GoogleFonts.inter(
+            style: GoogleFonts.plusJakartaSans(
               fontSize: 20,
               fontWeight: FontWeight.w800,
               color: AppTheme.textPrimary,
@@ -314,7 +314,7 @@ class _DoctorResultScreenState extends State<DoctorResultScreen> {
             const SizedBox(height: 8),
             Text(
               verdictBody,
-              style: GoogleFonts.inter(
+              style: GoogleFonts.plusJakartaSans(
                 fontSize: 14,
                 height: 1.5,
                 color: AppTheme.textPrimary,
@@ -340,7 +340,7 @@ class _DoctorResultScreenState extends State<DoctorResultScreen> {
         children: [
           Text(
             'Peta Resep',
-            style: GoogleFonts.inter(
+            style: GoogleFonts.plusJakartaSans(
               fontSize: 16,
               fontWeight: FontWeight.w800,
               color: AppTheme.textPrimary,
@@ -349,7 +349,7 @@ class _DoctorResultScreenState extends State<DoctorResultScreen> {
           const SizedBox(height: 4),
           Text(
             'Kerjakan satu per satu, tidak perlu sekaligus.',
-            style: GoogleFonts.inter(
+            style: GoogleFonts.plusJakartaSans(
               fontSize: 12,
               color: AppTheme.textSecondary,
             ),
@@ -378,7 +378,7 @@ class _DoctorResultScreenState extends State<DoctorResultScreen> {
                         ? const Icon(Icons.check, color: Colors.white, size: 18)
                         : Text(
                             '${i + 1}',
-                            style: GoogleFonts.inter(
+                            style: GoogleFonts.plusJakartaSans(
                               fontSize: 14,
                               fontWeight: FontWeight.w800,
                               color: Colors.white,
@@ -392,7 +392,7 @@ class _DoctorResultScreenState extends State<DoctorResultScreen> {
                       children: [
                         Text(
                           step['text']?.toString() ?? '',
-                          style: GoogleFonts.inter(
+                          style: GoogleFonts.plusJakartaSans(
                             fontSize: 14,
                             height: 1.4,
                             color: AppTheme.textPrimary,
@@ -471,7 +471,7 @@ class _DoctorResultScreenState extends State<DoctorResultScreen> {
               children: [
                 Text(
                   'Target & Waktu',
-                  style: GoogleFonts.inter(
+                  style: GoogleFonts.plusJakartaSans(
                     fontSize: 13,
                     fontWeight: FontWeight.w800,
                     color: AppTheme.textPrimary,
@@ -484,7 +484,7 @@ class _DoctorResultScreenState extends State<DoctorResultScreen> {
                     if (due != null)
                       'batas ${DateFormat('d MMM yyyy', 'id_ID').format(due)}',
                   ].join(' | '),
-                  style: GoogleFonts.inter(
+                  style: GoogleFonts.plusJakartaSans(
                     fontSize: 13,
                     color: AppTheme.textSecondary,
                   ),

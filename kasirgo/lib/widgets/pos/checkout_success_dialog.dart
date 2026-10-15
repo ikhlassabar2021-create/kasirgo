@@ -60,7 +60,7 @@ class CheckoutSuccessDialog extends StatelessWidget {
               const SizedBox(height: 16),
               Text(
                 title,
-                style: GoogleFonts.inter(
+                style: GoogleFonts.plusJakartaSans(
                   fontSize: 18,
                   fontWeight: FontWeight.w800,
                   color: AppTheme.textPrimary,
@@ -71,7 +71,7 @@ class CheckoutSuccessDialog extends StatelessWidget {
                 Text(
                   message,
                   textAlign: TextAlign.center,
-                  style: GoogleFonts.inter(
+                  style: GoogleFonts.plusJakartaSans(
                     fontSize: 13,
                     color: AppTheme.textSecondary,
                   ),
@@ -110,7 +110,7 @@ class CheckoutSuccessDialog extends StatelessWidget {
                   onPressed: onFinish,
                   child: Text(
                     'Selesai',
-                    style: GoogleFonts.inter(
+                    style: GoogleFonts.plusJakartaSans(
                       fontSize: 14,
                       fontWeight: FontWeight.w600,
                       color: AppTheme.textSecondary,
@@ -139,7 +139,7 @@ class CheckoutSuccessDialog extends StatelessWidget {
         icon: Icon(icon, size: 20),
         label: Text(
           label,
-          style: GoogleFonts.inter(fontSize: 14, fontWeight: FontWeight.w700),
+          style: GoogleFonts.plusJakartaSans(fontSize: 14, fontWeight: FontWeight.w700),
         ),
         style: FilledButton.styleFrom(
           backgroundColor: background,

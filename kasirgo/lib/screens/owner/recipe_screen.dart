@@ -87,13 +87,13 @@ class _RecipeScreenState extends ConsumerState<RecipeScreen> {
         shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(AppTheme.radiusLarge)),
         title: Text('Hapus resep?',
-            style: GoogleFonts.inter(
+            style: GoogleFonts.plusJakartaSans(
                 fontWeight: FontWeight.w700,
                 fontSize: 15,
                 color: AppTheme.textPrimary)),
         content: Text(
             'Resep ${product.name} akan dihapus. Stok bahan tidak berubah.',
-            style: GoogleFonts.inter(
+            style: GoogleFonts.plusJakartaSans(
                 fontSize: 13, color: AppTheme.textSecondary)),
         actions: [
           TextButton(
@@ -102,7 +102,7 @@ class _RecipeScreenState extends ConsumerState<RecipeScreen> {
           TextButton(
               onPressed: () => Navigator.pop(ctx, true),
               child: Text('Hapus',
-                  style: GoogleFonts.inter(
+                  style: GoogleFonts.plusJakartaSans(
                       color: AppTheme.errorColor,
                       fontWeight: FontWeight.w700))),
         ],
@@ -129,7 +129,7 @@ class _RecipeScreenState extends ConsumerState<RecipeScreen> {
       backgroundColor: AppTheme.backgroundColor,
       appBar: AppBar(
         title: Text('Resep & Bahan (HPP)',
-            style: GoogleFonts.inter(
+            style: GoogleFonts.plusJakartaSans(
                 fontSize: 18,
                 fontWeight: FontWeight.w700,
                 color: AppTheme.textPrimary)),
@@ -146,7 +146,7 @@ class _RecipeScreenState extends ConsumerState<RecipeScreen> {
           : _products.isEmpty
               ? Center(
                   child: Text('Belum ada produk',
-                      style: GoogleFonts.inter(
+                      style: GoogleFonts.plusJakartaSans(
                           fontSize: 13, color: AppTheme.textSecondary)))
               : ListView(
                   padding: const EdgeInsets.all(16),
@@ -171,7 +171,7 @@ class _RecipeScreenState extends ConsumerState<RecipeScreen> {
     return Padding(
       padding: const EdgeInsets.only(bottom: 8),
       child: Text(text.toUpperCase(),
-          style: GoogleFonts.inter(
+          style: GoogleFonts.plusJakartaSans(
               fontSize: 11,
               fontWeight: FontWeight.w800,
               letterSpacing: 0.5,
@@ -188,7 +188,7 @@ class _RecipeScreenState extends ConsumerState<RecipeScreen> {
         border: Border.all(color: AppTheme.borderColor),
       ),
       child: Text(text,
-          style: GoogleFonts.inter(
+          style: GoogleFonts.plusJakartaSans(
               fontSize: 12.5, color: AppTheme.textSecondary)),
     );
   }
@@ -213,7 +213,7 @@ class _RecipeScreenState extends ConsumerState<RecipeScreen> {
             const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
         onTap: () => _openEditor(product),
         title: Text(product.name,
-            style: GoogleFonts.inter(
+            style: GoogleFonts.plusJakartaSans(
                 fontSize: 14,
                 fontWeight: FontWeight.w700,
                 color: AppTheme.textPrimary)),
@@ -221,7 +221,7 @@ class _RecipeScreenState extends ConsumerState<RecipeScreen> {
           padding: const EdgeInsets.only(top: 4),
           child: Text(
             '${recipe.items.length} bahan - yield ${_fmtNum(recipe.yieldQty)} porsi - HPP ${Formatters.currency(hpp)}/porsi - margin ${margin.toStringAsFixed(0)}%',
-            style: GoogleFonts.inter(
+            style: GoogleFonts.plusJakartaSans(
                 fontSize: 11.5, color: AppTheme.textSecondary),
           ),
         ),
@@ -254,7 +254,7 @@ class _RecipeScreenState extends ConsumerState<RecipeScreen> {
             const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
         onTap: () => _openEditor(product),
         title: Text(product.name,
-            style: GoogleFonts.inter(
+            style: GoogleFonts.plusJakartaSans(
                 fontSize: 14,
                 fontWeight: FontWeight.w600,
                 color: AppTheme.textPrimary)),
@@ -262,7 +262,7 @@ class _RecipeScreenState extends ConsumerState<RecipeScreen> {
           padding: const EdgeInsets.only(top: 4),
           child: Text(
             'Harga jual ${Formatters.currency(product.price)} - belum ada resep',
-            style: GoogleFonts.inter(
+            style: GoogleFonts.plusJakartaSans(
                 fontSize: 11.5, color: AppTheme.textSecondary),
           ),
         ),
@@ -273,7 +273,7 @@ class _RecipeScreenState extends ConsumerState<RecipeScreen> {
             borderRadius: BorderRadius.circular(8),
           ),
           child: Text('Buat Resep',
-              style: GoogleFonts.inter(
+              style: GoogleFonts.plusJakartaSans(
                   fontSize: 11,
                   fontWeight: FontWeight.w700,
                   color: Colors.white)),
@@ -411,7 +411,7 @@ class _RecipeEditorState extends State<_RecipeEditor> {
               ),
               const SizedBox(height: 12),
               Text('Resep - ${widget.product.name}',
-                  style: GoogleFonts.inter(
+                  style: GoogleFonts.plusJakartaSans(
                       fontSize: 15,
                       fontWeight: FontWeight.w800,
                       color: AppTheme.textPrimary)),
@@ -419,7 +419,7 @@ class _RecipeEditorState extends State<_RecipeEditor> {
               _yieldField(),
               const SizedBox(height: 12),
               Text('BAHAN BAKU',
-                  style: GoogleFonts.inter(
+                  style: GoogleFonts.plusJakartaSans(
                       fontSize: 11,
                       fontWeight: FontWeight.w800,
                       letterSpacing: 0.5,
@@ -430,7 +430,7 @@ class _RecipeEditorState extends State<_RecipeEditor> {
                 onPressed: _addIngredient,
                 icon: const Icon(Icons.add_rounded, size: 18),
                 label: Text('Tambah Bahan',
-                    style: GoogleFonts.inter(
+                    style: GoogleFonts.plusJakartaSans(
                         fontSize: 12.5, fontWeight: FontWeight.w700)),
                 style: TextButton.styleFrom(
                     foregroundColor: AppTheme.primaryColor,
@@ -461,7 +461,7 @@ class _RecipeEditorState extends State<_RecipeEditor> {
                           child: CircularProgressIndicator(
                               strokeWidth: 2, color: Colors.white))
                       : Text('Simpan Resep',
-                          style: GoogleFonts.inter(
+                          style: GoogleFonts.plusJakartaSans(
                               fontSize: 14, fontWeight: FontWeight.w700)),
                 ),
               ),
@@ -483,7 +483,7 @@ class _RecipeEditorState extends State<_RecipeEditor> {
       child: Row(
         children: [
           Text('Hasil (porsi)',
-              style: GoogleFonts.inter(
+              style: GoogleFonts.plusJakartaSans(
                   fontSize: 12.5, color: AppTheme.textSecondary)),
           const Spacer(),
           IconButton(
@@ -493,7 +493,7 @@ class _RecipeEditorState extends State<_RecipeEditor> {
               icon: const Icon(Icons.remove_circle_outline_rounded,
                   size: 20, color: AppTheme.textSecondary)),
           Text(_fmt(_yieldQty),
-              style: GoogleFonts.inter(
+              style: GoogleFonts.plusJakartaSans(
                   fontSize: 14,
                   fontWeight: FontWeight.w800,
                   color: AppTheme.textPrimary)),
@@ -526,13 +526,13 @@ class _RecipeEditorState extends State<_RecipeEditor> {
                     value: item.ingredientProductId,
                     isDense: true,
                     hint: Text('Pilih bahan',
-                        style: GoogleFonts.inter(fontSize: 12.5)),
+                        style: GoogleFonts.plusJakartaSans(fontSize: 12.5)),
                     items: widget.products
                         .map((p) => DropdownMenuItem(
                             value: p.id,
                             child: Text(
                                 '${p.name} (${Formatters.currency(p.costPrice ?? 0)}/${(p.unit == null || p.unit!.isEmpty) ? 'unit' : p.unit})',
-                                style: GoogleFonts.inter(fontSize: 12.5))))
+                                style: GoogleFonts.plusJakartaSans(fontSize: 12.5))))
                         .toList(),
                     onChanged: (v) => setState(() {
                       _items[index] = item.copyWith(ingredientProductId: v);
@@ -553,11 +553,11 @@ class _RecipeEditorState extends State<_RecipeEditor> {
                   initialValue: _fmt(item.qty),
                   keyboardType: const TextInputType.numberWithOptions(
                       decimal: true),
-                  style: GoogleFonts.inter(fontSize: 13),
+                  style: GoogleFonts.plusJakartaSans(fontSize: 13),
                   decoration: InputDecoration(
                       isDense: true,
                       labelText: 'Jumlah',
-                      labelStyle: GoogleFonts.inter(fontSize: 11)),
+                      labelStyle: GoogleFonts.plusJakartaSans(fontSize: 11)),
                   onChanged: (v) {
                     final parsed = double.tryParse(v.replaceAll(',', '.'));
                     if (parsed != null) {
@@ -570,13 +570,13 @@ class _RecipeEditorState extends State<_RecipeEditor> {
               Expanded(
                 child: TextFormField(
                   initialValue: item.unit ?? '',
-                  style: GoogleFonts.inter(fontSize: 13),
+                  style: GoogleFonts.plusJakartaSans(fontSize: 13),
                   decoration: InputDecoration(
                       isDense: true,
                       labelText: 'Satuan',
                       hintText: 'gram/ml/biji',
-                      hintStyle: GoogleFonts.inter(fontSize: 11),
-                      labelStyle: GoogleFonts.inter(fontSize: 11)),
+                      hintStyle: GoogleFonts.plusJakartaSans(fontSize: 11),
+                      labelStyle: GoogleFonts.plusJakartaSans(fontSize: 11)),
                   onChanged: (v) {
                     _items[index] = item.copyWith(unit: v.trim());
                   },
@@ -585,7 +585,7 @@ class _RecipeEditorState extends State<_RecipeEditor> {
               const SizedBox(width: 8),
               Text(
                 ing == null ? '-' : Formatters.currency(item.qty * (ing.costPrice ?? 0)),
-                style: GoogleFonts.inter(
+                style: GoogleFonts.plusJakartaSans(
                     fontSize: 12,
                     fontWeight: FontWeight.w700,
                     color: AppTheme.textSecondary),
@@ -612,10 +612,10 @@ class _RecipeEditorState extends State<_RecipeEditor> {
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               Text('Total biaya resep',
-                  style: GoogleFonts.inter(
+                  style: GoogleFonts.plusJakartaSans(
                       fontSize: 12, color: AppTheme.textSecondary)),
               Text(Formatters.currency(_hppBatch),
-                  style: GoogleFonts.inter(
+                  style: GoogleFonts.plusJakartaSans(
                       fontSize: 12.5, fontWeight: FontWeight.w700)),
             ],
           ),
@@ -624,10 +624,10 @@ class _RecipeEditorState extends State<_RecipeEditor> {
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               Text('HPP per porsi',
-                  style: GoogleFonts.inter(
+                  style: GoogleFonts.plusJakartaSans(
                       fontSize: 12, color: AppTheme.textSecondary)),
               Text(Formatters.currency(_hppPorsi),
-                  style: GoogleFonts.inter(
+                  style: GoogleFonts.plusJakartaSans(
                       fontSize: 13.5,
                       fontWeight: FontWeight.w800,
                       color: AppTheme.primaryColor)),
@@ -638,10 +638,10 @@ class _RecipeEditorState extends State<_RecipeEditor> {
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               Text('Harga saran (margin ${_targetMargin.toStringAsFixed(0)}%)',
-                  style: GoogleFonts.inter(
+                  style: GoogleFonts.plusJakartaSans(
                       fontSize: 12, color: AppTheme.textSecondary)),
               Text(Formatters.currency(_hargaSaran),
-                  style: GoogleFonts.inter(
+                  style: GoogleFonts.plusJakartaSans(
                       fontSize: 13.5,
                       fontWeight: FontWeight.w800,
                       color: AppTheme.successColor)),
@@ -659,10 +659,10 @@ class _RecipeEditorState extends State<_RecipeEditor> {
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
             Text('Target margin',
-                style: GoogleFonts.inter(
+                style: GoogleFonts.plusJakartaSans(
                     fontSize: 12.5, color: AppTheme.textSecondary)),
             Text('${_targetMargin.toStringAsFixed(0)}%',
-                style: GoogleFonts.inter(
+                style: GoogleFonts.plusJakartaSans(
                     fontSize: 13,
                     fontWeight: FontWeight.w800,
                     color: AppTheme.textPrimary)),
@@ -693,7 +693,7 @@ class _RecipeEditorState extends State<_RecipeEditor> {
         Expanded(
           child: Text(
               'Set HPP produk = HPP per porsi (dipakai laporan laba)',
-              style: GoogleFonts.inter(
+              style: GoogleFonts.plusJakartaSans(
                   fontSize: 12, color: AppTheme.textSecondary)),
         ),
         Switch(

@@ -83,7 +83,7 @@ class _FintechScreenState extends ConsumerState<FintechScreen> {
           shape: RoundedRectangleBorder(
               borderRadius: BorderRadius.circular(AppTheme.radiusLarge)),
           title: Text('Ajukan Modal Usaha',
-              style: GoogleFonts.inter(
+              style: GoogleFonts.plusJakartaSans(
                   fontSize: 16,
                   fontWeight: FontWeight.w800,
                   color: AppTheme.textPrimary)),
@@ -94,13 +94,13 @@ class _FintechScreenState extends ConsumerState<FintechScreen> {
               Text(
                   'Dikirim ke ${_cfg.partnerName} beserta ringkasan arus kas '
                   'AGREGAT ANONIM (tanpa data pelanggan).',
-                  style: GoogleFonts.inter(
+                  style: GoogleFonts.plusJakartaSans(
                       fontSize: 12, color: AppTheme.textSecondary)),
               const SizedBox(height: 12),
               TextField(
                 controller: amountCtl,
                 keyboardType: TextInputType.number,
-                style: GoogleFonts.inter(
+                style: GoogleFonts.plusJakartaSans(
                     fontSize: 15, color: AppTheme.textPrimary),
                 decoration: const InputDecoration(
                   labelText: 'Jumlah diajukan (Rp)',
@@ -109,7 +109,7 @@ class _FintechScreenState extends ConsumerState<FintechScreen> {
               ),
               const SizedBox(height: 10),
               Text('TENOR',
-                  style: GoogleFonts.inter(
+                  style: GoogleFonts.plusJakartaSans(
                       fontSize: 11,
                       fontWeight: FontWeight.w800,
                       letterSpacing: 0.5,
@@ -125,7 +125,7 @@ class _FintechScreenState extends ConsumerState<FintechScreen> {
                       selected: selected,
                       selectedColor:
                           AppTheme.primaryColor.withValues(alpha: 0.2),
-                      labelStyle: GoogleFonts.inter(
+                      labelStyle: GoogleFonts.plusJakartaSans(
                           fontSize: 12,
                           fontWeight: FontWeight.w700,
                           color: selected
@@ -145,7 +145,7 @@ class _FintechScreenState extends ConsumerState<FintechScreen> {
             TextButton(
                 onPressed: () => Navigator.pop(ctx, true),
                 child: Text('Ajukan',
-                    style: GoogleFonts.inter(
+                    style: GoogleFonts.plusJakartaSans(
                         color: AppTheme.primaryColor,
                         fontWeight: FontWeight.w800))),
           ],
@@ -207,7 +207,7 @@ class _FintechScreenState extends ConsumerState<FintechScreen> {
       backgroundColor: AppTheme.backgroundColor,
       appBar: AppBar(
         title: Text('Modal Usaha',
-            style: GoogleFonts.inter(
+            style: GoogleFonts.plusJakartaSans(
                 fontSize: 18,
                 fontWeight: FontWeight.w700,
                 color: AppTheme.textPrimary)),
@@ -232,7 +232,7 @@ class _FintechScreenState extends ConsumerState<FintechScreen> {
                   _buildPrivacyNote(),
                   const SizedBox(height: 20),
                   Text('RIWAYAT PENGAJUAN',
-                      style: GoogleFonts.inter(
+                      style: GoogleFonts.plusJakartaSans(
                           fontSize: 11,
                           fontWeight: FontWeight.w800,
                           letterSpacing: 0.5,
@@ -248,7 +248,7 @@ class _FintechScreenState extends ConsumerState<FintechScreen> {
                         border: Border.all(color: AppTheme.borderColor),
                       ),
                       child: Text('Belum ada pengajuan modal.',
-                          style: GoogleFonts.inter(
+                          style: GoogleFonts.plusJakartaSans(
                               fontSize: 12.5,
                               color: AppTheme.textSecondary)),
                     )
@@ -282,7 +282,7 @@ class _FintechScreenState extends ConsumerState<FintechScreen> {
               const SizedBox(width: 6),
               Text('ESTIMASI PLAFON (${_cfg.partnerName})',
                   overflow: TextOverflow.ellipsis,
-                  style: GoogleFonts.inter(
+                  style: GoogleFonts.plusJakartaSans(
                       fontSize: 10.5,
                       fontWeight: FontWeight.w800,
                       letterSpacing: 0.5,
@@ -294,14 +294,14 @@ class _FintechScreenState extends ConsumerState<FintechScreen> {
             hasData
                 ? Formatters.currency(_profile.suggestedPlafon)
                 : 'Belum cukup data',
-            style: GoogleFonts.inter(
+            style: GoogleFonts.plusJakartaSans(
                 fontSize: 26, fontWeight: FontWeight.w800, color: Colors.white),
           ),
           const SizedBox(height: 2),
           Text(
             'Skor kelayakan: ${_profile.score.toStringAsFixed(0)}/100 '
             '(dari arus kas ${_profile.windowDays} hari)',
-            style: GoogleFonts.inter(
+            style: GoogleFonts.plusJakartaSans(
                 fontSize: 11.5, color: Colors.white.withValues(alpha: 0.9)),
           ),
           if (hasData) ...[
@@ -331,7 +331,7 @@ class _FintechScreenState extends ConsumerState<FintechScreen> {
               onPressed: _apply,
               icon: const Icon(Icons.trending_up_rounded, size: 18),
               label: Text('Ajukan Modal',
-                  style: GoogleFonts.inter(
+                  style: GoogleFonts.plusJakartaSans(
                       fontSize: 13.5, fontWeight: FontWeight.w700)),
               style: ElevatedButton.styleFrom(
                 backgroundColor: Colors.white,
@@ -343,7 +343,7 @@ class _FintechScreenState extends ConsumerState<FintechScreen> {
           ),
           const SizedBox(height: 6),
           Text('Estimasi indikatif - keputusan akhir oleh mitra pembiayaan.',
-              style: GoogleFonts.inter(
+              style: GoogleFonts.plusJakartaSans(
                   fontSize: 10.5, color: Colors.white.withValues(alpha: 0.8))),
         ],
       ),
@@ -356,12 +356,12 @@ class _FintechScreenState extends ConsumerState<FintechScreen> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(label,
-              style: GoogleFonts.inter(
+              style: GoogleFonts.plusJakartaSans(
                   fontSize: 10, color: Colors.white70)),
           Text(value,
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
-              style: GoogleFonts.inter(
+              style: GoogleFonts.plusJakartaSans(
                   fontSize: 12,
                   fontWeight: FontWeight.w800,
                   color: Colors.white)),
@@ -389,7 +389,7 @@ class _FintechScreenState extends ConsumerState<FintechScreen> {
               'Privasi (UU PDP): yang dikirim hanya ringkasan agregat '
               '(omzet, jumlah transaksi, rata-rata belanja). Tidak ada data '
               'pribadi pelanggan yang dibagikan.',
-              style: GoogleFonts.inter(
+              style: GoogleFonts.plusJakartaSans(
                   fontSize: 11.5, color: AppTheme.textSecondary),
             ),
           ),
@@ -426,7 +426,7 @@ class _FintechScreenState extends ConsumerState<FintechScreen> {
         leading: const Icon(Icons.account_balance_rounded,
             size: 22, color: AppTheme.textSecondary),
         title: Text(Formatters.currency(d(lead['amount_requested'])),
-            style: GoogleFonts.inter(
+            style: GoogleFonts.plusJakartaSans(
                 fontSize: 13.5,
                 fontWeight: FontWeight.w700,
                 color: AppTheme.textPrimary)),
@@ -438,12 +438,12 @@ class _FintechScreenState extends ConsumerState<FintechScreen> {
             ' - ${createdAt.day}/${createdAt.month}',
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
-            style: GoogleFonts.inter(
+            style: GoogleFonts.plusJakartaSans(
                 fontSize: 11, color: AppTheme.textSecondary),
           ),
         ),
         trailing: Text(status.toUpperCase(),
-            style: GoogleFonts.inter(
+            style: GoogleFonts.plusJakartaSans(
                 fontSize: 10.5,
                 fontWeight: FontWeight.w800,
                 color: statusColor)),

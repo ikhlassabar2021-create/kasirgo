@@ -196,7 +196,7 @@ class _DebtScreenState extends ConsumerState<DebtScreen> {
         scrolledUnderElevation: 0,
         title: Text(
           'Buku Kasbon / Piutang',
-          style: GoogleFonts.inter(
+          style: GoogleFonts.plusJakartaSans(
             fontSize: 18,
             fontWeight: FontWeight.w800,
             color: AppTheme.textPrimary,

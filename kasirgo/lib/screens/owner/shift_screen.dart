@@ -51,7 +51,7 @@ class _ShiftScreenState extends ConsumerState<ShiftScreen> {
         shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(AppTheme.radiusLarge)),
         title: Text('Buka Shift Kasir',
-            style: GoogleFonts.inter(
+            style: GoogleFonts.plusJakartaSans(
                 fontWeight: FontWeight.w800,
                 fontSize: 16,
                 color: AppTheme.textPrimary)),
@@ -59,7 +59,7 @@ class _ShiftScreenState extends ConsumerState<ShiftScreen> {
           controller: controller,
           keyboardType: TextInputType.number,
           autofocus: true,
-          style: GoogleFonts.inter(
+          style: GoogleFonts.plusJakartaSans(
               fontSize: 15, color: AppTheme.textPrimary),
           decoration: const InputDecoration(
             labelText: 'Modal Awal (Cash Di Laci)',
@@ -76,7 +76,7 @@ class _ShiftScreenState extends ConsumerState<ShiftScreen> {
                   backgroundColor: AppTheme.primaryColor),
               onPressed: () => Navigator.pop(ctx, true),
               child: Text('Buka Shift',
-                  style: GoogleFonts.inter(fontWeight: FontWeight.w700))),
+                  style: GoogleFonts.plusJakartaSans(fontWeight: FontWeight.w700))),
         ],
       ),
     );
@@ -114,7 +114,7 @@ class _ShiftScreenState extends ConsumerState<ShiftScreen> {
         shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(AppTheme.radiusLarge)),
         title: Text('Tutup Shift',
-            style: GoogleFonts.inter(
+            style: GoogleFonts.plusJakartaSans(
                 fontWeight: FontWeight.w800,
                 fontSize: 16,
                 color: AppTheme.textPrimary)),
@@ -124,14 +124,14 @@ class _ShiftScreenState extends ConsumerState<ShiftScreen> {
           children: [
             Text(
                 'Shift dibuka ${_fmtTime(shift.openedAt)} - modal awal ${Formatters.currency(shift.openingCash)}',
-                style: GoogleFonts.inter(
+                style: GoogleFonts.plusJakartaSans(
                     fontSize: 12, color: AppTheme.textSecondary)),
             const SizedBox(height: 12),
             TextField(
               controller: controller,
               keyboardType: TextInputType.number,
               autofocus: true,
-              style: GoogleFonts.inter(
+              style: GoogleFonts.plusJakartaSans(
                   fontSize: 15, color: AppTheme.textPrimary),
               decoration: const InputDecoration(
                 labelText: 'Uang Cash Fisik Di Laci',
@@ -141,7 +141,7 @@ class _ShiftScreenState extends ConsumerState<ShiftScreen> {
             const SizedBox(height: 10),
             TextField(
               controller: noteController,
-              style: GoogleFonts.inter(
+              style: GoogleFonts.plusJakartaSans(
                   fontSize: 13, color: AppTheme.textPrimary),
               decoration: const InputDecoration(
                 labelText: 'Catatan (opsional)',
@@ -159,7 +159,7 @@ class _ShiftScreenState extends ConsumerState<ShiftScreen> {
                   backgroundColor: AppTheme.errorColor),
               onPressed: () => Navigator.pop(ctx, true),
               child: Text('Tutup Shift',
-                  style: GoogleFonts.inter(fontWeight: FontWeight.w700))),
+                  style: GoogleFonts.plusJakartaSans(fontWeight: FontWeight.w700))),
         ],
       ),
     );
@@ -192,7 +192,7 @@ class _ShiftScreenState extends ConsumerState<ShiftScreen> {
       backgroundColor: AppTheme.backgroundColor,
       appBar: AppBar(
         title: Text('Shift Kasir',
-            style: GoogleFonts.inter(
+            style: GoogleFonts.plusJakartaSans(
                 fontSize: 18,
                 fontWeight: FontWeight.w700,
                 color: AppTheme.textPrimary)),
@@ -215,7 +215,7 @@ class _ShiftScreenState extends ConsumerState<ShiftScreen> {
                   _openShift == null ? _closedBanner() : _openCard(_openShift!),
                   const SizedBox(height: 16),
                   Text('RIWAYAT SHIFT',
-                      style: GoogleFonts.inter(
+                      style: GoogleFonts.plusJakartaSans(
                           fontSize: 11,
                           fontWeight: FontWeight.w800,
                           letterSpacing: 0.5,
@@ -246,7 +246,7 @@ class _ShiftScreenState extends ConsumerState<ShiftScreen> {
               size: 40, color: AppTheme.textSecondary),
           const SizedBox(height: 8),
           Text('Tidak ada shift aktif',
-              style: GoogleFonts.inter(
+              style: GoogleFonts.plusJakartaSans(
                   fontSize: 14,
                   fontWeight: FontWeight.w700,
                   color: AppTheme.textPrimary)),
@@ -254,7 +254,7 @@ class _ShiftScreenState extends ConsumerState<ShiftScreen> {
           Text(
               'Buka shift di awal kerja agar cash/qris/transfer tercatat per kasir.',
               textAlign: TextAlign.center,
-              style: GoogleFonts.inter(
+              style: GoogleFonts.plusJakartaSans(
                   fontSize: 12, color: AppTheme.textSecondary)),
           const SizedBox(height: 14),
           SizedBox(
@@ -264,7 +264,7 @@ class _ShiftScreenState extends ConsumerState<ShiftScreen> {
               onPressed: _openShiftDialog,
               icon: const Icon(Icons.play_arrow_rounded, size: 20),
               label: Text('Buka Shift',
-                  style: GoogleFonts.inter(
+                  style: GoogleFonts.plusJakartaSans(
                       fontSize: 14, fontWeight: FontWeight.w700)),
               style: ElevatedButton.styleFrom(
                 backgroundColor: AppTheme.primaryColor,
@@ -302,14 +302,14 @@ class _ShiftScreenState extends ConsumerState<ShiftScreen> {
               ),
               const SizedBox(width: 8),
               Text('SHIFT AKTIF',
-                  style: GoogleFonts.inter(
+                  style: GoogleFonts.plusJakartaSans(
                       fontSize: 12,
                       fontWeight: FontWeight.w800,
                       letterSpacing: 0.5,
                       color: AppTheme.successColor)),
               const Spacer(),
               Text('Sejak ${_fmtTime(shift.openedAt)}',
-                  style: GoogleFonts.inter(
+                  style: GoogleFonts.plusJakartaSans(
                       fontSize: 12, color: AppTheme.textSecondary)),
             ],
           ),
@@ -324,7 +324,7 @@ class _ShiftScreenState extends ConsumerState<ShiftScreen> {
               onPressed: _closeShiftDialog,
               icon: const Icon(Icons.stop_circle_rounded, size: 20),
               label: Text('Tutup Shift & Hitung Kas',
-                  style: GoogleFonts.inter(
+                  style: GoogleFonts.plusJakartaSans(
                       fontSize: 14, fontWeight: FontWeight.w700)),
               style: ElevatedButton.styleFrom(
                 backgroundColor: AppTheme.errorColor,
@@ -357,7 +357,7 @@ class _ShiftScreenState extends ConsumerState<ShiftScreen> {
             Row(
               children: [
                 Text('${_fmtTime(shift.openedAt)} - ${shift.closedAt != null ? _fmtTime(shift.closedAt!) : '-'}',
-                    style: GoogleFonts.inter(
+                    style: GoogleFonts.plusJakartaSans(
                         fontSize: 13,
                         fontWeight: FontWeight.w700,
                         color: AppTheme.textPrimary)),
@@ -375,7 +375,7 @@ class _ShiftScreenState extends ConsumerState<ShiftScreen> {
                     diff.abs() <= 1
                         ? 'KAS PAS'
                         : 'Selisih ${diff > 0 ? '+' : ''}${Formatters.currency(diff)}',
-                    style: GoogleFonts.inter(
+                    style: GoogleFonts.plusJakartaSans(
                         fontSize: 10.5,
                         fontWeight: FontWeight.w800,
                         color: diff.abs() <= 1
@@ -396,7 +396,7 @@ class _ShiftScreenState extends ConsumerState<ShiftScreen> {
               Padding(
                 padding: const EdgeInsets.only(top: 6),
                 child: Text('Catatan: ${shift.note}',
-                    style: GoogleFonts.inter(
+                    style: GoogleFonts.plusJakartaSans(
                         fontSize: 11.5, color: AppTheme.textSecondary)),
               ),
           ],
@@ -412,10 +412,10 @@ class _ShiftScreenState extends ConsumerState<ShiftScreen> {
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
           Text(label,
-              style: GoogleFonts.inter(
+              style: GoogleFonts.plusJakartaSans(
                   fontSize: 12.5, color: AppTheme.textSecondary)),
           Text(value,
-              style: GoogleFonts.inter(
+              style: GoogleFonts.plusJakartaSans(
                   fontSize: 12.5,
                   fontWeight: FontWeight.w700,
                   color: AppTheme.textPrimary)),
@@ -433,7 +433,7 @@ class _ShiftScreenState extends ConsumerState<ShiftScreen> {
         border: Border.all(color: AppTheme.borderColor),
       ),
       child: Text(text,
-          style: GoogleFonts.inter(
+          style: GoogleFonts.plusJakartaSans(
               fontSize: 12.5, color: AppTheme.textSecondary)),
     );
   }

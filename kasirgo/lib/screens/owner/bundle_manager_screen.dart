@@ -117,7 +117,7 @@ class _BundleManagerScreenState extends ConsumerState<BundleManagerScreen> {
       backgroundColor: AppTheme.backgroundColor,
       appBar: AppBar(
         title: Text('Paket Bundling',
-            style: GoogleFonts.inter(fontWeight: FontWeight.w700)),
+            style: GoogleFonts.plusJakartaSans(fontWeight: FontWeight.w700)),
         backgroundColor: AppTheme.surfaceColor,
         foregroundColor: AppTheme.textPrimary,
         elevation: 0,
@@ -211,7 +211,7 @@ class _EmptyBundles extends StatelessWidget {
             ),
             const SizedBox(height: 16),
             Text('Belum Ada Paket Bundling',
-                style: GoogleFonts.inter(
+                style: GoogleFonts.plusJakartaSans(
                     fontSize: 17, fontWeight: FontWeight.w800)),
             const SizedBox(height: 6),
             const Text(
@@ -273,7 +273,7 @@ class _BundleCard extends StatelessWidget {
             children: [
               Expanded(
                 child: Text(name,
-                    style: GoogleFonts.inter(
+                    style: GoogleFonts.plusJakartaSans(
                         fontSize: 15, fontWeight: FontWeight.w800)),
               ),
               PopupMenuButton<String>(
@@ -319,7 +319,7 @@ class _BundleCard extends StatelessWidget {
           Row(
             children: [
               Text(Formatters.currency(price),
-                  style: GoogleFonts.inter(
+                  style: GoogleFonts.plusJakartaSans(
                       fontSize: 16,
                       fontWeight: FontWeight.w800,
                       color: AppTheme.primaryColor)),
@@ -468,7 +468,7 @@ class _BundleFormSheetState extends State<_BundleFormSheet> {
           children: [
             Text(
               widget.bundle == null ? 'Paket Bundling Baru' : 'Ubah Paket',
-              style: GoogleFonts.inter(fontSize: 17, fontWeight: FontWeight.w800),
+              style: GoogleFonts.plusJakartaSans(fontSize: 17, fontWeight: FontWeight.w800),
             ),
             const SizedBox(height: 16),
             TextField(

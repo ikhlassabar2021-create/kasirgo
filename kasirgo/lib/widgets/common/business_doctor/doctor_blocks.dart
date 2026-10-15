@@ -44,7 +44,7 @@ class DoctorBlocks extends StatelessWidget {
       case 'text':
         return Text(
           _s(b['text']),
-          style: GoogleFonts.inter(
+          style: GoogleFonts.plusJakartaSans(
             fontSize: 14,
             height: 1.45,
             color: AppTheme.textPrimary,
@@ -83,7 +83,7 @@ class DoctorBlocks extends StatelessWidget {
           if (_s(b['title']).isNotEmpty)
             Text(
               _s(b['title']),
-              style: GoogleFonts.inter(
+              style: GoogleFonts.plusJakartaSans(
                 fontSize: 14,
                 fontWeight: FontWeight.w700,
                 color: AppTheme.textPrimary,
@@ -94,7 +94,7 @@ class DoctorBlocks extends StatelessWidget {
               padding: EdgeInsets.only(top: _s(b['title']).isEmpty ? 0 : 4),
               child: Text(
                 _s(b['body']),
-                style: GoogleFonts.inter(
+                style: GoogleFonts.plusJakartaSans(
                   fontSize: 13,
                   height: 1.4,
                   color: AppTheme.textPrimary,
@@ -129,7 +129,7 @@ class DoctorBlocks extends StatelessWidget {
                   _s(b['label']).isEmpty
                       ? 'Skor Kesehatan Usaha'
                       : _s(b['label']),
-                  style: GoogleFonts.inter(
+                  style: GoogleFonts.plusJakartaSans(
                     fontSize: 13,
                     fontWeight: FontWeight.w700,
                     color: AppTheme.textPrimary,
@@ -138,7 +138,7 @@ class DoctorBlocks extends StatelessWidget {
               ),
               Text(
                 value.round().toString(),
-                style: GoogleFonts.inter(
+                style: GoogleFonts.plusJakartaSans(
                   fontSize: 20,
                   fontWeight: FontWeight.w800,
                   color: color,
@@ -161,7 +161,7 @@ class DoctorBlocks extends StatelessWidget {
               padding: const EdgeInsets.only(top: 6),
               child: Text(
                 _s(b['hint']),
-                style: GoogleFonts.inter(
+                style: GoogleFonts.plusJakartaSans(
                   fontSize: 11,
                   color: AppTheme.textSecondary,
                 ),
@@ -182,7 +182,7 @@ class DoctorBlocks extends StatelessWidget {
             padding: const EdgeInsets.only(bottom: 6),
             child: Text(
               _s(b['title']),
-              style: GoogleFonts.inter(
+              style: GoogleFonts.plusJakartaSans(
                 fontSize: 14,
                 fontWeight: FontWeight.w700,
                 color: AppTheme.textPrimary,
@@ -209,7 +209,7 @@ class DoctorBlocks extends StatelessWidget {
                   Expanded(
                     child: Text(
                       _s(raw['text']),
-                      style: GoogleFonts.inter(
+                      style: GoogleFonts.plusJakartaSans(
                         fontSize: 13,
                         height: 1.35,
                         color: AppTheme.textPrimary,
@@ -233,7 +233,7 @@ class DoctorBlocks extends StatelessWidget {
             padding: const EdgeInsets.only(bottom: 8),
             child: Text(
               _s(b['prompt']),
-              style: GoogleFonts.inter(
+              style: GoogleFonts.plusJakartaSans(
                 fontSize: 13,
                 color: AppTheme.textPrimary,
               ),
@@ -262,7 +262,7 @@ class DoctorBlocks extends StatelessWidget {
                   ),
                   child: Text(
                     _s(raw['label']),
-                    style: GoogleFonts.inter(
+                    style: GoogleFonts.plusJakartaSans(
                       fontSize: 13,
                       fontWeight: FontWeight.w600,
                     ),
@@ -334,7 +334,7 @@ class DoctorBlocks extends StatelessWidget {
                     _s(b['title']).isEmpty
                         ? 'Resep Perbaikan'
                         : _s(b['title']),
-                    style: GoogleFonts.inter(
+                    style: GoogleFonts.plusJakartaSans(
                       fontSize: 14,
                       fontWeight: FontWeight.w800,
                       color: Colors.white,
@@ -350,7 +350,7 @@ class DoctorBlocks extends StatelessWidget {
                   ),
                   child: Text(
                     allDone ? 'SELESAI' : 'RESEP AKTIF',
-                    style: GoogleFonts.inter(
+                    style: GoogleFonts.plusJakartaSans(
                       fontSize: 9,
                       fontWeight: FontWeight.w800,
                       color: Colors.white,
@@ -379,7 +379,7 @@ class DoctorBlocks extends StatelessWidget {
                     Text(
                       'Masa target $target hari'
                       '${remaining.isEmpty ? '' : ' • $remaining'}',
-                      style: GoogleFonts.inter(
+                      style: GoogleFonts.plusJakartaSans(
                         fontSize: 11,
                         fontWeight: FontWeight.w600,
                         color: accent,
@@ -398,7 +398,7 @@ class DoctorBlocks extends StatelessWidget {
                     child: Text(
                       'Resep ini belum tuntas padahal masa target sudah lewat. '
                       'Ayo jalankan langkah yang tersisa.',
-                      style: GoogleFonts.inter(
+                      style: GoogleFonts.plusJakartaSans(
                         fontSize: 11,
                         height: 1.35,
                         color: AppTheme.errorColor,
@@ -436,7 +436,7 @@ class DoctorBlocks extends StatelessWidget {
               ? const Icon(Icons.check_rounded, size: 14, color: Colors.white)
               : Text(
                   '${index + 1}',
-                  style: GoogleFonts.inter(
+                  style: GoogleFonts.plusJakartaSans(
                     fontSize: 11,
                     fontWeight: FontWeight.w800,
                     color: AppTheme.primaryColor,
@@ -450,7 +450,7 @@ class DoctorBlocks extends StatelessWidget {
             children: [
               Text(
                 _s(step['text']),
-                style: GoogleFonts.inter(
+                style: GoogleFonts.plusJakartaSans(
                   fontSize: 13,
                   height: 1.35,
                   color: done
@@ -464,7 +464,7 @@ class DoctorBlocks extends StatelessWidget {
                   padding: const EdgeInsets.only(top: 4),
                   child: Text(
                     _featureLabel(key),
-                    style: GoogleFonts.inter(
+                    style: GoogleFonts.plusJakartaSans(
                       fontSize: 10,
                       fontWeight: FontWeight.w700,
                       color: AppTheme.accentColor,
@@ -531,7 +531,7 @@ class DoctorBlocks extends StatelessWidget {
               const SizedBox(width: 4),
               Text(
                 label,
-                style: GoogleFonts.inter(
+                style: GoogleFonts.plusJakartaSans(
                   fontSize: 11,
                   fontWeight: FontWeight.w700,
                   color: filled ? Colors.white : color,

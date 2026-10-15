@@ -523,12 +523,12 @@ class _OnboardingKycScreenState extends ConsumerState<OnboardingKycScreen> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text('Verifikasi Data Usaha',
-                        style: GoogleFonts.inter(
+                        style: GoogleFonts.plusJakartaSans(
                             fontSize: 19,
                             fontWeight: FontWeight.w800,
                             color: AppTheme.textPrimary)),
                     Text('Wajib sebelum mulai berjualan',
-                        style: GoogleFonts.inter(
+                        style: GoogleFonts.plusJakartaSans(
                             fontSize: 12, color: AppTheme.textSecondary)),
                   ],
                 ),
@@ -1050,7 +1050,7 @@ class _OnboardingKycScreenState extends ConsumerState<OnboardingKycScreen> {
             const SizedBox(height: 16),
             Text(title,
                 textAlign: TextAlign.center,
-                style: GoogleFonts.inter(
+                style: GoogleFonts.plusJakartaSans(
                     fontSize: 20, fontWeight: FontWeight.w800, color: AppTheme.textPrimary)),
             const SizedBox(height: 8),
             Text(body,

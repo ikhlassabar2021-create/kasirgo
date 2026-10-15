@@ -268,7 +268,7 @@ class _CustomerOrderScreenState extends State<CustomerOrderScreen> {
               const SizedBox(height: 16),
               Text(
                 'Pesanan Terkirim!',
-                style: GoogleFonts.inter(
+                style: GoogleFonts.plusJakartaSans(
                   color: AppTheme.textPrimary,
                   fontSize: 19,
                   fontWeight: FontWeight.w800,
@@ -278,7 +278,7 @@ class _CustomerOrderScreenState extends State<CustomerOrderScreen> {
               Text(
                 'Pesanan Meja ${widget.tableNumber} sudah diteruskan ke kasir/dapur. Silakan menunggu di meja.',
                 textAlign: TextAlign.center,
-                style: GoogleFonts.inter(
+                style: GoogleFonts.plusJakartaSans(
                     color: AppTheme.textSecondary, fontSize: 12.5, height: 1.4),
               ),
               const SizedBox(height: 18),
@@ -312,7 +312,7 @@ class _CustomerOrderScreenState extends State<CustomerOrderScreen> {
                     Text(
                       'Pesanan Anda sudah kami terima. Terima kasih!',
                       textAlign: TextAlign.center,
-                      style: GoogleFonts.inter(
+                      style: GoogleFonts.plusJakartaSans(
                           color: AppTheme.textSecondary, fontSize: 11),
                     ),
                     const Padding(
@@ -342,7 +342,7 @@ class _CustomerOrderScreenState extends State<CustomerOrderScreen> {
                   onPressed: () => Navigator.of(ctx).pop(),
                   child: Text(
                     'Pesan Lagi',
-                    style: GoogleFonts.inter(
+                    style: GoogleFonts.plusJakartaSans(
                         fontWeight: FontWeight.w700, fontSize: 15),
                   ),
                 ),
@@ -383,14 +383,14 @@ class _CustomerOrderScreenState extends State<CustomerOrderScreen> {
                   : 'Menu Pesanan',
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
-              style: GoogleFonts.inter(
+              style: GoogleFonts.plusJakartaSans(
                   fontWeight: FontWeight.w700,
                   fontSize: 16,
                   color: AppTheme.textPrimary),
             ),
             Text(
               'Meja ${widget.tableNumber}',
-              style: GoogleFonts.inter(
+              style: GoogleFonts.plusJakartaSans(
                   fontWeight: FontWeight.w600,
                   fontSize: 12,
                   color: AppTheme.primaryColor),
@@ -561,7 +561,7 @@ class _CustomerOrderScreenState extends State<CustomerOrderScreen> {
                         title,
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
-                        style: GoogleFonts.inter(
+                        style: GoogleFonts.plusJakartaSans(
                           fontWeight: FontWeight.w800,
                           fontSize: 13,
                           color: AppTheme.textPrimary,
@@ -791,7 +791,7 @@ class _CustomerOrderScreenState extends State<CustomerOrderScreen> {
                           product.name.isNotEmpty
                               ? product.name[0].toUpperCase()
                               : '?',
-                          style: GoogleFonts.inter(
+                          style: GoogleFonts.plusJakartaSans(
                             fontSize: 32,
                             fontWeight: FontWeight.w800,
                             color: AppTheme.primaryColor.withValues(alpha: 0.35),
@@ -839,7 +839,7 @@ class _CustomerOrderScreenState extends State<CustomerOrderScreen> {
                         product.name,
                         maxLines: 2,
                         overflow: TextOverflow.ellipsis,
-                        style: GoogleFonts.inter(
+                        style: GoogleFonts.plusJakartaSans(
                           fontSize: 12.5,
                           fontWeight: FontWeight.w700,
                           color: AppTheme.textPrimary,
@@ -848,7 +848,7 @@ class _CustomerOrderScreenState extends State<CustomerOrderScreen> {
                       const Spacer(),
                       Text(
                         Formatters.currency(product.price),
-                        style: GoogleFonts.inter(
+                        style: GoogleFonts.plusJakartaSans(
                           color: AppTheme.primaryColor,
                           fontWeight: FontWeight.w800,
                           fontSize: 13,
@@ -1044,7 +1044,7 @@ class _CustomerCheckoutDialogState extends State<CustomerCheckoutDialog> {
                             children: [
                               Text(
                                 'Bayar di Meja',
-                                style: GoogleFonts.inter(
+                                style: GoogleFonts.plusJakartaSans(
                                   color: AppTheme.textPrimary,
                                   fontSize: 18,
                                   fontWeight: FontWeight.w800,
@@ -1052,7 +1052,7 @@ class _CustomerCheckoutDialogState extends State<CustomerCheckoutDialog> {
                               ),
                               Text(
                                 'Tanpa antre di kasir',
-                                style: GoogleFonts.inter(
+                                style: GoogleFonts.plusJakartaSans(
                                   color: AppTheme.textSecondary,
                                   fontSize: 11.5,
                                 ),
@@ -1092,7 +1092,7 @@ class _CustomerCheckoutDialogState extends State<CustomerCheckoutDialog> {
                           else ...[
                             Text(
                               'Pilih Cara Bayar',
-                              style: GoogleFonts.inter(
+                              style: GoogleFonts.plusJakartaSans(
                                 color: AppTheme.textPrimary,
                                 fontSize: 14,
                                 fontWeight: FontWeight.w700,
@@ -1128,7 +1128,7 @@ class _CustomerCheckoutDialogState extends State<CustomerCheckoutDialog> {
                               icon: const Icon(Icons.send_rounded, size: 20),
                               label: Text(
                                 'Kirim Pesanan',
-                                style: GoogleFonts.inter(
+                                style: GoogleFonts.plusJakartaSans(
                                     fontWeight: FontWeight.w700, fontSize: 15),
                               ),
                             ),
@@ -1165,7 +1165,7 @@ class _CustomerCheckoutDialogState extends State<CustomerCheckoutDialog> {
               const SizedBox(width: 8),
               Text(
                 'Scan QRIS di meja',
-                style: GoogleFonts.inter(
+                style: GoogleFonts.plusJakartaSans(
                     color: AppTheme.textPrimary,
                     fontSize: 13,
                     fontWeight: FontWeight.w700),
@@ -1175,7 +1175,7 @@ class _CustomerCheckoutDialogState extends State<CustomerCheckoutDialog> {
           const SizedBox(height: 10),
           Text(
             'Scan stiker QRIS $_merchantName yang tersedia di meja, lalu masukkan nominal berikut:',
-            style: GoogleFonts.inter(
+            style: GoogleFonts.plusJakartaSans(
                 color: AppTheme.textSecondary, fontSize: 11.5, height: 1.35),
           ),
           const SizedBox(height: 10),
@@ -1183,11 +1183,11 @@ class _CustomerCheckoutDialogState extends State<CustomerCheckoutDialog> {
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               Text('Nominal',
-                  style: GoogleFonts.inter(
+                  style: GoogleFonts.plusJakartaSans(
                       color: AppTheme.textSecondary, fontSize: 12)),
               Text(
                 Formatters.currency(widget.total),
-                style: GoogleFonts.inter(
+                style: GoogleFonts.plusJakartaSans(
                   color: AppTheme.primaryColor,
                   fontSize: 17,
                   fontWeight: FontWeight.w800,
@@ -1204,7 +1204,7 @@ class _CustomerCheckoutDialogState extends State<CustomerCheckoutDialog> {
           Text(
             'Setelah scan & bayar, tunjukkan bukti ke kasir. Pesanan diproses '
             'setelah kasir mengonfirmasi pembayaran.',
-            style: GoogleFonts.inter(
+            style: GoogleFonts.plusJakartaSans(
                 color: AppTheme.textSecondary, fontSize: 11.5, height: 1.35),
           ),
         ],
@@ -1246,14 +1246,14 @@ class _CustomerCheckoutDialogState extends State<CustomerCheckoutDialog> {
           width: 132,
           child: Text(
             label,
-            style: GoogleFonts.inter(
+            style: GoogleFonts.plusJakartaSans(
                 color: AppTheme.textSecondary, fontSize: 12),
           ),
         ),
         Expanded(
           child: Text(
             value,
-            style: GoogleFonts.inter(
+            style: GoogleFonts.plusJakartaSans(
               color: AppTheme.textPrimary,
               fontSize: 13,
               fontWeight: FontWeight.w700,
@@ -1297,7 +1297,7 @@ class _CustomerCheckoutDialogState extends State<CustomerCheckoutDialog> {
             children: [
               Text(
                 'MEJA ${widget.tableNumber}',
-                style: GoogleFonts.inter(
+                style: GoogleFonts.plusJakartaSans(
                   color: AppTheme.primaryColor,
                   fontSize: 11,
                   fontWeight: FontWeight.w800,
@@ -1307,7 +1307,7 @@ class _CustomerCheckoutDialogState extends State<CustomerCheckoutDialog> {
               const Spacer(),
               Text(
                 '${widget.itemCount} item',
-                style: GoogleFonts.inter(
+                style: GoogleFonts.plusJakartaSans(
                   color: AppTheme.textSecondary,
                   fontSize: 11,
                   fontWeight: FontWeight.w700,
@@ -1318,7 +1318,7 @@ class _CustomerCheckoutDialogState extends State<CustomerCheckoutDialog> {
           const SizedBox(height: 10),
           Text(
             'TOTAL TAGIHAN',
-            style: GoogleFonts.inter(
+            style: GoogleFonts.plusJakartaSans(
               color: AppTheme.textSecondary,
               fontSize: 10.5,
               fontWeight: FontWeight.w700,
@@ -1328,7 +1328,7 @@ class _CustomerCheckoutDialogState extends State<CustomerCheckoutDialog> {
           const SizedBox(height: 4),
           Text(
             Formatters.currency(widget.total),
-            style: GoogleFonts.inter(
+            style: GoogleFonts.plusJakartaSans(
               color: AppTheme.textPrimary,
               fontSize: 30,
               fontWeight: FontWeight.w800,
@@ -1372,7 +1372,7 @@ class _CustomerCheckoutDialogState extends State<CustomerCheckoutDialog> {
               Expanded(
                 child: Text(
                   label,
-                  style: GoogleFonts.inter(
+                  style: GoogleFonts.plusJakartaSans(
                     color: isSelected
                         ? AppTheme.textPrimary
                         : AppTheme.textSecondary,
@@ -1408,14 +1408,14 @@ class _SuccessRow extends StatelessWidget {
       children: [
         Text(
           label,
-          style: GoogleFonts.inter(
+          style: GoogleFonts.plusJakartaSans(
               color: AppTheme.textSecondary, fontSize: 12.5),
         ),
         Flexible(
           child: Text(
             value,
             textAlign: TextAlign.end,
-            style: GoogleFonts.inter(
+            style: GoogleFonts.plusJakartaSans(
               color: emphasize
                   ? AppTheme.primaryColor
                   : AppTheme.textPrimary,
@@ -1461,7 +1461,7 @@ class _SendingOverlay extends StatelessWidget {
                     const SizedBox(height: 12),
                     Text(
                       'Mengirim pesanan...',
-                      style: GoogleFonts.inter(
+                      style: GoogleFonts.plusJakartaSans(
                           color: AppTheme.textPrimary,
                           fontSize: 13,
                           fontWeight: FontWeight.w600),

@@ -155,7 +155,7 @@ class _CustomerMenuScreenState extends ConsumerState<CustomerMenuScreen> {
         shape: const Border(bottom: BorderSide(color: AppTheme.borderColor)),
         title: Text(
           'Menu Mandiri Pelanggan',
-          style: GoogleFonts.inter(fontWeight: FontWeight.w700, fontSize: 17, color: AppTheme.textPrimary),
+          style: GoogleFonts.plusJakartaSans(fontWeight: FontWeight.w700, fontSize: 17, color: AppTheme.textPrimary),
         ),
       ),
       body: ListView(
@@ -189,7 +189,7 @@ class _CustomerMenuScreenState extends ConsumerState<CustomerMenuScreen> {
                         children: [
                           Text(
                             'Scan QR Meja',
-                            style: GoogleFonts.inter(fontWeight: FontWeight.w700, fontSize: 15, color: AppTheme.textPrimary),
+                            style: GoogleFonts.plusJakartaSans(fontWeight: FontWeight.w700, fontSize: 15, color: AppTheme.textPrimary),
                           ),
                           const SizedBox(height: 2),
                           const Text(
@@ -216,7 +216,7 @@ class _CustomerMenuScreenState extends ConsumerState<CustomerMenuScreen> {
                     icon: const Icon(Icons.qr_code_scanner_rounded, size: 20),
                     label: Text(
                       'Scan QR Kamera',
-                      style: GoogleFonts.inter(fontWeight: FontWeight.w700, fontSize: 14),
+                      style: GoogleFonts.plusJakartaSans(fontWeight: FontWeight.w700, fontSize: 14),
                     ),
                   ),
                 ),
@@ -264,7 +264,7 @@ class _CustomerMenuScreenState extends ConsumerState<CustomerMenuScreen> {
                         : const Icon(Icons.restaurant_menu_rounded, size: 20),
                     label: Text(
                       _opening ? 'Membuka menu...' : 'Buka Katalog & Pesan',
-                      style: GoogleFonts.inter(fontWeight: FontWeight.w700, fontSize: 14),
+                      style: GoogleFonts.plusJakartaSans(fontWeight: FontWeight.w700, fontSize: 14),
                     ),
                   ),
                 ),
@@ -288,7 +288,7 @@ class _CustomerMenuScreenState extends ConsumerState<CustomerMenuScreen> {
                     const SizedBox(width: 8),
                     Text(
                       'Alur Pesan Cepat',
-                      style: GoogleFonts.inter(fontWeight: FontWeight.w700, fontSize: 14, color: AppTheme.textPrimary),
+                      style: GoogleFonts.plusJakartaSans(fontWeight: FontWeight.w700, fontSize: 14, color: AppTheme.textPrimary),
                     ),
                   ],
                 ),

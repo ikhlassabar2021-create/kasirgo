@@ -149,7 +149,7 @@ class _AffiliateOwnerScreenState extends ConsumerState<AffiliateOwnerScreen> {
       backgroundColor: AppTheme.backgroundColor,
       appBar: AppBar(
         title: Text('Afiliasi KasirGo',
-            style: GoogleFonts.inter(fontWeight: FontWeight.w700)),
+            style: GoogleFonts.plusJakartaSans(fontWeight: FontWeight.w700)),
         backgroundColor: AppTheme.surfaceColor,
         foregroundColor: AppTheme.textPrimary,
         elevation: 0,
@@ -183,7 +183,7 @@ class _AffiliateOwnerScreenState extends ConsumerState<AffiliateOwnerScreen> {
                 const SizedBox(height: 8),
                 Text(_error!,
                     textAlign: TextAlign.center,
-                    style: GoogleFonts.inter(color: AppTheme.textSecondary)),
+                    style: GoogleFonts.plusJakartaSans(color: AppTheme.textSecondary)),
                 const SizedBox(height: 12),
                 TextButton(onPressed: _load, child: const Text('Coba lagi')),
               ],
@@ -212,7 +212,7 @@ class _AffiliateOwnerScreenState extends ConsumerState<AffiliateOwnerScreen> {
                   'Outlet Anda sudah otomatis menjadi afiliasi KasirGo. '
                   'Bagikan kode di bawah — Anda dapat komisi ketika usaha baru '
                   'bergabung memakai kode ini.',
-                  style: GoogleFonts.inter(
+                  style: GoogleFonts.plusJakartaSans(
                       fontSize: 12.5, height: 1.45,
                       color: AppTheme.textSecondary),
                 ),
@@ -233,7 +233,7 @@ class _AffiliateOwnerScreenState extends ConsumerState<AffiliateOwnerScreen> {
                       size: 16, color: AppTheme.primaryColor),
                   const SizedBox(width: 6),
                   Text('Kode & Link Referral',
-                      style: GoogleFonts.inter(
+                      style: GoogleFonts.plusJakartaSans(
                           fontSize: 13,
                           fontWeight: FontWeight.w700,
                           color: AppTheme.textPrimary)),
@@ -294,7 +294,7 @@ class _AffiliateOwnerScreenState extends ConsumerState<AffiliateOwnerScreen> {
                         _referralLink,
                         maxLines: 2,
                         overflow: TextOverflow.ellipsis,
-                        style: GoogleFonts.inter(
+                        style: GoogleFonts.plusJakartaSans(
                             fontSize: 11.5,
                             color: AppTheme.textSecondary),
                       ),
@@ -316,7 +316,7 @@ class _AffiliateOwnerScreenState extends ConsumerState<AffiliateOwnerScreen> {
                 const SizedBox(height: 8),
                 Text(
                   'Komisi Anda: ${_fmtRp(0).replaceAll('0', commission.toString())}% per usaha baru yang bergabung.',
-                  style: GoogleFonts.inter(
+                  style: GoogleFonts.plusJakartaSans(
                       fontSize: 12, color: AppTheme.textSecondary),
                 ),
               ],
@@ -364,7 +364,7 @@ class _AffiliateOwnerScreenState extends ConsumerState<AffiliateOwnerScreen> {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text('Riwayat Closing',
-                  style: GoogleFonts.inter(
+                  style: GoogleFonts.plusJakartaSans(
                       fontSize: 13,
                       fontWeight: FontWeight.w700,
                       color: AppTheme.textPrimary)),
@@ -374,7 +374,7 @@ class _AffiliateOwnerScreenState extends ConsumerState<AffiliateOwnerScreen> {
                   padding: const EdgeInsets.symmetric(vertical: 8),
                   child: Text(
                     'Belum ada closing. Sebarkan kode referral Anda untuk mulai mendapat komisi.',
-                    style: GoogleFonts.inter(
+                    style: GoogleFonts.plusJakartaSans(
                         fontSize: 12,
                         height: 1.4,
                         color: AppTheme.textSecondary),
@@ -398,7 +398,7 @@ class _AffiliateOwnerScreenState extends ConsumerState<AffiliateOwnerScreen> {
                       size: 16, color: AppTheme.accentColor),
                   const SizedBox(width: 6),
                   Text('Rekening Pembayaran Komisi',
-                      style: GoogleFonts.inter(
+                      style: GoogleFonts.plusJakartaSans(
                           fontSize: 13,
                           fontWeight: FontWeight.w700,
                           color: AppTheme.textPrimary)),
@@ -445,7 +445,7 @@ class _AffiliateOwnerScreenState extends ConsumerState<AffiliateOwnerScreen> {
                               strokeWidth: 2, color: Colors.white))
                       : const Icon(Icons.save_rounded, size: 18),
                   label: Text(_saving ? 'Menyimpan...' : 'Simpan Rekening',
-                      style: GoogleFonts.inter(
+                      style: GoogleFonts.plusJakartaSans(
                           fontSize: 13, fontWeight: FontWeight.w700)),
                 ),
               ),
@@ -465,7 +465,7 @@ class _AffiliateOwnerScreenState extends ConsumerState<AffiliateOwnerScreen> {
                       size: 16, color: AppTheme.primaryColor),
                   const SizedBox(width: 6),
                   Text('Cara Kerja Komisi Afiliasi',
-                      style: GoogleFonts.inter(
+                      style: GoogleFonts.plusJakartaSans(
                           fontSize: 13,
                           fontWeight: FontWeight.w700,
                           color: AppTheme.textPrimary)),
@@ -484,7 +484,7 @@ class _AffiliateOwnerScreenState extends ConsumerState<AffiliateOwnerScreen> {
               Text(
                 'Panduan lengkap (PDF) dan video tutorial: hubungi tim KasirGo '
                 'atau lihat di Portal Afiliasi (web admin).',
-                style: GoogleFonts.inter(
+                style: GoogleFonts.plusJakartaSans(
                     fontSize: 11,
                     height: 1.4,
                     color: AppTheme.textSecondary,
@@ -517,7 +517,7 @@ class _AffiliateOwnerScreenState extends ConsumerState<AffiliateOwnerScreen> {
               children: [
                 Text(
                   c['referred_outlet_name']?.toString() ?? 'Usaha baru',
-                  style: GoogleFonts.inter(
+                  style: GoogleFonts.plusJakartaSans(
                       fontSize: 13,
                       fontWeight: FontWeight.w700,
                       color: AppTheme.textPrimary),
@@ -525,7 +525,7 @@ class _AffiliateOwnerScreenState extends ConsumerState<AffiliateOwnerScreen> {
                 const SizedBox(height: 2),
                 Text(
                   _fmtDate(c['created_at']),
-                  style: GoogleFonts.inter(
+                  style: GoogleFonts.plusJakartaSans(
                       fontSize: 11, color: AppTheme.textSecondary),
                 ),
               ],
@@ -535,7 +535,7 @@ class _AffiliateOwnerScreenState extends ConsumerState<AffiliateOwnerScreen> {
             crossAxisAlignment: CrossAxisAlignment.end,
             children: [
               Text(_fmtRp(c['amount']),
-                  style: GoogleFonts.inter(
+                  style: GoogleFonts.plusJakartaSans(
                       fontSize: 13,
                       fontWeight: FontWeight.w800,
                       color: AppTheme.successColor)),
@@ -563,7 +563,7 @@ class _AffiliateOwnerScreenState extends ConsumerState<AffiliateOwnerScreen> {
               shape: BoxShape.circle,
             ),
             child: Text(no,
-                style: GoogleFonts.inter(
+                style: GoogleFonts.plusJakartaSans(
                     fontSize: 10,
                     fontWeight: FontWeight.w800,
                     color: Colors.white)),
@@ -571,7 +571,7 @@ class _AffiliateOwnerScreenState extends ConsumerState<AffiliateOwnerScreen> {
           const SizedBox(width: 8),
           Expanded(
             child: Text(text,
-                style: GoogleFonts.inter(
+                style: GoogleFonts.plusJakartaSans(
                     fontSize: 12,
                     height: 1.4,
                     color: AppTheme.textSecondary)),
@@ -596,12 +596,12 @@ class _AffiliateOwnerScreenState extends ConsumerState<AffiliateOwnerScreen> {
           Icon(icon, size: 18, color: color),
           const SizedBox(height: 6),
           Text(label,
-              style: GoogleFonts.inter(
+              style: GoogleFonts.plusJakartaSans(
                   fontSize: 10.5, color: AppTheme.textSecondary)),
           Text(value,
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
-              style: GoogleFonts.inter(
+              style: GoogleFonts.plusJakartaSans(
                   fontSize: 14,
                   fontWeight: FontWeight.w800,
                   color: AppTheme.textPrimary)),
@@ -618,7 +618,7 @@ class _AffiliateOwnerScreenState extends ConsumerState<AffiliateOwnerScreen> {
         borderRadius: BorderRadius.circular(20),
       ),
       child: Text(text,
-          style: GoogleFonts.inter(
+          style: GoogleFonts.plusJakartaSans(
               fontSize: 10, fontWeight: FontWeight.w700, color: color)),
     );
   }

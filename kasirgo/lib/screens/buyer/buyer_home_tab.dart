@@ -230,7 +230,7 @@ class _BuyerHomeTabState extends ConsumerState<BuyerHomeTab> {
           children: [
             Text(
               'Masukkan koordinat lokasimu. Contoh: -6.2000 dan 106.8000.',
-              style: GoogleFonts.inter(
+              style: GoogleFonts.plusJakartaSans(
                 fontSize: 12.5,
                 color: AppTheme.textSecondary,
               ),
@@ -355,7 +355,7 @@ class _BuyerHomeTabState extends ConsumerState<BuyerHomeTab> {
               Expanded(
                 child: Text(
                   'Posisi Live',
-                  style: GoogleFonts.inter(
+                  style: GoogleFonts.plusJakartaSans(
                     fontSize: 14,
                     fontWeight: FontWeight.w700,
                     color: AppTheme.textPrimary,
@@ -373,7 +373,7 @@ class _BuyerHomeTabState extends ConsumerState<BuyerHomeTab> {
               'Lat ${live.latitude.toStringAsFixed(5)}, '
               'Lng ${live.longitude.toStringAsFixed(5)}'
               '${live.updatedAt != null ? '\nDiperbarui ${Formatters.dateTime(live.updatedAt!)}' : ''}',
-              style: GoogleFonts.inter(
+              style: GoogleFonts.plusJakartaSans(
                 fontSize: 12.5,
                 color: AppTheme.textSecondary,
               ),
@@ -383,7 +383,7 @@ class _BuyerHomeTabState extends ConsumerState<BuyerHomeTab> {
               o.isMobile
                   ? 'Penjual belum membagikan posisi terkini.'
                   : 'Posisi toko belum dibagikan.',
-              style: GoogleFonts.inter(
+              style: GoogleFonts.plusJakartaSans(
                 fontSize: 12.5,
                 color: AppTheme.textSecondary,
               ),
@@ -400,7 +400,7 @@ class _BuyerHomeTabState extends ConsumerState<BuyerHomeTab> {
                 ),
                 child: Text(
                   'Nomor antreanmu: ${_myQueue!.number} (${_myQueue!.status})',
-                  style: GoogleFonts.inter(
+                  style: GoogleFonts.plusJakartaSans(
                     fontSize: 13,
                     fontWeight: FontWeight.w700,
                     color: AppTheme.primaryColor,
@@ -512,7 +512,7 @@ class _BuyerHomeTabState extends ConsumerState<BuyerHomeTab> {
         children: [
           Text(
             'Halo, ${widget.customer.displayName}!',
-            style: GoogleFonts.inter(
+            style: GoogleFonts.plusJakartaSans(
               fontSize: 20,
               fontWeight: FontWeight.w700,
               color: Colors.white,
@@ -521,7 +521,7 @@ class _BuyerHomeTabState extends ConsumerState<BuyerHomeTab> {
           const SizedBox(height: 6),
           Text(
             'Temukan warung & produk di sekitarmu. Pesan, bayar, ambil atau diantar.',
-            style: GoogleFonts.inter(
+            style: GoogleFonts.plusJakartaSans(
               fontSize: 13,
               color: Colors.white.withValues(alpha: 0.9),
             ),
@@ -587,7 +587,7 @@ class _BuyerHomeTabState extends ConsumerState<BuyerHomeTab> {
         child: Center(
           child: Text(
             label,
-            style: GoogleFonts.inter(
+            style: GoogleFonts.plusJakartaSans(
               fontSize: 12.5,
               fontWeight: FontWeight.w600,
               color: active ? Colors.white : AppTheme.primaryColor,
@@ -631,7 +631,7 @@ class _BuyerHomeTabState extends ConsumerState<BuyerHomeTab> {
               const SizedBox(height: 10),
               Text(
                 'Produk tidak ditemukan',
-                style: GoogleFonts.inter(
+                style: GoogleFonts.plusJakartaSans(
                   fontWeight: FontWeight.w700,
                   fontSize: 15,
                 ),
@@ -640,7 +640,7 @@ class _BuyerHomeTabState extends ConsumerState<BuyerHomeTab> {
               Text(
                 'Coba kata kunci lain, atau aktifkan lokasi agar hasil lebih dekat.',
                 textAlign: TextAlign.center,
-                style: GoogleFonts.inter(
+                style: GoogleFonts.plusJakartaSans(
                   fontSize: 12.5,
                   color: AppTheme.textSecondary,
                 ),
@@ -678,7 +678,7 @@ class _BuyerHomeTabState extends ConsumerState<BuyerHomeTab> {
                 r.productName.isNotEmpty
                     ? r.productName[0].toUpperCase()
                     : '?',
-                style: GoogleFonts.inter(
+                style: GoogleFonts.plusJakartaSans(
                   fontSize: 22,
                   fontWeight: FontWeight.w800,
                   color: AppTheme.primaryColor.withValues(alpha: 0.5),
@@ -695,7 +695,7 @@ class _BuyerHomeTabState extends ConsumerState<BuyerHomeTab> {
                   r.productName,
                   maxLines: 2,
                   overflow: TextOverflow.ellipsis,
-                  style: GoogleFonts.inter(
+                  style: GoogleFonts.plusJakartaSans(
                     fontSize: 14,
                     fontWeight: FontWeight.w700,
                     color: AppTheme.textPrimary,
@@ -706,7 +706,7 @@ class _BuyerHomeTabState extends ConsumerState<BuyerHomeTab> {
                   r.outletName,
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
-                  style: GoogleFonts.inter(
+                  style: GoogleFonts.plusJakartaSans(
                     fontSize: 12,
                     color: AppTheme.textSecondary,
                   ),
@@ -714,7 +714,7 @@ class _BuyerHomeTabState extends ConsumerState<BuyerHomeTab> {
                 const SizedBox(height: 6),
                 Text(
                   Formatters.currency(r.price),
-                  style: GoogleFonts.inter(
+                  style: GoogleFonts.plusJakartaSans(
                     fontSize: 13.5,
                     fontWeight: FontWeight.w800,
                     color: AppTheme.primaryColor,
@@ -758,7 +758,7 @@ class _BuyerHomeTabState extends ConsumerState<BuyerHomeTab> {
                     padding: const EdgeInsets.only(bottom: 4),
                     child: Text(
                       'x$qty',
-                      style: GoogleFonts.inter(
+                      style: GoogleFonts.plusJakartaSans(
                         fontSize: 12,
                         fontWeight: FontWeight.w700,
                         color: AppTheme.primaryColor,
@@ -803,7 +803,7 @@ class _BuyerHomeTabState extends ConsumerState<BuyerHomeTab> {
                   loc == null
                       ? (_locating ? 'Mendeteksi lokasi...' : 'Lokasi belum diatur')
                       : 'Lokasi aktif',
-                  style: GoogleFonts.inter(
+                  style: GoogleFonts.plusJakartaSans(
                     fontSize: 14,
                     fontWeight: FontWeight.w700,
                     color: AppTheme.textPrimary,
@@ -816,7 +816,7 @@ class _BuyerHomeTabState extends ConsumerState<BuyerHomeTab> {
                           ? 'Mendeteksi otomatis, mohon tunggu...'
                           : 'Lokasi aktif otomatis. Isi manual bila perlu.')
                       : '${loc.lat.toStringAsFixed(4)}, ${loc.lng.toStringAsFixed(4)}',
-                  style: GoogleFonts.inter(
+                  style: GoogleFonts.plusJakartaSans(
                     fontSize: 12,
                     color: AppTheme.textSecondary,
                   ),
@@ -873,7 +873,7 @@ class _BuyerHomeTabState extends ConsumerState<BuyerHomeTab> {
         Text(
           'Sebaran skematis berdasarkan jarak (bukan arah sebenarnya).',
           textAlign: TextAlign.center,
-          style: GoogleFonts.inter(
+          style: GoogleFonts.plusJakartaSans(
             fontSize: 11,
             color: AppTheme.textSecondary,
           ),
@@ -911,7 +911,7 @@ class _BuyerHomeTabState extends ConsumerState<BuyerHomeTab> {
           const SizedBox(height: 10),
           Text(
             _locating ? 'Mendeteksi lokasimu...' : 'Radar Hyper-Local',
-            style: GoogleFonts.inter(fontWeight: FontWeight.w700, fontSize: 15),
+            style: GoogleFonts.plusJakartaSans(fontWeight: FontWeight.w700, fontSize: 15),
           ),
           const SizedBox(height: 4),
           Text(
@@ -919,7 +919,7 @@ class _BuyerHomeTabState extends ConsumerState<BuyerHomeTab> {
                 ? 'Mohon izinkan akses lokasi bila diminta browser.'
                 : 'Aktifkan lokasi untuk menemukan warung, gerobak, dan status buka/tutup dalam radius 1-3 km.',
             textAlign: TextAlign.center,
-            style: GoogleFonts.inter(fontSize: 12.5, color: AppTheme.textSecondary),
+            style: GoogleFonts.plusJakartaSans(fontSize: 12.5, color: AppTheme.textSecondary),
           ),
           const SizedBox(height: 14),
           AppButton(
@@ -949,13 +949,13 @@ class _BuyerHomeTabState extends ConsumerState<BuyerHomeTab> {
           const SizedBox(height: 10),
           Text(
             'Belum ada warung terdeteksi',
-            style: GoogleFonts.inter(fontWeight: FontWeight.w700, fontSize: 15),
+            style: GoogleFonts.plusJakartaSans(fontWeight: FontWeight.w700, fontSize: 15),
           ),
           const SizedBox(height: 4),
           Text(
             'Coba perbarui lokasi atau perluas area pencarian.',
             textAlign: TextAlign.center,
-            style: GoogleFonts.inter(fontSize: 12.5, color: AppTheme.textSecondary),
+            style: GoogleFonts.plusJakartaSans(fontSize: 12.5, color: AppTheme.textSecondary),
           ),
         ],
       ),
@@ -993,7 +993,7 @@ class _BuyerHomeTabState extends ConsumerState<BuyerHomeTab> {
                   children: [
                     Text(
                       o.name,
-                      style: GoogleFonts.inter(
+                      style: GoogleFonts.plusJakartaSans(
                         fontSize: 15,
                         fontWeight: FontWeight.w700,
                         color: AppTheme.textPrimary,
@@ -1002,7 +1002,7 @@ class _BuyerHomeTabState extends ConsumerState<BuyerHomeTab> {
                     const SizedBox(height: 2),
                     Text(
                       [o.type, o.distanceLabel].whereType<String>().join(' - '),
-                      style: GoogleFonts.inter(
+                      style: GoogleFonts.plusJakartaSans(
                         fontSize: 12,
                         color: AppTheme.textSecondary,
                       ),
@@ -1017,7 +1017,7 @@ class _BuyerHomeTabState extends ConsumerState<BuyerHomeTab> {
             const SizedBox(height: 10),
             Text(
               o.address!,
-              style: GoogleFonts.inter(
+              style: GoogleFonts.plusJakartaSans(
                 fontSize: 12,
                 color: AppTheme.textSecondary,
               ),
@@ -1043,7 +1043,7 @@ class _BuyerHomeTabState extends ConsumerState<BuyerHomeTab> {
             alignment: Alignment.centerRight,
             child: Text(
               'Lihat Katalog',
-              style: GoogleFonts.inter(
+              style: GoogleFonts.plusJakartaSans(
                 fontSize: 13,
                 fontWeight: FontWeight.w700,
                 color: AppTheme.primaryColor,
@@ -1077,7 +1077,7 @@ class _BuyerHomeTabState extends ConsumerState<BuyerHomeTab> {
               children: [
                 Text(
                   o.name,
-                  style: GoogleFonts.inter(
+                  style: GoogleFonts.plusJakartaSans(
                     fontSize: 17,
                     fontWeight: FontWeight.w700,
                     color: AppTheme.textPrimary,
@@ -1085,7 +1085,7 @@ class _BuyerHomeTabState extends ConsumerState<BuyerHomeTab> {
                 ),
                 Text(
                   [o.type, o.distanceLabel].whereType<String>().join(' - '),
-                  style: GoogleFonts.inter(
+                  style: GoogleFonts.plusJakartaSans(
                     fontSize: 12,
                     color: AppTheme.textSecondary,
                   ),
@@ -1117,7 +1117,7 @@ class _BuyerHomeTabState extends ConsumerState<BuyerHomeTab> {
               const SizedBox(height: 10),
               Text(
                 'Belum ada produk dipublikasikan',
-                style: GoogleFonts.inter(
+                style: GoogleFonts.plusJakartaSans(
                   fontWeight: FontWeight.w700,
                   fontSize: 15,
                 ),
@@ -1126,7 +1126,7 @@ class _BuyerHomeTabState extends ConsumerState<BuyerHomeTab> {
               Text(
                 'Warung ini belum menaruh produknya di katalog online.',
                 textAlign: TextAlign.center,
-                style: GoogleFonts.inter(
+                style: GoogleFonts.plusJakartaSans(
                   fontSize: 12.5,
                   color: AppTheme.textSecondary,
                 ),
@@ -1184,7 +1184,7 @@ class _BuyerHomeTabState extends ConsumerState<BuyerHomeTab> {
                     '${cart.itemCount} item - ${cart.outletName}',
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
-                    style: GoogleFonts.inter(
+                    style: GoogleFonts.plusJakartaSans(
                       fontSize: 13,
                       fontWeight: FontWeight.w700,
                       color: AppTheme.textPrimary,
@@ -1192,7 +1192,7 @@ class _BuyerHomeTabState extends ConsumerState<BuyerHomeTab> {
                   ),
                   Text(
                     Formatters.currency(cart.subtotal),
-                    style: GoogleFonts.inter(
+                    style: GoogleFonts.plusJakartaSans(
                       fontSize: 12.5,
                       color: AppTheme.textSecondary,
                     ),
@@ -1228,7 +1228,7 @@ class _StatusBadge extends StatelessWidget {
       ),
       child: Text(
         open ? 'Buka' : 'Tutup',
-        style: GoogleFonts.inter(
+        style: GoogleFonts.plusJakartaSans(
           fontSize: 11,
           fontWeight: FontWeight.w700,
           color: color,
@@ -1259,7 +1259,7 @@ class _MetaChip extends StatelessWidget {
           const SizedBox(width: 5),
           Text(
             label,
-            style: GoogleFonts.inter(
+            style: GoogleFonts.plusJakartaSans(
               fontSize: 11.5,
               color: AppTheme.textSecondary,
             ),
@@ -1306,7 +1306,7 @@ class _ProductCard extends StatelessWidget {
                       product.name.isNotEmpty
                           ? product.name[0].toUpperCase()
                           : '?',
-                      style: GoogleFonts.inter(
+                      style: GoogleFonts.plusJakartaSans(
                         fontSize: 32,
                         fontWeight: FontWeight.w800,
                         color: AppTheme.primaryColor.withValues(alpha: 0.35),
@@ -1326,7 +1326,7 @@ class _ProductCard extends StatelessWidget {
                         ),
                         child: Text(
                           '$qty',
-                          style: GoogleFonts.inter(
+                          style: GoogleFonts.plusJakartaSans(
                             fontSize: 11,
                             fontWeight: FontWeight.w700,
                             color: Colors.white,
@@ -1349,7 +1349,7 @@ class _ProductCard extends StatelessWidget {
                     product.name,
                     maxLines: 2,
                     overflow: TextOverflow.ellipsis,
-                    style: GoogleFonts.inter(
+                    style: GoogleFonts.plusJakartaSans(
                       fontSize: 13,
                       fontWeight: FontWeight.w700,
                       color: AppTheme.textPrimary,
@@ -1358,7 +1358,7 @@ class _ProductCard extends StatelessWidget {
                   const SizedBox(height: 4),
                   Text(
                     Formatters.currency(product.price),
-                    style: GoogleFonts.inter(
+                    style: GoogleFonts.plusJakartaSans(
                       fontSize: 13,
                       fontWeight: FontWeight.w800,
                       color: AppTheme.primaryColor,
@@ -1367,7 +1367,7 @@ class _ProductCard extends StatelessWidget {
                   const Spacer(),
                   Text(
                     isOut ? 'Stok habis' : 'Stok ${product.stock}',
-                    style: GoogleFonts.inter(
+                    style: GoogleFonts.plusJakartaSans(
                       fontSize: 11,
                       color: isOut ? AppTheme.errorColor : AppTheme.textSecondary,
                     ),
@@ -1443,7 +1443,7 @@ class _CartSheet extends ConsumerWidget {
                     children: [
                       Text(
                         'Keranjang',
-                        style: GoogleFonts.inter(
+                        style: GoogleFonts.plusJakartaSans(
                           fontSize: 18,
                           fontWeight: FontWeight.w700,
                           color: AppTheme.textPrimary,
@@ -1451,7 +1451,7 @@ class _CartSheet extends ConsumerWidget {
                       ),
                       Text(
                         cart.outletName,
-                        style: GoogleFonts.inter(
+                        style: GoogleFonts.plusJakartaSans(
                           fontSize: 12.5,
                           color: AppTheme.textSecondary,
                         ),
@@ -1472,7 +1472,7 @@ class _CartSheet extends ConsumerWidget {
                 child: Center(
                   child: Text(
                     'Keranjang kosong',
-                    style: GoogleFonts.inter(
+                    style: GoogleFonts.plusJakartaSans(
                       color: AppTheme.textSecondary,
                     ),
                   ),
@@ -1498,7 +1498,7 @@ class _CartSheet extends ConsumerWidget {
                               children: [
                                 Text(
                                   item.name,
-                                  style: GoogleFonts.inter(
+                                  style: GoogleFonts.plusJakartaSans(
                                     fontSize: 14,
                                     fontWeight: FontWeight.w600,
                                     color: AppTheme.textPrimary,
@@ -1506,7 +1506,7 @@ class _CartSheet extends ConsumerWidget {
                                 ),
                                 Text(
                                   Formatters.currency(item.price),
-                                  style: GoogleFonts.inter(
+                                  style: GoogleFonts.plusJakartaSans(
                                     fontSize: 12,
                                     color: AppTheme.textSecondary,
                                   ),
@@ -1531,7 +1531,7 @@ class _CartSheet extends ConsumerWidget {
                 children: [
                   Text(
                     'Subtotal',
-                    style: GoogleFonts.inter(
+                    style: GoogleFonts.plusJakartaSans(
                       fontSize: 14,
                       color: AppTheme.textSecondary,
                     ),
@@ -1539,7 +1539,7 @@ class _CartSheet extends ConsumerWidget {
                   const Spacer(),
                   Text(
                     Formatters.currency(cart.subtotal),
-                    style: GoogleFonts.inter(
+                    style: GoogleFonts.plusJakartaSans(
                       fontSize: 16,
                       fontWeight: FontWeight.w800,
                       color: AppTheme.textPrimary,
@@ -1550,7 +1550,7 @@ class _CartSheet extends ConsumerWidget {
               const SizedBox(height: 6),
               Text(
                 'Satu toko per transaksi. Ongkir dihitung saat checkout.',
-                style: GoogleFonts.inter(
+                style: GoogleFonts.plusJakartaSans(
                   fontSize: 11.5,
                   color: AppTheme.textSecondary,
                 ),
@@ -1610,7 +1610,7 @@ class _QtyStepper extends StatelessWidget {
             child: Text(
               '$qty',
               textAlign: TextAlign.center,
-              style: GoogleFonts.inter(
+              style: GoogleFonts.plusJakartaSans(
                 fontSize: 14,
                 fontWeight: FontWeight.w700,
                 color: AppTheme.textPrimary,

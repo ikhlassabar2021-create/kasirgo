@@ -158,13 +158,13 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                     Text(
                       'Daftar KasirGo',
                       textAlign: TextAlign.center,
-                      style: GoogleFonts.inter(fontSize: 26, fontWeight: FontWeight.w800, letterSpacing: -0.6),
+                      style: GoogleFonts.plusJakartaSans(fontSize: 26, fontWeight: FontWeight.w800, letterSpacing: -0.6),
                     ),
                     const SizedBox(height: 6),
                     Text(
                       'Gratis selamanya untuk UMKM Indonesia',
                       textAlign: TextAlign.center,
-                      style: GoogleFonts.inter(color: AppTheme.textSecondary, fontSize: 13),
+                      style: GoogleFonts.plusJakartaSans(color: AppTheme.textSecondary, fontSize: 13),
                     ),
                     const SizedBox(height: 24),
                     GlassCard(
@@ -220,7 +220,7 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                           const SizedBox(height: 8),
                           Text(
                             'Data KYC Wajib',
-                            style: GoogleFonts.inter(fontSize: 14, fontWeight: FontWeight.w700, color: AppTheme.textPrimary),
+                            style: GoogleFonts.plusJakartaSans(fontSize: 14, fontWeight: FontWeight.w700, color: AppTheme.textPrimary),
                           ),
                           const SizedBox(height: 8),
                           TextFormField(
@@ -309,7 +309,7 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                                       )
                                     : Text(
                                         'Daftar',
-                                        style: GoogleFonts.inter(fontSize: 16, fontWeight: FontWeight.w800),
+                                        style: GoogleFonts.plusJakartaSans(fontSize: 16, fontWeight: FontWeight.w800),
                                       ),
                               ),
                             ),
@@ -320,7 +320,7 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                               const Expanded(child: Divider(color: AppTheme.borderColor)),
                               Padding(
                                 padding: const EdgeInsets.symmetric(horizontal: 12),
-                                child: Text('atau', style: GoogleFonts.inter(color: AppTheme.textSecondary, fontSize: 12)),
+                                child: Text('atau', style: GoogleFonts.plusJakartaSans(color: AppTheme.textSecondary, fontSize: 12)),
                               ),
                               const Expanded(child: Divider(color: AppTheme.borderColor)),
                             ],
@@ -337,7 +337,7 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                               icon: const Icon(Icons.g_mobiledata, size: 28, color: AppTheme.primaryColor),
                               label: Text(
                                 'Daftar dengan Google',
-                                style: GoogleFonts.inter(fontSize: 14, fontWeight: FontWeight.w600, color: AppTheme.textPrimary),
+                                style: GoogleFonts.plusJakartaSans(fontSize: 14, fontWeight: FontWeight.w600, color: AppTheme.textPrimary),
                               ),
                             ),
                           ),
@@ -346,7 +346,7 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                             onPressed: () => context.go('/login'),
                             child: Text(
                               'Sudah punya akun? Masuk',
-                              style: GoogleFonts.inter(color: AppTheme.accentColor, fontWeight: FontWeight.w600),
+                              style: GoogleFonts.plusJakartaSans(color: AppTheme.accentColor, fontWeight: FontWeight.w600),
                             ),
                           ),
                         ],

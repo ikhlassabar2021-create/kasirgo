@@ -97,7 +97,7 @@ class _ReferralScreenState extends ConsumerState<ReferralScreen> {
       backgroundColor: AppTheme.backgroundColor,
       appBar: AppBar(
         title: Text('Program Referral',
-            style: GoogleFonts.inter(fontWeight: FontWeight.w700)),
+            style: GoogleFonts.plusJakartaSans(fontWeight: FontWeight.w700)),
         backgroundColor: AppTheme.surfaceColor,
         foregroundColor: AppTheme.textPrimary,
         elevation: 0,
@@ -162,7 +162,7 @@ class _ReferralScreenState extends ConsumerState<ReferralScreen> {
       child: Column(
         children: [
           Text(value,
-              style: GoogleFonts.inter(
+              style: GoogleFonts.plusJakartaSans(
                   fontSize: 15,
                   fontWeight: FontWeight.w800,
                   color: Colors.white)),
@@ -189,7 +189,7 @@ class _ReferralScreenState extends ConsumerState<ReferralScreen> {
               size: 44, color: AppTheme.primaryColor),
           const SizedBox(height: 12),
           Text('Belum Ada Kode Referral',
-              style: GoogleFonts.inter(
+              style: GoogleFonts.plusJakartaSans(
                   fontSize: 15, fontWeight: FontWeight.w800)),
           const SizedBox(height: 6),
           const Text(
@@ -239,7 +239,7 @@ class _ReferralScreenState extends ConsumerState<ReferralScreen> {
                 ),
                 child: Text(
                   kode,
-                  style: GoogleFonts.inter(
+                  style: GoogleFonts.plusJakartaSans(
                       fontSize: 14,
                       fontWeight: FontWeight.w800,
                       letterSpacing: 1.2,
@@ -381,7 +381,7 @@ class _ReferralFormSheetState extends State<_ReferralFormSheet> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text('Kode Referral Baru',
-                style: GoogleFonts.inter(
+                style: GoogleFonts.plusJakartaSans(
                     fontSize: 17, fontWeight: FontWeight.w800)),
             const SizedBox(height: 16),
             TextField(
