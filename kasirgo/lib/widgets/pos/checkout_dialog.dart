@@ -1,5 +1,4 @@
 import 'dart:async';
-import 'dart:ui';
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -257,17 +256,13 @@ class _CheckoutDialogState extends State<CheckoutDialog> {
       backgroundColor: Colors.transparent,
       elevation: 0,
       insetPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 24),
-      child: ClipRRect(
-        borderRadius: BorderRadius.circular(24),
-        child: BackdropFilter(
-          filter: ImageFilter.blur(sigmaX: 20, sigmaY: 20),
-          child: Container(
-            decoration: BoxDecoration(
-              color: AppTheme.surfaceColor,
-              borderRadius: BorderRadius.circular(24),
-              border: Border.all(color: AppTheme.borderColor),
-            ),
-            child: ConstrainedBox(
+      child: Container(
+        decoration: BoxDecoration(
+          color: AppTheme.surfaceColor,
+          borderRadius: BorderRadius.circular(24),
+          border: Border.all(color: AppTheme.borderColor),
+        ),
+        child: ConstrainedBox(
               constraints: const BoxConstraints(maxWidth: 460, maxHeight: 720),
               child: Column(
                 mainAxisSize: MainAxisSize.min,
@@ -372,8 +367,6 @@ class _CheckoutDialogState extends State<CheckoutDialog> {
               ),
             ),
           ),
-        ),
-      ),
     );
   }
 

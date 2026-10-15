@@ -1,5 +1,4 @@
 import 'dart:async';
-import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:google_fonts/google_fonts.dart';
@@ -1004,17 +1003,13 @@ class _CustomerCheckoutDialogState extends State<CustomerCheckoutDialog> {
       backgroundColor: Colors.transparent,
       elevation: 0,
       insetPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 24),
-      child: ClipRRect(
-        borderRadius: BorderRadius.circular(24),
-        child: BackdropFilter(
-          filter: ImageFilter.blur(sigmaX: 20, sigmaY: 20),
-          child: Container(
-            decoration: BoxDecoration(
-              color: AppTheme.surfaceColor,
-              borderRadius: BorderRadius.circular(24),
-              border: Border.all(color: AppTheme.borderColor),
-            ),
-            child: ConstrainedBox(
+      child: Container(
+        decoration: BoxDecoration(
+          color: AppTheme.surfaceColor,
+          borderRadius: BorderRadius.circular(24),
+          border: Border.all(color: AppTheme.borderColor),
+        ),
+        child: ConstrainedBox(
               constraints: const BoxConstraints(maxWidth: 460, maxHeight: 720),
               child: Column(
                 mainAxisSize: MainAxisSize.min,
@@ -1141,8 +1136,6 @@ class _CustomerCheckoutDialogState extends State<CustomerCheckoutDialog> {
               ),
             ),
           ),
-        ),
-      ),
     );
   }
 
@@ -1435,40 +1428,34 @@ class _SendingOverlay extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Positioned.fill(
-      child: ClipRRect(
-        child: BackdropFilter(
-          filter: ImageFilter.blur(sigmaX: 6, sigmaY: 6),
+      child: Container(
+        color: Colors.black.withValues(alpha: 0.45),
+        child: Center(
           child: Container(
-            color: Colors.black.withValues(alpha: 0.45),
-            child: Center(
-              child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 22, vertical: 18),
-                decoration: BoxDecoration(
-                  color: AppTheme.surfaceColor,
-                  borderRadius: BorderRadius.circular(18),
-                  border: Border.all(
-                      color: AppTheme.accentColor.withValues(alpha: 0.3)),
+            padding: const EdgeInsets.symmetric(horizontal: 22, vertical: 18),
+            decoration: BoxDecoration(
+              color: AppTheme.surfaceColor,
+              borderRadius: BorderRadius.circular(18),
+              border: Border.all(color: AppTheme.borderColor),
+            ),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const SizedBox(
+                  width: 26,
+                  height: 26,
+                  child: CircularProgressIndicator(
+                      strokeWidth: 2.4, color: AppTheme.accentColor),
                 ),
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    const SizedBox(
-                      width: 26,
-                      height: 26,
-                      child: CircularProgressIndicator(
-                          strokeWidth: 2.4, color: AppTheme.accentColor),
-                    ),
-                    const SizedBox(height: 12),
-                    Text(
-                      'Mengirim pesanan...',
-                      style: GoogleFonts.plusJakartaSans(
-                          color: AppTheme.textPrimary,
-                          fontSize: 13,
-                          fontWeight: FontWeight.w600),
-                    ),
-                  ],
+                const SizedBox(height: 12),
+                Text(
+                  'Mengirim pesanan...',
+                  style: GoogleFonts.plusJakartaSans(
+                      color: AppTheme.textPrimary,
+                      fontSize: 13,
+                      fontWeight: FontWeight.w600),
                 ),
-              ),
+              ],
             ),
           ),
         ),

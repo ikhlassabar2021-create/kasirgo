@@ -1,4 +1,3 @@
-import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
@@ -650,40 +649,35 @@ class _PosScreenState extends ConsumerState<PosScreen> {
       children: [
         Padding(
           padding: const EdgeInsets.fromLTRB(12, 10, 12, 6),
-          child: ClipRRect(
-            borderRadius: BorderRadius.circular(14),
-            child: BackdropFilter(
-              filter: ImageFilter.blur(sigmaX: 12, sigmaY: 12),
-              child: TextField(                controller: _searchController,
-                style: const TextStyle(color: AppTheme.textPrimary, fontSize: 14),
-                onChanged: (v) => setState(() => _searchQuery = v),
-                decoration: InputDecoration(
-                  hintText: 'Cari produk / barcode...',
-                  filled: true,
-                  fillColor: AppTheme.surfaceColor.withValues(alpha: 0.7),
-                  prefixIcon: const Icon(Icons.search_rounded, color: AppTheme.textSecondary),
-                  suffixIcon: _searchQuery.isNotEmpty
-                      ? IconButton(
-                          icon: const Icon(Icons.clear_rounded, color: AppTheme.textSecondary),
-                          onPressed: () {
-                            _searchController.clear();
-                            setState(() => _searchQuery = '');
-                          },
-                        )
-                      : null,
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(14),
-                    borderSide: BorderSide(color: Colors.white.withValues(alpha: 0.07)),
-                  ),
-                  enabledBorder: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(14),
-                    borderSide: BorderSide(color: Colors.white.withValues(alpha: 0.07)),
-                  ),
-                  focusedBorder: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(14),
-                    borderSide: const BorderSide(color: AppTheme.accentColor, width: 1.5),
-                  ),
-                ),
+          child: TextField(
+            controller: _searchController,
+            style: const TextStyle(color: AppTheme.textPrimary, fontSize: 14),
+            onChanged: (v) => setState(() => _searchQuery = v),
+            decoration: InputDecoration(
+              hintText: 'Cari produk / barcode...',
+              filled: true,
+              fillColor: AppTheme.surfaceColor,
+              prefixIcon: const Icon(Icons.search_rounded, color: AppTheme.textSecondary),
+              suffixIcon: _searchQuery.isNotEmpty
+                  ? IconButton(
+                      icon: const Icon(Icons.clear_rounded, color: AppTheme.textSecondary),
+                      onPressed: () {
+                        _searchController.clear();
+                        setState(() => _searchQuery = '');
+                      },
+                    )
+                  : null,
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(14),
+                borderSide: const BorderSide(color: AppTheme.borderColor),
+              ),
+              enabledBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(14),
+                borderSide: const BorderSide(color: AppTheme.borderColor),
+              ),
+              focusedBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(14),
+                borderSide: const BorderSide(color: AppTheme.accentColor, width: 1.5),
               ),
             ),
           ),
@@ -839,35 +833,30 @@ class _SyncingOverlay extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Positioned.fill(
-      child: ClipRRect(
-        child: BackdropFilter(
-          filter: ImageFilter.blur(sigmaX: 6, sigmaY: 6),
+      child: Container(
+        color: Colors.black.withValues(alpha: 0.45),
+        child: Center(
           child: Container(
-            color: Colors.black.withValues(alpha: 0.45),
-            child: Center(
-              child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 22, vertical: 18),
-                decoration: BoxDecoration(
-                  color: AppTheme.surfaceColor.withValues(alpha: 0.95),
-                  borderRadius: BorderRadius.circular(18),
-                  border: Border.all(color: AppTheme.accentColor.withValues(alpha: 0.3)),
+            padding: const EdgeInsets.symmetric(horizontal: 22, vertical: 18),
+            decoration: BoxDecoration(
+              color: AppTheme.surfaceColor,
+              borderRadius: BorderRadius.circular(18),
+              border: Border.all(color: AppTheme.borderColor),
+            ),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const SizedBox(
+                  width: 26,
+                  height: 26,
+                  child: CircularProgressIndicator(strokeWidth: 2.4, color: AppTheme.accentColor),
                 ),
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    const SizedBox(
-                      width: 26,
-                      height: 26,
-                      child: CircularProgressIndicator(strokeWidth: 2.4, color: AppTheme.accentColor),
-                    ),
-                    const SizedBox(height: 12),
-                    Text(
-                      'Memproses pembayaran...',
-                      style: GoogleFonts.plusJakartaSans(color: AppTheme.textPrimary, fontSize: 13, fontWeight: FontWeight.w600),
-                    ),
-                  ],
+                const SizedBox(height: 12),
+                Text(
+                  'Memproses pembayaran...',
+                  style: GoogleFonts.plusJakartaSans(color: AppTheme.textPrimary, fontSize: 13, fontWeight: FontWeight.w600),
                 ),
-              ),
+              ],
             ),
           ),
         ),

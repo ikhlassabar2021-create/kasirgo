@@ -1,4 +1,3 @@
-import 'dart:ui';
 import 'package:flutter/material.dart';
 import '../../config/app_theme.dart';
 
@@ -7,6 +6,8 @@ class GlassCard extends StatelessWidget {
   final EdgeInsetsGeometry? padding;
   final EdgeInsetsGeometry? margin;
   final double borderRadius;
+  // ponytail: blur tidak lagi dipakai (kartu solid v3). Dipertahankan agar
+  // call site lama tetap kompilasi; hapus saat semua pemanggil dibersihkan.
   final double blur;
   final Color? borderColor;
   final Color? backgroundColor;
@@ -29,19 +30,13 @@ class GlassCard extends StatelessWidget {
     Widget content = Container(
       padding: padding,
       decoration: BoxDecoration(
-        color: backgroundColor ?? AppTheme.surfaceColor.withValues(alpha: 0.95),
+        color: backgroundColor ?? AppTheme.surfaceColor,
         borderRadius: BorderRadius.circular(borderRadius),
         border: Border.all(
           color: borderColor ?? AppTheme.borderColor,
           width: 1,
         ),
-        boxShadow: [
-          BoxShadow(
-            color: AppTheme.textPrimary.withValues(alpha: 0.04),
-            blurRadius: 10,
-            offset: const Offset(0, 4),
-          ),
-        ],
+        boxShadow: AppTheme.shadowSoft,
       ),
       child: child,
     );
@@ -57,18 +52,10 @@ class GlassCard extends StatelessWidget {
       );
     }
 
-    Widget glass = ClipRRect(
-      borderRadius: BorderRadius.circular(borderRadius),
-      child: BackdropFilter(
-        filter: ImageFilter.blur(sigmaX: blur, sigmaY: blur),
-        child: content,
-      ),
-    );
-
     if (margin != null) {
-      glass = Padding(padding: margin!, child: glass);
+      content = Padding(padding: margin!, child: content);
     }
 
-    return glass;
+    return content;
   }
 }
