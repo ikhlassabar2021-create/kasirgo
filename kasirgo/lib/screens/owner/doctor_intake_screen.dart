@@ -7,6 +7,7 @@ import '../../providers/auth_provider.dart';
 import '../../services/business_doctor_service.dart';
 import '../../widgets/common/app_button.dart';
 import '../../widgets/common/centennial_background.dart';
+import '../../utils/error_messages.dart';
 
 class DoctorIntakeScreen extends ConsumerStatefulWidget {
   const DoctorIntakeScreen({super.key, this.service});
@@ -171,7 +172,7 @@ class _DoctorIntakeScreenState extends ConsumerState<DoctorIntakeScreen> {
       if (!mounted) return;
       setState(() => _saving = false);
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Gagal menyimpan: $e')),
+        SnackBar(content: Text(friendlyError(e, fallback: 'Gagal menyimpan. Silakan coba lagi.'))),
       );
     }
   }

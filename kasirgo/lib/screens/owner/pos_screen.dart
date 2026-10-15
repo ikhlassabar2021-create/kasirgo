@@ -20,6 +20,7 @@ import '../../models/shift.dart';
 import '../../widgets/pos/cart_panel.dart';
 import '../../widgets/pos/checkout_dialog.dart';
 import '../../widgets/pos/checkout_success_dialog.dart';
+import '../../utils/error_messages.dart';
 
 class PosScreen extends ConsumerStatefulWidget {
   final bool embedded;
@@ -509,7 +510,7 @@ class _PosScreenState extends ConsumerState<PosScreen> {
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error: $e'), backgroundColor: AppTheme.errorColor),
+          SnackBar(content: Text(friendlyError(e)), backgroundColor: AppTheme.errorColor),
         );
       }
     } finally {
@@ -530,7 +531,7 @@ class _PosScreenState extends ConsumerState<PosScreen> {
           child: Padding(
             padding: const EdgeInsets.all(24),
             child: Text(
-              'Gagal memuat produk: $err',
+              friendlyError(err, fallback: 'Gagal memuat produk. Silakan coba lagi.'),
               textAlign: TextAlign.center,
               style: const TextStyle(color: AppTheme.errorColor),
             ),

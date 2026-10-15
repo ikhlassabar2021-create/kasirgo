@@ -9,6 +9,7 @@ import '../../providers/auth_provider.dart';
 import '../../services/b2b_service.dart';
 import '../../services/supabase_service.dart';
 import '../../utils/formatters.dart';
+import '../../utils/error_messages.dart';
 
 /// Embedded B2B Restock (Phase 9 / ST9-3).
 ///
@@ -219,7 +220,7 @@ class _RestockScreenState extends ConsumerState<RestockScreen> {
     } catch (e) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-          content: Text('Gagal menyimpan order: $e'),
+          content: Text(friendlyError(e, fallback: 'Gagal menyimpan order. Silakan coba lagi.')),
           backgroundColor: AppTheme.errorColor));
     }
   }

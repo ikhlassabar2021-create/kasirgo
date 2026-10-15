@@ -17,6 +17,7 @@ import '../../services/supabase_service.dart';
 import '../../utils/formatters.dart';
 import '../../utils/receipt_generator.dart';
 import '../../widgets/common/supporter_gate.dart';
+import '../../utils/error_messages.dart';
 
 enum ReportPeriod { today, last7Days, last30Days, thisMonth, custom }
 
@@ -480,7 +481,7 @@ class _ReportScreenState extends ConsumerState<ReportScreen> with SingleTickerPr
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Gagal export Excel: $e')),
+          SnackBar(content: Text(friendlyError(e, fallback: 'Gagal export Excel. Silakan coba lagi.'))),
         );
       }
     }
@@ -669,7 +670,7 @@ class _ReportScreenState extends ConsumerState<ReportScreen> with SingleTickerPr
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Gagal generate PDF: $e')),
+          SnackBar(content: Text(friendlyError(e, fallback: 'Gagal generate PDF. Silakan coba lagi.'))),
         );
       }
     }

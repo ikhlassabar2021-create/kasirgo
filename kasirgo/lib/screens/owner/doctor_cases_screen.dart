@@ -8,6 +8,7 @@ import '../../providers/auth_provider.dart';
 import '../../services/business_doctor_service.dart';
 import '../../widgets/common/centennial_background.dart';
 import 'business_doctor_screen.dart';
+import '../../utils/error_messages.dart';
 
 class DoctorCasesScreen extends ConsumerStatefulWidget {
   const DoctorCasesScreen({super.key, this.service});
@@ -90,7 +91,7 @@ class _DoctorCasesScreenState extends ConsumerState<DoctorCasesScreen> {
       if (!mounted) return;
       setState(() {
         _loading = false;
-        _error = e.toString().replaceFirst('Exception: ', '');
+        _error = friendlyError(e);
       });
     }
   }
@@ -420,7 +421,7 @@ class _DoctorCasesScreenState extends ConsumerState<DoctorCasesScreen> {
       _load();
     } catch (e) {
       if (!mounted) return;
-      _snack('Gagal menghapus: ${e.toString().replaceFirst('Exception: ', '')}');
+      _snack(friendlyError(e, fallback: 'Gagal menghapus. Silakan coba lagi.'));
     }
   }
 
@@ -437,7 +438,7 @@ class _DoctorCasesScreenState extends ConsumerState<DoctorCasesScreen> {
       _load();
     } catch (e) {
       if (!mounted) return;
-      _snack('Gagal menghapus: ${e.toString().replaceFirst('Exception: ', '')}');
+      _snack(friendlyError(e, fallback: 'Gagal menghapus. Silakan coba lagi.'));
     }
   }
 
@@ -469,7 +470,7 @@ class _DoctorCasesScreenState extends ConsumerState<DoctorCasesScreen> {
       _load();
     } catch (e) {
       if (!mounted) return;
-      _snack('Gagal menghapus: ${e.toString().replaceFirst('Exception: ', '')}');
+      _snack(friendlyError(e, fallback: 'Gagal menghapus. Silakan coba lagi.'));
     }
   }
 

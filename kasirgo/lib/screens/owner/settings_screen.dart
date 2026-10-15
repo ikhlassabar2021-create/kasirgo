@@ -19,6 +19,7 @@ import 'report_schedule_screen.dart';
 import 'guide_screen.dart';
 import 'multi_outlet_screen.dart';
 import '../../utils/receipt_generator.dart';
+import '../../utils/error_messages.dart';
 
 class SettingsScreen extends ConsumerStatefulWidget {
   const SettingsScreen({super.key});
@@ -182,7 +183,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Gagal memproses dukungan: $e'),
+            content: Text(friendlyError(e, fallback: 'Gagal memproses dukungan. Silakan coba lagi.')),
             backgroundColor: AppTheme.errorColor,
           ),
         );
@@ -1010,7 +1011,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                   } catch (e) {
                     if (mounted) {
                       ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(content: Text('Gagal menautkan Google: $e')),
+                        SnackBar(content: Text(friendlyError(e, fallback: 'Gagal menautkan Google. Silakan coba lagi.'))),
                       );
                     }
                   }
@@ -1100,7 +1101,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
         setDialogState(() => isUploading = false);
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Gagal upload gambar: $e'),
+            content: Text(friendlyError(e, fallback: 'Gagal upload gambar. Silakan coba lagi.')),
             backgroundColor: AppTheme.errorColor,
           ),
         );
@@ -1624,7 +1625,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                 if (ctx.mounted) Navigator.pop(ctx);
                 if (mounted) {
                   ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(content: Text('Gagal mengubah password: $e')),
+                    SnackBar(content: Text(friendlyError(e, fallback: 'Gagal mengubah password. Silakan coba lagi.'))),
                   );
                 }
               }

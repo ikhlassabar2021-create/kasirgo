@@ -9,6 +9,7 @@ import '../../providers/auth_provider.dart';
 import '../../utils/validators.dart';
 import '../../widgets/common/centennial_background.dart';
 import '../../widgets/common/glass_card.dart';
+import '../../utils/error_messages.dart';
 
 class RegisterScreen extends ConsumerStatefulWidget {
   const RegisterScreen({super.key});
@@ -90,7 +91,8 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Pendaftaran gagal: ${e.toString()}'),
+            content: Text(friendlyError(e,
+                fallback: 'Pendaftaran gagal. Silakan coba lagi.')),
             backgroundColor: AppTheme.errorColor,
           ),
         );
@@ -109,7 +111,7 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Gagal daftar dengan Google: $e'),
+            content: Text(friendlyError(e, fallback: 'Gagal daftar dengan Google. Silakan coba lagi.')),
             backgroundColor: AppTheme.errorColor,
           ),
         );

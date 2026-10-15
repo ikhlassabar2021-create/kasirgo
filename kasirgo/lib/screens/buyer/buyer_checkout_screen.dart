@@ -20,6 +20,7 @@ import '../../widgets/common/app_card.dart';
 import '../../widgets/common/app_text_field.dart';
 import '../../widgets/common/centennial_background.dart';
 import 'buyer_order_tracking_screen.dart';
+import '../../utils/error_messages.dart';
 
 /// ST17-6 (Phase 17 - Ekosistem Hyper-Local): Checkout Pembeli.
 ///
@@ -187,7 +188,7 @@ class _BuyerCheckoutScreenState extends ConsumerState<BuyerCheckoutScreen> {
     } catch (e) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Gagal memilih bukti: $e')),
+        SnackBar(content: Text(friendlyError(e, fallback: 'Gagal memilih bukti. Silakan coba lagi.'))),
       );
     }
   }

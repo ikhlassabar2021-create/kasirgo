@@ -4,6 +4,7 @@ import 'package:url_launcher/url_launcher.dart';
 
 import '../../config/app_theme.dart';
 import '../../services/dm_service.dart';
+import '../../utils/error_messages.dart';
 
 /// Bottom sheet self-service untuk owner menghubungkan akun kanal
 /// (media sosial / iklan) sendiri TANPA superadmin.
@@ -128,7 +129,7 @@ class _DmChannelConnectSheetState extends State<DmChannelConnectSheet> {
       }
       await _refresh();
     } catch (e) {
-      _snack('Gagal: $e');
+      _snack(friendlyError(e));
     }
     if (mounted) setState(() => _busy = false);
   }
@@ -161,7 +162,7 @@ class _DmChannelConnectSheetState extends State<DmChannelConnectSheet> {
       _snack('Silakan login di halaman yang terbuka. Menunggu koneksi...');
       await _pollUntilConnected(channel);
     } catch (e) {
-      _snack('Gagal: $e');
+      _snack(friendlyError(e));
     }
     if (mounted) setState(() => _busy = false);
   }

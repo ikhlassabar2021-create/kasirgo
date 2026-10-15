@@ -8,6 +8,7 @@ import '../../providers/auth_provider.dart';
 import '../../services/growth_service.dart';
 import '../../utils/formatters.dart';
 import '../../widgets/common/centennial_background.dart';
+import '../../utils/error_messages.dart';
 
 /// ST15-3 (13.25.5): manajer bundling — paket produk dijual 1 harga.
 /// Diakses dari dashboard owner / aksi resep Dokter Bisnis.
@@ -637,7 +638,7 @@ class _BundleFormSheetState extends State<_BundleFormSheet> {
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text('Gagal menyimpan: $e')));
+            SnackBar(content: Text(friendlyError(e, fallback: 'Gagal menyimpan. Silakan coba lagi.'))));
       }
     } finally {
       if (mounted) setState(() => _saving = false);

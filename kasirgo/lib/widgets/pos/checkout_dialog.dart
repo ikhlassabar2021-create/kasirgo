@@ -14,6 +14,7 @@ import '../../utils/qris_config.dart';
 import '../../utils/wa_helper.dart';
 import '../common/app_button.dart';
 import '../common/supporter_gate.dart';
+import '../../utils/error_messages.dart';
 
 class SplitPayment {
   final String method;
@@ -773,7 +774,7 @@ class _CheckoutDialogState extends State<CheckoutDialog> {
       if (!mounted) return;
       setState(() => _isLoadingQris = false);
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Gagal membuat QRIS: $e'), backgroundColor: AppTheme.errorColor),
+        SnackBar(content: Text(friendlyError(e, fallback: 'Gagal membuat QRIS. Silakan coba lagi.')), backgroundColor: AppTheme.errorColor),
       );
     }
   }

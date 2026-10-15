@@ -26,6 +26,7 @@ import 'qr_table_screen.dart';
 import 'recipe_screen.dart';
 import 'report_screen.dart';
 import 'whatsapp_broadcast_screen.dart';
+import '../../utils/error_messages.dart';
 
 class BusinessDoctorScreen extends ConsumerStatefulWidget {
   const BusinessDoctorScreen(
@@ -153,7 +154,7 @@ class _BusinessDoctorScreenState extends ConsumerState<BusinessDoctorScreen> {
           _pendingActions.where((a) => a['id']?.toString() != id).toList());
       _snack(approve ? 'Aksi disetujui.' : 'Aksi ditolak.');
     } catch (e) {
-      _snack('Gagal: ${e.toString().replaceFirst('Exception: ', '')}');
+      _snack(friendlyError(e));
     }
   }
 
@@ -314,7 +315,7 @@ class _BusinessDoctorScreenState extends ConsumerState<BusinessDoctorScreen> {
       setState(() {
         _messages.add(_Msg(
           'assistant',
-          e.toString().replaceFirst('Exception: ', ''),
+          friendlyError(e),
           const [],
         ));
         _loading = false;

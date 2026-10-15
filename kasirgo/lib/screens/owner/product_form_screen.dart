@@ -15,6 +15,7 @@ import '../../providers/auth_provider.dart';
 import '../../services/supabase_service.dart';
 import '../../utils/validators.dart';
 import 'product_list_screen.dart' show productsProvider;
+import '../../utils/error_messages.dart';
 
 class ProductFormScreen extends ConsumerStatefulWidget {
   final Product? product;
@@ -199,7 +200,7 @@ class _ProductFormScreenState extends ConsumerState<ProductFormScreen> {
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Gagal mengambil foto: $e'), backgroundColor: AppTheme.errorColor),
+          SnackBar(content: Text(friendlyError(e, fallback: 'Gagal mengambil foto. Silakan coba lagi.')), backgroundColor: AppTheme.errorColor),
         );
       }
     }

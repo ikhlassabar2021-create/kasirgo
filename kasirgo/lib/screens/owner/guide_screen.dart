@@ -6,6 +6,7 @@ import 'package:url_launcher/url_launcher.dart';
 import '../../config/app_theme.dart';
 import '../../services/guide_service.dart';
 import '../../widgets/common/centennial_background.dart';
+import '../../utils/error_messages.dart';
 
 /// Panduan penggunaan aplikasi: PDF (offline-cached) + video YouTube.
 /// Konten dikelola superadmin lewat `guide_items` (Control Plane).
@@ -104,7 +105,7 @@ class _GuideScreenState extends ConsumerState<GuideScreen> {
         if (!ok) _snack('Tidak bisa membuka video.', AppTheme.errorColor);
       }
     } catch (e) {
-      _snack('Gagal membuka: $e', AppTheme.errorColor);
+      _snack(friendlyError(e, fallback: 'Gagal membuka. Silakan coba lagi.'), AppTheme.errorColor);
     } finally {
       if (mounted) setState(() => _busyId = null);
     }

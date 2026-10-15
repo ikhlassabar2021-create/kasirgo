@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../config/app_theme.dart';
 import '../../providers/auth_provider.dart';
+import '../../utils/error_messages.dart';
 
 class LoginScreen extends ConsumerStatefulWidget {
   const LoginScreen({super.key});
@@ -33,7 +34,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Login Google gagal: ${e.toString()}'),
+            content: Text(friendlyError(e, fallback: 'Login Google gagal. Silakan coba lagi.')),
             backgroundColor: AppTheme.errorColor,
           ),
         );
@@ -84,16 +85,10 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
       }
     } catch (e) {
       if (mounted) {
-        final msg = e.toString();
-        // Supabase: email belum dikonfirmasi -> pesan ramah, bukan "Login gagal".
-        final isUnconfirmed = msg.contains('email_not_confirmed') ||
-            msg.toLowerCase().contains('email not confirmed') ||
-            msg.toLowerCase().contains('confirm');
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text(isUnconfirmed
-                ? 'Belum bisa login. Email harus dikonfirmasi dulu. Silakan cek email Anda (kotak masuk / folder spam) untuk tautan konfirmasi.'
-                : 'Login gagal: ${msg.replaceFirst('Exception: ', '')}'),
+            content: Text(friendlyError(e,
+                fallback: 'Login gagal. Periksa email dan kata sandi Anda.')),
             backgroundColor: AppTheme.errorColor,
             duration: const Duration(seconds: 5),
           ),

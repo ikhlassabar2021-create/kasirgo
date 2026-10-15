@@ -8,6 +8,7 @@ import '../../config/app_theme.dart';
 import '../../providers/auth_provider.dart';
 import '../../services/supabase_service.dart';
 import '../../widgets/common/centennial_background.dart';
+import '../../utils/error_messages.dart';
 
 /// Layar Afiliasi untuk owner: kode & link referral otomatis per outlet,
 /// laporan komisi (closing), rekening pembayaran komisi, dan panduan singkat.
@@ -93,7 +94,7 @@ class _AffiliateOwnerScreenState extends ConsumerState<AffiliateOwnerScreen> {
       if (!mounted) return;
       setState(() {
         _loading = false;
-        _error = e.toString().replaceFirst('Exception: ', '');
+        _error = friendlyError(e);
       });
     }
   }
@@ -115,7 +116,7 @@ class _AffiliateOwnerScreenState extends ConsumerState<AffiliateOwnerScreen> {
     } catch (e) {
       if (!mounted) return;
       setState(() => _saving = false);
-      _snack('Gagal menyimpan: ${e.toString().replaceFirst('Exception: ', '')}');
+      _snack(friendlyError(e, fallback: 'Gagal menyimpan. Silakan coba lagi.'));
     }
   }
 

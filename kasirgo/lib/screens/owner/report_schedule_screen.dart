@@ -9,6 +9,7 @@ import '../../providers/auth_provider.dart';
 import '../../services/notification_service.dart';
 import '../../services/report_scheduler_service.dart';
 import '../../utils/formatters.dart';
+import '../../utils/error_messages.dart';
 
 class ReportScheduleScreen extends ConsumerStatefulWidget {
   const ReportScheduleScreen({super.key});
@@ -196,7 +197,7 @@ class _ReportScheduleScreenState extends ConsumerState<ReportScheduleScreen> {
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-          content: Text('Gagal membuat PDF: $e'),
+          content: Text(friendlyError(e, fallback: 'Gagal membuat PDF. Silakan coba lagi.')),
           backgroundColor: AppTheme.errorColor,
         ));
       }

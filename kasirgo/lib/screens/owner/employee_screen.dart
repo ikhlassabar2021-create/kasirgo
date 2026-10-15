@@ -10,6 +10,7 @@ import '../../providers/module_provider.dart';
 import '../../providers/outlet_provider.dart';
 import '../../services/supabase_service.dart';
 import '../../widgets/common/supporter_gate.dart';
+import '../../utils/error_messages.dart';
 
 class EmployeeScreen extends ConsumerStatefulWidget {
   const EmployeeScreen({super.key});
@@ -457,7 +458,7 @@ class _EmployeeScreenState extends ConsumerState<EmployeeScreen> with SingleTick
                                   content: Text(
                                     isRateLimit
                                         ? 'Kuota email Supabase habis (maks ~3/jam). Tunggu 1 jam, atau minta admin menonaktifkan "Confirm email" sementara, lalu coba lagi.'
-                                        : 'Gagal membuat akun login: $e',
+                                        : friendlyError(e, fallback: 'Gagal membuat akun login. Silakan coba lagi.'),
                                   ),
                                   backgroundColor: AppTheme.errorColor,
                                   duration: const Duration(seconds: 8),

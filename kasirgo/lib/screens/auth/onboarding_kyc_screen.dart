@@ -14,6 +14,7 @@ import '../../services/kyc_ml.dart';
 import '../../services/kyc_verification_service.dart';
 import '../../utils/kyc_checks.dart';
 import '../../widgets/common/centennial_background.dart';
+import '../../utils/error_messages.dart';
 
 /// Wizard KYC wajib (6 field) — foto disimpan LOKAL di HP.
 ///
@@ -235,7 +236,7 @@ class _OnboardingKycScreenState extends ConsumerState<OnboardingKycScreen> {
         await _checkSelfie(image);
       }
     } catch (e) {
-      _snack('Gagal memuat gambar: $e', AppTheme.errorColor);
+      _snack(friendlyError(e, fallback: 'Gagal memuat gambar. Silakan coba lagi.'), AppTheme.errorColor);
     }
   }
 

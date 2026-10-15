@@ -20,6 +20,7 @@ import '../../widgets/pos/checkout_dialog.dart';
 import '../../widgets/pos/checkout_success_dialog.dart';
 import '../../widgets/common/logout_button.dart';
 import 'incoming_orders_screen.dart';
+import '../../utils/error_messages.dart';
 
 class CashierPosScreen extends ConsumerStatefulWidget {
   const CashierPosScreen({super.key});
@@ -349,7 +350,7 @@ class _CashierPosScreenState extends ConsumerState<CashierPosScreen> {
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error: $e'), backgroundColor: AppTheme.errorColor),
+          SnackBar(content: Text(friendlyError(e)), backgroundColor: AppTheme.errorColor),
         );
       }
     } finally {
@@ -415,7 +416,7 @@ class _CashierPosScreenState extends ConsumerState<CashierPosScreen> {
         child: productsAsync.when(
           loading: () => const Center(child: CircularProgressIndicator()),
           error: (err, _) => Center(
-            child: Text('Gagal memuat produk: $err', style: const TextStyle(color: AppTheme.errorColor)),
+            child: Text(friendlyError(err, fallback: 'Gagal memuat produk. Silakan coba lagi.'), style: const TextStyle(color: AppTheme.errorColor)),
           ),
           data: (products) {
             final filtered = products.where((p) {

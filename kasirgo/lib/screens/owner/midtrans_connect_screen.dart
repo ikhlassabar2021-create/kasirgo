@@ -8,6 +8,7 @@ import '../../providers/auth_provider.dart';
 import '../../services/payment_service.dart';
 import '../../widgets/common/app_button.dart';
 import '../../widgets/common/centennial_background.dart';
+import '../../utils/error_messages.dart';
 
 /// Wizard "Hubungkan Midtrans" — zero-custody: Server Key hanya dikirim ke
 /// Edge Function dan disimpan terenkripsi di Supabase Vault. Aplikasi tidak
@@ -123,7 +124,7 @@ class _MidtransConnectScreenState extends ConsumerState<MidtransConnectScreen> {
       if (!silent) _showMessage('Kredensial tersimpan. Lanjutkan Tes Koneksi.', true);
       return true;
     } catch (e) {
-      if (mounted) _showMessage(e.toString().replaceFirst('Exception: ', ''), false);
+      if (mounted) _showMessage(friendlyError(e), false);
       return false;
     } finally {
       if (mounted) setState(() => _saving = false);
@@ -145,7 +146,7 @@ class _MidtransConnectScreenState extends ConsumerState<MidtransConnectScreen> {
       });
       _showMessage(res['message']?.toString() ?? (valid ? 'Kredensial valid.' : 'Kredensial tidak valid.'), valid);
     } catch (e) {
-      if (mounted) _showMessage(e.toString().replaceFirst('Exception: ', ''), false);
+      if (mounted) _showMessage(friendlyError(e), false);
     } finally {
       if (mounted) setState(() => _testing = false);
     }

@@ -7,6 +7,7 @@ import '../../providers/auth_provider.dart';
 import '../../services/ppob_service.dart';
 import '../../utils/formatters.dart';
 import '../../widgets/common/app_close_button.dart';
+import '../../utils/error_messages.dart';
 
 class PpobScreen extends ConsumerStatefulWidget {
   const PpobScreen({super.key});
@@ -176,7 +177,7 @@ class _PpobScreenState extends ConsumerState<PpobScreen> {
     } catch (e) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-          content: Text('Gagal setor saldo: $e'),
+          content: Text(friendlyError(e, fallback: 'Gagal setor saldo. Silakan coba lagi.')),
           backgroundColor: AppTheme.errorColor));
     }
   }
