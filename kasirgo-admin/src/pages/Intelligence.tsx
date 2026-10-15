@@ -61,15 +61,15 @@ export function IntelligencePage() {
               <div className="h-64">
                 <ResponsiveContainer width="100%" height="100%">
                   <LineChart data={trend} margin={{ top: 5, right: 10, left: -10, bottom: 0 }}>
-                    <CartesianGrid strokeDasharray="3 3" stroke="#E2E8F0" vertical={false} />
-                    <XAxis dataKey="label" tick={{ fontSize: 10, fill: '#64748B' }} interval="preserveStartEnd" />
-                    <YAxis tick={{ fontSize: 10, fill: '#64748B' }} allowDecimals={false} />
+                    <CartesianGrid strokeDasharray="3 3" stroke="var(--color-border)" vertical={false} />
+                    <XAxis dataKey="label" tick={{ fontSize: 10, fill: 'var(--color-muted)' }} interval="preserveStartEnd" />
+                    <YAxis tick={{ fontSize: 10, fill: 'var(--color-muted)' }} allowDecimals={false} />
                     <Tooltip
-                      contentStyle={{ borderRadius: 12, border: '1px solid #E2E8F0', fontSize: 12 }}
+                      contentStyle={{ borderRadius: 12, border: '1px solid var(--color-border)', fontSize: 12 }}
                       formatter={(v: number, name: string) => [name === 'omzet' ? fmtRp(v) : v, name === 'omzet' ? 'Omzet' : 'Transaksi']}
                     />
-                    <Line type="monotone" dataKey="tx" stroke="#0284C7" strokeWidth={2} dot={false} name="Transaksi" />
-                    <Line type="monotone" dataKey="omzet" stroke="#10B981" strokeWidth={2} dot={false} hide={trend.every((t) => t.omzet === 0)} name="Omzet" />
+                    <Line type="monotone" dataKey="tx" stroke="var(--color-primary)" strokeWidth={2} dot={false} name="Transaksi" />
+                    <Line type="monotone" dataKey="omzet" stroke="var(--color-success)" strokeWidth={2} dot={false} hide={trend.every((t) => t.omzet === 0)} name="Omzet" />
                   </LineChart>
                 </ResponsiveContainer>
               </div>
@@ -136,11 +136,11 @@ export function IntelligencePage() {
                     ...w,
                     label: new Date(w.week).toLocaleDateString('id-ID', { day: '2-digit', month: 'short' }),
                   }))} margin={{ top: 5, right: 10, left: -10, bottom: 0 }}>
-                    <CartesianGrid strokeDasharray="3 3" stroke="#E2E8F0" vertical={false} />
-                    <XAxis dataKey="label" tick={{ fontSize: 10, fill: '#64748B' }} />
-                    <YAxis tick={{ fontSize: 10, fill: '#64748B' }} allowDecimals={false} />
-                    <Tooltip contentStyle={{ borderRadius: 12, border: '1px solid #E2E8F0', fontSize: 12 }} />
-                    <Line type="monotone" dataKey="outlets" stroke="#06B6D4" strokeWidth={2} dot={{ r: 3 }} name="Outlet aktif" />
+                    <CartesianGrid strokeDasharray="3 3" stroke="var(--color-border)" vertical={false} />
+                    <XAxis dataKey="label" tick={{ fontSize: 10, fill: 'var(--color-muted)' }} />
+                    <YAxis tick={{ fontSize: 10, fill: 'var(--color-muted)' }} allowDecimals={false} />
+                    <Tooltip contentStyle={{ borderRadius: 12, border: '1px solid var(--color-border)', fontSize: 12 }} />
+                    <Line type="monotone" dataKey="outlets" stroke="var(--color-primary-light)" strokeWidth={2} dot={{ r: 3 }} name="Outlet aktif" />
                   </LineChart>
                 </ResponsiveContainer>
               </div>

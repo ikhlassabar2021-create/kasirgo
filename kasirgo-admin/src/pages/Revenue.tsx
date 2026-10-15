@@ -12,10 +12,10 @@ const revenueData = [
 ];
 
 const tierDistribution = [
-  { name: 'Free', value: 45, color: '#94a3b8' },
-  { name: 'Basic', value: 30, color: '#0284c7' },
+  { name: 'Free', value: 45, color: 'var(--color-muted)' },
+  { name: 'Basic', value: 30, color: 'var(--color-primary)' },
   { name: 'Premium', value: 15, color: '#4f46e5' },
-  { name: 'Pro', value: 10, color: '#f59e0b' },
+  { name: 'Pro', value: 10, color: 'var(--color-warning)' },
 ];
 
 export function RevenuePage() {
@@ -69,14 +69,14 @@ export function RevenuePage() {
           <div className="h-[240px] sm:h-[300px]">
             <ResponsiveContainer width="100%" height="100%">
               <LineChart data={revenueData} margin={{ top: 10, right: 10, left: -25, bottom: 0 }}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" vertical={false} />
-                <XAxis dataKey="month" stroke="#94a3b8" fontSize={11} tickLine={false} />
-                <YAxis stroke="#94a3b8" fontSize={11} tickLine={false} tickFormatter={(v) => `${v / 1000}k`} />
+                <CartesianGrid strokeDasharray="3 3" stroke="var(--color-border)" vertical={false} />
+                <XAxis dataKey="month" stroke="var(--color-muted)" fontSize={11} tickLine={false} />
+                <YAxis stroke="var(--color-muted)" fontSize={11} tickLine={false} tickFormatter={(v) => `${v / 1000}k`} />
                 <Tooltip 
-                  contentStyle={{ backgroundColor: '#fff', border: '1px solid #e2e8f0', borderRadius: '12px', fontSize: '12px' }}
+                  contentStyle={{ backgroundColor: 'var(--color-surface)', border: '1px solid var(--color-border)', borderRadius: '12px', fontSize: '12px' }}
                   formatter={(value: number) => [`Rp ${value}K`, 'Revenue']}
                 />
-                <Line type="monotone" dataKey="revenue" stroke="#0284c7" strokeWidth={3} dot={{ fill: '#0284c7', r: 3 }} />
+                <Line type="monotone" dataKey="revenue" stroke="var(--color-primary)" strokeWidth={3} dot={{ fill: 'var(--color-primary)', r: 3 }} />
               </LineChart>
             </ResponsiveContainer>
           </div>

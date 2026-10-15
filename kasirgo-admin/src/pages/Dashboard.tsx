@@ -161,11 +161,11 @@ export function Dashboard() {
         ) : (
           <ResponsiveContainer width="100%" height={288}>
             <BarChart data={chartData} margin={{ top: 4, right: 4, left: -12, bottom: 0 }}>
-              <CartesianGrid strokeDasharray="3 3" stroke="#E2E8F0" vertical={false} />
-              <XAxis dataKey="bucket" tick={{ fontSize: 10, fill: '#64748B' }} tickLine={false} axisLine={{ stroke: '#E2E8F0' }} />
-              <YAxis tick={{ fontSize: 10, fill: '#64748B' }} tickLine={false} axisLine={false} tickFormatter={(v: number) => fmtRp(v)} />
+              <CartesianGrid strokeDasharray="3 3" stroke="var(--color-border)" vertical={false} />
+              <XAxis dataKey="bucket" tick={{ fontSize: 10, fill: 'var(--color-muted)' }} tickLine={false} axisLine={{ stroke: 'var(--color-border)' }} />
+              <YAxis tick={{ fontSize: 10, fill: 'var(--color-muted)' }} tickLine={false} axisLine={false} tickFormatter={(v: number) => fmtRp(v)} />
               <Tooltip
-                contentStyle={{ borderRadius: 12, border: '1px solid #E2E8F0', fontSize: 11 }}
+                contentStyle={{ borderRadius: 12, border: '1px solid var(--color-border)', fontSize: 11 }}
                 formatter={(v: number | string) => fmtRp(Number(v))}
               />
               <Legend wrapperStyle={{ fontSize: 10 }} />

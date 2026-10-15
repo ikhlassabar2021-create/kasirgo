@@ -25,7 +25,8 @@ export const fmtDate = (iso: string | null | undefined): string => {
   return d.toLocaleDateString('id-ID', { day: '2-digit', month: 'short', year: 'numeric' })
 }
 
-// 12 revenue engine + warna chart (Ocean White tokens).
+// 12 revenue engine + palet kategorikal chart (butuh 12 hue berbeda, bukan token tunggal).
+// ponytail: palet data-viz sengaja literal; pindah ke token bila jumlah seri <=4.
 export const REVENUE_ENGINES: { key: string; label: string; color: string }[] = [
   { key: 'pendukung', label: 'Pendukung', color: '#0284C7' },
   { key: 'ppob_margin', label: 'PPOB', color: '#06B6D4' },

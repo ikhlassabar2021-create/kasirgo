@@ -186,18 +186,18 @@ export function OwnerDashboard() {
               <AreaChart data={hourlySales} margin={{ top: 10, right: 10, left: -25, bottom: 0 }}>
                 <defs>
                   <linearGradient id="oceanGradient" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor="#0284c7" stopOpacity={0.25}/>
-                    <stop offset="95%" stopColor="#06b6d4" stopOpacity={0.0}/>
+                    <stop offset="5%" stopColor="var(--color-primary)" stopOpacity={0.25}/>
+                    <stop offset="95%" stopColor="var(--color-primary-light)" stopOpacity={0.0}/>
                   </linearGradient>
                 </defs>
-                <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" vertical={false} />
-                <XAxis dataKey="time" stroke="#64748b" fontSize={10} tickLine={false} />
-                <YAxis stroke="#64748b" fontSize={10} tickLine={false} tickFormatter={(v) => `${v / 1000}k`} />
+                <CartesianGrid strokeDasharray="3 3" stroke="var(--color-border)" vertical={false} />
+                <XAxis dataKey="time" stroke="var(--color-muted)" fontSize={10} tickLine={false} />
+                <YAxis stroke="var(--color-muted)" fontSize={10} tickLine={false} tickFormatter={(v) => `${v / 1000}k`} />
                 <Tooltip 
                   contentStyle={{ 
-                    backgroundColor: '#0f172a', 
+                    backgroundColor: 'var(--color-ink)', 
                     borderRadius: '10px',
-                    color: '#f8fafc',
+                    color: 'var(--color-surface)',
                     fontSize: '11px',
                     border: 'none',
                     boxShadow: '0 4px 12px rgba(0,0,0,0.15)'
@@ -207,7 +207,7 @@ export function OwnerDashboard() {
                 <Area 
                   type="monotone" 
                   dataKey="total" 
-                  stroke="#0284c7" 
+                  stroke="var(--color-primary)" 
                   strokeWidth={2.5} 
                   fillOpacity={1} 
                   fill="url(#oceanGradient)" 
