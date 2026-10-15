@@ -16,6 +16,7 @@ import '../../widgets/common/app_card.dart';
 import '../../widgets/common/app_text_field.dart';
 import '../../widgets/common/centennial_background.dart';
 import '../../widgets/common/responsive.dart';
+import 'buyer_auth_screen.dart';
 import 'buyer_home_tab.dart';
 import 'buyer_onboarding_screen.dart';
 import 'buyer_order_tracking_screen.dart';
@@ -49,9 +50,14 @@ class _BuyerShellState extends ConsumerState<BuyerShell> {
         backgroundColor: AppTheme.backgroundColor,
         body: Center(child: CircularProgressIndicator()),
       ),
-      error: (e, _) => const BuyerOnboardingScreen(),
+      error: (e, _) => const BuyerAuthScreen(),
       data: (customer) {
-        if (customer == null) return const BuyerOnboardingScreen();
+        if (customer == null) {
+          final hasSession = ref.read(appCustomerServiceProvider).hasSession;
+          return hasSession
+              ? const BuyerOnboardingScreen()
+              : const BuyerAuthScreen();
+        }
         return AppShell(
           headerTitle: _titles[_index],
           navItems: _navItems,

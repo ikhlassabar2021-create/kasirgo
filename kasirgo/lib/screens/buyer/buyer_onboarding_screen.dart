@@ -11,9 +11,10 @@ import '../../widgets/common/app_card.dart';
 import '../../widgets/common/app_text_field.dart';
 import '../../widgets/common/centennial_background.dart';
 
-/// ST17-4 (Phase 17 - Ekosistem Hyper-Local): onboarding Pembeli.
-/// Data akun lengkap (nama akun, nama, email, nohp, alamat) tersimpan LOKAL
-/// di perangkat untuk autofill checkout. Sesi anonymous -> baris `app_customers`.
+/// ST17-4 (Phase 17 - Ekosistem Hyper-Local): melengkapi profil Pembeli.
+/// Dipanggil SETELAH pembeli punya akun (email terkonfirmasi / Google OAuth).
+/// Data profil (nama, nohp, alamat) tersimpan LOKAL untuk autofill checkout,
+/// lalu dibuat baris `app_customers` untuk sesi yang aktif.
 /// Consent UU PDP (lokasi + nohp) disimpan lokal di perangkat.
 class BuyerOnboardingScreen extends ConsumerStatefulWidget {
   const BuyerOnboardingScreen({super.key});
@@ -34,6 +35,14 @@ class _BuyerOnboardingScreenState extends ConsumerState<BuyerOnboardingScreen> {
   bool _consentPhone = true;
   bool _consentLocation = false;
   bool _busy = false;
+
+  @override
+  void initState() {
+    super.initState();
+    // Email akun sudah terisi dari sesi Supabase Auth (email/Google).
+    final email = ref.read(appCustomerServiceProvider).currentEmail;
+    if (email != null && email.isNotEmpty) _emailCtrl.text = email;
+  }
 
   @override
   void dispose() {
@@ -137,19 +146,11 @@ class _BuyerOnboardingScreenState extends ConsumerState<BuyerOnboardingScreen> {
                             const SizedBox(height: 14),
                             AppTextField(
                               controller: _emailCtrl,
-                              label: 'Email (opsional)',
+                              label: 'Email Akun',
                               hint: 'nama@email.com',
                               prefixIcon: Icons.email_rounded,
                               keyboardType: TextInputType.emailAddress,
-                              validator: (v) {
-                                final t = (v ?? '').trim();
-                                if (t.isEmpty) return null;
-                                if (!RegExp(r'^[^@\s]+@[^@\s]+\.[^@\s]+$')
-                                    .hasMatch(t)) {
-                                  return 'Format email belum benar';
-                                }
-                                return null;
-                              },
+                              enabled: false,
                             ),
                             const SizedBox(height: 14),
                             AppTextField(
@@ -251,7 +252,7 @@ class _BuyerOnboardingScreenState extends ConsumerState<BuyerOnboardingScreen> {
         ),
         const SizedBox(height: 4),
         Text(
-          'Isi data akun Anda. Tanpa password, langsung bisa belanja.',
+          'Lengkapi data Anda untuk mulai belanja di warung sekitar.',
           textAlign: TextAlign.center,
           style: GoogleFonts.plusJakartaSans(fontSize: 13, color: AppTheme.textSecondary),
         ),

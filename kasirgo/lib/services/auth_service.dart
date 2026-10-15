@@ -329,6 +329,31 @@ class AuthService {
     }
   }
 
+  /// Mendaftarkan akun PEMBELI (email + password, wajib konfirmasi email).
+  ///
+  /// `signup_kind = 'buyer'` memberi tahu trigger `handle_new_user` agar TIDAK
+  /// membuat outlet/user_roles seperti pendaftar owner. Profil pembeli
+  /// (nama/HP/alamat) disimpan lokal + baris `app_customers` setelah sesi aktif.
+  Future<AuthResponse> signUpBuyer({
+    required String email,
+    required String password,
+    String? name,
+  }) async {
+    try {
+      return await _client.auth.signUp(
+        email: email.trim(),
+        password: password,
+        data: {
+          'signup_kind': 'buyer',
+          if (name != null && name.trim().isNotEmpty) 'full_name': name.trim(),
+        },
+        emailRedirectTo: getAuthRedirectUrl(),
+      );
+    } catch (e) {
+      rethrow;
+    }
+  }
+
   Future<AuthResponse> signIn({
     required String email,
     required String password,

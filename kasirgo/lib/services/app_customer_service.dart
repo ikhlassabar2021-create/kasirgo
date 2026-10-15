@@ -7,9 +7,10 @@ import 'auth_service.dart';
 
 /// ST17-4 (Phase 17 - Ekosistem Hyper-Local): identitas Pembeli.
 ///
-/// Pembeli memakai Supabase ANONYMOUS auth (tanpa email/password) lalu
-/// disimpan sebagai baris `app_customers`. Consent UU PDP (lokasi + nohp)
-/// disimpan LOKAL di perangkat.
+/// Pembeli WAJIB punya akun Supabase Auth (email terkonfirmasi + password,
+/// atau Google OAuth). Setelah sesi aktif, profil (nama/HP/alamat) disimpan
+/// sebagai baris `app_customers`. Consent UU PDP (lokasi + nohp) disimpan
+/// LOKAL di perangkat.
 class AppCustomerService {
   AppCustomerService({SupabaseClient? client, AuthService? authService})
       : _client = client ?? Supabase.instance.client,
@@ -27,6 +28,12 @@ class AppCustomerService {
 
   bool get isSignedIn => _uid != null;
 
+  /// Sesi Supabase Auth aktif (pembeli wajib punya akun email / Google).
+  bool get hasSession => _client.auth.currentUser != null;
+
+  /// Email pembeli yang sedang masuk (null bila OAuth tanpa email).
+  String? get currentEmail => _client.auth.currentUser?.email;
+
   /// Pembeli anonim (tanpa email) yang sedang aktif.
   bool get isAnonymous => _client.auth.currentUser?.isAnonymous ?? false;
 
@@ -37,16 +44,36 @@ class AppCustomerService {
     return s;
   }
 
-  /// Pastikan ada sesi (anonymous) sebelum mengakses data pembeli.
-  Future<bool> ensureSession() async {
-    if (_client.auth.currentUser != null) return true;
-    try {
-      await _client.auth.signInAnonymously();
-    } catch (e) {
-      debugPrint('AppCustomerService.ensureSession error: $e');
-    }
-    return _client.auth.currentUser != null;
-  }
+  /// Pembeli kini WAJIB punya akun (email terkonfirmasi / Google OAuth).
+  /// Method ini hanya melaporkan apakah sesi sudah ada, TIDAK lagi membuat
+  /// sesi anonim.
+  Future<bool> ensureSession() async => _client.auth.currentUser != null;
+
+  // ---------------------------------------------------------------------------
+  // AUTH PEMBELI (email + password wajib konfirmasi, atau Google OAuth)
+  // ---------------------------------------------------------------------------
+
+  /// Daftar akun pembeli baru (email + password, wajib konfirmasi email).
+  Future<AuthResponse> signUpBuyer({
+    required String email,
+    required String password,
+    String? name,
+  }) =>
+      _auth.signUpBuyer(email: email, password: password, name: name);
+
+  /// Masuk dengan email + password.
+  Future<AuthResponse> signInWithPassword({
+    required String email,
+    required String password,
+  }) =>
+      _client.auth.signInWithPassword(email: email.trim(), password: password);
+
+  /// Masuk / daftar cepat dengan Google.
+  Future<void> signInWithGoogle() => _auth.signInWithGoogle();
+
+  /// Kirim ulang email konfirmasi pendaftaran.
+  Future<void> resendConfirmation(String email) =>
+      _client.auth.resend(type: OtpType.signup, email: email.trim());
 
   /// Baris `app_customers` milik sesi saat ini (null bila belum terdaftar).
   Future<AppCustomer?> currentCustomer() async {
