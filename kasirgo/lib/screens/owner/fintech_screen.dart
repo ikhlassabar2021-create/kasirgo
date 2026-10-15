@@ -266,11 +266,7 @@ class _FintechScreenState extends ConsumerState<FintechScreen> {
     return Container(
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
-        gradient: const LinearGradient(
-          colors: [Color(0xFF4F46E5), AppTheme.primaryColor],
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-        ),
+        gradient: AppTheme.primaryGradient,
         borderRadius: BorderRadius.circular(AppTheme.radiusLarge),
       ),
       child: Column(
@@ -335,7 +331,7 @@ class _FintechScreenState extends ConsumerState<FintechScreen> {
                       fontSize: 13.5, fontWeight: FontWeight.w700)),
               style: ElevatedButton.styleFrom(
                 backgroundColor: Colors.white,
-                foregroundColor: const Color(0xFF4F46E5),
+                foregroundColor: AppTheme.accentColor,
                 shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(AppTheme.radiusMedium)),
               ),
