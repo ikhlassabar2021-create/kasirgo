@@ -15,6 +15,7 @@ import '../../utils/formatters.dart';
 import '../../utils/ai_engine.dart';
 import '../../utils/qris_config.dart';
 import '../../widgets/common/app_drawer.dart';
+import '../../widgets/common/bubble_glass.dart';
 import '../../widgets/common/glass_card.dart';
 import '../../widgets/common/centennial_background.dart';
 import '../../widgets/common/supporter_gate.dart';
@@ -323,18 +324,12 @@ class _OwnerHomeScreenState extends ConsumerState<OwnerHomeScreen> {
                       alignment: Alignment.centerLeft,
                       child: Row(
                         children: [
-                          Container(
+                          const BubbleGlass(
                             width: 38,
                             height: 38,
-                            decoration: BoxDecoration(
-                              gradient: const LinearGradient(
-                                colors: [AppTheme.primaryColor, AppTheme.secondaryColor],
-                                begin: Alignment.topLeft,
-                                end: Alignment.bottomRight,
-                              ),
-                              borderRadius: BorderRadius.circular(10),
-                            ),
-                            child: const Icon(Icons.point_of_sale_rounded, color: Colors.white, size: 20),
+                            radius: 11,
+                            child: Icon(Icons.point_of_sale_rounded,
+                                color: Colors.white, size: 20),
                           ),
                           const SizedBox(width: 12),
                           Column(
@@ -520,14 +515,27 @@ class _OwnerHomeScreenState extends ConsumerState<OwnerHomeScreen> {
         scrolledUnderElevation: 0,
         centerTitle: false,
         shape: const Border(bottom: BorderSide(color: AppTheme.borderColor)),
-        title: Text(
-          'KasirGo',
-          style: GoogleFonts.plusJakartaSans(
-            fontSize: 20,
-            fontWeight: FontWeight.w800,
-            letterSpacing: -0.3,
-            color: AppTheme.textPrimary,
-          ),
+        title: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const BubbleGlass(
+              width: 34,
+              height: 34,
+              radius: 10,
+              child: Icon(Icons.point_of_sale_rounded,
+                  color: Colors.white, size: 18),
+            ),
+            const SizedBox(width: 10),
+            Text(
+              'KasirGo',
+              style: GoogleFonts.plusJakartaSans(
+                fontSize: 20,
+                fontWeight: FontWeight.w800,
+                letterSpacing: -0.3,
+                color: AppTheme.textPrimary,
+              ),
+            ),
+          ],
         ),
         leading: Builder(
           builder: (context) => IconButton(
@@ -1143,30 +1151,18 @@ class _OwnerHomeScreenState extends ConsumerState<OwnerHomeScreen> {
   }
 
   Widget _centerPosButton() {
-    final selected = _currentIndex == 2;
     return Expanded(
       child: InkWell(
         onTap: () => setState(() => _currentIndex = 2),
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Container(
+            const BubbleGlass(
               width: 44,
               height: 32,
-              decoration: BoxDecoration(
-                color: AppTheme.secondaryColor,
-                borderRadius: BorderRadius.circular(10),
-                boxShadow: selected
-                    ? [
-                        BoxShadow(
-                          color: AppTheme.secondaryColor.withValues(alpha: 0.4),
-                          blurRadius: 10,
-                          offset: const Offset(0, 4),
-                        ),
-                      ]
-                    : null,
-              ),
-              child: const Icon(Icons.point_of_sale_rounded,
+              radius: 10,
+              glow: true,
+              child: Icon(Icons.point_of_sale_rounded,
                   size: 20, color: Colors.white),
             ),
             const SizedBox(height: 3),
@@ -1680,24 +1676,26 @@ class _HeroSalesCard extends StatelessWidget {
     return Expanded(
       child: InkWell(
         onTap: onTap,
-        borderRadius: BorderRadius.circular(12),
-        child: Container(
-          padding: const EdgeInsets.symmetric(vertical: 10),
-          decoration: BoxDecoration(
-            color: color.withValues(alpha: 0.10),
-            borderRadius: BorderRadius.circular(12),
-          ),
+        borderRadius: BorderRadius.circular(14),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(vertical: 6),
           child: Column(
             children: [
-              Icon(icon, size: 20, color: color),
-              const SizedBox(height: 4),
+              BubbleGlass(
+                width: 44,
+                height: 44,
+                radius: 14,
+                colors: [color, Color.lerp(color, Colors.black, 0.18)!],
+                child: Icon(icon, size: 20, color: Colors.white),
+              ),
+              const SizedBox(height: 6),
               Text(
                 label,
                 textAlign: TextAlign.center,
                 style: GoogleFonts.plusJakartaSans(
                   fontSize: 10.5,
                   fontWeight: FontWeight.w700,
-                  color: color,
+                  color: AppTheme.textPrimary,
                 ),
               ),
             ],
@@ -2306,14 +2304,12 @@ class _ModuleCard extends StatelessWidget {
         ),
         child: Row(
           children: [
-            Container(
+            BubbleGlass(
               width: 48,
               height: 48,
-              decoration: BoxDecoration(
-                color: color.withValues(alpha: 0.12),
-                shape: BoxShape.circle,
-              ),
-              child: Icon(icon, color: color, size: 24),
+              radius: 24,
+              colors: [color, Color.lerp(color, Colors.black, 0.20)!],
+              child: Icon(icon, color: Colors.white, size: 24),
             ),
             const SizedBox(width: 10),
             Expanded(
