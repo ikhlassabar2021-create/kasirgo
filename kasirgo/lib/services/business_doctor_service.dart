@@ -427,4 +427,83 @@ class BusinessDoctorService {
       return null;
     }
   }
+
+  // --- Dokter Bisnis 3.0: Kamera Klinis (vitals) + gamifikasi XP ---
+
+  /// Simpan hasil "Kamera Klinis": skor dihitung server dari rating per aspek.
+  /// Kembalikan {ok, score, xp, level, leveled_up} bila sukses.
+  Future<Map<String, dynamic>> saveVitals({
+    required String outletId,
+    required List aspects,
+    String? notes,
+  }) async {
+    final res = await _client.rpc('doctor_save_vitals', params: {
+      'p_outlet': outletId,
+      'p_aspects': aspects,
+      'p_notes': ?notes,
+    });
+    if (res is Map) return res.cast<String, dynamic>();
+    return <String, dynamic>{};
+  }
+
+  /// Tambah XP server-authoritative untuk sebuah aktivitas.
+  Future<Map<String, dynamic>> awardXp({
+    required String outletId,
+    required String reason,
+  }) async {
+    final res = await _client.rpc('doctor_award_xp', params: {
+      'p_outlet': outletId,
+      'p_reason': reason,
+    });
+    if (res is Map) return res.cast<String, dynamic>();
+    return <String, dynamic>{};
+  }
+
+  /// Config Kamera Klinis dari Control Plane
+  /// (platform_configs 'business_doctor' -> 'kamera_klinis').
+  /// Kembalikan {aktif, aspek:[{key,label}]}; fallback 3 aspek default.
+  Future<Map<String, dynamic>> getKameraKlinisConfig() async {
+    const defaultAspects = [
+      {'key': 'fisik', 'label': 'Kondisi Fisik Toko'},
+      {'key': 'tampilan', 'label': 'Tampilan & Kerapian'},
+      {'key': 'perilaku', 'label': 'Perilaku Pelayanan'},
+    ];
+    try {
+      final res = await _client
+          .from('platform_configs')
+          .select('value')
+          .eq('key', 'business_doctor')
+          .eq('scope', 'global')
+          .order('version', ascending: false)
+          .limit(1)
+          .maybeSingle();
+      final value = res?['value'];
+      if (value is Map && value['kamera_klinis'] is Map) {
+        final cfg = Map<String, dynamic>.from(value['kamera_klinis'] as Map);
+        final aspek = cfg['aspek'];
+        if (aspek is List && aspek.isNotEmpty) {
+          return {
+            'aktif': cfg['aktif'] ?? true,
+            'aspek': aspek
+                .whereType<Map>()
+                .map((e) => e.cast<String, dynamic>())
+                .toList(),
+          };
+        }
+        return {'aktif': cfg['aktif'] ?? true, 'aspek': defaultAspects};
+      }
+    } catch (_) {}
+    return {'aktif': true, 'aspek': defaultAspects};
+  }
+
+  /// Riwayat pemeriksaan Kamera Klinis (terbaru lebih dulu).
+  Future<List<Map<String, dynamic>>> getVitalsHistory(String outletId) async {
+    final rows = await _client
+        .from('doctor_vitals_checks')
+        .select('id, check_date, aspects, score, notes, created_at')
+        .eq('outlet_id', outletId)
+        .order('check_date', ascending: false)
+        .limit(30);
+    return (rows as List).cast<Map<String, dynamic>>();
+  }
 }

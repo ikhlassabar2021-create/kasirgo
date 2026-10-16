@@ -16,7 +16,9 @@ import '../modules/supporter_screen.dart';
 import 'doctor_cases_screen.dart';
 import 'doctor_intake_screen.dart';
 import 'doctor_promotion_log_screen.dart';
+import 'doctor_rapor_roi_screen.dart';
 import 'doctor_result_screen.dart';
+import 'doctor_vitals_screen.dart';
 import 'bundle_manager_screen.dart';
 import 'health_score_screen.dart';
 import 'multi_outlet_screen.dart';
@@ -519,6 +521,34 @@ class _BusinessDoctorScreenState extends ConsumerState<BusinessDoctorScreen> {
     }
   }
 
+  Future<void> _openKameraKlinis() async {
+    final res = await Navigator.push<Map<String, dynamic>>(
+      context,
+      MaterialPageRoute(
+        builder: (_) => DoctorVitalsScreen(service: widget.service),
+      ),
+    );
+    if (!mounted || res == null) return;
+    final score = int.tryParse(res['score']?.toString() ?? '') ?? 0;
+    final gained = int.tryParse(res['gained']?.toString() ?? '') ?? 0;
+    final leveled = res['leveled_up'] == true;
+    _snack(
+      'Skor kesehatan: $score/100. +$gained XP'
+      '${leveled ? ' - Naik level!' : ''}',
+    );
+    _loadIdentity();
+    _loadProfile();
+  }
+
+  Future<void> _openRaporRoi() async {
+    await Navigator.push<void>(
+      context,
+      MaterialPageRoute(
+        builder: (_) => DoctorRaporRoiScreen(service: widget.service),
+      ),
+    );
+  }
+
   void _handleAction(String actionKey, String label) {
     if (actionKey == 'upgrade') {
       Navigator.push(
@@ -976,6 +1006,10 @@ class _BusinessDoctorScreenState extends ConsumerState<BusinessDoctorScreen> {
           const SizedBox(height: 12),
         ],
         _buildIntakeCta(),
+        const SizedBox(height: 12),
+        _buildKameraKlinisCta(),
+        const SizedBox(height: 12),
+        _buildRaporRoiCta(),
         const SizedBox(height: 12),
         if (_phase != 'A') ...[
           _buildEvaluationCta(),
@@ -1691,6 +1725,110 @@ class _BusinessDoctorScreenState extends ConsumerState<BusinessDoctorScreen> {
               ),
               const Icon(Icons.chevron_right_rounded,
                   color: AppTheme.primaryColor),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildKameraKlinisCta() {
+    return Material(
+      color: AppTheme.moduleAccentTeal.withValues(alpha: 0.06),
+      borderRadius: BorderRadius.circular(AppTheme.radiusLarge),
+      child: InkWell(
+        borderRadius: BorderRadius.circular(AppTheme.radiusLarge),
+        onTap: _openKameraKlinis,
+        child: Container(
+          padding: const EdgeInsets.all(14),
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(AppTheme.radiusLarge),
+            border: Border.all(
+                color: AppTheme.moduleAccentTeal.withValues(alpha: 0.35)),
+          ),
+          child: Row(
+            children: [
+              Container(
+                width: 40,
+                height: 40,
+                decoration: BoxDecoration(
+                  color: AppTheme.moduleAccentTeal,
+                  borderRadius: BorderRadius.circular(AppTheme.radiusMedium),
+                ),
+                child: const Icon(Icons.photo_camera_rounded,
+                    color: Colors.white, size: 22),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text('Kamera Klinis',
+                        style: GoogleFonts.plusJakartaSans(
+                            fontSize: 14, fontWeight: FontWeight.w700)),
+                    const SizedBox(height: 2),
+                    Text(
+                      'Foto kondisi toko + nilai 1-5, dapatkan skor kesehatan.',
+                      style: GoogleFonts.plusJakartaSans(
+                          fontSize: 12, color: AppTheme.textSecondary),
+                    ),
+                  ],
+                ),
+              ),
+              const Icon(Icons.chevron_right_rounded,
+                  color: AppTheme.moduleAccentTeal),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildRaporRoiCta() {
+    return Material(
+      color: AppTheme.moduleAccentIndigo.withValues(alpha: 0.06),
+      borderRadius: BorderRadius.circular(AppTheme.radiusLarge),
+      child: InkWell(
+        borderRadius: BorderRadius.circular(AppTheme.radiusLarge),
+        onTap: _openRaporRoi,
+        child: Container(
+          padding: const EdgeInsets.all(14),
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(AppTheme.radiusLarge),
+            border: Border.all(
+                color: AppTheme.moduleAccentIndigo.withValues(alpha: 0.35)),
+          ),
+          child: Row(
+            children: [
+              Container(
+                width: 40,
+                height: 40,
+                decoration: BoxDecoration(
+                  color: AppTheme.moduleAccentIndigo,
+                  borderRadius: BorderRadius.circular(AppTheme.radiusMedium),
+                ),
+                child: const Icon(Icons.insights_rounded,
+                    color: Colors.white, size: 22),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text('Rapor ROI Promosi',
+                        style: GoogleFonts.plusJakartaSans(
+                            fontSize: 14, fontWeight: FontWeight.w700)),
+                    const SizedBox(height: 2),
+                    Text(
+                      'Lihat promosi mana yang paling menguntungkan.',
+                      style: GoogleFonts.plusJakartaSans(
+                          fontSize: 12, color: AppTheme.textSecondary),
+                    ),
+                  ],
+                ),
+              ),
+              const Icon(Icons.chevron_right_rounded,
+                  color: AppTheme.moduleAccentIndigo),
             ],
           ),
         ),
