@@ -1086,3 +1086,18 @@ Commit `ff04bb3` (main) + deploy web gh-pages `050051c` (live md5
   "Dukung KasirGo Sekarang" -> "Dukung Sekarang" -> sheet "Pembayaran QRIS"
   TAMPIL + EF `rcb_create_charge` 200 + polling `rcb_check_status` PENDING.
   `flutter analyze` 3 file bersih.
+
+## Sesi Bersih Data Uji (Item #9) (SELESAI)
+- Tujuan: hapus semua akun/outlet uji, sisakan hanya akun milik
+  `ikhlassabar2021@gmail.com` (semua varian `+tag` DIPERTAHANKAN) + `superadmin@kasirgo.com`.
+- Eksekusi via Supabase Management API `POST /v1/projects/lmvjecdvfzsmrowwwpck/database/query`:
+  `delete from auth.users where email is null or (email not like 'ikhlassabar2021%'
+  and email <> 'superadmin@kasirgo.com')`.
+- Sebelum hapus: `outlets_owner_id_fkey` = ON DELETE CASCADE (tervalidasi) -> outlet
+  ikut terhapus; FK NO ACTION (`transactions.user_id`, `employees.user_id`,
+  `affiliate_referrals.referred_user_id`) dicek = 0 baris (tidak memblokir).
+- Hasil: 99 user terhapus (92 anon + digitalnewss02, lifesgroups, marketingaps2016,
+  rumahaps, sabarberkah2017, test, virna). Tersisa 25 user (24 `ikhlassabar2021*` +
+  superadmin). `outlets` 103 -> 7; `products` 12; `transactions` 37; `customers` 3;
+  `user_roles` 14. Verifikasi orphan (products/tx/customers/user_roles terhadap
+  outlets) = 0. Tidak ada perubahan kode (operasi data murni).
