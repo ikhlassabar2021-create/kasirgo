@@ -406,6 +406,51 @@ const TOOLS = [
       },
     },
   },
+  {
+    type: "function",
+    function: {
+      name: "get_daily_dose",
+      description: "Baca Dosis Harian outlet hari ini (checklist tugas ringan + progres). Kembalikan empty bila belum ada.",
+      parameters: { type: "object", properties: {} },
+    },
+  },
+  {
+    type: "function",
+    function: {
+      name: "save_daily_dose",
+      description: "Simpan/perbarui Dosis Harian hari ini (maks 3 langkah ringan, masing-masing butuh < 10 menit). Panggil saat owner minta 'dosis hari ini' atau membuka sesi harian.",
+      parameters: {
+        type: "object",
+        properties: {
+          title: { type: "string", description: "Judul dosis, mis. 'Dosis Hari Ini'." },
+          items: {
+            type: "array",
+            description: "Langkah harian ringan berurutan (maks 3).",
+            items: {
+              type: "object",
+              properties: {
+                text: { type: "string" },
+                action_key: {
+                  type: "string",
+                  enum: ["sidak_bos", "progress_tracker", "dynamic_pricing", "bundling", "cross_sell", "wa_marketing", "catat_promosi", "health_score", "online_catalog", "qr_table", "multi_outlet", "recipe", "referral", "create_asset"],
+                },
+              },
+              required: ["text"],
+            },
+          },
+        },
+        required: ["items"],
+      },
+    },
+  },
+  {
+    type: "function",
+    function: {
+      name: "get_briefing",
+      description: "Baca Briefing 'Apel Pagi' hari ini (cuaca, catatan kalender, stok menipis, ringkasan). Kembalikan empty bila belum dibuat.",
+      parameters: { type: "object", properties: {} },
+    },
+  },
 ];
 function privateHost(host: string) {
   const h = host.toLowerCase();
@@ -874,6 +919,75 @@ async function execTool(admin: any, outletId: string, name: string, args: Json, 
       });
       return { escalated: true, level, status };
     }
+    case "get_daily_dose": {
+      const { data } = await admin
+        .from("doctor_daily_doses")
+        .select("dose_date, title, items, total_items, done_items, status")
+        .eq("outlet_id", outletId)
+        .order("dose_date", { ascending: false })
+        .limit(1)
+        .maybeSingle();
+      return data ?? { empty: true };
+    }
+    case "save_daily_dose": {
+      const items = (Array.isArray(args?.items) ? args.items : []).slice(0, 3).map((s: Json) => ({
+        text: String(s?.text ?? "").slice(0, 200),
+        action_key: s?.action_key ? String(s.action_key) : null,
+        done: false,
+      })).filter((s: Json) => s.text);
+      if (!items.length) return { error: "no_items" };
+      const title = String(args?.title ?? "Dosis Harian").slice(0, 120);
+      const today = new Date().toISOString().slice(0, 10);
+      // Pertahankan progres bila dosis hari ini sudah ada (jangan reset centang).
+      const { data: prev } = await admin
+        .from("doctor_daily_doses")
+        .select("items")
+        .eq("outlet_id", outletId).eq("dose_date", today).maybeSingle();
+      const prevItems = Array.isArray(prev?.items) ? prev.items : [];
+      for (const it of items) {
+        const old = prevItems.find((p: Json) => String(p?.text ?? "") === it.text);
+        if (old?.done === true) it.done = true;
+      }
+      const doneItems = items.filter((it: Json) => it.done === true).length;
+      const status = doneItems >= items.length ? "done" : (doneItems > 0 ? "partial" : "pending");
+      const { data } = await admin
+        .from("doctor_daily_doses")
+        .upsert({
+          outlet_id: outletId, dose_date: today, title, items,
+          total_items: items.length, done_items: doneItems, status,
+          updated_at: new Date().toISOString(),
+        }, { onConflict: "outlet_id,dose_date" })
+        .select("id")
+        .maybeSingle();
+      // Gamifikasi: catat waktu dosis + jaga streak harian.
+      const { data: prof } = await admin
+        .from("doctor_outlet_profile").select("daily_streak, last_dose_at").eq("outlet_id", outletId).maybeSingle();
+      const lastDose = prof?.last_dose_at ? String(prof.last_dose_at).slice(0, 10) : null;
+      const yesterday = new Date(Date.now() - 86400000).toISOString().slice(0, 10);
+      const streak = lastDose === today
+        ? Number(prof?.daily_streak ?? 0)
+        : (lastDose === yesterday ? Number(prof?.daily_streak ?? 0) + 1 : 1);
+      await admin.from("doctor_outlet_profile").upsert({
+        outlet_id: outletId,
+        last_dose_at: new Date().toISOString(),
+        daily_streak: streak,
+        updated_at: new Date().toISOString(),
+      }, { onConflict: "outlet_id" });
+      sink.dose = {
+        type: "dose", title, items, total_items: items.length, done_items: doneItems,
+        dose_date: today, status,
+      };
+      return { saved: true, id: data?.id ?? null, total_items: items.length, daily_streak: streak };
+    }
+    case "get_briefing": {
+      const today = new Date().toISOString().slice(0, 10);
+      const { data } = await admin
+        .from("doctor_briefings")
+        .select("briefing_date, weather, calendar_note, low_stock, summary, items, read_at")
+        .eq("outlet_id", outletId).eq("briefing_date", today)
+        .maybeSingle();
+      return data ?? { empty: true };
+    }
     default:
       return { error: `unknown_tool:${name}` };
   }
@@ -899,8 +1013,19 @@ function buildSystem(cfg: Json, snap: Json, profile: Json | null, openCases: Jso
   const skillLine = sk.length
     ? `\nSKILL AKTIF (hanya fitur/tool ini yang tersedia untuk Anda): ${sk.join(", ")}. Jangan menjanjikan fitur di luar daftar ini.`
     : "";
+  // Persona / nada bicara (Dokter Bisnis 3.0): pilihan owner -> default config.
+  const toneKey = String(profile?.preferred_tone ?? cfg.default_tone ?? "hangat");
+  const toneMap = (cfg.tone_presets ?? {}) as Json;
+  const toneDesc = String(toneMap?.[toneKey] ?? toneMap?.[cfg.default_tone ?? "hangat"] ?? "Ramah, membesarkan hati, bahasa sederhana.");
+  const doseCfg = (cfg.daily_dose ?? {}) as Json;
+  const doseLine = doseCfg?.aktif === false
+    ? "- Dosis Harian sedang dimatikan; jangan menawarkan dosis harian."
+    : `- Dosis Harian aktif (maks ${Number(doseCfg?.maks_langkah ?? 3)} langkah ringan). Saat owner minta "dosis hari ini" ATAU membuka sesi baru, panggil save_daily_dose dengan langkah kecil yang bisa selesai < 10 menit (mis. cek stok, tawarkan produk laris, catat penjualan).`;
   return `${cfg.prompt_utama ?? "Kamu adalah Dokter Bisnis KasirGo."}
 ${skillLine}
+
+PERSONA / NADA BICARA: ${toneKey.toUpperCase()} - ${toneDesc}
+Pertahankan nada ini di seluruh jawaban.
 
 PERAN UNTUK TIPE OUTLET (${snap.outlet_type ?? "umum"}):
 ${roleText}
@@ -941,7 +1066,8 @@ ATURAN OUTPUT:
   {"type":"gauge","label":"Skor Kesehatan Usaha","value":0-100,"hint":"..."},
   {"type":"checklist","title":"Peta Resep","items":[{"text":"...","done":false}]},
   {"type":"choices","prompt":"...","options":[{"label":"...","value":"..."}]},
-  {"type":"action","label":"...","action_key":"sidak_bos|progress_tracker|dynamic_pricing|bundling|cross_sell|wa_marketing|catat_promosi|health_score|online_catalog|qr_table|multi_outlet|recipe|referral|create_asset"}
+  {"type":"action","label":"...","action_key":"sidak_bos|progress_tracker|dynamic_pricing|bundling|cross_sell|wa_marketing|catat_promosi|health_score|online_catalog|qr_table|multi_outlet|recipe|referral|create_asset"},
+  {"type":"dose","title":"Dosis Harian","items":[{"text":"...","done":false}]}
 - Bahasa Indonesia sederhana, minim istilah teknis, langkah kecil yang bisa dikerjakan.
 - WAJIB balas 100% dalam Bahasa Indonesia kecuali istilah asing yang sudah umum (QRIS, PDF, ROI). DILARANG KERAS menjawab dalam bahasa Inggris (atau bahasa lain), DILARANG menulis/menempelkan kode program (contoh kode, JSON mentah, SQL, rumus pemrograman) di "reply", dan DILARANG memakai istilah teknis asing tanpa penjelasan bahasa awam. Bila owner bertanya dalam bahasa apa pun, tetap jawab dalam Bahasa Indonesia.
 - Isi "phase" dengan fase saat ini sesuai ALUR FASE di atas.
@@ -952,6 +1078,7 @@ ATURAN OUTPUT:
 - Bila owner menyatakan resep BELUM berhasil: panggil observe_progress untuk melihat tren (improving/flat/declining), lalu escalate_case, lalu WAJIB buat resep BARU (save_prescription) dengan pendekatan berbeda dan target_days baru. JANGAN ulangi resep yang sudah gagal.
 - Saat owner bertanya "apakah resep sudah membuahkan hasil" / meminta evaluasi progres: WAJIB panggil observe_progress dulu sebelum menjawab.
 ${netLine}
+${doseLine}
 - Selalu akhiri dengan disclaimer singkat "saran AI".`;
 }
 
@@ -1340,6 +1467,27 @@ Deno.serve(async (req: Request) => {
           // dan menulis jawaban final.
           data = await callLlm(provider, messages, tools);
         }
+        // Bila putaran terakhir masih meminta tool (umum pada model reasoning),
+        // jalankan tool tersebut lalu minta jawaban final TANPA tools agar model
+        // berhenti memanggil tool dan menulis teks jawaban.
+        let guard = 0;
+        while (
+          guard < 2 &&
+          !String(data?.choices?.[0]?.message?.content ?? "").trim() &&
+          (data?.choices?.[0]?.message?.tool_calls ?? []).length
+        ) {
+          guard++;
+          const msg = data.choices[0].message;
+          messages.push({ role: "assistant", content: msg.content ?? null, tool_calls: msg.tool_calls });
+          const results = await Promise.all((msg.tool_calls as Json[]).map(async (tc: Json) => {
+            let args: Json = {};
+            try { args = JSON.parse(tc?.function?.arguments ?? "{}"); } catch { args = {}; }
+            const result = await execTool(admin, outletId, tc?.function?.name, args, internetActive, conversationId, sink);
+            return { id: tc.id, result };
+          }));
+          for (const r of results) messages.push({ role: "tool", tool_call_id: r.id, content: JSON.stringify(r.result) });
+          data = await callLlm(provider, messages, null);
+        }
         parsed = extractJson(data?.choices?.[0]?.message?.content ?? "");
         if (!parsed) parsed = { reply: String(data?.choices?.[0]?.message?.content ?? ""), blocks: [] };
       } catch (e) {
@@ -1353,7 +1501,7 @@ Deno.serve(async (req: Request) => {
     if (fallbackReason) blocks = fallbackBlocks(snap, fallbackReason);
     if (!blocks.length) blocks = fallbackBlocks(snap, "Belum ada jawaban dari AI.");
     // Pastikan kartu resep / target / peta ekspansi tampil walau model lupa menyertakannya.
-    for (const key of ["prescription", "target", "scaling", "bundle", "referral", "pending"] as const) {
+    for (const key of ["prescription", "target", "scaling", "bundle", "referral", "pending", "dose"] as const) {
       const s = sink[key];
       if (!fallbackReason && s && !blocks.some((b: Json) => b?.type === s.type && b?.title === s.title)) {
         blocks.push(s);
