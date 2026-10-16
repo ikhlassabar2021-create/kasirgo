@@ -12,6 +12,9 @@ verify_jwt = true
 [functions.doctor_observe]
 verify_jwt = true
 
+[functions.doctor_briefing]
+verify_jwt = true
+
 [functions.create_payment]
 verify_jwt = true
 
