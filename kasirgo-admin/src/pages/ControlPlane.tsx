@@ -2260,6 +2260,14 @@ function DoctorTab() {
   const setIt = (k: string, val: any) => set('internet_tool', { ...it, [k]: val });
   const rl = v.rate_limit ?? {};
   const setRl = (k: string, val: any) => set('rate_limit', { ...rl, [k]: val });
+  const tp: Record<string, string> = v.tone_presets ?? {};
+  const setTp = (k: string, val: any) => set('tone_presets', { ...tp, [k]: val });
+  const br = v.briefing ?? {};
+  const setBr = (k: string, val: any) => set('briefing', { ...br, [k]: val });
+  const dd = v.daily_dose ?? {};
+  const setDd = (k: string, val: any) => set('daily_dose', { ...dd, [k]: val });
+  const au = v.audio ?? {};
+  const setAu = (k: string, val: any) => set('audio', { ...au, [k]: val });
   const sk: string[] = Array.isArray(v.skills) ? v.skills : [];
   const toggleSkill = (k: string) =>
     set('skills', sk.includes(k) ? sk.filter((s) => s !== k) : [...sk, k]);
@@ -2430,6 +2438,96 @@ function DoctorTab() {
           {probe && <p className="text-[11px] text-muted bg-bg border border-border rounded-lg px-3 py-2">{probe}</p>}
         </div>
         <Toast msg={msg} />
+      </Card>
+
+      <Card title="Persona, Briefing, Dosis Harian & Suara" subtitle="Dokter Bisnis 3.0: nada bicara AI, briefing 'Apel Pagi', dosis harian, dan fitur suara (soundbox POS & teguran). Semua tanpa ubah koding.">
+        <div className="max-w-[760px] space-y-3.5">
+          <div>
+            <label className={labelCls}>Nada Bicara Default (Persona)</label>
+            <select className={inputCls} value={v.default_tone ?? 'hangat'} onChange={(e) => set('default_tone', e.target.value)}>
+              <option value="hangat">Hangat</option>
+              <option value="tegas">Tegas</option>
+              <option value="santai">Santai</option>
+              <option value="singkat">Singkat</option>
+            </select>
+            <p className="text-[11px] text-muted mt-1">Owner tetap bisa mengganti nada per outlet dari aplikasi.</p>
+          </div>
+          <div>
+            <p className="text-[11px] font-bold text-muted uppercase tracking-wider mb-1.5">Nada Bicara (tone preset)</p>
+            <div className="space-y-2">
+              {(['hangat', 'tegas', 'santai', 'singkat'] as const).map((k) => (
+                <div key={k}>
+                  <label className={labelCls}>{k}</label>
+                  <input className={inputCls} value={tp[k] ?? ''} onChange={(e) => setTp(k, e.target.value)} />
+                </div>
+              ))}
+            </div>
+          </div>
+
+          <div className="pt-2 border-t border-border">
+            <p className="text-[11px] font-bold text-muted uppercase tracking-wider mb-2">Briefing "Apel Pagi"</p>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <label className="flex items-center gap-2 text-xs font-semibold text-muted sm:col-span-2">
+                <input type="checkbox" checked={!!br.aktif} onChange={(e) => setBr('aktif', e.target.checked)} />
+                Aktifkan briefing harian
+              </label>
+              <label className="flex items-center gap-2 text-xs font-semibold text-muted">
+                <input type="checkbox" checked={!!br.cuaca} onChange={(e) => setBr('cuaca', e.target.checked)} />
+                Sertakan prakiraan cuaca
+              </label>
+              <label className="flex items-center gap-2 text-xs font-semibold text-muted">
+                <input type="checkbox" checked={!!br.kalender} onChange={(e) => setBr('kalender', e.target.checked)} />
+                Sertakan kalender (libur/gajian)
+              </label>
+              <div>
+                <label className={labelCls}>Jam Kirim (WIB, 0-23)</label>
+                <input className={inputCls} type="number" value={br.jam_kirim ?? ''} placeholder="6" onChange={(e) => setBr('jam_kirim', Number(e.target.value))} />
+              </div>
+              <div>
+                <label className={labelCls}>Ambang Stok Menipis</label>
+                <input className={inputCls} type="number" value={br.stok_minimum ?? ''} placeholder="5" onChange={(e) => setBr('stok_minimum', Number(e.target.value))} />
+              </div>
+            </div>
+          </div>
+
+          <div className="pt-2 border-t border-border">
+            <p className="text-[11px] font-bold text-muted uppercase tracking-wider mb-2">Dosis Harian</p>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <label className="flex items-center gap-2 text-xs font-semibold text-muted sm:col-span-2">
+                <input type="checkbox" checked={!!dd.aktif} onChange={(e) => setDd('aktif', e.target.checked)} />
+                Aktifkan dosis harian
+              </label>
+              <div>
+                <label className={labelCls}>Jam Kirim (WIB, 0-23)</label>
+                <input className={inputCls} type="number" value={dd.jam_kirim ?? ''} placeholder="7" onChange={(e) => setDd('jam_kirim', Number(e.target.value))} />
+              </div>
+              <div>
+                <label className={labelCls}>Maks Langkah</label>
+                <input className={inputCls} type="number" value={dd.maks_langkah ?? ''} placeholder="3" onChange={(e) => setDd('maks_langkah', Number(e.target.value))} />
+              </div>
+            </div>
+          </div>
+
+          <div className="pt-2 border-t border-border">
+            <p className="text-[11px] font-bold text-muted uppercase tracking-wider mb-2">Fitur Suara (Text-to-Speech)</p>
+            <label className="flex items-center gap-2 text-xs font-semibold text-muted">
+              <input type="checkbox" checked={!!au.aktif} onChange={(e) => setAu('aktif', e.target.checked)} />
+              Aktifkan fitur suara
+            </label>
+            <label className="flex items-center gap-2 text-xs font-semibold text-muted">
+              <input type="checkbox" checked={!!au.soundbox_pos} onChange={(e) => setAu('soundbox_pos', e.target.checked)} />
+              Soundbox POS (umumkan pembayaran)
+            </label>
+            <label className="flex items-center gap-2 text-xs font-semibold text-muted">
+              <input type="checkbox" checked={!!au.teguran} onChange={(e) => setAu('teguran', e.target.checked)} />
+              Bacakan teguran Dokter Bisnis
+            </label>
+          </div>
+
+          <div className="flex flex-wrap items-center gap-2">
+            <SaveButton loading={loading} onClick={save} />
+          </div>
+        </div>
       </Card>
 
       <Card title="Override Provider per Outlet" subtitle="Ganti provider LLM untuk outlet tertentu (mis. kunci/limit terpisah). Kunci hanya disimpan di server, tidak pernah ditampilkan kembali.">
