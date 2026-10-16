@@ -144,27 +144,27 @@ export function AffiliatePortalPage() {
 
   if (loading) {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-slate-50">
-        <Loader2 className="w-8 h-8 animate-spin text-sky-600" />
+      <div className="flex min-h-screen items-center justify-center bg-bg">
+        <Loader2 className="w-8 h-8 animate-spin text-primary" />
       </div>
     );
   }
 
   if (!session) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-cyan-500 to-sky-600 p-4">
-        <div className="bg-white rounded-2xl shadow-xl w-full max-w-sm p-6">
+      <div className="min-h-screen flex items-center justify-center ocean-gradient p-4">
+        <div className="bg-surface rounded-2xl shadow-xl w-full max-w-sm p-6">
           <div className="flex items-center gap-2 mb-5">
-            <div className="w-9 h-9 rounded-xl bg-gradient-to-r from-cyan-500 to-sky-600 flex items-center justify-center">
+            <div className="w-9 h-9 rounded-xl ocean-gradient flex items-center justify-center">
               <Wallet className="w-5 h-5 text-white" />
             </div>
             <div>
-              <h1 className="font-bold text-slate-900 text-sm">Portal Afiliasi</h1>
-              <p className="text-[11px] text-slate-400">KasirGo Partner</p>
+              <h1 className="font-bold text-ink text-sm">Portal Afiliasi</h1>
+              <p className="text-[11px] text-muted">KasirGo Partner</p>
             </div>
           </div>
           <div className="space-y-3">
-            {authMsg && <p className="text-[11px] text-emerald-600">{authMsg}</p>}
+            {authMsg && <p className="text-[11px] text-success">{authMsg}</p>}
 
             {mode === 'login' ? (
               <>
@@ -183,18 +183,18 @@ export function AffiliatePortalPage() {
                   onKeyDown={(e) => e.key === 'Enter' && signIn()}
                   className={inputCls}
                 />
-                {authErr && <p className="text-[11px] text-rose-600">{authErr}</p>}
+                {authErr && <p className="text-[11px] text-danger">{authErr}</p>}
                 <button
                   onClick={signIn}
                   disabled={signingIn}
-                  className="w-full py-2.5 rounded-xl text-sm font-semibold bg-gradient-to-r from-cyan-500 to-sky-600 text-white shadow-md shadow-sky-500/25 disabled:opacity-60 flex items-center justify-center gap-2"
+                  className="w-full py-2.5 rounded-xl text-sm font-semibold ocean-gradient text-white shadow-md shadow-primary/25 disabled:opacity-60 flex items-center justify-center gap-2"
                 >
                   {signingIn && <Loader2 className="w-4 h-4 animate-spin" />}
                   Masuk
                 </button>
-                <p className="text-[11px] text-slate-500 text-center pt-1">
+                <p className="text-[11px] text-muted text-center pt-1">
                   Belum punya akun afiliasi?{' '}
-                  <button onClick={() => { setMode('register'); setAuthErr(''); setAuthMsg(''); }} className="text-sky-700 font-semibold hover:underline">
+                  <button onClick={() => { setMode('register'); setAuthErr(''); setAuthMsg(''); }} className="text-primary font-semibold hover:underline">
                     Daftar sekarang
                   </button>
                 </p>
@@ -236,18 +236,18 @@ export function AffiliatePortalPage() {
                   onChange={(e) => setRegReferral(e.target.value)}
                   className={inputCls}
                 />
-                {authErr && <p className="text-[11px] text-rose-600">{authErr}</p>}
+                {authErr && <p className="text-[11px] text-danger">{authErr}</p>}
                 <button
                   onClick={register}
                   disabled={signingIn}
-                  className="w-full py-2.5 rounded-xl text-sm font-semibold bg-gradient-to-r from-cyan-500 to-sky-600 text-white shadow-md shadow-sky-500/25 disabled:opacity-60 flex items-center justify-center gap-2"
+                  className="w-full py-2.5 rounded-xl text-sm font-semibold ocean-gradient text-white shadow-md shadow-primary/25 disabled:opacity-60 flex items-center justify-center gap-2"
                 >
                   {signingIn && <Loader2 className="w-4 h-4 animate-spin" />}
                   Daftar
                 </button>
-                <p className="text-[11px] text-slate-500 text-center pt-1">
+                <p className="text-[11px] text-muted text-center pt-1">
                   Sudah punya akun?{' '}
-                  <button onClick={() => { setMode('login'); setAuthErr(''); setAuthMsg(''); }} className="text-sky-700 font-semibold hover:underline">
+                  <button onClick={() => { setMode('login'); setAuthErr(''); setAuthMsg(''); }} className="text-primary font-semibold hover:underline">
                     Masuk di sini
                   </button>
                 </p>
@@ -263,31 +263,31 @@ export function AffiliatePortalPage() {
   const summary = data?.summary;
 
   return (
-    <div className="min-h-screen bg-slate-50">
-      <header className="bg-white border-b border-slate-200 px-4 sm:px-6 py-3.5 flex items-center justify-between">
+    <div className="min-h-screen bg-bg">
+      <header className="bg-surface border-b border-border px-4 sm:px-6 py-3.5 flex items-center justify-between">
         <div className="flex items-center gap-2">
-          <div className="w-8 h-8 rounded-xl bg-gradient-to-r from-cyan-500 to-sky-600 flex items-center justify-center">
+          <div className="w-8 h-8 rounded-xl ocean-gradient flex items-center justify-center">
             <Wallet className="w-4 h-4 text-white" />
           </div>
           <div>
-            <h1 className="font-bold text-slate-900 text-sm">Portal Afiliasi</h1>
-            <p className="text-[10px] text-slate-400">{session.user?.email}</p>
+            <h1 className="font-bold text-ink text-sm">Portal Afiliasi</h1>
+            <p className="text-[10px] text-muted">{session.user?.email}</p>
           </div>
         </div>
-        <button onClick={logout} className="flex items-center gap-1.5 text-xs font-semibold text-slate-600 hover:text-rose-600">
+        <button onClick={logout} className="flex items-center gap-1.5 text-xs font-semibold text-muted hover:text-danger">
           <LogOut className="w-4 h-4" /> Keluar
         </button>
       </header>
 
       <main className="p-4 sm:p-6 max-w-[900px] mx-auto space-y-4">
         {!a && (
-          <div className="bg-amber-50 border border-amber-200 text-amber-700 rounded-2xl p-4 text-xs">
+          <div className="bg-warning/10 border border-warning/30 text-warning rounded-2xl p-4 text-xs">
             Akun ini belum terdaftar sebagai afiliasi. Hubungi superadmin KasirGo untuk dihubungkan.
           </div>
         )}
 
         {a && a.status !== 'active' && (
-          <div className="bg-amber-50 border border-amber-200 text-amber-700 rounded-2xl p-4 text-xs">
+          <div className="bg-warning/10 border border-warning/30 text-warning rounded-2xl p-4 text-xs">
             {a.status === 'pending'
               ? 'Pendaftaran Anda sedang menunggu persetujuan superadmin KasirGo. Anda akan dapat mulai mereferensikan setelah disetujui.'
               : `Status akun afiliasi Anda: ${a.status}. Hubungi superadmin KasirGo untuk informasi lebih lanjut.`}
@@ -304,49 +304,49 @@ export function AffiliatePortalPage() {
             </div>
 
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-              <div className="bg-white rounded-2xl border border-slate-200/80 card-shadow p-5">
-                <h2 className="font-bold text-slate-900 text-sm mb-3 flex items-center gap-2">
-                  <Banknote className="w-4 h-4 text-emerald-600" /> Riwayat Closing
+              <div className="bg-surface rounded-2xl border border-border/80 card-shadow p-5">
+                <h2 className="font-bold text-ink text-sm mb-3 flex items-center gap-2">
+                  <Banknote className="w-4 h-4 text-success" /> Riwayat Closing
                 </h2>
                 <div className="space-y-2 max-h-[320px] overflow-y-auto">
-                  {(data?.closings ?? []).length === 0 && <p className="text-xs text-slate-400">Belum ada komisi.</p>}
+                  {(data?.closings ?? []).length === 0 && <p className="text-xs text-muted">Belum ada komisi.</p>}
                   {(data?.closings ?? []).map((c: any, i) => (
-                    <div key={c.id ?? i} className="flex items-center justify-between p-2.5 rounded-xl border border-slate-100 bg-slate-50/50 text-xs">
+                    <div key={c.id ?? i} className="flex items-center justify-between p-2.5 rounded-xl border border-border bg-bg/50 text-xs">
                       <div>
-                        <p className="font-semibold text-slate-800">{c.outlet_name ?? 'Komisi referral'}</p>
-                        <p className="text-[10px] text-slate-400">{fmtDate(c.created_at)} · {c.status ?? '-'}</p>
+                        <p className="font-semibold text-ink">{c.outlet_name ?? 'Komisi referral'}</p>
+                        <p className="text-[10px] text-muted">{fmtDate(c.created_at)} · {c.status ?? '-'}</p>
                       </div>
-                      <p className="font-bold text-emerald-600">{fmtRp(c.commission_amount ?? c.amount ?? 0)}</p>
+                      <p className="font-bold text-success">{fmtRp(c.commission_amount ?? c.amount ?? 0)}</p>
                     </div>
                   ))}
                 </div>
               </div>
 
-              <div className="bg-white rounded-2xl border border-slate-200/80 card-shadow p-5">
-                <h2 className="font-bold text-slate-900 text-sm mb-3 flex items-center gap-2">
-                  <Banknote className="w-4 h-4 text-sky-600" /> Riwayat Payout
+              <div className="bg-surface rounded-2xl border border-border/80 card-shadow p-5">
+                <h2 className="font-bold text-ink text-sm mb-3 flex items-center gap-2">
+                  <Banknote className="w-4 h-4 text-primary" /> Riwayat Payout
                 </h2>
                 <div className="space-y-2 max-h-[320px] overflow-y-auto">
-                  {(data?.payouts ?? []).length === 0 && <p className="text-xs text-slate-400">Belum ada payout.</p>}
+                  {(data?.payouts ?? []).length === 0 && <p className="text-xs text-muted">Belum ada payout.</p>}
                   {(data?.payouts ?? []).map((p: any, i) => (
-                    <div key={p.id ?? i} className="flex items-center justify-between p-2.5 rounded-xl border border-slate-100 bg-slate-50/50 text-xs">
+                    <div key={p.id ?? i} className="flex items-center justify-between p-2.5 rounded-xl border border-border bg-bg/50 text-xs">
                       <div>
-                        <p className="font-semibold text-slate-800">{p.method ?? 'Transfer'} · {p.status ?? '-'}</p>
-                        <p className="text-[10px] text-slate-400">
+                        <p className="font-semibold text-ink">{p.method ?? 'Transfer'} · {p.status ?? '-'}</p>
+                        <p className="text-[10px] text-muted">
                           {fmtDate(p.paid_at ?? p.created_at)}
                           {p.period_start && p.period_end ? ` · ${fmtDate(p.period_start)} - ${fmtDate(p.period_end)}` : ''}
                         </p>
-                        {p.note && <p className="text-[10px] text-slate-400">{p.note}</p>}
+                        {p.note && <p className="text-[10px] text-muted">{p.note}</p>}
                       </div>
-                      <p className="font-bold text-sky-600">{fmtRp(p.amount ?? 0)}</p>
+                      <p className="font-bold text-primary">{fmtRp(p.amount ?? 0)}</p>
                     </div>
                   ))}
                 </div>
               </div>
             </div>
 
-            <div className="bg-white rounded-2xl border border-slate-200/80 card-shadow p-5">
-              <h2 className="font-bold text-slate-900 text-sm mb-3">Pengaturan Data & Rekening</h2>
+            <div className="bg-surface rounded-2xl border border-border/80 card-shadow p-5">
+              <h2 className="font-bold text-ink text-sm mb-3">Pengaturan Data & Rekening</h2>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <Field label="Nama"><input className={inputCls} value={name} onChange={(e) => setName(e.target.value)} /></Field>
                 <Field label="No. HP / WA"><input className={inputCls} value={phone} onChange={(e) => setPhone(e.target.value)} /></Field>
@@ -357,7 +357,7 @@ export function AffiliatePortalPage() {
               <button
                 onClick={save}
                 disabled={saving}
-                className="mt-4 px-5 py-2.5 rounded-xl text-sm font-semibold bg-gradient-to-r from-cyan-500 to-sky-600 text-white shadow-md shadow-sky-500/25 disabled:opacity-60 flex items-center gap-2"
+                className="mt-4 px-5 py-2.5 rounded-xl text-sm font-semibold ocean-gradient text-white shadow-md shadow-primary/25 disabled:opacity-60 flex items-center gap-2"
               >
                 {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
                 Simpan
@@ -368,7 +368,7 @@ export function AffiliatePortalPage() {
       </main>
 
       {toast && (
-        <div className="fixed bottom-5 right-5 z-50 px-4 py-3 rounded-xl text-xs font-semibold shadow-lg bg-slate-800 text-white">
+        <div className="fixed bottom-5 right-5 z-50 px-4 py-3 rounded-xl text-xs font-semibold shadow-lg bg-ink text-white">
           {toast}
         </div>
       )}
@@ -377,8 +377,8 @@ export function AffiliatePortalPage() {
 }
 
 const inputCls =
-  'w-full px-3.5 py-2.5 rounded-xl border border-slate-200 bg-slate-50/50 hover:bg-white focus:bg-white text-xs text-slate-800 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-sky-500/30 focus:border-sky-500 transition';
-const labelCls = 'block text-[11px] font-bold text-slate-600 uppercase tracking-wider mb-1.5';
+  'w-full px-3.5 py-2.5 rounded-xl border border-border bg-bg/50 hover:bg-surface focus:bg-surface text-xs text-ink placeholder:text-muted focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary transition';
+const labelCls = 'block text-[11px] font-bold text-muted uppercase tracking-wider mb-1.5';
 
 function Field({ label, children }: { label: string; children: React.ReactNode }) {
   return (
@@ -391,10 +391,10 @@ function Field({ label, children }: { label: string; children: React.ReactNode }
 
 function StatCard({ label, value, icon: Icon, mono }: { label: string; value: string; icon: any; mono?: boolean }) {
   return (
-    <div className="bg-white rounded-2xl border border-slate-200/80 card-shadow p-4">
-      <Icon className="w-4 h-4 text-sky-600 mb-2" />
-      <p className="text-[10px] text-slate-500 uppercase tracking-wide">{label}</p>
-      <p className={`font-black text-slate-900 ${mono ? 'font-mono text-sm' : 'text-lg'}`}>{value}</p>
+    <div className="bg-surface rounded-2xl border border-border/80 card-shadow p-4">
+      <Icon className="w-4 h-4 text-primary mb-2" />
+      <p className="text-[10px] text-muted uppercase tracking-wide">{label}</p>
+      <p className={`font-black text-ink ${mono ? 'font-mono text-sm' : 'text-lg'}`}>{value}</p>
     </div>
   );
 }

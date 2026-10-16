@@ -124,16 +124,16 @@ const TABS: { id: TabId; name: string; icon: any }[] = [
 ];
 
 const inputCls =
-  'w-full px-3.5 py-2.5 rounded-xl border border-slate-200 bg-slate-50/50 hover:bg-white focus:bg-white text-xs text-slate-800 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-sky-500/30 focus:border-sky-500 transition duration-150';
-const labelCls = 'block text-[11px] font-bold text-slate-600 uppercase tracking-wider mb-1.5';
+  'w-full px-3.5 py-2.5 rounded-xl border border-border bg-bg/50 hover:bg-surface focus:bg-surface text-xs text-ink placeholder:text-muted focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary transition duration-150';
+const labelCls = 'block text-[11px] font-bold text-muted uppercase tracking-wider mb-1.5';
 
 function Card({ title, subtitle, children, action }: any) {
   return (
-    <div className="bg-white p-4 sm:p-6 rounded-2xl border border-slate-200/80 shadow-sm">
-      <div className="flex items-start justify-between gap-3 pb-4 mb-4 border-b border-slate-100">
+    <div className="bg-surface p-4 sm:p-6 rounded-2xl border border-border/80 shadow-sm">
+      <div className="flex items-start justify-between gap-3 pb-4 mb-4 border-b border-border">
         <div>
-          <h2 className="text-sm sm:text-base font-bold text-slate-900">{title}</h2>
-          {subtitle && <p className="text-xs text-slate-500 mt-0.5">{subtitle}</p>}
+          <h2 className="text-sm sm:text-base font-bold text-ink">{title}</h2>
+          {subtitle && <p className="text-xs text-muted mt-0.5">{subtitle}</p>}
         </div>
         {action}
       </div>
@@ -149,8 +149,8 @@ function SaveButton({ onClick, loading, label = 'Simpan' }: any) {
       disabled={loading}
       className={`flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl font-semibold text-xs shadow-md transition active:scale-95 ${
         loading
-          ? 'bg-sky-400 text-white cursor-not-allowed'
-          : 'bg-gradient-to-r from-cyan-500 to-sky-600 hover:from-cyan-600 hover:to-sky-700 text-white shadow-sky-500/25'
+          ? 'bg-primary/50 text-white cursor-not-allowed'
+          : 'ocean-gradient hover:opacity-90 text-white shadow-primary/25'
       }`}
     >
       {loading ? <RefreshCw className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
@@ -173,7 +173,7 @@ function Toast({ msg }: { msg: { type: 'ok' | 'err'; text: string } | null }) {
   return (
     <div
       className={`fixed bottom-5 right-5 z-50 px-4 py-2.5 rounded-xl text-xs font-semibold shadow-lg ${
-        msg.type === 'ok' ? 'bg-emerald-500 text-white' : 'bg-red-500 text-white'
+        msg.type === 'ok' ? 'bg-success/100 text-white' : 'bg-red-500 text-white'
       }`}
     >
       {msg.text}
@@ -286,41 +286,41 @@ function AdsTab() {
         <div>
           <label className={labelCls}>Kategori Diblokir (pisahkan koma)</label>
           <input className={inputCls} value={(v.blocked_categories ?? []).join(', ')} onChange={(e) => setV({ ...v, blocked_categories: e.target.value.split(',').map((s) => s.trim()).filter(Boolean) })} />
-          <p className="text-[11px] text-slate-400 mt-1">Judi, dewasa, pinjol diblokir permanen oleh sistem.</p>
+          <p className="text-[11px] text-muted mt-1">Judi, dewasa, pinjol diblokir permanen oleh sistem.</p>
         </div>
         <div>
           <label className={labelCls}>Placement (pisahkan koma)</label>
           <input className={inputCls} value={(v.placement ?? []).join(', ')} onChange={(e) => setV({ ...v, placement: e.target.value.split(',').map((s) => s.trim()).filter(Boolean) })} />
         </div>
         <div className="grid grid-cols-2 gap-3">
-          <label className="flex items-center gap-2 text-xs font-semibold text-slate-600">
+          <label className="flex items-center gap-2 text-xs font-semibold text-muted">
             <input type="checkbox" checked={!!v.ad_free_for_supporter} onChange={(e) => setV({ ...v, ad_free_for_supporter: e.target.checked })} />
             Bebas iklan untuk Pendukung
           </label>
-          <label className="flex items-center gap-2 text-xs font-semibold text-slate-600">
+          <label className="flex items-center gap-2 text-xs font-semibold text-muted">
             <input type="checkbox" checked={!!v.consent_required} onChange={(e) => setV({ ...v, consent_required: e.target.checked })} />
             Wajib consent UU PDP
           </label>
         </div>
 
-        <div className="pt-2 border-t border-slate-100">
+        <div className="pt-2 border-t border-border">
           <div className="flex items-center justify-between mb-2">
             <label className={labelCls}>Kreatif Iklan</label>
-            <button onClick={addCreative} className="flex items-center gap-1 text-[11px] font-bold text-sky-600 hover:text-sky-700">
+            <button onClick={addCreative} className="flex items-center gap-1 text-[11px] font-bold text-primary hover:text-primary">
               <Plus className="w-3.5 h-3.5" /> Tambah Iklan
             </button>
           </div>
-          {creatives.length === 0 && <p className="text-[11px] text-slate-400">Belum ada iklan.</p>}
+          {creatives.length === 0 && <p className="text-[11px] text-muted">Belum ada iklan.</p>}
           <div className="space-y-3">
             {creatives.map((c, i) => (
-              <div key={c.id} className="p-4 rounded-xl border border-slate-200 bg-slate-50/40 space-y-3">
+              <div key={c.id} className="p-4 rounded-xl border border-border bg-bg/40 space-y-3">
                 <div className="grid grid-cols-1 sm:grid-cols-[1fr_auto] gap-3">
                   <div>
                     <label className={labelCls}>Nama Iklan (internal)</label>
                     <input className={inputCls} value={c.name} onChange={(e) => setCreative(i, { name: e.target.value })} placeholder="Promo Kopi A" />
                   </div>
                   <div className="flex items-end gap-2">
-                    <label className="flex items-center gap-2 text-xs font-semibold text-slate-600 mb-2">
+                    <label className="flex items-center gap-2 text-xs font-semibold text-muted mb-2">
                       <input type="checkbox" checked={c.is_active} onChange={(e) => setCreative(i, { is_active: e.target.checked })} /> Aktif
                     </label>
                     <button onClick={() => removeCreative(i)} className="mb-1 p-2 rounded-lg bg-red-50 text-red-500 hover:bg-red-100">
@@ -364,8 +364,8 @@ function AdsTab() {
                 </div>
 
                 <div className="flex flex-wrap items-center gap-3">
-                  <label className="flex items-center gap-2 px-3 py-2 rounded-xl border border-dashed border-slate-300 bg-white text-[11px] font-semibold text-slate-600 cursor-pointer hover:border-sky-400">
-                    <ImagePlus className="w-4 h-4 text-sky-500" />
+                  <label className="flex items-center gap-2 px-3 py-2 rounded-xl border border-dashed border-border bg-surface text-[11px] font-semibold text-muted cursor-pointer hover:border-primary/50">
+                    <ImagePlus className="w-4 h-4 text-primary" />
                     {busy === c.id ? 'Memproses...' : 'Upload Banner (gambar/video, disimpan lokal)'}
                     <input type="file" accept="image/*,video/*" className="hidden"
                       onChange={(e) => { const f = e.target.files?.[0]; if (f) uploadBanner(i, f); e.currentTarget.value = ''; }} />
@@ -383,7 +383,7 @@ function AdsTab() {
                         <img src={c.image_base64.startsWith('http') ? c.image_base64 : `data:${c.image_mime || 'image/png'};base64,${c.image_base64}`} className="h-16 rounded-lg object-cover" alt="banner" />
                       )}
                       <button onClick={() => setCreative(i, { image_base64: '', image_mime: '' })}
-                        className="absolute -top-2 -right-2 p-1 rounded-full bg-white border border-slate-200 text-slate-500 shadow">
+                        className="absolute -top-2 -right-2 p-1 rounded-full bg-surface border border-border text-muted shadow">
                         <X className="w-3 h-3" />
                       </button>
                     </div>
@@ -484,14 +484,14 @@ function GuideTab() {
             <label className={labelCls}>Thumbnail Key (R2)</label>
             <input className={inputCls} value={draft.thumbnail_key ?? ''} onChange={(e) => setDraft({ ...draft, thumbnail_key: e.target.value })} />
           </div>
-          <label className="flex items-center gap-2 text-xs font-semibold text-slate-600">
+          <label className="flex items-center gap-2 text-xs font-semibold text-muted">
             <input type="checkbox" checked={draft.is_active} onChange={(e) => setDraft({ ...draft, is_active: e.target.checked })} />
             Aktif
           </label>
           <div className="flex gap-2">
             <SaveButton loading={saving} label={draft.id ? 'Perbarui' : 'Tambah'} onClick={save} />
             {draft.id && (
-              <button onClick={() => setDraft(empty)} className="px-4 py-2.5 rounded-xl text-xs font-semibold border border-slate-200 text-slate-600 hover:bg-slate-50">
+              <button onClick={() => setDraft(empty)} className="px-4 py-2.5 rounded-xl text-xs font-semibold border border-border text-muted hover:bg-bg">
                 Batal
               </button>
             )}
@@ -499,15 +499,15 @@ function GuideTab() {
         </div>
 
         <div className="space-y-2 max-h-[520px] overflow-y-auto pr-1">
-          {loading && <p className="text-xs text-slate-400">Memuat...</p>}
-          {!loading && items.length === 0 && <p className="text-xs text-slate-400">Belum ada panduan.</p>}
+          {loading && <p className="text-xs text-muted">Memuat...</p>}
+          {!loading && items.length === 0 && <p className="text-xs text-muted">Belum ada panduan.</p>}
           {items.map((it) => (
-            <div key={it.id} className="flex items-center gap-2 p-3 rounded-xl border border-slate-200 bg-slate-50/50">
+            <div key={it.id} className="flex items-center gap-2 p-3 rounded-xl border border-border bg-bg/50">
               <div className="flex-1 min-w-0">
-                <p className="text-xs font-bold text-slate-800 truncate">{it.title}</p>
-                <p className="text-[10px] text-slate-500">{it.kind} · {it.category} · {it.role} · #{it.sort_order} {it.is_active ? '' : '· nonaktif'}</p>
+                <p className="text-xs font-bold text-ink truncate">{it.title}</p>
+                <p className="text-[10px] text-muted">{it.kind} · {it.category} · {it.role} · #{it.sort_order} {it.is_active ? '' : '· nonaktif'}</p>
               </div>
-              <button onClick={() => setDraft(it)} className="text-[11px] font-bold text-sky-600 hover:text-sky-700">Edit</button>
+              <button onClick={() => setDraft(it)} className="text-[11px] font-bold text-primary hover:text-primary">Edit</button>
               <button
                 onClick={async () => {
                   if (!confirm(`Hapus "${it.title}"?`)) return;
@@ -563,7 +563,7 @@ function StructuredConfigTab({
           <div key={f.key}>
             <label className={labelCls}>{f.label}</label>
             {f.type === 'boolean' ? (
-              <label className="flex items-center gap-2 text-xs font-semibold text-slate-600">
+              <label className="flex items-center gap-2 text-xs font-semibold text-muted">
                 <input type="checkbox" checked={!!v[f.key]} onChange={(e) => set(f.key, e.target.checked)} />
                 {f.hint ?? 'Aktifkan'}
               </label>
@@ -587,7 +587,7 @@ function StructuredConfigTab({
                 onChange={(e) => set(f.key, f.type === 'number' ? Number(e.target.value) : e.target.value)}
               />
             )}
-            {f.hint && f.type !== 'boolean' && <p className="text-[11px] text-slate-400 mt-1">{f.hint}</p>}
+            {f.hint && f.type !== 'boolean' && <p className="text-[11px] text-muted mt-1">{f.hint}</p>}
           </div>
         ))}
         <SaveButton loading={loading} onClick={async () => {
@@ -755,18 +755,18 @@ function FinancialTab() {
           } catch (e: any) { show('err', e.message); } finally { setLoading(false); }
         }} />
 
-        <div className="pt-4 border-t border-slate-100 space-y-3">
+        <div className="pt-4 border-t border-border space-y-3">
           <div className="flex items-center justify-between">
             <div>
-              <h3 className="font-semibold text-slate-900 text-sm">Kredensial Payment Gateway</h3>
-              <p className="text-[11px] text-slate-500">Secret hanya dibaca server/Edge Function. Ditampilkan ter-mask & tidak pernah dikirim ke aplikasi klien.</p>
+              <h3 className="font-semibold text-ink text-sm">Kredensial Payment Gateway</h3>
+              <p className="text-[11px] text-muted">Secret hanya dibaca server/Edge Function. Ditampilkan ter-mask & tidak pernah dikirim ke aplikasi klien.</p>
             </div>
-            <label className="flex items-center gap-2 text-[11px] font-semibold text-slate-600">
+            <label className="flex items-center gap-2 text-[11px] font-semibold text-muted">
               <input type="checkbox" checked={pgActive} onChange={(e) => setPgActive(e.target.checked)} /> Aktif
             </label>
           </div>
           {pgExisting.length > 0 && (
-            <p className="text-[11px] text-amber-600">Tersimpan: {pgExisting.join(', ')}. Isi hanya field yang ingin diubah.</p>
+            <p className="text-[11px] text-warning">Tersimpan: {pgExisting.join(', ')}. Isi hanya field yang ingin diubah.</p>
           )}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div>
@@ -795,7 +795,7 @@ function FinancialTab() {
             </div>
           </div>
           {pgMeta.mode === 'sandbox_direct' && (
-            <p className="text-[11px] text-amber-600">Mode <b>sandbox langsung</b> menyimpan API key sandbox di aplikasi klien (hanya untuk uji coba). Ganti ke mode Edge Function sebelum produksi.</p>
+            <p className="text-[11px] text-warning">Mode <b>sandbox langsung</b> menyimpan API key sandbox di aplikasi klien (hanya untuk uji coba). Ganti ke mode Edge Function sebelum produksi.</p>
           )}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             {PG_FIELDS.map((f) => (
@@ -810,7 +810,7 @@ function FinancialTab() {
                     onChange={(e) => setPgSecrets({ ...pgSecrets, [f.key]: e.target.value })}
                   />
                   <button type="button" onClick={() => setRevealPg(!revealPg)}
-                    className="absolute top-2 right-2 p-1.5 rounded-lg text-slate-400 hover:text-slate-600">
+                    className="absolute top-2 right-2 p-1.5 rounded-lg text-muted hover:text-ink">
                     {revealPg ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
                   </button>
                 </div>
@@ -823,19 +823,19 @@ function FinancialTab() {
       <div className="max-w-[960px] mt-8">
         <div className="flex items-center justify-between mb-3">
           <div>
-            <h3 className="font-semibold text-slate-900 text-sm">Status Payment Gateway per Outlet</h3>
-            <p className="text-[11px] text-slate-500">Kredensial Midtrans diisi owner lewat wizard di aplikasi (Server Key tersimpan di Vault, zero-custody). Superadmin mengelola aktif/nonaktif & tes koneksi.</p>
+            <h3 className="font-semibold text-ink text-sm">Status Payment Gateway per Outlet</h3>
+            <p className="text-[11px] text-muted">Kredensial Midtrans diisi owner lewat wizard di aplikasi (Server Key tersimpan di Vault, zero-custody). Superadmin mengelola aktif/nonaktif & tes koneksi.</p>
           </div>
-          <button onClick={reloadOutlets} className="p-2 rounded-lg hover:bg-slate-100" title="Muat ulang"><RefreshCw size={16} /></button>
+          <button onClick={reloadOutlets} className="p-2 rounded-lg hover:bg-bg" title="Muat ulang"><RefreshCw size={16} /></button>
         </div>
         {loadingOutlets && outlets.length === 0 ? (
-          <p className="text-sm text-slate-400">Memuat data outlet...</p>
+          <p className="text-sm text-muted">Memuat data outlet...</p>
         ) : outlets.length === 0 ? (
-          <p className="text-sm text-slate-400">Belum ada data outlet.</p>
+          <p className="text-sm text-muted">Belum ada data outlet.</p>
         ) : (
-          <div className="overflow-x-auto rounded-xl border border-slate-200">
+          <div className="overflow-x-auto rounded-xl border border-border">
             <table className="w-full text-xs">
-              <thead className="bg-slate-50 text-slate-500">
+              <thead className="bg-bg text-muted">
                 <tr>
                   <th className="text-left px-3 py-2 font-semibold">Outlet</th>
                   <th className="text-left px-3 py-2 font-semibold">Pemilik</th>
@@ -846,32 +846,32 @@ function FinancialTab() {
                   <th className="text-right px-3 py-2 font-semibold">Aksi</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-slate-100">
+              <tbody className="divide-y divide-border">
                 {outlets.map((o) => {
                   const configured = o.has_server_key;
                   const badge =
-                    o.status === 'verified' ? 'bg-emerald-50 text-emerald-600'
-                    : o.status === 'disabled' ? 'bg-rose-50 text-rose-600'
-                    : o.status === 'pending' ? 'bg-amber-50 text-amber-600'
-                    : 'bg-slate-100 text-slate-500';
+                    o.status === 'verified' ? 'bg-success/10 text-success'
+                    : o.status === 'disabled' ? 'bg-danger/10 text-danger'
+                    : o.status === 'pending' ? 'bg-warning/10 text-warning'
+                    : 'bg-bg text-muted';
                   const label =
                     o.status === 'verified' ? 'Aktif'
                     : o.status === 'disabled' ? 'Nonaktif'
                     : o.status === 'pending' ? 'Menunggu'
                     : 'Belum diatur';
                   return (
-                    <tr key={o.outlet_id} className="hover:bg-slate-50/60">
+                    <tr key={o.outlet_id} className="hover:bg-bg/60">
                       <td className="px-3 py-2.5">
-                        <p className="font-semibold text-slate-800">{o.outlet_name}</p>
-                        <p className="text-[10px] text-slate-400 capitalize">{o.outlet_type ?? '-'}</p>
+                        <p className="font-semibold text-ink">{o.outlet_name}</p>
+                        <p className="text-[10px] text-muted capitalize">{o.outlet_type ?? '-'}</p>
                       </td>
-                      <td className="px-3 py-2.5 text-slate-500">{o.owner_email ?? '-'}</td>
-                      <td className="px-3 py-2.5 text-slate-600">{configured ? (o.provider ?? 'midtrans') : '-'}</td>
-                      <td className="px-3 py-2.5 text-slate-600">{configured ? (o.is_production ? 'Produksi' : 'Sandbox') : '-'}</td>
+                      <td className="px-3 py-2.5 text-muted">{o.owner_email ?? '-'}</td>
+                      <td className="px-3 py-2.5 text-muted">{configured ? (o.provider ?? 'midtrans') : '-'}</td>
+                      <td className="px-3 py-2.5 text-muted">{configured ? (o.is_production ? 'Produksi' : 'Sandbox') : '-'}</td>
                       <td className="px-3 py-2.5">
                         <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold ${badge}`}>{label}</span>
                       </td>
-                      <td className="px-3 py-2.5 text-slate-500 max-w-[200px] truncate" title={o.last_test_result ?? ''}>
+                      <td className="px-3 py-2.5 text-muted max-w-[200px] truncate" title={o.last_test_result ?? ''}>
                         {o.last_test_result ?? '-'}
                       </td>
                       <td className="px-3 py-2.5 text-right">
@@ -888,20 +888,20 @@ function FinancialTab() {
                                 } catch (e: any) { show('err', e.message); } finally { setBusyOutlet(null); }
                               }}
                               disabled={busyOutlet === o.outlet_id}
-                              className="px-2.5 py-1 rounded-lg border border-slate-200 text-slate-600 hover:bg-slate-50 disabled:opacity-50"
+                              className="px-2.5 py-1 rounded-lg border border-border text-muted hover:bg-bg disabled:opacity-50"
                             >
                               Tes
                             </button>
                             <button
                               onClick={() => toggleOutletPg(o)}
                               disabled={busyOutlet === o.outlet_id}
-                              className={`px-2.5 py-1 rounded-lg text-white disabled:opacity-50 ${o.status === 'disabled' ? 'bg-emerald-500 hover:bg-emerald-600' : 'bg-rose-500 hover:bg-rose-600'}`}
+                              className={`px-2.5 py-1 rounded-lg text-white disabled:opacity-50 ${o.status === 'disabled' ? 'bg-success hover:bg-success/90' : 'bg-danger hover:bg-danger/90'}`}
                             >
                               {o.status === 'disabled' ? 'Aktifkan' : 'Nonaktifkan'}
                             </button>
                           </div>
                         ) : (
-                          <span className="text-[10px] text-slate-400">Belum ada kredensial</span>
+                          <span className="text-[10px] text-muted">Belum ada kredensial</span>
                         )}
                       </td>
                     </tr>
@@ -915,26 +915,26 @@ function FinancialTab() {
       <div className="max-w-[760px] mt-8">
         <div className="flex items-center justify-between mb-3">
           <div>
-            <h3 className="font-semibold text-slate-900">Verifikasi Langganan Pendukung</h3>
-            <p className="text-xs text-slate-500">Pembayaran QRIS/transfer yang dikonfirmasi owner menunggu setujui/tolak di sini.</p>
+            <h3 className="font-semibold text-ink">Verifikasi Langganan Pendukung</h3>
+            <p className="text-xs text-muted">Pembayaran QRIS/transfer yang dikonfirmasi owner menunggu setujui/tolak di sini.</p>
           </div>
-          <button onClick={reloadPend} className="p-2 rounded-lg hover:bg-slate-100" title="Muat ulang"><RefreshCw size={16} /></button>
+          <button onClick={reloadPend} className="p-2 rounded-lg hover:bg-bg" title="Muat ulang"><RefreshCw size={16} /></button>
         </div>
         {pend.length === 0 ? (
-          <p className="text-sm text-slate-400">Tidak ada langganan menunggu verifikasi.</p>
+          <p className="text-sm text-muted">Tidak ada langganan menunggu verifikasi.</p>
         ) : (
           <div className="space-y-2">
             {pend.map((p) => (
-              <div key={p.id} className="flex items-center justify-between gap-3 rounded-xl border border-slate-200 bg-white px-4 py-3">
+              <div key={p.id} className="flex items-center justify-between gap-3 rounded-xl border border-border bg-surface px-4 py-3">
                 <div className="min-w-0">
-                  <p className="text-sm font-semibold text-slate-900 truncate">{p.outlet_name}</p>
-                  <p className="text-xs text-slate-500">
+                  <p className="text-sm font-semibold text-ink truncate">{p.outlet_name}</p>
+                  <p className="text-xs text-muted">
                     Rp {Number(p.amount).toLocaleString('id-ID')} - {p.pg_reference_id ?? '-'} - {p.status === 'pending_verification' ? 'menunggu verifikasi' : 'belum bayar'}
                   </p>
                 </div>
                 <div className="flex gap-2 shrink-0">
-                  <button onClick={() => decide(p.id, true)} className="rounded-lg bg-emerald-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-emerald-700">Setujui</button>
-                  <button onClick={() => decide(p.id, false)} className="rounded-lg bg-slate-200 px-3 py-1.5 text-xs font-semibold text-slate-700 hover:bg-slate-300">Tolak</button>
+                  <button onClick={() => decide(p.id, true)} className="rounded-lg bg-success px-3 py-1.5 text-xs font-semibold text-white hover:bg-success/90">Setujui</button>
+                  <button onClick={() => decide(p.id, false)} className="rounded-lg bg-border px-3 py-1.5 text-xs font-semibold text-ink hover:bg-border">Tolak</button>
                 </div>
               </div>
             ))}
@@ -967,7 +967,7 @@ function FlagsTab() {
             <input className={inputCls} type="number" value={draft.rollout_pct} onChange={(e) => setDraft({ ...draft, rollout_pct: Number(e.target.value) })} />
           </div>
         </div>
-        <label className="flex items-center gap-2 text-xs font-semibold text-slate-600">
+        <label className="flex items-center gap-2 text-xs font-semibold text-muted">
           <input type="checkbox" checked={draft.enabled} onChange={(e) => setDraft({ ...draft, enabled: e.target.checked })} /> Aktif
         </label>
         <SaveButton label="Simpan Flag" onClick={async () => {
@@ -977,13 +977,13 @@ function FlagsTab() {
         }} />
       </div>
       <div className="space-y-2">
-        {flags.length === 0 && <p className="text-xs text-slate-400">Belum ada feature flag.</p>}
+        {flags.length === 0 && <p className="text-xs text-muted">Belum ada feature flag.</p>}
         {flags.map((f) => (
-          <div key={f.key} className="flex items-center gap-3 p-3 rounded-xl border border-slate-200 bg-slate-50/50">
-            <span className={`w-2 h-2 rounded-full ${f.enabled ? 'bg-emerald-500' : 'bg-slate-300'}`} />
-            <span className="text-xs font-bold text-slate-800 flex-1">{f.key}</span>
-            <span className="text-[11px] text-slate-500">rollout {f.rollout_pct}%</span>
-            <button onClick={() => setDraft(f)} className="text-[11px] font-bold text-sky-600">Edit</button>
+          <div key={f.key} className="flex items-center gap-3 p-3 rounded-xl border border-border bg-bg/50">
+            <span className={`w-2 h-2 rounded-full ${f.enabled ? 'bg-success/100' : 'bg-border'}`} />
+            <span className="text-xs font-bold text-ink flex-1">{f.key}</span>
+            <span className="text-[11px] text-muted">rollout {f.rollout_pct}%</span>
+            <button onClick={() => setDraft(f)} className="text-[11px] font-bold text-primary">Edit</button>
             <button onClick={async () => { if (!confirm(`Hapus ${f.key}?`)) return; try { await deleteFeatureFlag(f.id!); await reload(); } catch (e: any) { show('err', e.message); } }} className="text-red-500">
               <Trash2 className="w-4 h-4" />
             </button>
@@ -1030,7 +1030,7 @@ function AutomationTab() {
             <textarea className={`${inputCls} font-mono min-h-[80px]`} value={JSON.stringify(draft.action)} onChange={(e) => { try { setDraft({ ...draft, action: JSON.parse(e.target.value) }); } catch {} }} />
           </div>
         </div>
-        <label className="flex items-center gap-2 text-xs font-semibold text-slate-600">
+        <label className="flex items-center gap-2 text-xs font-semibold text-muted">
           <input type="checkbox" checked={draft.enabled} onChange={(e) => setDraft({ ...draft, enabled: e.target.checked })} /> Aktif
         </label>
         <SaveButton label="Simpan Rule" onClick={async () => {
@@ -1040,15 +1040,15 @@ function AutomationTab() {
         }} />
       </div>
       <div className="space-y-2">
-        {rules.length === 0 && <p className="text-xs text-slate-400">Belum ada rule otomatisasi.</p>}
+        {rules.length === 0 && <p className="text-xs text-muted">Belum ada rule otomatisasi.</p>}
         {rules.map((r) => (
-          <div key={r.id} className="flex items-center gap-3 p-3 rounded-xl border border-slate-200 bg-slate-50/50">
-            <span className={`w-2 h-2 rounded-full ${r.enabled ? 'bg-emerald-500' : 'bg-slate-300'}`} />
+          <div key={r.id} className="flex items-center gap-3 p-3 rounded-xl border border-border bg-bg/50">
+            <span className={`w-2 h-2 rounded-full ${r.enabled ? 'bg-success/100' : 'bg-border'}`} />
             <div className="flex-1 min-w-0">
-              <p className="text-xs font-bold text-slate-800 truncate">{r.name}</p>
-              <p className="text-[10px] text-slate-500">{r.trigger}</p>
+              <p className="text-xs font-bold text-ink truncate">{r.name}</p>
+              <p className="text-[10px] text-muted">{r.trigger}</p>
             </div>
-            <button onClick={() => setDraft(r)} className="text-[11px] font-bold text-sky-600">Edit</button>
+            <button onClick={() => setDraft(r)} className="text-[11px] font-bold text-primary">Edit</button>
             <button onClick={async () => { if (!confirm(`Hapus ${r.name}?`)) return; try { await deleteAutomationRule(r.id!); await reload(); } catch (e: any) { show('err', e.message); } }} className="text-red-500">
               <Trash2 className="w-4 h-4" />
             </button>
@@ -1134,7 +1134,7 @@ function PpobTab() {
             <input className={inputCls} type="number" value={v.margin_percent ?? 0} onChange={(e) => setV({ ...v, margin_percent: Number(e.target.value) })} />
           </div>
           <div className="flex items-end pb-2">
-            <label className="flex items-center gap-2 text-xs font-semibold text-slate-600">
+            <label className="flex items-center gap-2 text-xs font-semibold text-muted">
               <input type="checkbox" checked={v.enabled !== false} onChange={(e) => setV({ ...v, enabled: e.target.checked })} /> PPOB Aktif
             </label>
           </div>
@@ -1163,17 +1163,17 @@ function PpobTab() {
           catch (e: any) { show('err', e.message); } finally { setLoading(false); }
         }} />
 
-        <div className="pt-4 border-t border-slate-100 space-y-3">
+        <div className="pt-4 border-t border-border space-y-3">
           <div className="flex items-center justify-between">
             <div>
-              <h3 className="font-semibold text-slate-900 text-sm">Kredensial Provider PPOB</h3>
-              <p className="text-[11px] text-slate-500">Disimpan aman, hanya dibaca Edge Function. Tidak pernah dikirim ke aplikasi klien.</p>
+              <h3 className="font-semibold text-ink text-sm">Kredensial Provider PPOB</h3>
+              <p className="text-[11px] text-muted">Disimpan aman, hanya dibaca Edge Function. Tidak pernah dikirim ke aplikasi klien.</p>
             </div>
-            <label className="flex items-center gap-2 text-[11px] font-semibold text-slate-600">
+            <label className="flex items-center gap-2 text-[11px] font-semibold text-muted">
               <input type="checkbox" checked={active} onChange={(e) => setActive(e.target.checked)} /> Aktif
             </label>
           </div>
-          {existing.length > 0 && <p className="text-[11px] text-amber-600">Tersimpan: {existing.join(', ')}. Isi hanya field yang ingin diubah.</p>}
+          {existing.length > 0 && <p className="text-[11px] text-warning">Tersimpan: {existing.join(', ')}. Isi hanya field yang ingin diubah.</p>}
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
             <SecretField label="API Key" value={secrets.api_key ?? ''} existing={existing.includes('api_key')} reveal={reveal} onChange={(x) => setSecrets({ ...secrets, api_key: x })} />
             <SecretField label="API Secret" value={secrets.api_secret ?? ''} existing={existing.includes('api_secret')} reveal={reveal} onChange={(x) => setSecrets({ ...secrets, api_secret: x })} />
@@ -1181,7 +1181,7 @@ function PpobTab() {
           </div>
           <div className="flex items-center gap-3">
             <SaveButton loading={savingSecret} label="Simpan Kredensial" onClick={saveSecret} />
-            <button type="button" onClick={() => setReveal(!reveal)} className="p-2 rounded-lg border border-slate-200 text-slate-500 hover:bg-slate-50">
+            <button type="button" onClick={() => setReveal(!reveal)} className="p-2 rounded-lg border border-border text-muted hover:bg-bg">
               {reveal ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
             </button>
           </div>
@@ -1206,7 +1206,7 @@ function B2bTab() {
   return (
     <Card title="B2B Kulakan" subtitle="Link distributor, komisi, dan embed (kode HTML/script) ke halaman kulakan.">
       <div className="max-w-[760px] space-y-3.5">
-        <label className="flex items-center gap-2 text-xs font-semibold text-slate-600">
+        <label className="flex items-center gap-2 text-xs font-semibold text-muted">
           <input type="checkbox" checked={v.enabled !== false} onChange={(e) => setV({ ...v, enabled: e.target.checked })} /> Aktifkan B2B Kulakan
         </label>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -1261,7 +1261,7 @@ function ModalUsahaTab() {
   return (
     <Card title="Modal Usaha" subtitle="Mitra pembiayaan: link pengajuan, WA, embed, dan komisi platform.">
       <div className="max-w-[760px] space-y-3.5">
-        <label className="flex items-center gap-2 text-xs font-semibold text-slate-600">
+        <label className="flex items-center gap-2 text-xs font-semibold text-muted">
           <input type="checkbox" checked={v.enabled !== false} onChange={(e) => setV({ ...v, enabled: e.target.checked })} /> Aktifkan Modal Usaha
         </label>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -1274,8 +1274,8 @@ function ModalUsahaTab() {
             <input className={inputCls} value={v.wa_number ?? ''} onChange={(e) => setV({ ...v, wa_number: e.target.value })} placeholder="628123..." />
           </div>
         </div>
-        <div className="rounded-xl border border-slate-200 bg-slate-50/60 p-3.5 space-y-3">
-          <p className="text-[11px] font-bold text-slate-500 uppercase tracking-wide">Komisi Platform</p>
+        <div className="rounded-xl border border-border bg-bg/60 p-3.5 space-y-3">
+          <p className="text-[11px] font-bold text-muted uppercase tracking-wide">Komisi Platform</p>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div>
               <label className={labelCls}>Komisi (%)</label>
@@ -1286,7 +1286,7 @@ function ModalUsahaTab() {
               <input type="number" step="1000" className={inputCls} value={v.commission_flat ?? 0} onChange={(e) => setV({ ...v, commission_flat: Number(e.target.value) })} />
             </div>
           </div>
-          <p className="text-[10px] text-slate-400">Komisi = (plafon disetujui x %) + komisi tetap. Dicatat pada closing modal usaha.</p>
+          <p className="text-[10px] text-muted">Komisi = (plafon disetujui x %) + komisi tetap. Dicatat pada closing modal usaha.</p>
         </div>
         <div>
           <label className={labelCls}>URL Tujuan / Pengajuan</label>
@@ -1339,9 +1339,9 @@ function AffiliateTab() {
       subtitle="Pendaftaran afiliasi mandiri, komisi default partner, dan pengaturan pembayaran komisi afiliasi outlet."
     >
       <div className="max-w-[760px] space-y-4">
-        <div className="rounded-xl border border-slate-200 bg-slate-50/60 p-4 space-y-3">
-          <p className="text-[11px] font-bold text-slate-500 uppercase tracking-wide">Mode Pendaftaran</p>
-          <label className="flex items-start gap-2.5 text-xs font-semibold text-slate-700">
+        <div className="rounded-xl border border-border bg-bg/60 p-4 space-y-3">
+          <p className="text-[11px] font-bold text-muted uppercase tracking-wide">Mode Pendaftaran</p>
+          <label className="flex items-start gap-2.5 text-xs font-semibold text-ink">
             <input
               type="radio"
               className="mt-0.5"
@@ -1350,12 +1350,12 @@ function AffiliateTab() {
             />
             <span>
               Persetujuan manual
-              <span className="block text-[10px] font-normal text-slate-400">
+              <span className="block text-[10px] font-normal text-muted">
                 Pendaftar berstatus pending hingga superadmin menyetujui di halaman Afiliasi.
               </span>
             </span>
           </label>
-          <label className="flex items-start gap-2.5 text-xs font-semibold text-slate-700">
+          <label className="flex items-start gap-2.5 text-xs font-semibold text-ink">
             <input
               type="radio"
               className="mt-0.5"
@@ -1364,7 +1364,7 @@ function AffiliateTab() {
             />
             <span>
               Otomatis (default)
-              <span className="block text-[10px] font-normal text-slate-400">
+              <span className="block text-[10px] font-normal text-muted">
                 Pendaftar langsung aktif dan bisa mereferensikan seketika.
               </span>
             </span>
@@ -1380,7 +1380,7 @@ function AffiliateTab() {
               value={v.default_commission ?? 10}
               onChange={(e) => upd({ default_commission: Number(e.target.value) })}
             />
-            <p className="text-[10px] text-slate-400 mt-1">Diberikan ke afiliasi partner baru saat mendaftar mandiri.</p>
+            <p className="text-[10px] text-muted mt-1">Diberikan ke afiliasi partner baru saat mendaftar mandiri.</p>
           </div>
           <div>
             <label className={labelCls}>Komisi Afiliasi Outlet (%)</label>
@@ -1391,11 +1391,11 @@ function AffiliateTab() {
               value={v.owner_commission_percent ?? 5}
               onChange={(e) => upd({ owner_commission_percent: Number(e.target.value) })}
             />
-            <p className="text-[10px] text-slate-400 mt-1">Komisi owner ketika usaha baru bergabung lewat kode referral outlet-nya.</p>
+            <p className="text-[10px] text-muted mt-1">Komisi owner ketika usaha baru bergabung lewat kode referral outlet-nya.</p>
           </div>
         </div>
-        <div className="rounded-xl border border-slate-200 bg-slate-50/60 p-4 space-y-3">
-          <p className="text-[11px] font-bold text-slate-500 uppercase tracking-wide">Pembayaran Komisi Afiliasi Outlet</p>
+        <div className="rounded-xl border border-border bg-bg/60 p-4 space-y-3">
+          <p className="text-[11px] font-bold text-muted uppercase tracking-wide">Pembayaran Komisi Afiliasi Outlet</p>
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
             <div>
               <label className={labelCls}>Frekuensi</label>
@@ -1423,7 +1423,7 @@ function AffiliateTab() {
               </select>
             </div>
           </div>
-          <p className="text-[10px] text-slate-400">
+          <p className="text-[10px] text-muted">
             Komisi dicatat pada tabel closing per outlet dan dibayar ke rekening yang diisi owner pada layar Afiliasi.
           </p>
         </div>
@@ -1507,10 +1507,10 @@ function SystemIntegrationTab() {
         </Section>
 
         <Section title="Backup & Restore">
-          <label className="flex items-center gap-2 text-xs font-semibold text-slate-600">
+          <label className="flex items-center gap-2 text-xs font-semibold text-muted">
             <input type="checkbox" checked={v.backup_enabled !== false} onChange={(e) => upd({ backup_enabled: e.target.checked })} /> Aktifkan backup terjadwal
           </label>
-          <label className="flex items-center gap-2 text-xs font-semibold text-slate-600 mt-2">
+          <label className="flex items-center gap-2 text-xs font-semibold text-muted mt-2">
             <input type="checkbox" checked={v.restore_enabled !== false} onChange={(e) => upd({ restore_enabled: e.target.checked })} /> Izinkan restore
           </label>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mt-3">
@@ -1571,8 +1571,8 @@ function SystemIntegrationTab() {
 
 function Section({ title, children }: { title: string; children: ReactNode }) {
   return (
-    <div className="rounded-xl border border-slate-200 bg-slate-50/50 p-4">
-      <p className="text-[11px] font-bold text-slate-500 uppercase tracking-wide mb-3">{title}</p>
+    <div className="rounded-xl border border-border bg-bg/50 p-4">
+      <p className="text-[11px] font-bold text-muted uppercase tracking-wide mb-3">{title}</p>
       {children}
     </div>
   );
@@ -1592,20 +1592,20 @@ function AuditTab() {
       title="Audit Log"
       subtitle="Jejak aksi tim superadmin. Secret tidak pernah dicatat."
       action={
-        <button onClick={reload} className="p-2 rounded-lg border border-slate-200 text-slate-500 hover:bg-slate-50">
+        <button onClick={reload} className="p-2 rounded-lg border border-border text-muted hover:bg-bg">
           <RefreshCw className="w-4 h-4" />
         </button>
       }
     >
       <div className="space-y-2">
-        {loading && <p className="text-xs text-slate-400">Memuat...</p>}
-        {!loading && logs.length === 0 && <p className="text-xs text-slate-400">Belum ada aktivitas.</p>}
+        {loading && <p className="text-xs text-muted">Memuat...</p>}
+        {!loading && logs.length === 0 && <p className="text-xs text-muted">Belum ada aktivitas.</p>}
         {logs.map((l) => (
-          <div key={l.id} className="flex items-center gap-3 p-2.5 rounded-lg border border-slate-100 bg-slate-50/40 text-xs">
-            <span className="font-mono text-[10px] text-sky-600 font-bold">{l.action}</span>
-            <span className="text-slate-600 flex-1 truncate">{l.target}</span>
-            <span className="text-[10px] text-slate-400">{l.actor_role}</span>
-            <span className="text-[10px] text-slate-400">{new Date(l.created_at).toLocaleString('id-ID')}</span>
+          <div key={l.id} className="flex items-center gap-3 p-2.5 rounded-lg border border-border bg-bg/40 text-xs">
+            <span className="font-mono text-[10px] text-primary font-bold">{l.action}</span>
+            <span className="text-muted flex-1 truncate">{l.target}</span>
+            <span className="text-[10px] text-muted">{l.actor_role}</span>
+            <span className="text-[10px] text-muted">{new Date(l.created_at).toLocaleString('id-ID')}</span>
           </div>
         ))}
       </div>
@@ -1768,7 +1768,7 @@ function OverrideTab() {
         <div>
           <div className="flex items-center justify-between">
             <label className={labelCls}>Nilai (JSON)</label>
-            <button onClick={loadCurrent} className="flex items-center gap-1 text-[11px] font-bold text-sky-600 hover:text-sky-700">
+            <button onClick={loadCurrent} className="flex items-center gap-1 text-[11px] font-bold text-primary hover:text-primary">
               <RefreshCw className={`w-3.5 h-3.5 ${loading ? 'animate-spin' : ''}`} /> Muat ulang
             </button>
           </div>
@@ -1785,7 +1785,7 @@ function OverrideTab() {
         </div>
 
         {/* Preview efektif */}
-        <div className="pt-3 border-t border-slate-100">
+        <div className="pt-3 border-t border-border">
           <label className={labelCls}>Preview Nilai Efektif (pilih outlet)</label>
           <div className="flex gap-2 mt-1">
             <select className={inputCls} value={previewOutlet} onChange={(e) => setPreviewOutlet(e.target.value)}>
@@ -1793,17 +1793,17 @@ function OverrideTab() {
               {outlets.map((o) => <option key={o.outlet_id} value={o.outlet_id}>{o.outlet_name}</option>)}
             </select>
             <button onClick={preview} disabled={!previewOutlet}
-              className="border border-sky-200 bg-sky-50 text-sky-700 px-4 py-2 rounded-xl text-xs font-semibold hover:bg-sky-100 disabled:opacity-50">
+              className="border border-primary/30 bg-primary/10 text-primary px-4 py-2 rounded-xl text-xs font-semibold hover:bg-primary/15 disabled:opacity-50">
               Lihat
             </button>
           </div>
           {effective && (
-            <div className="mt-2 bg-slate-50 rounded-xl p-3 text-xs">
-              <p className="font-bold text-slate-700 mb-1">
-                Sumber: <span className="text-sky-600 uppercase">{String(effective.source)}</span>
+            <div className="mt-2 bg-bg rounded-xl p-3 text-xs">
+              <p className="font-bold text-ink mb-1">
+                Sumber: <span className="text-primary uppercase">{String(effective.source)}</span>
                 {effective.version ? <> &bull; versi {String(effective.version)}</> : null}
               </p>
-              <pre className="text-[10px] font-mono text-slate-600 whitespace-pre-wrap max-h-40 overflow-auto">
+              <pre className="text-[10px] font-mono text-muted whitespace-pre-wrap max-h-40 overflow-auto">
                 {effective.value ? JSON.stringify(effective.value, null, 2) : '(tidak ada nilai)'}
               </pre>
             </div>
@@ -1811,23 +1811,23 @@ function OverrideTab() {
         </div>
 
         {/* Riwayat */}
-        <div className="pt-3 border-t border-slate-100">
+        <div className="pt-3 border-t border-border">
           <label className={labelCls}>Riwayat Versi</label>
           {versions.length === 0 ? (
-            <p className="text-[11px] text-slate-400 mt-1">Belum ada riwayat untuk scope ini.</p>
+            <p className="text-[11px] text-muted mt-1">Belum ada riwayat untuk scope ini.</p>
           ) : (
-            <div className="mt-1 bg-white border border-slate-200/80 rounded-xl divide-y divide-slate-50 max-h-56 overflow-y-auto">
+            <div className="mt-1 bg-surface border border-border/80 rounded-xl divide-y divide-border max-h-56 overflow-y-auto">
               {versions.map((h) => (
                 <div key={h.version} className="flex items-center justify-between px-3 py-2 gap-2">
                   <div className="min-w-0">
-                    <p className="text-xs font-bold text-slate-700">
+                    <p className="text-xs font-bold text-ink">
                       v{h.version} &bull; {new Date(h.created_at).toLocaleString('id-ID', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' })}
                     </p>
-                    <p className="text-[10px] text-slate-400 truncate">{h.changed_by_email}{h.note ? ` — ${h.note}` : ''}</p>
+                    <p className="text-[10px] text-muted truncate">{h.changed_by_email}{h.note ? ` — ${h.note}` : ''}</p>
                   </div>
                   <button
                     onClick={() => rollback(h.version)}
-                    className="shrink-0 border border-amber-200 bg-amber-50 text-amber-700 px-3 py-1.5 rounded-lg text-[10px] font-bold hover:bg-amber-100"
+                    className="shrink-0 border border-warning/30 bg-warning/10 text-warning px-3 py-1.5 rounded-lg text-[10px] font-bold hover:bg-warning/15"
                   >
                     Rollback
                   </button>
@@ -1926,25 +1926,25 @@ function AnnouncementsTab() {
           <label className={labelCls}>Isi</label>
           <textarea className={`${inputCls} min-h-[80px]`} value={form.body} onChange={(e) => setForm({ ...form, body: e.target.value })} />
         </div>
-        <label className="flex items-center gap-2 text-xs font-semibold text-slate-600">
+        <label className="flex items-center gap-2 text-xs font-semibold text-muted">
           <input type="checkbox" checked={form.is_active} onChange={(e) => setForm({ ...form, is_active: e.target.checked })} />
           Aktif
         </label>
         <SaveButton loading={saving} onClick={save} label="Tambah Pengumuman" />
 
-        <div className="pt-3 border-t border-slate-100">
-          {loading ? <p className="text-[11px] text-slate-400">Memuat...</p> : rows.length === 0 ? (
-            <p className="text-[11px] text-slate-400">Belum ada pengumuman.</p>
+        <div className="pt-3 border-t border-border">
+          {loading ? <p className="text-[11px] text-muted">Memuat...</p> : rows.length === 0 ? (
+            <p className="text-[11px] text-muted">Belum ada pengumuman.</p>
           ) : (
-            <div className="bg-white border border-slate-200/80 rounded-xl divide-y divide-slate-50">
+            <div className="bg-surface border border-border/80 rounded-xl divide-y divide-border">
               {rows.map((r) => (
                 <div key={r.id} className="flex items-center justify-between px-3 py-2.5 gap-2">
                   <div className="min-w-0">
-                    <p className="text-xs font-bold text-slate-800 truncate">{r.title}</p>
-                    <p className="text-[10px] text-slate-400 truncate">{r.audience} &bull; {r.is_active ? 'aktif' : 'nonaktif'}</p>
+                    <p className="text-xs font-bold text-ink truncate">{r.title}</p>
+                    <p className="text-[10px] text-muted truncate">{r.audience} &bull; {r.is_active ? 'aktif' : 'nonaktif'}</p>
                   </div>
                   <div className="flex gap-1.5 shrink-0">
-                    <button onClick={() => toggle(r)} className="px-3 py-1.5 rounded-lg border border-sky-200 bg-sky-50 text-sky-700 text-[10px] font-bold hover:bg-sky-100">
+                    <button onClick={() => toggle(r)} className="px-3 py-1.5 rounded-lg border border-primary/30 bg-primary/10 text-primary text-[10px] font-bold hover:bg-primary/15">
                       {r.is_active ? 'Matikan' : 'Aktifkan'}
                     </button>
                     <button onClick={() => remove(r)} className="p-2 rounded-lg bg-red-50 text-red-500 hover:bg-red-100">
@@ -2009,38 +2009,38 @@ function MonitoringTab() {
   return (
     <Card title="Monitoring Platform" subtitle="Kesehatan sistem & antrean yang perlu ditindak.">
       <div className="space-y-4">
-        {loading && <p className="text-[11px] text-slate-400">Memuat...</p>}
+        {loading && <p className="text-[11px] text-muted">Memuat...</p>}
         {data && (
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
             {items.map((it) => (
-              <div key={it.label} className={`rounded-xl border p-3 ${it.warn ? 'bg-amber-50 border-amber-200' : 'bg-white border-slate-200/80'}`}>
-                <p className="text-[9px] font-bold text-slate-400 uppercase">{it.label}</p>
-                <p className={`text-lg font-extrabold mt-0.5 ${it.warn ? 'text-amber-600' : 'text-slate-900'}`}>{String(it.value ?? 0)}</p>
+              <div key={it.label} className={`rounded-xl border p-3 ${it.warn ? 'bg-warning/10 border-warning/30' : 'bg-surface border-border/80'}`}>
+                <p className="text-[9px] font-bold text-muted uppercase">{it.label}</p>
+                <p className={`text-lg font-extrabold mt-0.5 ${it.warn ? 'text-warning' : 'text-ink'}`}>{String(it.value ?? 0)}</p>
               </div>
             ))}
           </div>
         )}
 
-        <div className="pt-3 border-t border-slate-100">
+        <div className="pt-3 border-t border-border">
           <div className="flex items-center justify-between mb-2">
             <div>
               <label className={labelCls}>Rules Engine</label>
-              <p className="text-[11px] text-slate-400">Evaluasi semua automation_rules aktif; hasil match dicatat di audit.</p>
+              <p className="text-[11px] text-muted">Evaluasi semua automation_rules aktif; hasil match dicatat di audit.</p>
             </div>
             <button onClick={runRules} disabled={running}
-              className="bg-gradient-to-r from-cyan-500 to-sky-600 text-white px-4 py-2.5 rounded-xl text-xs font-semibold shadow-md shadow-sky-500/25 active:scale-95 transition disabled:opacity-50">
+              className="ocean-gradient text-white px-4 py-2.5 rounded-xl text-xs font-semibold shadow-md shadow-primary/25 active:scale-95 transition disabled:opacity-50">
               {running ? 'Menjalankan...' : 'Jalankan Rules'}
             </button>
           </div>
           {ruleResults && (
-            <div className="bg-white border border-slate-200/80 rounded-xl divide-y divide-slate-50">
+            <div className="bg-surface border border-border/80 rounded-xl divide-y divide-border">
               {ruleResults.map((r, i) => (
                 <div key={i} className="flex items-center justify-between px-3 py-2 gap-2">
                   <div className="min-w-0">
-                    <p className="text-xs font-bold text-slate-700 truncate">{r.rule}</p>
-                    <p className="text-[10px] text-slate-400 truncate">{r.detail ?? r.trigger}</p>
+                    <p className="text-xs font-bold text-ink truncate">{r.rule}</p>
+                    <p className="text-[10px] text-muted truncate">{r.detail ?? r.trigger}</p>
                   </div>
-                  <span className={`shrink-0 px-2 py-0.5 rounded-full text-[9px] font-bold border ${r.matched ? 'bg-emerald-50 text-emerald-600 border-emerald-200' : 'bg-slate-50 text-slate-400 border-slate-200'}`}>
+                  <span className={`shrink-0 px-2 py-0.5 rounded-full text-[9px] font-bold border ${r.matched ? 'bg-success/10 text-success border-success/30' : 'bg-bg text-muted border-border'}`}>
                     {r.matched ? 'MATCH' : 'tidak'}
                   </span>
                 </div>
@@ -2130,26 +2130,26 @@ function AdminsTab() {
           <SaveButton loading={saving} onClick={upsert} label="Tambah / Update" />
         </div>
 
-        <div className="bg-white border border-slate-200/80 rounded-xl divide-y divide-slate-50">
-          {loading && <p className="px-3 py-4 text-[11px] text-slate-400">Memuat...</p>}
-          {!loading && rows.length === 0 && <p className="px-3 py-4 text-[11px] text-slate-400">Belum ada admin.</p>}
+        <div className="bg-surface border border-border/80 rounded-xl divide-y divide-border">
+          {loading && <p className="px-3 py-4 text-[11px] text-muted">Memuat...</p>}
+          {!loading && rows.length === 0 && <p className="px-3 py-4 text-[11px] text-muted">Belum ada admin.</p>}
           {rows.map((r) => (
             <div key={r.id} className="flex flex-col sm:flex-row sm:items-center justify-between px-3 py-2.5 gap-2">
               <div className="min-w-0">
-                <p className="text-xs font-bold text-slate-800 truncate">{r.email}</p>
-                <p className="text-[10px] text-slate-400">{r.is_active ? 'aktif' : 'nonaktif'} &bull; sejak {new Date(r.created_at).toLocaleDateString('id-ID')}</p>
+                <p className="text-xs font-bold text-ink truncate">{r.email}</p>
+                <p className="text-[10px] text-muted">{r.is_active ? 'aktif' : 'nonaktif'} &bull; sejak {new Date(r.created_at).toLocaleDateString('id-ID')}</p>
               </div>
               <div className="flex items-center gap-2 shrink-0">
                 <select
                   value={r.role ?? 'support'}
                   onChange={(e) => changeRole(r.user_id, e.target.value)}
-                  className="border border-slate-200 rounded-lg px-2 py-1.5 text-[11px] bg-white"
+                  className="border border-border rounded-lg px-2 py-1.5 text-[11px] bg-surface"
                 >
                   {ADMIN_ROLES.map((x) => <option key={x} value={x}>{x}</option>)}
                 </select>
                 <button
                   onClick={() => setActive(r.user_id, !r.is_active)}
-                  className={`px-3 py-1.5 rounded-lg text-[10px] font-bold border ${r.is_active ? 'bg-rose-50 text-rose-600 border-rose-200 hover:bg-rose-100' : 'bg-emerald-50 text-emerald-600 border-emerald-200 hover:bg-emerald-100'}`}
+                  className={`px-3 py-1.5 rounded-lg text-[10px] font-bold border ${r.is_active ? 'bg-danger/10 text-danger border-danger/30 hover:bg-danger/15' : 'bg-success/10 text-success border-success/30 hover:bg-success/15'}`}
                 >
                   {r.is_active ? 'Nonaktifkan' : 'Aktifkan'}
                 </button>
@@ -2318,7 +2318,7 @@ function DoctorTab() {
     <div className="space-y-3.5">
       <Card title="Dokter Bisnis AI" subtitle="Otak AI global: provider LLM, prompt, guardrails, dan internet tool. Semua tanpa ubah koding.">
         <div className="max-w-[760px] space-y-3.5">
-          <label className="flex items-center gap-2 text-xs font-semibold text-slate-600">
+          <label className="flex items-center gap-2 text-xs font-semibold text-muted">
             <input type="checkbox" checked={!!v.aktif} onChange={(e) => set('aktif', e.target.checked)} />
             Aktifkan Dokter Bisnis AI untuk semua outlet
           </label>
@@ -2330,18 +2330,18 @@ function DoctorTab() {
             <div className="flex items-center justify-between mb-1.5">
               <label className={`${labelCls} mb-0`}>Master Prompt Karakter & Skill</label>
               <div className="flex gap-2">
-                <button type="button" onClick={() => setShowPrompt((s) => !s)} className="px-2.5 py-1 rounded-lg text-[11px] font-semibold border border-slate-200 bg-white hover:bg-slate-50 text-slate-700">
+                <button type="button" onClick={() => setShowPrompt((s) => !s)} className="px-2.5 py-1 rounded-lg text-[11px] font-semibold border border-border bg-surface hover:bg-bg text-ink">
                   {showPrompt ? 'Sembunyikan' : 'Preview'}
                 </button>
-                <button type="button" onClick={resetPrompt} className="px-2.5 py-1 rounded-lg text-[11px] font-semibold border border-slate-200 bg-white hover:bg-slate-50 text-slate-700">
+                <button type="button" onClick={resetPrompt} className="px-2.5 py-1 rounded-lg text-[11px] font-semibold border border-border bg-surface hover:bg-bg text-ink">
                   Reset ke Default
                 </button>
               </div>
             </div>
             <textarea className={inputCls} rows={10} value={v.prompt_utama ?? ''} onChange={(e) => set('prompt_utama', e.target.value)} />
-            <p className="text-[11px] text-slate-400 mt-1">Karakter + skill AI (BAGIAN 13.23). Dapat diubah tanpa koding.</p>
+            <p className="text-[11px] text-muted mt-1">Karakter + skill AI (BAGIAN 13.23). Dapat diubah tanpa koding.</p>
             {showPrompt && (
-              <pre className="mt-2 max-h-72 overflow-auto whitespace-pre-wrap rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-[11px] text-slate-600">
+              <pre className="mt-2 max-h-72 overflow-auto whitespace-pre-wrap rounded-xl border border-border bg-bg px-3 py-2 text-[11px] text-muted">
                 {v.prompt_utama || '(kosong)'}
               </pre>
             )}
@@ -2354,13 +2354,13 @@ function DoctorTab() {
                   key={s.key}
                   type="button"
                   onClick={() => toggleSkill(s.key)}
-                  className={`px-3 py-1.5 rounded-full text-[11px] font-semibold border transition ${sk.includes(s.key) ? 'bg-gradient-to-r from-cyan-500 to-sky-600 text-white border-transparent' : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-50'}`}
+                  className={`px-3 py-1.5 rounded-full text-[11px] font-semibold border transition ${sk.includes(s.key) ? 'ocean-gradient text-white border-transparent' : 'bg-surface text-muted border-border hover:bg-bg'}`}
                 >
                   {s.label}
                 </button>
               ))}
             </div>
-            <p className="text-[11px] text-slate-400 mt-1">Kosong = semua skill aktif. Tool diluar skill terpilih tidak dikirim ke AI.</p>
+            <p className="text-[11px] text-muted mt-1">Kosong = semua skill aktif. Tool diluar skill terpilih tidak dikirim ke AI.</p>
           </div>
           <div>
             <label className={labelCls}>Guardrails (pisahkan dengan koma)</label>
@@ -2370,13 +2370,13 @@ function DoctorTab() {
               onChange={(e) => set('guardrails', e.target.value.split(',').map((s) => s.trim()).filter(Boolean))}
             />
           </div>
-          <label className="flex items-center gap-2 text-xs font-semibold text-slate-600">
+          <label className="flex items-center gap-2 text-xs font-semibold text-muted">
             <input type="checkbox" checked={!!it.aktif} onChange={(e) => setIt('aktif', e.target.checked)} />
             Izinkan AI mengakses internet (web search)
           </label>
 
-          <div className="pt-2 border-t border-slate-100">
-            <p className="text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-2">Batas Pemakaian Harian (per outlet)</p>
+          <div className="pt-2 border-t border-border">
+            <p className="text-[11px] font-bold text-muted uppercase tracking-wider mb-2">Batas Pemakaian Harian (per outlet)</p>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div>
                 <label className={labelCls}>Maks Pesan / Hari</label>
@@ -2389,8 +2389,8 @@ function DoctorTab() {
             </div>
           </div>
 
-          <div className="pt-2 border-t border-slate-100">
-            <p className="text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-2">Provider Default</p>
+          <div className="pt-2 border-t border-border">
+            <p className="text-[11px] font-bold text-muted uppercase tracking-wider mb-2">Provider Default</p>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div className="sm:col-span-2">
                 <label className={labelCls}>Base URL</label>
@@ -2399,7 +2399,7 @@ function DoctorTab() {
               <div className="sm:col-span-2">
                 <label className={labelCls}>API Key</label>
                 <input className={inputCls} type="password" value={pd.api_key ?? ''} placeholder="sk-..." onChange={(e) => setPd('api_key', e.target.value)} />
-                <p className="text-[11px] text-slate-400 mt-1">Hanya disimpan di server (Edge Function). Tidak pernah dikirim ke aplikasi.</p>
+                <p className="text-[11px] text-muted mt-1">Hanya disimpan di server (Edge Function). Tidak pernah dikirim ke aplikasi.</p>
               </div>
               <div>
                 <label className={labelCls}>Model</label>
@@ -2421,13 +2421,13 @@ function DoctorTab() {
             <button
               onClick={probeProvider}
               disabled={probing}
-              className="flex items-center gap-2 px-4 py-2.5 rounded-xl font-semibold text-xs border border-slate-200 bg-white hover:bg-slate-50 text-slate-700 transition"
+              className="flex items-center gap-2 px-4 py-2.5 rounded-xl font-semibold text-xs border border-border bg-surface hover:bg-bg text-ink transition"
             >
               {probing ? <RefreshCw className="w-4 h-4 animate-spin" /> : <Zap className="w-4 h-4" />}
               Tes Koneksi Provider
             </button>
           </div>
-          {probe && <p className="text-[11px] text-slate-600 bg-slate-50 border border-slate-200 rounded-lg px-3 py-2">{probe}</p>}
+          {probe && <p className="text-[11px] text-muted bg-bg border border-border rounded-lg px-3 py-2">{probe}</p>}
         </div>
         <Toast msg={msg} />
       </Card>
@@ -2437,7 +2437,7 @@ function DoctorTab() {
           <div className="overflow-x-auto">
             <table className="w-full text-xs">
               <thead>
-                <tr className="text-left text-slate-500 border-b border-slate-200">
+                <tr className="text-left text-muted border-b border-border">
                   <th className="py-2 pr-3 font-semibold">Outlet</th>
                   <th className="py-2 pr-3 font-semibold">Override</th>
                   <th className="py-2 pr-3 font-semibold">Status</th>
@@ -2448,23 +2448,23 @@ function DoctorTab() {
               </thead>
               <tbody>
                 {aiConfigs.map((o) => (
-                  <tr key={o.outlet_id} className="border-b border-slate-100">
-                    <td className="py-2 pr-3 text-slate-800">{o.outlet_name ?? o.outlet_id}</td>
-                    <td className="py-2 pr-3 text-slate-600">{o.has_config ? (o.model ?? o.provider ?? '-') : '-'}</td>
+                  <tr key={o.outlet_id} className="border-b border-border">
+                    <td className="py-2 pr-3 text-ink">{o.outlet_name ?? o.outlet_id}</td>
+                    <td className="py-2 pr-3 text-muted">{o.has_config ? (o.model ?? o.provider ?? '-') : '-'}</td>
                     <td className="py-2 pr-3">
                       {o.has_config ? (
-                        <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${o.is_active ? 'bg-emerald-50 text-emerald-700 border border-emerald-200' : 'bg-slate-100 text-slate-500 border border-slate-200'}`}>
+                        <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${o.is_active ? 'bg-success/10 text-success border border-success/30' : 'bg-bg text-muted border border-border'}`}>
                           {o.is_active ? 'Aktif' : 'Nonaktif'}
                         </span>
-                      ) : <span className="text-slate-400">Global</span>}
+                      ) : <span className="text-muted">Global</span>}
                     </td>
-                    <td className="py-2 pr-3 text-slate-500">{o.has_api_key ? 'Tersimpan' : '-'}</td>
-                    <td className="py-2 pr-3 text-slate-500">
+                    <td className="py-2 pr-3 text-muted">{o.has_api_key ? 'Tersimpan' : '-'}</td>
+                    <td className="py-2 pr-3 text-muted">
                       {o.unlimited_tokens ? 'Unlimited' : (o.token_quota ? o.token_quota.toLocaleString('id-ID') : 'Global')}
                     </td>
                     <td className="py-2">
                       <div className="flex gap-2">
-                        <button onClick={() => openAiEdit(o)} className="px-2.5 py-1 rounded-lg text-[11px] font-semibold border border-slate-200 bg-white hover:bg-slate-50 text-slate-700">Atur</button>
+                        <button onClick={() => openAiEdit(o)} className="px-2.5 py-1 rounded-lg text-[11px] font-semibold border border-border bg-surface hover:bg-bg text-ink">Atur</button>
                         {o.has_config && (
                           <button onClick={() => clearAi(o.outlet_id)} disabled={aiBusy} className="px-2.5 py-1 rounded-lg text-[11px] font-semibold border border-red-200 bg-red-50 hover:bg-red-100 text-red-600">Hapus</button>
                         )}
@@ -2473,15 +2473,15 @@ function DoctorTab() {
                   </tr>
                 ))}
                 {aiConfigs.length === 0 && (
-                  <tr><td colSpan={6} className="py-3 text-center text-slate-400">Memuat data outlet...</td></tr>
+                  <tr><td colSpan={6} className="py-3 text-center text-muted">Memuat data outlet...</td></tr>
                 )}
               </tbody>
             </table>
           </div>
 
           {editOutlet && (
-            <div className="pt-2 border-t border-slate-100 max-w-[760px] space-y-3">
-              <p className="text-[11px] font-bold text-slate-500 uppercase tracking-wider">
+            <div className="pt-2 border-t border-border max-w-[760px] space-y-3">
+              <p className="text-[11px] font-bold text-muted uppercase tracking-wider">
                 Atur Override: {aiConfigs.find((o) => o.outlet_id === editOutlet)?.outlet_name ?? editOutlet}
               </p>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -2502,11 +2502,11 @@ function DoctorTab() {
                   <input className={inputCls} type="number" value={aiForm.max_tokens ?? ''} onChange={(e) => setAiForm({ ...aiForm, max_tokens: Number(e.target.value) })} />
                 </div>
               </div>
-              <label className="flex items-center gap-2 text-xs font-semibold text-slate-600">
+              <label className="flex items-center gap-2 text-xs font-semibold text-muted">
                 <input type="checkbox" checked={!!aiForm.is_active} onChange={(e) => setAiForm({ ...aiForm, is_active: e.target.checked })} />
                 Gunakan override ini untuk outlet tersebut
               </label>
-              <label className="flex items-center gap-2 text-xs font-semibold text-slate-600">
+              <label className="flex items-center gap-2 text-xs font-semibold text-muted">
                 <input type="checkbox" checked={!!aiForm.unlimited_tokens} onChange={(e) => setAiForm({ ...aiForm, unlimited_tokens: e.target.checked })} />
                 Unlimited token (lewati kuota; tetap dicatat)
               </label>
@@ -2517,11 +2517,11 @@ function DoctorTab() {
                 </div>
               )}
               <div className="flex flex-wrap gap-2">
-                <button onClick={saveAi} disabled={aiBusy} className="flex items-center gap-2 px-4 py-2.5 rounded-xl font-semibold text-xs bg-gradient-to-r from-cyan-500 to-sky-600 hover:from-cyan-600 hover:to-sky-700 text-white shadow-md shadow-sky-500/25 transition active:scale-95">
+                <button onClick={saveAi} disabled={aiBusy} className="flex items-center gap-2 px-4 py-2.5 rounded-xl font-semibold text-xs ocean-gradient hover:opacity-90 text-white shadow-md shadow-primary/25 transition active:scale-95">
                   {aiBusy ? <RefreshCw className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
                   Simpan Override
                 </button>
-                <button onClick={() => setEditOutlet('')} className="px-4 py-2.5 rounded-xl font-semibold text-xs border border-slate-200 bg-white hover:bg-slate-50 text-slate-700">Batal</button>
+                <button onClick={() => setEditOutlet('')} className="px-4 py-2.5 rounded-xl font-semibold text-xs border border-border bg-surface hover:bg-bg text-ink">Batal</button>
               </div>
             </div>
           )}
@@ -2543,12 +2543,12 @@ function DoctorTab() {
           <button
             onClick={runChat}
             disabled={chatBusy}
-            className="flex items-center gap-2 px-4 py-2.5 rounded-xl font-semibold text-xs bg-gradient-to-r from-cyan-500 to-sky-600 hover:from-cyan-600 hover:to-sky-700 text-white shadow-md shadow-sky-500/25 transition active:scale-95"
+            className="flex items-center gap-2 px-4 py-2.5 rounded-xl font-semibold text-xs ocean-gradient hover:opacity-90 text-white shadow-md shadow-primary/25 transition active:scale-95"
           >
             {chatBusy ? <RefreshCw className="w-4 h-4 animate-spin" /> : <Activity className="w-4 h-4" />}
             Kirim Uji
           </button>
-          {chatOut && <pre className="text-[11px] text-slate-700 bg-slate-50 border border-slate-200 rounded-lg px-3 py-2 whitespace-pre-wrap">{chatOut}</pre>}
+          {chatOut && <pre className="text-[11px] text-ink bg-bg border border-border rounded-lg px-3 py-2 whitespace-pre-wrap">{chatOut}</pre>}
         </div>
       </Card>
 
@@ -2564,12 +2564,12 @@ function DoctorTab() {
           <button
             onClick={runObserve}
             disabled={observeBusy}
-            className="flex items-center gap-2 px-4 py-2.5 rounded-xl font-semibold text-xs border border-slate-200 bg-white hover:bg-slate-50 text-slate-700 transition"
+            className="flex items-center gap-2 px-4 py-2.5 rounded-xl font-semibold text-xs border border-border bg-surface hover:bg-bg text-ink transition"
           >
             {observeBusy ? <RefreshCw className="w-4 h-4 animate-spin" /> : <CalendarClock className="w-4 h-4" />}
             Jalankan Observasi
           </button>
-          {observeOut && <pre className="text-[11px] text-slate-700 bg-slate-50 border border-slate-200 rounded-lg px-3 py-2 whitespace-pre-wrap">{observeOut}</pre>}
+          {observeOut && <pre className="text-[11px] text-ink bg-bg border border-border rounded-lg px-3 py-2 whitespace-pre-wrap">{observeOut}</pre>}
         </div>
       </Card>
     </div>
@@ -2717,7 +2717,7 @@ function SquadDmTab() {
     <div className="space-y-3.5">
       <Card title="Squad Digital Marketing AI" subtitle="Otak AI global untuk tim Desain, Promosi & Iklan. Semua tanpa ubah koding.">
         <div className="max-w-[760px] space-y-3.5">
-          <label className="flex items-center gap-2 text-xs font-semibold text-slate-600">
+          <label className="flex items-center gap-2 text-xs font-semibold text-muted">
             <input type="checkbox" checked={!!v.aktif} onChange={(e) => set('aktif', e.target.checked)} />
             Aktifkan Squad Digital Marketing AI untuk semua outlet
           </label>
@@ -2751,8 +2751,8 @@ function SquadDmTab() {
             </div>
           </div>
 
-          <div className="pt-2 border-t border-slate-100">
-            <p className="text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-2">Batas Pemakaian Harian (per outlet)</p>
+          <div className="pt-2 border-t border-border">
+            <p className="text-[11px] font-bold text-muted uppercase tracking-wider mb-2">Batas Pemakaian Harian (per outlet)</p>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div>
                 <label className={labelCls}>Maks Aset / Hari</label>
@@ -2765,8 +2765,8 @@ function SquadDmTab() {
             </div>
           </div>
 
-          <div className="pt-2 border-t border-slate-100">
-            <p className="text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-2">Provider Default</p>
+          <div className="pt-2 border-t border-border">
+            <p className="text-[11px] font-bold text-muted uppercase tracking-wider mb-2">Provider Default</p>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div className="sm:col-span-2">
                 <label className={labelCls}>Base URL</label>
@@ -2775,7 +2775,7 @@ function SquadDmTab() {
               <div className="sm:col-span-2">
                 <label className={labelCls}>API Key</label>
                 <input className={inputCls} type="password" value={pd.api_key ?? ''} placeholder="sk-..." onChange={(e) => setPd('api_key', e.target.value)} />
-                <p className="text-[11px] text-slate-400 mt-1">Hanya disimpan di server (Edge Function). Tidak pernah dikirim ke aplikasi.</p>
+                <p className="text-[11px] text-muted mt-1">Hanya disimpan di server (Edge Function). Tidak pernah dikirim ke aplikasi.</p>
               </div>
               <div>
                 <label className={labelCls}>Model</label>
@@ -2792,19 +2792,19 @@ function SquadDmTab() {
               <div>
                 <label className={labelCls}>Model Gambar (opsional)</label>
                 <input className={inputCls} value={pd.image_model ?? ''} placeholder="dall-e-3 / gpt-image-1 / flux-schnell" onChange={(e) => setPd('image_model', e.target.value)} />
-                <p className="text-[11px] text-slate-400 mt-1">Isi bila provider mendukung <span className="font-semibold">/images/generations</span>. Kosongkan bila tidak.</p>
+                <p className="text-[11px] text-muted mt-1">Isi bila provider mendukung <span className="font-semibold">/images/generations</span>. Kosongkan bila tidak.</p>
               </div>
               <div className="sm:col-span-2">
                 <label className={labelCls}>Model Video (opsional)</label>
                 <input className={inputCls} value={pd.video_model ?? ''} placeholder="mis. sora-1 / kling / runway" onChange={(e) => setPd('video_model', e.target.value)} />
-                <p className="text-[11px] text-slate-400 mt-1">Dipakai generator video bila provider mendukung. Bila kosong, video dibuat sebagai GIF animasi dari gambar.</p>
+                <p className="text-[11px] text-muted mt-1">Dipakai generator video bila provider mendukung. Bila kosong, video dibuat sebagai GIF animasi dari gambar.</p>
               </div>
             </div>
           </div>
 
-          <div className="pt-2 border-t border-slate-100">
-            <p className="text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-1">Koneksi Otomatis Kanal (OAuth)</p>
-            <p className="text-[11px] text-slate-400 mb-3">Isi kredensial aplikasi OAuth platform agar owner dapat menekan "Hubungkan Otomatis" di aplikasi. Kredensial HANYA tersimpan di server (service_role). Kosongkan bila belum ada - form manual owner tetap berfungsi.</p>
+          <div className="pt-2 border-t border-border">
+            <p className="text-[11px] font-bold text-muted uppercase tracking-wider mb-1">Koneksi Otomatis Kanal (OAuth)</p>
+            <p className="text-[11px] text-muted mb-3">Isi kredensial aplikasi OAuth platform agar owner dapat menekan "Hubungkan Otomatis" di aplikasi. Kredensial HANYA tersimpan di server (service_role). Kosongkan bila belum ada - form manual owner tetap berfungsi.</p>
             <div className="space-y-3">
               {[
                 { key: 'facebook', label: 'Facebook Page / Meta Ads', hint: 'developers.facebook.com' },
@@ -2815,10 +2815,10 @@ function SquadDmTab() {
               ].map((p) => {
                 const cfg = oauth[p.key] ?? {};
                 return (
-                  <div key={p.key} className="rounded-xl border border-slate-200 p-3">
+                  <div key={p.key} className="rounded-xl border border-border p-3">
                     <div className="flex items-center justify-between mb-2">
-                      <span className="text-xs font-bold text-slate-700">{p.label}</span>
-                      <span className="text-[10px] text-slate-400">{p.hint}</span>
+                      <span className="text-xs font-bold text-ink">{p.label}</span>
+                      <span className="text-[10px] text-muted">{p.hint}</span>
                     </div>
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                       <div>
@@ -2861,13 +2861,13 @@ function SquadDmTab() {
             <button
               onClick={probeProvider}
               disabled={probing}
-              className="flex items-center gap-2 px-4 py-2.5 rounded-xl font-semibold text-xs border border-slate-200 bg-white hover:bg-slate-50 text-slate-700 transition"
+              className="flex items-center gap-2 px-4 py-2.5 rounded-xl font-semibold text-xs border border-border bg-surface hover:bg-bg text-ink transition"
             >
               {probing ? <RefreshCw className="w-4 h-4 animate-spin" /> : <Zap className="w-4 h-4" />}
               Tes Koneksi Provider
             </button>
           </div>
-          {probe && <p className="text-[11px] text-slate-600 bg-slate-50 border border-slate-200 rounded-lg px-3 py-2">{probe}</p>}
+          {probe && <p className="text-[11px] text-muted bg-bg border border-border rounded-lg px-3 py-2">{probe}</p>}
         </div>
         <Toast msg={msg} />
       </Card>
@@ -2877,7 +2877,7 @@ function SquadDmTab() {
           <div className="overflow-x-auto">
             <table className="w-full text-xs">
               <thead>
-                <tr className="text-left text-slate-500 border-b border-slate-200">
+                <tr className="text-left text-muted border-b border-border">
                   <th className="py-2 pr-3 font-semibold">Outlet</th>
                   <th className="py-2 pr-3 font-semibold">Override</th>
                   <th className="py-2 pr-3 font-semibold">Status</th>
@@ -2888,23 +2888,23 @@ function SquadDmTab() {
               </thead>
               <tbody>
                 {dmConfigs.map((o) => (
-                  <tr key={o.outlet_id} className="border-b border-slate-100">
-                    <td className="py-2 pr-3 text-slate-800">{o.outlet_name ?? o.outlet_id}</td>
-                    <td className="py-2 pr-3 text-slate-600">{o.has_config ? (o.model ?? o.provider ?? '-') : '-'}</td>
+                  <tr key={o.outlet_id} className="border-b border-border">
+                    <td className="py-2 pr-3 text-ink">{o.outlet_name ?? o.outlet_id}</td>
+                    <td className="py-2 pr-3 text-muted">{o.has_config ? (o.model ?? o.provider ?? '-') : '-'}</td>
                     <td className="py-2 pr-3">
                       {o.has_config ? (
-                        <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${o.is_active ? 'bg-emerald-50 text-emerald-700 border border-emerald-200' : 'bg-slate-100 text-slate-500 border border-slate-200'}`}>
+                        <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${o.is_active ? 'bg-success/10 text-success border border-success/30' : 'bg-bg text-muted border border-border'}`}>
                           {o.is_active ? 'Aktif' : 'Nonaktif'}
                         </span>
-                      ) : <span className="text-slate-400">Global</span>}
+                      ) : <span className="text-muted">Global</span>}
                     </td>
-                    <td className="py-2 pr-3 text-slate-500">{o.has_api_key ? 'Tersimpan' : '-'}</td>
-                    <td className="py-2 pr-3 text-slate-500">
+                    <td className="py-2 pr-3 text-muted">{o.has_api_key ? 'Tersimpan' : '-'}</td>
+                    <td className="py-2 pr-3 text-muted">
                       {o.unlimited_tokens ? 'Unlimited' : (o.token_quota ? o.token_quota.toLocaleString('id-ID') : 'Global')}
                     </td>
                     <td className="py-2">
                       <div className="flex gap-2">
-                        <button onClick={() => openDmEdit(o)} className="px-2.5 py-1 rounded-lg text-[11px] font-semibold border border-slate-200 bg-white hover:bg-slate-50 text-slate-700">Atur</button>
+                        <button onClick={() => openDmEdit(o)} className="px-2.5 py-1 rounded-lg text-[11px] font-semibold border border-border bg-surface hover:bg-bg text-ink">Atur</button>
                         {o.has_config && (
                           <button onClick={() => clearDm(o.outlet_id)} disabled={dmBusy} className="px-2.5 py-1 rounded-lg text-[11px] font-semibold border border-red-200 bg-red-50 hover:bg-red-100 text-red-600">Hapus</button>
                         )}
@@ -2913,15 +2913,15 @@ function SquadDmTab() {
                   </tr>
                 ))}
                 {dmConfigs.length === 0 && (
-                  <tr><td colSpan={6} className="py-3 text-center text-slate-400">Memuat data outlet...</td></tr>
+                  <tr><td colSpan={6} className="py-3 text-center text-muted">Memuat data outlet...</td></tr>
                 )}
               </tbody>
             </table>
           </div>
 
           {editOutlet && (
-            <div className="pt-2 border-t border-slate-100 max-w-[760px] space-y-3">
-              <p className="text-[11px] font-bold text-slate-500 uppercase tracking-wider">
+            <div className="pt-2 border-t border-border max-w-[760px] space-y-3">
+              <p className="text-[11px] font-bold text-muted uppercase tracking-wider">
                 Atur Override: {dmConfigs.find((o) => o.outlet_id === editOutlet)?.outlet_name ?? editOutlet}
               </p>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -2942,11 +2942,11 @@ function SquadDmTab() {
                   <input className={inputCls} type="number" value={dmForm.max_tokens ?? ''} onChange={(e) => setDmForm({ ...dmForm, max_tokens: Number(e.target.value) })} />
                 </div>
               </div>
-              <label className="flex items-center gap-2 text-xs font-semibold text-slate-600">
+              <label className="flex items-center gap-2 text-xs font-semibold text-muted">
                 <input type="checkbox" checked={!!dmForm.is_active} onChange={(e) => setDmForm({ ...dmForm, is_active: e.target.checked })} />
                 Gunakan override ini untuk outlet tersebut
               </label>
-              <label className="flex items-center gap-2 text-xs font-semibold text-slate-600">
+              <label className="flex items-center gap-2 text-xs font-semibold text-muted">
                 <input type="checkbox" checked={!!dmForm.unlimited_tokens} onChange={(e) => setDmForm({ ...dmForm, unlimited_tokens: e.target.checked })} />
                 Unlimited token (lewati kuota; tetap dicatat)
               </label>
@@ -2957,11 +2957,11 @@ function SquadDmTab() {
                 </div>
               )}
               <div className="flex flex-wrap gap-2">
-                <button onClick={saveDm} disabled={dmBusy} className="flex items-center gap-2 px-4 py-2.5 rounded-xl font-semibold text-xs bg-gradient-to-r from-cyan-500 to-sky-600 hover:from-cyan-600 hover:to-sky-700 text-white shadow-md shadow-sky-500/25 transition active:scale-95">
+                <button onClick={saveDm} disabled={dmBusy} className="flex items-center gap-2 px-4 py-2.5 rounded-xl font-semibold text-xs ocean-gradient hover:opacity-90 text-white shadow-md shadow-primary/25 transition active:scale-95">
                   {dmBusy ? <RefreshCw className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
                   Simpan Override
                 </button>
-                <button onClick={() => setEditOutlet('')} className="px-4 py-2.5 rounded-xl font-semibold text-xs border border-slate-200 bg-white hover:bg-slate-50 text-slate-700">Batal</button>
+                <button onClick={() => setEditOutlet('')} className="px-4 py-2.5 rounded-xl font-semibold text-xs border border-border bg-surface hover:bg-bg text-ink">Batal</button>
               </div>
             </div>
           )}
@@ -2973,7 +2973,7 @@ function SquadDmTab() {
           <div className="overflow-x-auto">
             <table className="w-full text-xs">
               <thead>
-                <tr className="text-left text-slate-500 border-b border-slate-200">
+                <tr className="text-left text-muted border-b border-border">
                   <th className="py-2 pr-3 font-semibold">Outlet</th>
                   <th className="py-2 pr-3 font-semibold">Kanal</th>
                   <th className="py-2 pr-3 font-semibold">Akun</th>
@@ -2985,14 +2985,14 @@ function SquadDmTab() {
               </thead>
               <tbody>
                 {accounts.map((a) => (
-                  <tr key={`${a.outlet_id}-${a.channel}`} className="border-b border-slate-100">
-                    <td className="py-2 pr-3 text-slate-800">{a.outlet_name ?? a.outlet_id}</td>
-                    <td className="py-2 pr-3 text-slate-600">{channelLabel(a.channel)}</td>
-                    <td className="py-2 pr-3 text-slate-600">{a.account_name ?? '-'}</td>
-                    <td className="py-2 pr-3 text-slate-500">{a.external_id ?? '-'}</td>
-                    <td className="py-2 pr-3 text-slate-500">{a.has_token ? 'Tersimpan' : '-'}</td>
+                  <tr key={`${a.outlet_id}-${a.channel}`} className="border-b border-border">
+                    <td className="py-2 pr-3 text-ink">{a.outlet_name ?? a.outlet_id}</td>
+                    <td className="py-2 pr-3 text-muted">{channelLabel(a.channel)}</td>
+                    <td className="py-2 pr-3 text-muted">{a.account_name ?? '-'}</td>
+                    <td className="py-2 pr-3 text-muted">{a.external_id ?? '-'}</td>
+                    <td className="py-2 pr-3 text-muted">{a.has_token ? 'Tersimpan' : '-'}</td>
                     <td className="py-2 pr-3">
-                      <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${a.is_connected ? 'bg-emerald-50 text-emerald-700 border border-emerald-200' : 'bg-slate-100 text-slate-500 border border-slate-200'}`}>
+                      <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${a.is_connected ? 'bg-success/10 text-success border border-success/30' : 'bg-bg text-muted border border-border'}`}>
                         {a.is_connected ? 'Terhubung' : 'Terputus'}
                       </span>
                     </td>
@@ -3002,14 +3002,14 @@ function SquadDmTab() {
                   </tr>
                 ))}
                 {accounts.length === 0 && (
-                  <tr><td colSpan={7} className="py-3 text-center text-slate-400">Belum ada akun kanal terhubung.</td></tr>
+                  <tr><td colSpan={7} className="py-3 text-center text-muted">Belum ada akun kanal terhubung.</td></tr>
                 )}
               </tbody>
             </table>
           </div>
 
-          <div className="pt-2 border-t border-slate-100 max-w-[760px] space-y-3">
-            <p className="text-[11px] font-bold text-slate-500 uppercase tracking-wider">Hubungkan Akun Kanal</p>
+          <div className="pt-2 border-t border-border max-w-[760px] space-y-3">
+            <p className="text-[11px] font-bold text-muted uppercase tracking-wider">Hubungkan Akun Kanal</p>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div>
                 <label className={labelCls}>Outlet</label>
@@ -3034,10 +3034,10 @@ function SquadDmTab() {
               <div className="sm:col-span-2">
                 <label className={labelCls}>Token Akses</label>
                 <input className={inputCls} type="password" value={accToken} placeholder="Kosongkan bila tidak diubah" onChange={(e) => setAccToken(e.target.value)} />
-                <p className="text-[11px] text-slate-400 mt-1">Token hanya disimpan di server (terenkripsi). Owner tidak dapat melihatnya.</p>
+                <p className="text-[11px] text-muted mt-1">Token hanya disimpan di server (terenkripsi). Owner tidak dapat melihatnya.</p>
               </div>
             </div>
-            <button onClick={saveAccount} disabled={accBusy} className="flex items-center gap-2 px-4 py-2.5 rounded-xl font-semibold text-xs bg-gradient-to-r from-cyan-500 to-sky-600 hover:from-cyan-600 hover:to-sky-700 text-white shadow-md shadow-sky-500/25 transition active:scale-95">
+            <button onClick={saveAccount} disabled={accBusy} className="flex items-center gap-2 px-4 py-2.5 rounded-xl font-semibold text-xs ocean-gradient hover:opacity-90 text-white shadow-md shadow-primary/25 transition active:scale-95">
               {accBusy ? <RefreshCw className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
               Simpan Akun Kanal
             </button>
@@ -3054,32 +3054,32 @@ export function ControlPlanePage() {
   const [warning] = useState<string | null>(null);
 
   return (
-    <div className="space-y-4 max-w-[1100px] mx-auto text-slate-800 fade-in">
-      <div className="bg-white p-4 sm:p-5 rounded-2xl border border-slate-200/80 shadow-sm flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+    <div className="space-y-4 max-w-[1100px] mx-auto text-ink fade-in">
+      <div className="bg-surface p-4 sm:p-5 rounded-2xl border border-border/80 shadow-sm flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div className="flex items-center gap-3">
-          <div className="w-11 h-11 rounded-xl bg-gradient-to-br from-cyan-500 to-sky-600 p-0.5 shadow-md shadow-sky-500/20 shrink-0">
-            <div className="w-full h-full bg-white rounded-[10px] flex items-center justify-center text-sky-600">
+          <div className="w-11 h-11 rounded-xl ocean-gradient p-0.5 shadow-md shadow-primary/20 shrink-0">
+            <div className="w-full h-full bg-surface rounded-[10px] flex items-center justify-center text-primary">
               <SlidersHorizontal className="w-5 h-5" />
             </div>
           </div>
           <div className="min-w-0">
-            <h1 className="text-base sm:text-lg font-bold text-slate-900 tracking-tight">Control Plane</h1>
-            <p className="text-slate-500 text-xs mt-0.5">Atur semua konfigurasi & integrasi tanpa mengubah koding.</p>
+            <h1 className="text-base sm:text-lg font-bold text-ink tracking-tight">Control Plane</h1>
+            <p className="text-muted text-xs mt-0.5">Atur semua konfigurasi & integrasi tanpa mengubah koding.</p>
           </div>
         </div>
-        <span className="px-2.5 py-1 bg-sky-50 text-sky-700 border border-sky-200/80 rounded-full text-[10px] font-bold tracking-wide self-start sm:self-auto">
+        <span className="px-2.5 py-1 bg-primary/10 text-primary border border-primary/30 rounded-full text-[10px] font-bold tracking-wide self-start sm:self-auto">
           KONFIGURASI PLATFORM
         </span>
       </div>
 
       {warning && (
-        <div className="flex items-center gap-2 p-3 rounded-xl bg-amber-50 border border-amber-200 text-xs text-amber-700">
+        <div className="flex items-center gap-2 p-3 rounded-xl bg-warning/10 border border-warning/30 text-xs text-warning">
           <AlertTriangle className="w-4 h-4" /> {warning}
         </div>
       )}
 
       <div className="grid grid-cols-1 lg:grid-cols-[240px_1fr] gap-3.5 sm:gap-4">
-        <aside className="bg-white p-2.5 rounded-2xl border border-slate-200/80 shadow-sm h-max lg:sticky lg:top-4">
+        <aside className="bg-surface p-2.5 rounded-2xl border border-border/80 shadow-sm h-max lg:sticky lg:top-4">
           <nav className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-1 gap-1">
             {TABS.map((tab) => {
               const Icon = tab.icon;
@@ -3090,11 +3090,11 @@ export function ControlPlanePage() {
                   onClick={() => setActiveId(tab.id)}
                   className={`flex items-center gap-2.5 px-3 py-2.5 rounded-xl text-xs font-semibold transition ${
                     isActive
-                      ? 'bg-gradient-to-r from-cyan-500 to-sky-600 text-white shadow-sm shadow-sky-500/25'
-                      : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900'
+                      ? 'ocean-gradient text-white shadow-sm shadow-primary/25'
+                      : 'text-muted hover:bg-bg hover:text-ink'
                   }`}
                 >
-                  <Icon className={`w-4 h-4 shrink-0 ${isActive ? 'text-white' : 'text-slate-500'}`} />
+                  <Icon className={`w-4 h-4 shrink-0 ${isActive ? 'text-white' : 'text-muted'}`} />
                   <span className="truncate">{tab.name}</span>
                 </button>
               );

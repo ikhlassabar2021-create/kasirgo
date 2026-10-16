@@ -32,11 +32,11 @@ const routeAllowed = (path: string, role: string): boolean => {
 function Forbidden() {
   return (
     <div className="min-h-[60vh] flex flex-col items-center justify-center text-center p-6">
-      <div className="w-14 h-14 rounded-2xl bg-rose-50 border border-rose-200 flex items-center justify-center mb-4">
-        <span className="text-rose-500 text-2xl font-black">!</span>
+      <div className="w-14 h-14 rounded-2xl bg-danger/10 border border-danger/30 flex items-center justify-center mb-4">
+        <span className="text-danger text-2xl font-black">!</span>
       </div>
-      <h1 className="text-lg font-bold text-slate-900 mb-1">Akses Ditolak</h1>
-      <p className="text-xs text-slate-500 max-w-xs">
+      <h1 className="text-lg font-bold text-ink mb-1">Akses Ditolak</h1>
+      <p className="text-xs text-muted max-w-xs">
         Role admin Anda tidak memiliki izin untuk halaman ini. Hubungi superadmin.
       </p>
     </div>
@@ -100,7 +100,7 @@ export default function App() {
 
   if (loading) {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-gradient-to-br from-cyan-500 to-sky-600">
+      <div className="flex min-h-screen items-center justify-center ocean-gradient">
         <div className="text-center text-white">
           <div className="h-12 w-12 animate-spin rounded-full border-4 border-white border-t-transparent mx-auto mb-4" />
           <p className="text-lg font-medium">Memuat KasirGo...</p>

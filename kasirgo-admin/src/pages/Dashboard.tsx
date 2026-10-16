@@ -81,43 +81,43 @@ export function Dashboard() {
   }, [series]);
 
   const metrics = [
-    { title: 'TOTAL USERS', value: String(totalUsers), icon: Users, color: 'text-sky-600', bg: 'bg-sky-50' },
-    { title: 'OUTLETS', value: String(totalOutlets), icon: Store, color: 'text-blue-600', bg: 'bg-blue-50' },
+    { title: 'TOTAL USERS', value: String(totalUsers), icon: Users, color: 'text-primary', bg: 'bg-primary/10' },
+    { title: 'OUTLETS', value: String(totalOutlets), icon: Store, color: 'text-primary', bg: 'bg-primary/10' },
     {
       title: 'PENDAPATAN ' + (granularity === 'month' ? '6 BLN' : '30 HARI'),
       value: fmtRp(totalRevenue),
-      icon: BarChart3, color: 'text-cyan-600', bg: 'bg-cyan-50',
+      icon: BarChart3, color: 'text-primary', bg: 'bg-primary/10',
     },
     {
       title: 'MRR PENDUKUNG',
       value: fmtRp(supporters?.mrr ?? 0),
-      icon: HeartHandshake, color: 'text-emerald-600', bg: 'bg-emerald-50',
+      icon: HeartHandshake, color: 'text-success', bg: 'bg-success/10',
     },
   ];
 
   return (
-    <div className="space-y-4 max-w-[1100px] mx-auto text-slate-800">
+    <div className="space-y-4 max-w-[1100px] mx-auto text-ink">
       {/* Header */}
-      <div className="bg-white p-4 sm:p-5 rounded-2xl border border-slate-200/80 shadow-sm flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+      <div className="bg-surface p-4 sm:p-5 rounded-2xl border border-border/80 shadow-sm flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div className="flex items-center gap-3">
-          <div className="w-11 h-11 rounded-xl bg-gradient-to-br from-cyan-500 to-sky-600 p-0.5 shadow-md shadow-sky-500/20">
-            <div className="w-full h-full bg-white rounded-[10px] flex items-center justify-center text-sky-600 font-extrabold">KG</div>
+          <div className="w-11 h-11 rounded-xl ocean-gradient p-0.5 shadow-md shadow-primary/20">
+            <div className="w-full h-full bg-surface rounded-[10px] flex items-center justify-center text-primary font-extrabold">KG</div>
           </div>
           <div>
-            <h1 className="text-base sm:text-lg font-bold text-slate-900 tracking-tight">Dashboard Revenue Superadmin</h1>
-            <p className="text-slate-500 text-xs mt-0.5">12 Revenue Engine &bull; data real-time Supabase</p>
+            <h1 className="text-base sm:text-lg font-bold text-ink tracking-tight">Dashboard Revenue Superadmin</h1>
+            <p className="text-muted text-xs mt-0.5">12 Revenue Engine &bull; data real-time Supabase</p>
           </div>
         </div>
         <button
           onClick={() => load(granularity)}
-          className="flex items-center gap-2 px-3 py-2 rounded-xl border border-slate-200 text-xs font-semibold text-slate-600 hover:bg-slate-50 transition"
+          className="flex items-center gap-2 px-3 py-2 rounded-xl border border-border text-xs font-semibold text-muted hover:bg-bg transition"
         >
           <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} /> Refresh
         </button>
       </div>
 
       {error && (
-        <div className="bg-rose-50 border border-rose-200 rounded-2xl p-4 flex items-center gap-2 text-rose-700 text-sm">
+        <div className="bg-danger/10 border border-danger/30 rounded-2xl p-4 flex items-center gap-2 text-danger text-sm">
           <AlertTriangle className="w-4 h-4" /> {error}
         </div>
       )}
@@ -125,30 +125,30 @@ export function Dashboard() {
       {/* Metric cards */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
         {metrics.map((m) => (
-          <div key={m.title} className="bg-white rounded-2xl border border-slate-200/80 shadow-sm p-4">
+          <div key={m.title} className="bg-surface rounded-2xl border border-border/80 shadow-sm p-4">
             <div className={`w-9 h-9 rounded-xl ${m.bg} ${m.color} flex items-center justify-center mb-3`}>
               <m.icon className="w-4 h-4" />
             </div>
-            <p className="text-[10px] font-bold tracking-wide text-slate-400">{m.title}</p>
-            <p className="text-lg font-extrabold text-slate-900 mt-0.5">{m.value}</p>
+            <p className="text-[10px] font-bold tracking-wide text-muted">{m.title}</p>
+            <p className="text-lg font-extrabold text-ink mt-0.5">{m.value}</p>
           </div>
         ))}
       </div>
 
       {/* 12 revenue engine chart */}
-      <section className="bg-white rounded-2xl border border-slate-200/80 shadow-sm p-4 sm:p-5">
+      <section className="bg-surface rounded-2xl border border-border/80 shadow-sm p-4 sm:p-5">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-4">
           <div>
-            <h2 className="text-sm font-bold text-slate-900">12 Revenue Engine</h2>
-            <p className="text-[11px] text-slate-500">Pendapatan platform per engine (data nyata)</p>
+            <h2 className="text-sm font-bold text-ink">12 Revenue Engine</h2>
+            <p className="text-[11px] text-muted">Pendapatan platform per engine (data nyata)</p>
           </div>
-          <div className="flex gap-1 bg-slate-100 rounded-xl p-1">
+          <div className="flex gap-1 bg-bg rounded-xl p-1">
             {(['day', 'month'] as const).map((g) => (
               <button
                 key={g}
                 onClick={() => setGranularity(g)}
                 className={`px-3 py-1.5 rounded-lg text-[11px] font-bold transition ${
-                  granularity === g ? 'bg-white text-sky-700 shadow-sm' : 'text-slate-500'
+                  granularity === g ? 'bg-surface text-primary shadow-sm' : 'text-muted'
                 }`}
               >
                 {g === 'day' ? 'Harian (30d)' : 'Bulanan (6bln)'}
@@ -157,7 +157,7 @@ export function Dashboard() {
           </div>
         </div>
         {loading ? (
-          <div className="h-72 flex items-center justify-center text-xs text-slate-400">Memuat grafik...</div>
+          <div className="h-72 flex items-center justify-center text-xs text-muted">Memuat grafik...</div>
         ) : (
           <ResponsiveContainer width="100%" height={288}>
             <BarChart data={chartData} margin={{ top: 4, right: 4, left: -12, bottom: 0 }}>
@@ -178,12 +178,12 @@ export function Dashboard() {
         {/* Per-engine totals */}
         <div className="grid grid-cols-3 sm:grid-cols-6 gap-2 mt-4">
           {REVENUE_ENGINES.map((e) => (
-            <div key={e.key} className="rounded-xl border border-slate-100 bg-slate-50/60 p-2">
+            <div key={e.key} className="rounded-xl border border-border bg-bg/60 p-2">
               <div className="flex items-center gap-1.5">
                 <span className="w-2 h-2 rounded-full" style={{ background: e.color }} />
-                <p className="text-[10px] font-bold text-slate-500 truncate">{e.label}</p>
+                <p className="text-[10px] font-bold text-muted truncate">{e.label}</p>
               </div>
-              <p className="text-xs font-extrabold text-slate-800 mt-0.5">{fmtRp(engineTotals[e.key] ?? 0)}</p>
+              <p className="text-xs font-extrabold text-ink mt-0.5">{fmtRp(engineTotals[e.key] ?? 0)}</p>
             </div>
           ))}
         </div>
@@ -191,42 +191,42 @@ export function Dashboard() {
 
       {/* Supporters + Partner leads */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-        <section className="bg-white rounded-2xl border border-slate-200/80 shadow-sm p-4 sm:p-5">
-          <h2 className="text-sm font-bold text-slate-900 mb-1">Program Pendukung</h2>
-          <p className="text-[11px] text-slate-500 mb-4">Langganan Rp50.000/bulan per outlet</p>
+        <section className="bg-surface rounded-2xl border border-border/80 shadow-sm p-4 sm:p-5">
+          <h2 className="text-sm font-bold text-ink mb-1">Program Pendukung</h2>
+          <p className="text-[11px] text-muted mb-4">Langganan Rp50.000/bulan per outlet</p>
           <div className="grid grid-cols-2 gap-3">
-            <SupporterStat label="Aktif" value={String(supporters?.active ?? 0)} tone="text-emerald-600" />
-            <SupporterStat label="Trial" value={String(supporters?.trial ?? 0)} tone="text-amber-600" />
-            <SupporterStat label="MRR" value={fmtRp(supporters?.mrr ?? 0)} tone="text-sky-700" />
-            <SupporterStat label="Pendapatan 30 hari" value={fmtRp(supporters?.revenue_30d ?? 0)} tone="text-cyan-700" />
+            <SupporterStat label="Aktif" value={String(supporters?.active ?? 0)} tone="text-success" />
+            <SupporterStat label="Trial" value={String(supporters?.trial ?? 0)} tone="text-warning" />
+            <SupporterStat label="MRR" value={fmtRp(supporters?.mrr ?? 0)} tone="text-primary" />
+            <SupporterStat label="Pendapatan 30 hari" value={fmtRp(supporters?.revenue_30d ?? 0)} tone="text-primary" />
           </div>
         </section>
 
-        <section className="bg-white rounded-2xl border border-slate-200/80 shadow-sm p-4 sm:p-5">
-          <h2 className="text-sm font-bold text-slate-900 mb-1">Partner Leads</h2>
-          <p className="text-[11px] text-slate-500 mb-4">Modal usaha</p>
+        <section className="bg-surface rounded-2xl border border-border/80 shadow-sm p-4 sm:p-5">
+          <h2 className="text-sm font-bold text-ink mb-1">Partner Leads</h2>
+          <p className="text-[11px] text-muted mb-4">Modal usaha</p>
           <div className="space-y-2">
-            <Link to="/users" className="flex items-center justify-between rounded-xl border border-slate-100 bg-slate-50/60 p-3 hover:bg-sky-50/60 transition">
+            <Link to="/users" className="flex items-center justify-between rounded-xl border border-border bg-bg/60 p-3 hover:bg-primary/10 transition">
               <div className="flex items-center gap-2.5">
-                <TrendingUp className="w-4 h-4 text-indigo-600" />
+                <TrendingUp className="w-4 h-4 text-primary" />
                 <div>
-                  <p className="text-xs font-bold text-slate-800">Fintech (Modal Usaha)</p>
-                  <p className="text-[10px] text-slate-500">
+                  <p className="text-xs font-bold text-ink">Fintech (Modal Usaha)</p>
+                  <p className="text-[10px] text-muted">
                     {partners?.fintech?.leads_total ?? 0} lead &bull; {partners?.fintech?.leads_approved ?? 0} disetujui
                   </p>
                 </div>
               </div>
-              <span className="text-xs font-extrabold text-indigo-700">{fmtRp(partners?.fintech?.amount_requested ?? 0)}</span>
+              <span className="text-xs font-extrabold text-primary">{fmtRp(partners?.fintech?.amount_requested ?? 0)}</span>
             </Link>
           </div>
         </section>
       </div>
 
       {/* Latest outlets quick list */}
-      <section className="bg-white rounded-2xl border border-slate-200/80 shadow-sm p-4 sm:p-5">
+      <section className="bg-surface rounded-2xl border border-border/80 shadow-sm p-4 sm:p-5">
         <div className="flex items-center justify-between mb-3">
-          <h2 className="text-sm font-bold text-slate-900">Outlet Terbaru</h2>
-          <Link to="/users" className="text-[11px] font-bold text-sky-700 hover:underline">Kelola pengguna &rarr;</Link>
+          <h2 className="text-sm font-bold text-ink">Outlet Terbaru</h2>
+          <Link to="/users" className="text-[11px] font-bold text-primary hover:underline">Kelola pengguna &rarr;</Link>
         </div>
         <OutletPreview />
       </section>
@@ -236,8 +236,8 @@ export function Dashboard() {
 
 function SupporterStat({ label, value, tone }: { label: string; value: string; tone: string }) {
   return (
-    <div className="rounded-xl border border-slate-100 bg-slate-50/60 p-3">
-      <p className="text-[10px] font-bold text-slate-400">{label}</p>
+    <div className="rounded-xl border border-border bg-bg/60 p-3">
+      <p className="text-[10px] font-bold text-muted">{label}</p>
       <p className={`text-sm font-extrabold ${tone} mt-0.5`}>{value}</p>
     </div>
   );
@@ -261,15 +261,15 @@ function OutletPreview() {
       .catch(() => setErr(true));
   }, []);
 
-  if (err) return <p className="text-xs text-slate-400">Gagal memuat outlet.</p>;
-  if (!rows.length) return <p className="text-xs text-slate-400">Belum ada outlet terdaftar.</p>;
+  if (err) return <p className="text-xs text-muted">Gagal memuat outlet.</p>;
+  if (!rows.length) return <p className="text-xs text-muted">Belum ada outlet terdaftar.</p>;
   return (
     <div className="space-y-2">
       {rows.map((r) => (
-        <div key={r.user_id} className="flex items-center justify-between rounded-xl border border-slate-100 p-3">
+        <div key={r.user_id} className="flex items-center justify-between rounded-xl border border-border p-3">
           <div className="min-w-0">
-            <p className="text-xs font-bold text-slate-800 truncate">{r.outlet_name ?? r.name ?? '(tanpa nama)'}</p>
-            <p className="text-[10px] text-slate-400 truncate">
+            <p className="text-xs font-bold text-ink truncate">{r.outlet_name ?? r.name ?? '(tanpa nama)'}</p>
+            <p className="text-[10px] text-muted truncate">
               {r.outlet_type ?? '-'} &bull; daftar {fmtDate(r.created_at)}
             </p>
           </div>
@@ -286,7 +286,7 @@ function OutletPreview() {
 function Badge({ ok, label }: { ok: boolean; label: string }) {
   return (
     <span className={`px-2 py-0.5 rounded-full text-[9px] font-bold border ${
-      ok ? 'bg-emerald-50 text-emerald-600 border-emerald-200' : 'bg-amber-50 text-amber-600 border-amber-200'
+      ok ? 'bg-success/10 text-success border-success/30' : 'bg-warning/10 text-warning border-warning/30'
     }`}>
       {label}
     </span>

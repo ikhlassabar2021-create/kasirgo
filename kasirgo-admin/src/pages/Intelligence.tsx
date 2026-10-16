@@ -33,16 +33,16 @@ export function IntelligencePage() {
     <div className="p-3 sm:p-6 max-w-[1100px] mx-auto fade-in">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-6">
         <div>
-          <h1 className="text-xl sm:text-2xl font-bold text-slate-900 mb-1">Intelijen Platform</h1>
-          <p className="text-xs sm:text-sm text-slate-500">Tren, retensi, churn risk, anomali &mdash; agregat tanpa data pribadi</p>
+          <h1 className="text-xl sm:text-2xl font-bold text-ink mb-1">Intelijen Platform</h1>
+          <p className="text-xs sm:text-sm text-muted">Tren, retensi, churn risk, anomali &mdash; agregat tanpa data pribadi</p>
         </div>
-        <button onClick={load} className="flex items-center gap-2 border border-slate-200 bg-white px-4 py-2.5 rounded-xl text-xs font-semibold text-slate-600 hover:bg-slate-50 transition">
+        <button onClick={load} className="flex items-center gap-2 border border-border bg-surface px-4 py-2.5 rounded-xl text-xs font-semibold text-muted hover:bg-bg transition">
           <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} /> Refresh
         </button>
       </div>
 
-      {error && <div className="bg-rose-50 border border-rose-200 rounded-2xl p-4 text-rose-700 text-sm mb-6">{error}</div>}
-      {loading && !data && <div className="text-center text-xs text-slate-400 py-10">Memuat...</div>}
+      {error && <div className="bg-danger/10 border border-danger/30 rounded-2xl p-4 text-danger text-sm mb-6">{error}</div>}
+      {loading && !data && <div className="text-center text-xs text-muted py-10">Memuat...</div>}
 
       {data && (
         <>
@@ -55,8 +55,8 @@ export function IntelligencePage() {
           </div>
 
           {/* Tren harian */}
-          <div className="bg-white rounded-2xl card-shadow border border-slate-200/80 p-4 sm:p-6 mb-6">
-            <h2 className="text-sm font-bold text-slate-900 mb-4">Transaksi Harian (30 hari)</h2>
+          <div className="bg-surface rounded-2xl card-shadow border border-border/80 p-4 sm:p-6 mb-6">
+            <h2 className="text-sm font-bold text-ink mb-4">Transaksi Harian (30 hari)</h2>
             {trend.length ? (
               <div className="h-64">
                 <ResponsiveContainer width="100%" height="100%">
@@ -74,61 +74,61 @@ export function IntelligencePage() {
                 </ResponsiveContainer>
               </div>
             ) : (
-              <p className="text-xs text-slate-400">Belum ada transaksi 30 hari terakhir.</p>
+              <p className="text-xs text-muted">Belum ada transaksi 30 hari terakhir.</p>
             )}
           </div>
 
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-6">
             {/* Churn risk */}
-            <div className="bg-white rounded-2xl card-shadow border border-slate-200/80 p-4 sm:p-5">
-              <h2 className="text-sm font-bold text-slate-900 mb-1 flex items-center gap-2">
-                <Timer className="w-4 h-4 text-amber-500" /> Risiko Churn
+            <div className="bg-surface rounded-2xl card-shadow border border-border/80 p-4 sm:p-5">
+              <h2 className="text-sm font-bold text-ink mb-1 flex items-center gap-2">
+                <Timer className="w-4 h-4 text-warning" /> Risiko Churn
               </h2>
-              <p className="text-[10px] text-slate-400 mb-3">Outlet aktif sebelumnya, tanpa transaksi &ge; 14 hari</p>
+              <p className="text-[10px] text-muted mb-3">Outlet aktif sebelumnya, tanpa transaksi &ge; 14 hari</p>
               {data.churn_risk.length ? (
                 <div className="space-y-2">
                   {data.churn_risk.map((c) => (
-                    <div key={c.outlet_id} className="flex items-center justify-between bg-slate-50 rounded-xl px-3 py-2.5">
+                    <div key={c.outlet_id} className="flex items-center justify-between bg-bg rounded-xl px-3 py-2.5">
                       <div className="min-w-0">
-                        <p className="text-xs font-bold text-slate-800 truncate">{c.outlet_name}</p>
-                        <p className="text-[10px] text-slate-400">Transaksi seumur hidup: {c.tx_total}</p>
+                        <p className="text-xs font-bold text-ink truncate">{c.outlet_name}</p>
+                        <p className="text-[10px] text-muted">Transaksi seumur hidup: {c.tx_total}</p>
                       </div>
                       <div className="text-right shrink-0">
-                        <p className="text-[10px] font-bold text-amber-600">idle {Math.floor((Date.now() - new Date(c.last_tx_at).getTime()) / 86400000)} hari</p>
-                        <p className="text-[10px] text-slate-400">TX terakhir {fmtDate(c.last_tx_at)}</p>
+                        <p className="text-[10px] font-bold text-warning">idle {Math.floor((Date.now() - new Date(c.last_tx_at).getTime()) / 86400000)} hari</p>
+                        <p className="text-[10px] text-muted">TX terakhir {fmtDate(c.last_tx_at)}</p>
                       </div>
                     </div>
                   ))}
                 </div>
               ) : (
-                <p className="text-xs text-slate-400">Tidak ada outlet berisiko churn.</p>
+                <p className="text-xs text-muted">Tidak ada outlet berisiko churn.</p>
               )}
             </div>
 
             {/* Anomali */}
-            <div className="bg-white rounded-2xl card-shadow border border-slate-200/80 p-4 sm:p-5">
-              <h2 className="text-sm font-bold text-slate-900 mb-1 flex items-center gap-2">
-                <AlertTriangle className="w-4 h-4 text-rose-500" /> Anomali Volume (z &gt; 2,5)
+            <div className="bg-surface rounded-2xl card-shadow border border-border/80 p-4 sm:p-5">
+              <h2 className="text-sm font-bold text-ink mb-1 flex items-center gap-2">
+                <AlertTriangle className="w-4 h-4 text-danger" /> Anomali Volume (z &gt; 2,5)
               </h2>
-              <p className="text-[10px] text-slate-400 mb-3">Hari dengan jumlah transaksi menyimpang jauh dari rata-rata</p>
+              <p className="text-[10px] text-muted mb-3">Hari dengan jumlah transaksi menyimpang jauh dari rata-rata</p>
               {data.anomaly.length ? (
                 <div className="space-y-2">
                   {data.anomaly.map((a) => (
-                    <div key={a.day} className="flex items-center justify-between bg-slate-50 rounded-xl px-3 py-2.5">
-                      <p className="text-xs font-bold text-slate-800">{fmtDate(a.day)}</p>
-                      <p className="text-[10px] text-slate-500">{a.tx} TX &bull; z = {a.z}</p>
+                    <div key={a.day} className="flex items-center justify-between bg-bg rounded-xl px-3 py-2.5">
+                      <p className="text-xs font-bold text-ink">{fmtDate(a.day)}</p>
+                      <p className="text-[10px] text-muted">{a.tx} TX &bull; z = {a.z}</p>
                     </div>
                   ))}
                 </div>
               ) : (
-                <p className="text-xs text-slate-400">Tidak ada anomali terdeteksi.</p>
+                <p className="text-xs text-muted">Tidak ada anomali terdeteksi.</p>
               )}
             </div>
           </div>
 
           {/* Retensi mingguan */}
-          <div className="bg-white rounded-2xl card-shadow border border-slate-200/80 p-4 sm:p-5">
-            <h2 className="text-sm font-bold text-slate-900 mb-3">Outlet Aktif per Minggu (retensi)</h2>
+          <div className="bg-surface rounded-2xl card-shadow border border-border/80 p-4 sm:p-5">
+            <h2 className="text-sm font-bold text-ink mb-3">Outlet Aktif per Minggu (retensi)</h2>
             {data.weekly_active.length ? (
               <div className="h-48">
                 <ResponsiveContainer width="100%" height="100%">
@@ -145,7 +145,7 @@ export function IntelligencePage() {
                 </ResponsiveContainer>
               </div>
             ) : (
-              <p className="text-xs text-slate-400">Belum ada data mingguan.</p>
+              <p className="text-xs text-muted">Belum ada data mingguan.</p>
             )}
           </div>
         </>
@@ -156,12 +156,12 @@ export function IntelligencePage() {
 
 function Kpi({ icon: Icon, label, value }: { icon: typeof Users; label: string; value: string }) {
   return (
-    <div className="bg-white rounded-2xl card-shadow border border-slate-200/80 p-4">
+    <div className="bg-surface rounded-2xl card-shadow border border-border/80 p-4">
       <div className="flex items-center gap-2 mb-1.5">
-        <Icon className="w-4 h-4 text-sky-600" />
-        <p className="text-[9px] font-bold text-slate-400 uppercase">{label}</p>
+        <Icon className="w-4 h-4 text-primary" />
+        <p className="text-[9px] font-bold text-muted uppercase">{label}</p>
       </div>
-      <p className="text-lg font-extrabold text-slate-900">{value}</p>
+      <p className="text-lg font-extrabold text-ink">{value}</p>
     </div>
   );
 }

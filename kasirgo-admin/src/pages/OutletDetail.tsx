@@ -85,13 +85,13 @@ export function OutletDetailPage() {
   const currentPlan = outlet?.is_supporter ? 'pendukung' : outlet?.on_trial ? 'trial' : 'free';
 
   if (loading) {
-    return <div className="p-10 text-center text-sm text-slate-400">Memuat data outlet...</div>;
+    return <div className="p-10 text-center text-sm text-muted">Memuat data outlet...</div>;
   }
   if (!outlet) {
     return (
       <div className="p-10 text-center">
-        <p className="text-sm text-slate-500 mb-3">Outlet tidak ditemukan.</p>
-        <Link to="/outlets" className="text-xs font-bold text-sky-700 hover:underline">Kembali ke Outlet Terdaftar</Link>
+        <p className="text-sm text-muted mb-3">Outlet tidak ditemukan.</p>
+        <Link to="/outlets" className="text-xs font-bold text-primary hover:underline">Kembali ke Outlet Terdaftar</Link>
       </div>
     );
   }
@@ -100,25 +100,25 @@ export function OutletDetailPage() {
     <div className="space-y-4 max-w-[1100px] mx-auto fade-in">
       {msg && (
         <div className={`fixed bottom-5 right-5 z-50 px-4 py-2.5 rounded-xl text-xs font-semibold shadow-lg ${
-          msg.type === 'ok' ? 'bg-emerald-500 text-white' : 'bg-red-500 text-white'
+          msg.type === 'ok' ? 'bg-success/100 text-white' : 'bg-red-500 text-white'
         }`}>{msg.text}</div>
       )}
 
-      <div className="bg-white p-4 sm:p-5 rounded-2xl border border-slate-200/80 shadow-sm flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+      <div className="bg-surface p-4 sm:p-5 rounded-2xl border border-border/80 shadow-sm flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div className="flex items-center gap-3">
-          <Link to="/outlets" className="p-2 rounded-lg hover:bg-slate-100 text-slate-500">
+          <Link to="/outlets" className="p-2 rounded-lg hover:bg-bg text-muted">
             <ArrowLeft className="w-4 h-4" />
           </Link>
           <div>
-            <h1 className="text-base sm:text-lg font-bold text-slate-900 tracking-tight">{outlet.outlet_name ?? '(tanpa nama)'}</h1>
-            <p className="text-slate-500 text-xs mt-0.5 capitalize">
+            <h1 className="text-base sm:text-lg font-bold text-ink tracking-tight">{outlet.outlet_name ?? '(tanpa nama)'}</h1>
+            <p className="text-muted text-xs mt-0.5 capitalize">
               {outlet.outlet_type ?? '-'} &bull; {outlet.owner_name || '-'} &bull; {outlet.email}
             </p>
           </div>
         </div>
         <button
           onClick={() => { loadInfo(); loadReport(period); }}
-          className="flex items-center gap-2 px-3 py-2 rounded-xl border border-slate-200 text-xs font-semibold text-slate-600 hover:bg-slate-50 transition"
+          className="flex items-center gap-2 px-3 py-2 rounded-xl border border-border text-xs font-semibold text-muted hover:bg-bg transition"
         >
           <RefreshCw className="w-4 h-4" /> Refresh
         </button>
@@ -132,16 +132,16 @@ export function OutletDetailPage() {
               tone={outlet.kyc_status === 'verified' ? 'ok' : outlet.kyc_status === 'rejected' ? 'bad' : 'warn'}
               label={outlet.kyc_status === 'verified' ? 'Terverifikasi' : outlet.kyc_status === 'rejected' ? 'Ditolak' : 'Pending'}
             />
-            {outlet.auto_verified && <span className="text-[10px] text-slate-400">auto-verify</span>}
+            {outlet.auto_verified && <span className="text-[10px] text-muted">auto-verify</span>}
           </div>
           {outlet.reject_reason && (
-            <p className="text-[11px] text-rose-600 mb-3">Alasan: {outlet.reject_reason}</p>
+            <p className="text-[11px] text-danger mb-3">Alasan: {outlet.reject_reason}</p>
           )}
           <div className="flex flex-wrap gap-2">
             <button
               disabled={busy}
               onClick={() => act(() => platformSetVerification(id, 'verified'), 'Outlet diverifikasi')}
-              className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-emerald-500 hover:bg-emerald-600 text-white text-xs font-bold disabled:opacity-50"
+              className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-success hover:bg-success/90 text-white text-xs font-bold disabled:opacity-50"
             >
               <ShieldCheck className="w-4 h-4" /> Verifikasi
             </button>
@@ -151,14 +151,14 @@ export function OutletDetailPage() {
                 const reason = window.prompt('Alasan penolakan (opsional):') ?? '';
                 act(() => platformSetVerification(id, 'rejected', reason || null), 'Outlet ditolak');
               }}
-              className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-rose-50 text-rose-600 border border-rose-200 hover:bg-rose-100 text-xs font-bold disabled:opacity-50"
+              className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-danger/10 text-danger border border-danger/30 hover:bg-danger/15 text-xs font-bold disabled:opacity-50"
             >
               <ShieldX className="w-4 h-4" /> Tolak
             </button>
             <button
               disabled={busy}
               onClick={() => act(() => platformSetVerification(id, 'pending_review'), 'Status diubah ke pending')}
-              className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-amber-50 text-amber-700 border border-amber-200 hover:bg-amber-100 text-xs font-bold disabled:opacity-50"
+              className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-warning/10 text-warning border border-warning/30 hover:bg-warning/15 text-xs font-bold disabled:opacity-50"
             >
               <Clock className="w-4 h-4" /> Pending
             </button>
@@ -174,15 +174,15 @@ export function OutletDetailPage() {
                 onClick={() => act(() => platformSetPlan(id, p), `Paket diubah ke ${p}`)}
                 className={`flex-1 px-3 py-2.5 rounded-xl text-xs font-bold border transition ${
                   currentPlan === p
-                    ? 'bg-sky-600 text-white border-sky-600'
-                    : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-50'
+                    ? 'bg-primary text-white border-primary'
+                    : 'bg-surface text-muted border-border hover:bg-bg'
                 }`}
               >
                 {p === 'free' ? 'Gratis' : p === 'trial' ? 'Trial' : 'Pendukung'}
               </button>
             ))}
           </div>
-          <p className="text-[11px] text-slate-500">
+          <p className="text-[11px] text-muted">
             Pendukung Rp50.000/bulan &bull; aktif: {fmtDate(outlet.trial_ends_at)}
           </p>
         </Card>
@@ -198,13 +198,13 @@ export function OutletDetailPage() {
         title="Laporan Outlet"
         subtitle="Omset & untung dari POS, PPOB, Payment Gateway, B2B, modal usaha"
         action={
-          <div className="flex gap-1 bg-slate-100 rounded-xl p-1">
+          <div className="flex gap-1 bg-bg rounded-xl p-1">
             {([1, 7, 30, 90] as Period[]).map((p) => (
               <button
                 key={p}
                 onClick={() => setPeriod(p)}
                 className={`px-2.5 py-1.5 rounded-lg text-[11px] font-bold transition ${
-                  period === p ? 'bg-white text-sky-700 shadow-sm' : 'text-slate-500'
+                  period === p ? 'bg-surface text-primary shadow-sm' : 'text-muted'
                 }`}
               >
                 {p}h
@@ -214,29 +214,29 @@ export function OutletDetailPage() {
         }
       >
         {!report ? (
-          <p className="text-xs text-slate-400 py-4 text-center">Memuat laporan...</p>
+          <p className="text-xs text-muted py-4 text-center">Memuat laporan...</p>
         ) : (
           <>
             <div className="grid grid-cols-3 gap-3 mb-4">
-              <Stat label="Omset Total" value={fmtRp(report.omzet_total)} tone="text-sky-700" />
-              <Stat label="Untung Platform" value={fmtRp(report.untung_total)} tone="text-emerald-600" />
-              <Stat label="Jumlah Transaksi" value={String(report.count_total)} tone="text-slate-700" />
+              <Stat label="Omset Total" value={fmtRp(report.omzet_total)} tone="text-primary" />
+              <Stat label="Untung Platform" value={fmtRp(report.untung_total)} tone="text-success" />
+              <Stat label="Jumlah Transaksi" value={String(report.count_total)} tone="text-ink" />
             </div>
             {vis.show_outlet_ppob ? (
               <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-                <Stat label="POS Omzet" value={fmtRp(report.pos.omzet)} tone="text-slate-700" />
-                <Stat label="POS Transaksi" value={String(report.pos.count)} tone="text-slate-500" />
-                <Stat label="PPOB Omzet" value={fmtRp(report.ppob.omzet)} tone="text-cyan-700" />
-                <Stat label="PPOB Untung" value={fmtRp(report.ppob.untung)} tone="text-emerald-600" />
-                <Stat label="PG Untung" value={fmtRp(report.pg.untung)} tone="text-emerald-600" />
-                <Stat label="B2B Komisi" value={fmtRp(report.b2b.komisi)} tone="text-emerald-600" />
-                <Stat label="Modal Usaha" value={fmtRp(report.fintech.pengajuan)} tone="text-indigo-600" />
-                <Stat label="Total Transaksi" value={String(report.count_total)} tone="text-slate-500" />
+                <Stat label="POS Omzet" value={fmtRp(report.pos.omzet)} tone="text-ink" />
+                <Stat label="POS Transaksi" value={String(report.pos.count)} tone="text-muted" />
+                <Stat label="PPOB Omzet" value={fmtRp(report.ppob.omzet)} tone="text-primary" />
+                <Stat label="PPOB Untung" value={fmtRp(report.ppob.untung)} tone="text-success" />
+                <Stat label="PG Untung" value={fmtRp(report.pg.untung)} tone="text-success" />
+                <Stat label="B2B Komisi" value={fmtRp(report.b2b.komisi)} tone="text-success" />
+                <Stat label="Modal Usaha" value={fmtRp(report.fintech.pengajuan)} tone="text-primary" />
+                <Stat label="Total Transaksi" value={String(report.count_total)} tone="text-muted" />
               </div>
             ) : (
               <div className="grid grid-cols-2 gap-3">
-                <Stat label="POS Omzet" value={fmtRp(report.pos.omzet)} tone="text-slate-700" />
-                <Stat label="POS Transaksi" value={String(report.pos.count)} tone="text-slate-500" />
+                <Stat label="POS Omzet" value={fmtRp(report.pos.omzet)} tone="text-ink" />
+                <Stat label="POS Transaksi" value={String(report.pos.count)} tone="text-muted" />
               </div>
             )}
           </>
@@ -256,14 +256,14 @@ export function OutletDetailPage() {
       {/* Staf */}
       <Card title="Kelola Staf" subtitle="Akun admin & kasir pada outlet ini">
         {staff.length === 0 ? (
-          <p className="text-xs text-slate-400 py-4 text-center">Belum ada staf.</p>
+          <p className="text-xs text-muted py-4 text-center">Belum ada staf.</p>
         ) : (
-          <div className="divide-y divide-slate-100">
+          <div className="divide-y divide-border">
             {staff.map((s) => (
               <div key={s.user_id} className="flex items-center justify-between py-2.5">
                 <div>
-                  <p className="text-xs font-bold text-slate-800">{s.email}</p>
-                  <p className="text-[10px] text-slate-400 capitalize">{s.role} &bull; {fmtDate(s.created_at)}</p>
+                  <p className="text-xs font-bold text-ink">{s.email}</p>
+                  <p className="text-[10px] text-muted capitalize">{s.role} &bull; {fmtDate(s.created_at)}</p>
                 </div>
                 <button
                   disabled={busy}
@@ -272,7 +272,7 @@ export function OutletDetailPage() {
                       act(() => platformOutletRemoveStaff(id, s.user_id), 'Staf dihapus');
                     }
                   }}
-                  className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-rose-600 hover:bg-rose-50 text-[11px] font-bold"
+                  className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-danger hover:bg-danger/10 text-[11px] font-bold"
                 >
                   <UserMinus className="w-3.5 h-3.5" /> Hapus
                 </button>
@@ -288,12 +288,12 @@ export function OutletDetailPage() {
       </Card>
 
       {/* Hapus akun */}
-      <div className="bg-rose-50 border border-rose-200 rounded-2xl p-4 sm:p-5">
+      <div className="bg-danger/10 border border-danger/30 rounded-2xl p-4 sm:p-5">
         <div className="flex items-center gap-2 mb-2">
-          <AlertTriangle className="w-4 h-4 text-rose-600" />
-          <h2 className="text-sm font-bold text-rose-700">Zona Berbahaya</h2>
+          <AlertTriangle className="w-4 h-4 text-danger" />
+          <h2 className="text-sm font-bold text-danger">Zona Berbahaya</h2>
         </div>
-        <p className="text-[11px] text-rose-600 mb-3">
+        <p className="text-[11px] text-danger mb-3">
           Menghapus akun akan menghapus outlet beserta seluruh data dan akun owner. Tindakan ini permanen.
         </p>
         <button
@@ -305,7 +305,7 @@ export function OutletDetailPage() {
               });
             }
           }}
-          className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-rose-600 hover:bg-rose-700 text-white text-xs font-bold disabled:opacity-50"
+          className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-danger hover:bg-danger/90 text-white text-xs font-bold disabled:opacity-50"
         >
           <Trash2 className="w-4 h-4" /> Hapus Akun & Outlet
         </button>
@@ -345,13 +345,13 @@ function HistoryPanel({ outletId }: { outletId: string }) {
 
   return (
     <div>
-      <div className="flex flex-wrap gap-1 bg-slate-100 rounded-xl p-1 mb-4">
+      <div className="flex flex-wrap gap-1 bg-bg rounded-xl p-1 mb-4">
         {TABS.map((t) => (
           <button
             key={t.key}
             onClick={() => setTab(t.key)}
             className={`px-2.5 py-1.5 rounded-lg text-[11px] font-bold transition ${
-              tab === t.key ? 'bg-white text-sky-700 shadow-sm' : 'text-slate-500'
+              tab === t.key ? 'bg-surface text-primary shadow-sm' : 'text-muted'
             }`}
           >
             {t.label}
@@ -359,21 +359,21 @@ function HistoryPanel({ outletId }: { outletId: string }) {
         ))}
       </div>
       {loading ? (
-        <p className="text-xs text-slate-400 py-4 text-center">Memuat riwayat...</p>
+        <p className="text-xs text-muted py-4 text-center">Memuat riwayat...</p>
       ) : rows.length === 0 ? (
-        <p className="text-xs text-slate-400 py-4 text-center">Belum ada transaksi pada kategori ini.</p>
+        <p className="text-xs text-muted py-4 text-center">Belum ada transaksi pada kategori ini.</p>
       ) : (
         <div className="overflow-x-auto">
           <table className="w-full text-left text-xs">
             <thead>
-              <tr className="text-[10px] uppercase text-slate-400 border-b border-slate-100">
+              <tr className="text-[10px] uppercase text-muted border-b border-border">
                 <th className="py-2 pr-3 font-bold">Detail</th>
                 <th className="py-2 px-3 font-bold">Status</th>
                 <th className="py-2 px-3 font-bold text-right">Nilai</th>
                 <th className="py-2 pl-3 font-bold text-right">Tanggal</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-slate-50">
+            <tbody className="divide-y divide-border">
               {rows.map((r, i) => {
                 const detail =
                   (r.product_name as string) ||
@@ -390,18 +390,18 @@ function HistoryPanel({ outletId }: { outletId: string }) {
                 const amount = r.commission ?? r.profit ?? r.amount ?? r.amount_requested;
                 const status = (r.status as string) || '-';
                 return (
-                  <tr key={(r.id as string) ?? i} className="hover:bg-slate-50/60">
+                  <tr key={(r.id as string) ?? i} className="hover:bg-bg/60">
                     <td className="py-2 pr-3">
-                      <p className="font-semibold text-slate-800 truncate max-w-[220px]">{detail}</p>
-                      {sub && <p className="text-[10px] text-slate-400 truncate max-w-[220px]">{sub}</p>}
+                      <p className="font-semibold text-ink truncate max-w-[220px]">{detail}</p>
+                      {sub && <p className="text-[10px] text-muted truncate max-w-[220px]">{sub}</p>}
                     </td>
                     <td className="py-2 px-3">
-                      <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-slate-100 text-slate-600">
+                      <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-bg text-muted">
                         {status}
                       </span>
                     </td>
-                    <td className="py-2 px-3 text-right font-bold text-slate-700">{num(amount)}</td>
-                    <td className="py-2 pl-3 text-right text-slate-400">{fmtDate(r.created_at as string)}</td>
+                    <td className="py-2 px-3 text-right font-bold text-ink">{num(amount)}</td>
+                    <td className="py-2 pl-3 text-right text-muted">{fmtDate(r.created_at as string)}</td>
                   </tr>
                 );
               })}
@@ -473,14 +473,14 @@ function BackupPanel({
         <button
           disabled={busy}
           onClick={() => create('full')}
-          className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-sky-600 hover:bg-sky-700 text-white text-xs font-bold disabled:opacity-50"
+          className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-primary hover:bg-primary-light text-white text-xs font-bold disabled:opacity-50"
         >
           <Download className="w-4 h-4" /> Backup Penuh
         </button>
         <button
           disabled={busy}
           onClick={() => create('quick')}
-          className="flex items-center gap-1.5 px-3 py-2 rounded-xl border border-slate-200 text-slate-600 hover:bg-slate-50 text-xs font-bold disabled:opacity-50"
+          className="flex items-center gap-1.5 px-3 py-2 rounded-xl border border-border text-muted hover:bg-bg text-xs font-bold disabled:opacity-50"
         >
           <Download className="w-4 h-4" /> Backup Cepat
         </button>
@@ -488,7 +488,7 @@ function BackupPanel({
           value={sched.cadence}
           onChange={(e) => setSched((s) => ({ ...s, cadence: e.target.value }))}
           disabled={busy || sched.enabled}
-          className="px-2.5 py-2 rounded-xl border border-slate-200 bg-white text-xs font-bold text-slate-600 disabled:opacity-50"
+          className="px-2.5 py-2 rounded-xl border border-border bg-surface text-xs font-bold text-muted disabled:opacity-50"
         >
           <option value="daily">Harian</option>
           <option value="weekly">Mingguan</option>
@@ -497,26 +497,26 @@ function BackupPanel({
         <button
           disabled={busy}
           onClick={setSchedule}
-          className="flex items-center gap-1.5 px-3 py-2 rounded-xl border border-slate-200 text-slate-600 hover:bg-slate-50 text-xs font-bold disabled:opacity-50"
+          className="flex items-center gap-1.5 px-3 py-2 rounded-xl border border-border text-muted hover:bg-bg text-xs font-bold disabled:opacity-50"
         >
           <Clock className="w-4 h-4" />{' '}
           {sched.enabled ? 'Matikan Jadwal' : `Jadwalkan ${CADENCE_LABEL[sched.cadence] ?? 'Harian'}`}
         </button>
       </div>
       {runs.length === 0 ? (
-        <p className="text-xs text-slate-400">Belum ada backup untuk outlet ini.</p>
+        <p className="text-xs text-muted">Belum ada backup untuk outlet ini.</p>
       ) : (
-        <div className="divide-y divide-slate-100">
+        <div className="divide-y divide-border">
           {runs.map((r) => (
             <div key={r.id} className="flex items-center justify-between py-2.5">
               <div>
-                <p className="text-xs font-bold text-slate-800">{r.kind === 'full' ? 'Backup Penuh' : 'Backup Cepat'}</p>
-                <p className="text-[10px] text-slate-400">{fmtDate(r.created_at)} &bull; {r.row_count ?? 0} baris &bull; {r.status}</p>
+                <p className="text-xs font-bold text-ink">{r.kind === 'full' ? 'Backup Penuh' : 'Backup Cepat'}</p>
+                <p className="text-[10px] text-muted">{fmtDate(r.created_at)} &bull; {r.row_count ?? 0} baris &bull; {r.status}</p>
               </div>
               <button
                 disabled={busy}
                 onClick={() => restore(r.id)}
-                className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-sky-700 hover:bg-sky-50 text-[11px] font-bold"
+                className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-primary hover:bg-primary/10 text-[11px] font-bold"
               >
                 <Upload className="w-3.5 h-3.5" /> Restore
               </button>
@@ -530,11 +530,11 @@ function BackupPanel({
 
 function Card({ title, subtitle, children, action }: any) {
   return (
-    <section className="bg-white p-4 sm:p-5 rounded-2xl border border-slate-200/80 shadow-sm">
-      <div className="flex items-start justify-between gap-3 pb-3 mb-4 border-b border-slate-100">
+    <section className="bg-surface p-4 sm:p-5 rounded-2xl border border-border/80 shadow-sm">
+      <div className="flex items-start justify-between gap-3 pb-3 mb-4 border-b border-border">
         <div>
-          <h2 className="text-sm font-bold text-slate-900">{title}</h2>
-          {subtitle && <p className="text-[11px] text-slate-500 mt-0.5">{subtitle}</p>}
+          <h2 className="text-sm font-bold text-ink">{title}</h2>
+          {subtitle && <p className="text-[11px] text-muted mt-0.5">{subtitle}</p>}
         </div>
         {action}
       </div>
@@ -545,8 +545,8 @@ function Card({ title, subtitle, children, action }: any) {
 
 function Stat({ label, value, tone }: { label: string; value: string; tone: string }) {
   return (
-    <div className="rounded-xl border border-slate-100 bg-slate-50/60 p-3">
-      <p className="text-[10px] font-bold text-slate-400">{label}</p>
+    <div className="rounded-xl border border-border bg-bg/60 p-3">
+      <p className="text-[10px] font-bold text-muted">{label}</p>
       <p className={`text-sm font-extrabold ${tone} mt-0.5`}>{value}</p>
     </div>
   );
@@ -554,9 +554,9 @@ function Stat({ label, value, tone }: { label: string; value: string; tone: stri
 
 function Badge({ tone, label }: { tone: 'ok' | 'bad' | 'warn'; label: string }) {
   const cls = tone === 'ok'
-    ? 'bg-emerald-50 text-emerald-600 border-emerald-200'
+    ? 'bg-success/10 text-success border-success/30'
     : tone === 'bad'
-      ? 'bg-rose-50 text-rose-600 border-rose-200'
-      : 'bg-amber-50 text-amber-600 border-amber-200';
+      ? 'bg-danger/10 text-danger border-danger/30'
+      : 'bg-warning/10 text-warning border-warning/30';
   return <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold border ${cls}`}>{label}</span>;
 }

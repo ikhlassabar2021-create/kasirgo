@@ -182,21 +182,21 @@ export function AffiliatesPage() {
     <div className="p-3 sm:p-6 max-w-[1100px] mx-auto fade-in">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-6">
         <div>
-          <h1 className="text-xl sm:text-2xl font-bold text-slate-900 mb-1">Program Afiliasi & Referral</h1>
-          <p className="text-xs sm:text-sm text-slate-500">Kelola agen referral, komisi, jadwal payout, dan rekening bank.</p>
+          <h1 className="text-xl sm:text-2xl font-bold text-ink mb-1">Program Afiliasi & Referral</h1>
+          <p className="text-xs sm:text-sm text-muted">Kelola agen referral, komisi, jadwal payout, dan rekening bank.</p>
         </div>
         <div className="flex items-center gap-2 self-start sm:self-auto">
           <button
             onClick={() => runPayout()}
             disabled={running}
-            className="border border-slate-200 bg-white text-slate-700 px-4 py-2.5 rounded-xl font-semibold text-xs sm:text-sm flex items-center gap-2 hover:bg-slate-50 active:scale-95 transition disabled:opacity-60"
+            className="border border-border bg-surface text-ink px-4 py-2.5 rounded-xl font-semibold text-xs sm:text-sm flex items-center gap-2 hover:bg-bg active:scale-95 transition disabled:opacity-60"
           >
             {running ? <Loader2 className="w-4 h-4 animate-spin" /> : <Banknote className="w-4 h-4" />}
             Jalankan Payout
           </button>
           <button
             onClick={() => setForm({ ...emptyForm })}
-            className="bg-gradient-to-r from-cyan-500 to-sky-600 hover:from-cyan-600 hover:to-sky-700 text-white px-4 py-2.5 sm:px-5 sm:py-3 rounded-xl font-semibold text-xs sm:text-sm flex items-center justify-center gap-2 shadow-md shadow-sky-500/25 active:scale-95 transition"
+            className="ocean-gradient hover:opacity-90 text-white px-4 py-2.5 sm:px-5 sm:py-3 rounded-xl font-semibold text-xs sm:text-sm flex items-center justify-center gap-2 shadow-md shadow-primary/25 active:scale-95 transition"
           >
             <Plus className="w-4 h-4" />
             Tambah Afiliasi
@@ -214,12 +214,12 @@ export function AffiliatesPage() {
         ].map((stat, index) => {
           const Icon = stat.icon;
           return (
-            <div key={index} className="bg-white rounded-2xl p-4 sm:p-6 card-shadow border border-slate-200/80">
+            <div key={index} className="bg-surface rounded-2xl p-4 sm:p-6 card-shadow border border-border/80">
               <div className="flex items-center justify-between mb-2">
                 <Icon className={`w-5 h-5 sm:w-6 sm:h-6 ${getStatColor(stat.color)}`} />
               </div>
-              <p className="text-xs text-slate-500">{stat.label}</p>
-              <p className="metric-number text-2xl sm:text-3xl font-black text-slate-900">{stat.value}</p>
+              <p className="text-xs text-muted">{stat.label}</p>
+              <p className="metric-number text-2xl sm:text-3xl font-black text-ink">{stat.value}</p>
             </div>
           );
         })}
@@ -238,8 +238,8 @@ export function AffiliatesPage() {
               onClick={() => setTab(t.id)}
               className={`px-4 py-2 rounded-xl text-xs font-bold flex items-center gap-2 transition ${
                 active
-                  ? 'bg-gradient-to-r from-cyan-500 to-sky-600 text-white shadow-md shadow-sky-500/25'
-                  : 'bg-white border border-slate-200 text-slate-600 hover:bg-slate-50'
+                  ? 'ocean-gradient text-white shadow-md shadow-primary/25'
+                  : 'bg-surface border border-border text-muted hover:bg-bg'
               }`}
             >
               <Icon className="w-4 h-4" />
@@ -249,10 +249,10 @@ export function AffiliatesPage() {
         })}
       </div>
 
-      <div className="bg-white rounded-2xl p-4 sm:p-6 card-shadow border border-slate-200/80 mb-6">
+      <div className="bg-surface rounded-2xl p-4 sm:p-6 card-shadow border border-border/80 mb-6">
         <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 sm:gap-4">
           <div className="relative flex-1">
-            <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 w-5 h-5 text-slate-400" />
+            <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 w-5 h-5 text-muted" />
             <input
               type="text"
               placeholder={tab === 'partner' ? 'Cari afiliasi atau kode referral...' : 'Cari kode referral outlet...'}
@@ -263,12 +263,12 @@ export function AffiliatesPage() {
                   tab === 'partner' ? load(search) : loadOutletAffiliates(search);
                 }
               }}
-              className="w-full pl-12 pr-4 py-2.5 sm:py-3 text-sm bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-sky-500 outline-none"
+              className="w-full pl-12 pr-4 py-2.5 sm:py-3 text-sm bg-bg border border-border rounded-xl focus:ring-2 focus:ring-primary outline-none"
             />
           </div>
           <button
             onClick={() => (tab === 'partner' ? load(search) : loadOutletAffiliates(search))}
-            className="px-4 py-2.5 sm:py-3 text-sm font-semibold rounded-xl bg-slate-100 text-slate-700 hover:bg-slate-200"
+            className="px-4 py-2.5 sm:py-3 text-sm font-semibold rounded-xl bg-bg text-ink hover:bg-border"
           >
             Cari
           </button>
@@ -276,50 +276,50 @@ export function AffiliatesPage() {
       </div>
 
       {tab === 'partner' && (
-      <div className="bg-white rounded-2xl card-shadow border border-slate-200/80 overflow-hidden">
+      <div className="bg-surface rounded-2xl card-shadow border border-border/80 overflow-hidden">
         <div className="overflow-x-auto">
           <table className="w-full min-w-[760px]">
-            <thead className="bg-slate-50 border-b border-slate-100">
+            <thead className="bg-bg border-b border-border">
               <tr>
-                <th className="text-left px-4 sm:px-6 py-3.5 text-xs font-semibold text-slate-600 uppercase">Afiliasi</th>
-                <th className="text-left px-4 sm:px-6 py-3.5 text-xs font-semibold text-slate-600 uppercase">Kode</th>
-                <th className="text-right px-4 sm:px-6 py-3.5 text-xs font-semibold text-slate-600 uppercase">Referral</th>
-                <th className="text-right px-4 sm:px-6 py-3.5 text-xs font-semibold text-slate-600 uppercase">Komisi</th>
-                <th className="text-left px-4 sm:px-6 py-3.5 text-xs font-semibold text-slate-600 uppercase">Status</th>
-                <th className="text-right px-4 sm:px-6 py-3.5 text-xs font-semibold text-slate-600 uppercase">Aksi</th>
+                <th className="text-left px-4 sm:px-6 py-3.5 text-xs font-semibold text-muted uppercase">Afiliasi</th>
+                <th className="text-left px-4 sm:px-6 py-3.5 text-xs font-semibold text-muted uppercase">Kode</th>
+                <th className="text-right px-4 sm:px-6 py-3.5 text-xs font-semibold text-muted uppercase">Referral</th>
+                <th className="text-right px-4 sm:px-6 py-3.5 text-xs font-semibold text-muted uppercase">Komisi</th>
+                <th className="text-left px-4 sm:px-6 py-3.5 text-xs font-semibold text-muted uppercase">Status</th>
+                <th className="text-right px-4 sm:px-6 py-3.5 text-xs font-semibold text-muted uppercase">Aksi</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-slate-100">
+            <tbody className="divide-y divide-border">
               {loading && (
-                <tr><td colSpan={6} className="px-6 py-8 text-center text-sm text-slate-400">Memuat...</td></tr>
+                <tr><td colSpan={6} className="px-6 py-8 text-center text-sm text-muted">Memuat...</td></tr>
               )}
               {!loading && rows.length === 0 && (
-                <tr><td colSpan={6} className="px-6 py-8 text-center text-sm text-slate-400">Belum ada afiliasi.</td></tr>
+                <tr><td colSpan={6} className="px-6 py-8 text-center text-sm text-muted">Belum ada afiliasi.</td></tr>
               )}
               {!loading && rows.map((a) => (
-                <tr key={a.id} className="hover:bg-slate-50">
+                <tr key={a.id} className="hover:bg-bg">
                   <td className="px-4 sm:px-6 py-4">
                     <div>
-                      <p className="font-medium text-sm text-slate-900">{a.name}</p>
-                      <p className="text-xs text-slate-400">{a.email || a.phone || '-'}</p>
+                      <p className="font-medium text-sm text-ink">{a.name}</p>
+                      <p className="text-xs text-muted">{a.email || a.phone || '-'}</p>
                     </div>
                   </td>
                   <td className="px-4 sm:px-6 py-4">
-                    <span className="font-mono text-xs text-sky-600 bg-sky-50 px-2 py-1 rounded font-bold">{a.referral_code}</span>
+                    <span className="font-mono text-xs text-primary bg-primary/10 px-2 py-1 rounded font-bold">{a.referral_code}</span>
                   </td>
-                  <td className="px-4 sm:px-6 py-4 text-right text-xs sm:text-sm font-semibold text-slate-700">{a.referral_count}</td>
+                  <td className="px-4 sm:px-6 py-4 text-right text-xs sm:text-sm font-semibold text-ink">{a.referral_count}</td>
                   <td className="px-4 sm:px-6 py-4 text-right">
-                    <p className="text-xs sm:text-sm font-bold text-emerald-600">{fmtRp(a.commission_total)}</p>
+                    <p className="text-xs sm:text-sm font-bold text-success">{fmtRp(a.commission_total)}</p>
                     {Number(a.unpaid_total) > 0 && (
-                      <p className="text-[10px] text-amber-600">Belum cair {fmtRp(a.unpaid_total)}</p>
+                      <p className="text-[10px] text-warning">Belum cair {fmtRp(a.unpaid_total)}</p>
                     )}
-                    <p className="text-[10px] text-slate-400">{a.commission_percent}%</p>
+                    <p className="text-[10px] text-muted">{a.commission_percent}%</p>
                   </td>
                   <td className="px-4 sm:px-6 py-4">
                     <span className={`inline-flex px-2.5 py-1 rounded-full text-xs font-semibold ${
-                      a.status === 'active' ? 'bg-emerald-50 text-emerald-600' :
-                      a.status === 'pending' ? 'bg-amber-50 text-amber-600' :
-                      'bg-rose-50 text-rose-600'
+                      a.status === 'active' ? 'bg-success/10 text-success' :
+                      a.status === 'pending' ? 'bg-warning/10 text-warning' :
+                      'bg-danger/10 text-danger'
                     }`}>
                       {a.status}
                     </span>
@@ -329,7 +329,7 @@ export function AffiliatesPage() {
                       {a.status === 'pending' && (
                         <button
                           onClick={() => setStatus(a, 'active')}
-                          className="px-2 py-1 rounded-lg bg-emerald-50 text-emerald-700 text-[10px] font-bold hover:bg-emerald-100"
+                          className="px-2 py-1 rounded-lg bg-success/10 text-success text-[10px] font-bold hover:bg-success/15"
                           title="Setujui pendaftaran"
                         >
                           Setujui
@@ -338,7 +338,7 @@ export function AffiliatesPage() {
                       {a.status === 'active' && (
                         <button
                           onClick={() => setStatus(a, 'suspended')}
-                          className="px-2 py-1 rounded-lg bg-amber-50 text-amber-700 text-[10px] font-bold hover:bg-amber-100"
+                          className="px-2 py-1 rounded-lg bg-warning/10 text-warning text-[10px] font-bold hover:bg-warning/15"
                           title="Tangguhkan"
                         >
                           Tangguhkan
@@ -346,21 +346,21 @@ export function AffiliatesPage() {
                       )}
                       <button
                         onClick={() => openClosingsPartner(a)}
-                        className="p-1.5 sm:p-2 hover:bg-slate-100 rounded-lg transition-colors text-slate-600"
+                        className="p-1.5 sm:p-2 hover:bg-bg rounded-lg transition-colors text-muted"
                         title="Lihat Closing"
                       >
                         <Eye className="w-4 h-4" />
                       </button>
                       <button
                         onClick={() => { navigator.clipboard?.writeText(a.referral_code); flash('ok', `Kode ${a.referral_code} disalin.`); }}
-                        className="p-1.5 sm:p-2 hover:bg-slate-100 rounded-lg transition-colors text-slate-600"
+                        className="p-1.5 sm:p-2 hover:bg-bg rounded-lg transition-colors text-muted"
                         title="Salin Kode"
                       >
                         <Copy className="w-4 h-4" />
                       </button>
                       <button
                         onClick={() => setPayoutFor(a)}
-                        className="p-1.5 sm:p-2 hover:bg-slate-100 rounded-lg transition-colors text-emerald-600"
+                        className="p-1.5 sm:p-2 hover:bg-bg rounded-lg transition-colors text-success"
                         title="Jadwal Payout & Rekening"
                       >
                         <Banknote className="w-4 h-4" />
@@ -371,14 +371,14 @@ export function AffiliatesPage() {
                           user_id: a.user_id ?? '', commission_percent: a.commission_percent,
                           referral_code: a.referral_code, status: a.status,
                         })}
-                        className="p-1.5 sm:p-2 hover:bg-slate-100 rounded-lg transition-colors text-sky-600"
+                        className="p-1.5 sm:p-2 hover:bg-bg rounded-lg transition-colors text-primary"
                         title="Edit"
                       >
                         <ExternalLink className="w-4 h-4" />
                       </button>
                       <button
                         onClick={() => remove(a)}
-                        className="p-1.5 sm:p-2 hover:bg-rose-50 rounded-lg transition-colors text-rose-600"
+                        className="p-1.5 sm:p-2 hover:bg-danger/10 rounded-lg transition-colors text-danger"
                         title="Hapus"
                       >
                         <X className="w-4 h-4" />
@@ -394,52 +394,52 @@ export function AffiliatesPage() {
       )}
 
       {tab === 'outlet' && (
-      <div className="bg-white rounded-2xl card-shadow border border-slate-200/80 overflow-hidden">
+      <div className="bg-surface rounded-2xl card-shadow border border-border/80 overflow-hidden">
         <div className="overflow-x-auto">
           <table className="w-full min-w-[820px]">
-            <thead className="bg-slate-50 border-b border-slate-100">
+            <thead className="bg-bg border-b border-border">
               <tr>
-                <th className="text-left px-4 sm:px-6 py-3.5 text-xs font-semibold text-slate-600 uppercase">Outlet</th>
-                <th className="text-left px-4 sm:px-6 py-3.5 text-xs font-semibold text-slate-600 uppercase">Kode</th>
-                <th className="text-right px-4 sm:px-6 py-3.5 text-xs font-semibold text-slate-600 uppercase">Komisi</th>
-                <th className="text-right px-4 sm:px-6 py-3.5 text-xs font-semibold text-slate-600 uppercase">Closing</th>
-                <th className="text-left px-4 sm:px-6 py-3.5 text-xs font-semibold text-slate-600 uppercase">Rekening</th>
-                <th className="text-right px-4 sm:px-6 py-3.5 text-xs font-semibold text-slate-600 uppercase">Aksi</th>
+                <th className="text-left px-4 sm:px-6 py-3.5 text-xs font-semibold text-muted uppercase">Outlet</th>
+                <th className="text-left px-4 sm:px-6 py-3.5 text-xs font-semibold text-muted uppercase">Kode</th>
+                <th className="text-right px-4 sm:px-6 py-3.5 text-xs font-semibold text-muted uppercase">Komisi</th>
+                <th className="text-right px-4 sm:px-6 py-3.5 text-xs font-semibold text-muted uppercase">Closing</th>
+                <th className="text-left px-4 sm:px-6 py-3.5 text-xs font-semibold text-muted uppercase">Rekening</th>
+                <th className="text-right px-4 sm:px-6 py-3.5 text-xs font-semibold text-muted uppercase">Aksi</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-slate-100">
+            <tbody className="divide-y divide-border">
               {outletLoading && (
-                <tr><td colSpan={6} className="px-6 py-8 text-center text-sm text-slate-400">Memuat...</td></tr>
+                <tr><td colSpan={6} className="px-6 py-8 text-center text-sm text-muted">Memuat...</td></tr>
               )}
               {!outletLoading && outletRows.length === 0 && (
-                <tr><td colSpan={6} className="px-6 py-8 text-center text-sm text-slate-400">Belum ada afiliasi outlet.</td></tr>
+                <tr><td colSpan={6} className="px-6 py-8 text-center text-sm text-muted">Belum ada afiliasi outlet.</td></tr>
               )}
               {!outletLoading && outletRows.map((p) => (
-                <tr key={p.id} className="hover:bg-slate-50">
+                <tr key={p.id} className="hover:bg-bg">
                   <td className="px-4 sm:px-6 py-4">
                     <div>
-                      <p className="font-medium text-sm text-slate-900">{p.outlet_name}</p>
-                      <p className="text-xs text-slate-400">{p.owner_email ?? '-'}</p>
+                      <p className="font-medium text-sm text-ink">{p.outlet_name}</p>
+                      <p className="text-xs text-muted">{p.owner_email ?? '-'}</p>
                     </div>
                   </td>
                   <td className="px-4 sm:px-6 py-4">
-                    <span className="font-mono text-xs text-sky-600 bg-sky-50 px-2 py-1 rounded font-bold">{p.referral_code}</span>
+                    <span className="font-mono text-xs text-primary bg-primary/10 px-2 py-1 rounded font-bold">{p.referral_code}</span>
                   </td>
                   <td className="px-4 sm:px-6 py-4 text-right">
-                    <p className="text-xs sm:text-sm font-bold text-emerald-600">{fmtRp(p.commission_total)}</p>
+                    <p className="text-xs sm:text-sm font-bold text-success">{fmtRp(p.commission_total)}</p>
                     {Number(p.unpaid_total) > 0 && (
-                      <p className="text-[10px] text-amber-600">Belum cair {fmtRp(p.unpaid_total)}</p>
+                      <p className="text-[10px] text-warning">Belum cair {fmtRp(p.unpaid_total)}</p>
                     )}
-                    <p className="text-[10px] text-slate-400">{p.commission_percent}%</p>
+                    <p className="text-[10px] text-muted">{p.commission_percent}%</p>
                   </td>
-                  <td className="px-4 sm:px-6 py-4 text-right text-xs sm:text-sm font-semibold text-slate-700">{p.closing_count}</td>
-                  <td className="px-4 sm:px-6 py-4 text-xs text-slate-500">
-                    {p.bank_name ? `${p.bank_name} • ${p.bank_account_number ?? '-'}` : <span className="text-slate-300">Belum diisi</span>}
+                  <td className="px-4 sm:px-6 py-4 text-right text-xs sm:text-sm font-semibold text-ink">{p.closing_count}</td>
+                  <td className="px-4 sm:px-6 py-4 text-xs text-muted">
+                    {p.bank_name ? `${p.bank_name} • ${p.bank_account_number ?? '-'}` : <span className="text-muted">Belum diisi</span>}
                   </td>
                   <td className="px-4 sm:px-6 py-4 text-right">
                     <button
                       onClick={() => openClosingsOutlet(p)}
-                      className="px-2.5 py-1.5 rounded-lg bg-slate-50 text-slate-700 text-[10px] font-bold hover:bg-slate-100 flex items-center gap-1.5"
+                      className="px-2.5 py-1.5 rounded-lg bg-bg text-ink text-[10px] font-bold hover:bg-border flex items-center gap-1.5"
                     >
                       <Eye className="w-3.5 h-3.5" /> Detail Closing
                     </button>
@@ -485,9 +485,9 @@ export function AffiliatesPage() {
               </select>
             </Field>
             <div className="flex justify-end gap-2 pt-1">
-              <button onClick={() => setForm(null)} className="px-4 py-2.5 rounded-xl text-sm font-semibold text-slate-600 hover:bg-slate-100">Batal</button>
+              <button onClick={() => setForm(null)} className="px-4 py-2.5 rounded-xl text-sm font-semibold text-muted hover:bg-bg">Batal</button>
               <button onClick={save} disabled={saving}
-                className="px-5 py-2.5 rounded-xl text-sm font-semibold bg-gradient-to-r from-cyan-500 to-sky-600 text-white shadow-md shadow-sky-500/25 disabled:opacity-60 flex items-center gap-2">
+                className="px-5 py-2.5 rounded-xl text-sm font-semibold ocean-gradient text-white shadow-md shadow-primary/25 disabled:opacity-60 flex items-center gap-2">
                 {saving && <Loader2 className="w-4 h-4 animate-spin" />}
                 Simpan
               </button>
@@ -522,21 +522,21 @@ export function AffiliatesPage() {
       {closingsFor && (
         <Modal title={`Riwayat Closing — ${closingsFor.name ?? closingsFor.outlet_name ?? '-'}`} onClose={() => setClosingsFor(null)}>
           <div className="space-y-2 max-h-[60vh] overflow-y-auto">
-            {closingLoading && <p className="text-xs text-slate-400 text-center py-4">Memuat...</p>}
+            {closingLoading && <p className="text-xs text-muted text-center py-4">Memuat...</p>}
             {!closingLoading && closingRows.length === 0 && (
-              <p className="text-xs text-slate-400 text-center py-4">Belum ada closing.</p>
+              <p className="text-xs text-muted text-center py-4">Belum ada closing.</p>
             )}
             {!closingLoading && closingRows.map((c: any, i) => (
-              <div key={c.id ?? i} className="flex items-center justify-between p-2.5 rounded-xl border border-slate-100 bg-slate-50/50 text-xs">
+              <div key={c.id ?? i} className="flex items-center justify-between p-2.5 rounded-xl border border-border bg-bg/50 text-xs">
                 <div>
-                  <p className="font-semibold text-slate-800">{c.referred_name ?? c.referred_outlet_name ?? c.outlet_name ?? 'Usaha/Pelanggan'}</p>
-                  <p className="text-[10px] text-slate-400">
+                  <p className="font-semibold text-ink">{c.referred_name ?? c.referred_outlet_name ?? c.outlet_name ?? 'Usaha/Pelanggan'}</p>
+                  <p className="text-[10px] text-muted">
                     {c.created_at ? new Date(c.created_at).toLocaleDateString('id-ID', { day: '2-digit', month: 'short', year: 'numeric' }) : '-'}
                     {c.outlet_name && c.referred_name !== c.outlet_name ? ` · outlet: ${c.outlet_name}` : ''}
                     {c.status ? ` · ${c.status}` : ''}
                   </p>
                 </div>
-                <p className="font-bold text-emerald-600">{fmtRp(c.commission_amount ?? c.amount ?? 0)}</p>
+                <p className="font-bold text-success">{fmtRp(c.commission_amount ?? c.amount ?? 0)}</p>
               </div>
             ))}
           </div>
@@ -545,7 +545,7 @@ export function AffiliatesPage() {
 
       {toast && (
         <div className={`fixed bottom-5 right-5 z-50 px-4 py-3 rounded-xl text-xs font-semibold shadow-lg ${
-          toast.kind === 'ok' ? 'bg-emerald-600 text-white' : 'bg-rose-600 text-white'
+          toast.kind === 'ok' ? 'bg-success text-white' : 'bg-danger text-white'
         }`}>
           {toast.text}
         </div>
@@ -602,7 +602,7 @@ function PayoutModal({
         <Field label="Minimum Payout (Rp)">
           <input type="number" step="1000" className={inputCls} value={minPayout} onChange={(e) => setMinPayout(Number(e.target.value))} />
         </Field>
-        <div className="pt-1 border-t border-slate-100" />
+        <div className="pt-1 border-t border-border" />
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
           <Field label="Nama Bank">
             <input className={inputCls} value={bankName} onChange={(e) => setBankName(e.target.value)} placeholder="BCA / BRI / Mandiri" />
@@ -616,12 +616,12 @@ function PayoutModal({
         </Field>
         <div className="flex flex-wrap justify-end gap-2 pt-1">
           <button onClick={onRun} disabled={running}
-            className="px-4 py-2.5 rounded-xl text-sm font-semibold border border-emerald-200 text-emerald-700 hover:bg-emerald-50 disabled:opacity-60 flex items-center gap-2">
+            className="px-4 py-2.5 rounded-xl text-sm font-semibold border border-success/30 text-success hover:bg-success/10 disabled:opacity-60 flex items-center gap-2">
             {running ? <Loader2 className="w-4 h-4 animate-spin" /> : <Banknote className="w-4 h-4" />}
             Payout Sekarang
           </button>
           <button onClick={() => onSave({ frequency, weekday, dayOfMonth, mode, minPayout, bankName, bankAccountName, bankAccountNumber })} disabled={saving}
-            className="px-5 py-2.5 rounded-xl text-sm font-semibold bg-gradient-to-r from-cyan-500 to-sky-600 text-white shadow-md shadow-sky-500/25 disabled:opacity-60 flex items-center gap-2">
+            className="px-5 py-2.5 rounded-xl text-sm font-semibold ocean-gradient text-white shadow-md shadow-primary/25 disabled:opacity-60 flex items-center gap-2">
             {saving && <Loader2 className="w-4 h-4 animate-spin" />}
             Simpan
           </button>
@@ -632,8 +632,8 @@ function PayoutModal({
 }
 
 const inputCls =
-  'w-full px-3.5 py-2.5 rounded-xl border border-slate-200 bg-slate-50/50 hover:bg-white focus:bg-white text-xs text-slate-800 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-sky-500/30 focus:border-sky-500 transition';
-const labelCls = 'block text-[11px] font-bold text-slate-600 uppercase tracking-wider mb-1.5';
+  'w-full px-3.5 py-2.5 rounded-xl border border-border bg-bg/50 hover:bg-surface focus:bg-surface text-xs text-ink placeholder:text-muted focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary transition';
+const labelCls = 'block text-[11px] font-bold text-muted uppercase tracking-wider mb-1.5';
 
 function Field({ label, children }: { label: string; children: React.ReactNode }) {
   return (
@@ -646,11 +646,11 @@ function Field({ label, children }: { label: string; children: React.ReactNode }
 
 function Modal({ title, children, onClose }: { title: string; children: React.ReactNode; onClose: () => void }) {
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-sm" onClick={onClose}>
-      <div className="bg-white rounded-2xl shadow-xl w-full max-w-lg max-h-[90vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
-        <div className="flex items-center justify-between px-5 py-4 border-b border-slate-100">
-          <h3 className="font-bold text-slate-900 text-sm">{title}</h3>
-          <button onClick={onClose} className="p-1.5 rounded-lg hover:bg-slate-100 text-slate-500">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-ink/40 backdrop-blur-sm" onClick={onClose}>
+      <div className="bg-surface rounded-2xl shadow-xl w-full max-w-lg max-h-[90vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
+        <div className="flex items-center justify-between px-5 py-4 border-b border-border">
+          <h3 className="font-bold text-ink text-sm">{title}</h3>
+          <button onClick={onClose} className="p-1.5 rounded-lg hover:bg-bg text-muted">
             <X className="w-4 h-4" />
           </button>
         </div>
@@ -662,10 +662,10 @@ function Modal({ title, children, onClose }: { title: string; children: React.Re
 
 function getStatColor(color: string) {
   const colors = {
-    blue: 'text-sky-600',
-    green: 'text-emerald-600',
-    purple: 'text-indigo-600',
-    orange: 'text-amber-500',
+    blue: 'text-primary',
+    green: 'text-success',
+    purple: 'text-primary',
+    orange: 'text-warning',
   };
-  return colors[color as keyof typeof colors] || 'text-sky-600';
+  return colors[color as keyof typeof colors] || 'text-primary';
 }

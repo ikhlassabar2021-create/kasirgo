@@ -31,11 +31,11 @@ export function RevenuePage() {
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-6">
         <div>
-          <h1 className="text-xl sm:text-2xl font-bold text-slate-900 mb-1">Analisis Finansial & Omset</h1>
-          <p className="text-xs sm:text-sm text-slate-500">Pantau performa pendapatan platform & outlet mitra</p>
+          <h1 className="text-xl sm:text-2xl font-bold text-ink mb-1">Analisis Finansial & Omset</h1>
+          <p className="text-xs sm:text-sm text-muted">Pantau performa pendapatan platform & outlet mitra</p>
         </div>
         
-        <select className="border border-slate-200 rounded-xl px-3 py-2 text-xs sm:text-sm bg-white hover:border-slate-300 focus:outline-none text-slate-700 self-start sm:self-auto">
+        <select className="border border-border rounded-xl px-3 py-2 text-xs sm:text-sm bg-surface hover:border-primary/40 focus:outline-none text-ink self-start sm:self-auto">
           <option>7 Hari Terakhir</option>
           <option>30 Hari Terakhir</option>
           <option>90 Hari Terakhir</option>
@@ -46,17 +46,17 @@ export function RevenuePage() {
       {/* Metrics Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 mb-6">
         {metrics.map((metric, index) => (
-          <div key={index} className="bg-white rounded-2xl p-4 sm:p-6 card-shadow border border-slate-200/80">
+          <div key={index} className="bg-surface rounded-2xl p-4 sm:p-6 card-shadow border border-border/80">
             <div className="flex items-center justify-between mb-2">
-              <p className="text-xs text-slate-500">{metric.title}</p>
+              <p className="text-xs text-muted">{metric.title}</p>
               <span className={`flex items-center gap-1 text-xs font-semibold ${
-                metric.isPositive ? 'text-emerald-600' : 'text-rose-600'
+                metric.isPositive ? 'text-success' : 'text-danger'
               }`}>
                 {metric.isPositive ? <TrendingUp className="w-3.5 h-3.5" /> : <TrendingDown className="w-3.5 h-3.5" />}
                 {metric.change}
               </span>
             </div>
-            <p className="metric-number text-2xl sm:text-3xl font-black text-slate-900">{metric.value}</p>
+            <p className="metric-number text-2xl sm:text-3xl font-black text-ink">{metric.value}</p>
           </div>
         ))}
       </div>
@@ -64,8 +64,8 @@ export function RevenuePage() {
       {/* Charts Grid */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-6 mb-6">
         {/* Revenue Line Chart */}
-        <div className="lg:col-span-2 bg-white rounded-2xl p-4 sm:p-6 card-shadow border border-slate-200/80">
-          <h3 className="text-xs sm:text-sm font-semibold text-slate-900 mb-4">Tren Pertumbuhan Pendapatan</h3>
+        <div className="lg:col-span-2 bg-surface rounded-2xl p-4 sm:p-6 card-shadow border border-border/80">
+          <h3 className="text-xs sm:text-sm font-semibold text-ink mb-4">Tren Pertumbuhan Pendapatan</h3>
           <div className="h-[240px] sm:h-[300px]">
             <ResponsiveContainer width="100%" height="100%">
               <LineChart data={revenueData} margin={{ top: 10, right: 10, left: -25, bottom: 0 }}>
@@ -83,8 +83,8 @@ export function RevenuePage() {
         </div>
 
         {/* Tier Distribution Pie Chart */}
-        <div className="bg-white rounded-2xl p-4 sm:p-6 card-shadow border border-slate-200/80">
-          <h3 className="text-xs sm:text-sm font-semibold text-slate-900 mb-4">Distribusi Paket Pelanggan</h3>
+        <div className="bg-surface rounded-2xl p-4 sm:p-6 card-shadow border border-border/80">
+          <h3 className="text-xs sm:text-sm font-semibold text-ink mb-4">Distribusi Paket Pelanggan</h3>
           <div className="h-[200px] sm:h-[240px]">
             <ResponsiveContainer width="100%" height="100%">
               <PieChart>
@@ -110,9 +110,9 @@ export function RevenuePage() {
               <div key={tier.name} className="flex items-center justify-between text-xs sm:text-sm">
                 <div className="flex items-center gap-2">
                   <div className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: tier.color }} />
-                  <span className="text-slate-600">{tier.name}</span>
+                  <span className="text-muted">{tier.name}</span>
                 </div>
-                <span className="font-semibold text-slate-900">{tier.value}%</span>
+                <span className="font-semibold text-ink">{tier.value}%</span>
               </div>
             ))}
           </div>
@@ -120,35 +120,35 @@ export function RevenuePage() {
       </div>
 
       {/* Monthly Breakdown Table */}
-      <div className="bg-white rounded-2xl card-shadow border border-slate-200/80 overflow-hidden">
-        <div className="px-4 sm:px-6 py-3.5 border-b border-slate-100">
-          <h3 className="text-xs sm:text-sm font-semibold text-slate-900">Rincian Bulanan</h3>
+      <div className="bg-surface rounded-2xl card-shadow border border-border/80 overflow-hidden">
+        <div className="px-4 sm:px-6 py-3.5 border-b border-border">
+          <h3 className="text-xs sm:text-sm font-semibold text-ink">Rincian Bulanan</h3>
         </div>
         <div className="overflow-x-auto">
           <table className="w-full min-w-[520px]">
-            <thead className="bg-slate-50 border-b border-slate-100">
+            <thead className="bg-bg border-b border-border">
               <tr>
-                <th className="text-left px-4 sm:px-6 py-3 text-xs font-semibold text-slate-600 uppercase">Bulan</th>
-                <th className="text-right px-4 sm:px-6 py-3 text-xs font-semibold text-slate-600 uppercase">Pendapatan</th>
-                <th className="text-right px-4 sm:px-6 py-3 text-xs font-semibold text-slate-600 uppercase">Transaksi</th>
-                <th className="text-right px-4 sm:px-6 py-3 text-xs font-semibold text-slate-600 uppercase">Rata-rata</th>
-                <th className="text-center px-4 sm:px-6 py-3 text-xs font-semibold text-slate-600 uppercase">Pertumbuhan</th>
+                <th className="text-left px-4 sm:px-6 py-3 text-xs font-semibold text-muted uppercase">Bulan</th>
+                <th className="text-right px-4 sm:px-6 py-3 text-xs font-semibold text-muted uppercase">Pendapatan</th>
+                <th className="text-right px-4 sm:px-6 py-3 text-xs font-semibold text-muted uppercase">Transaksi</th>
+                <th className="text-right px-4 sm:px-6 py-3 text-xs font-semibold text-muted uppercase">Rata-rata</th>
+                <th className="text-center px-4 sm:px-6 py-3 text-xs font-semibold text-muted uppercase">Pertumbuhan</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-slate-100">
+            <tbody className="divide-y divide-border">
               {revenueData.slice().reverse().map((data, index) => {
                 const growth = index === revenueData.length - 1 ? null : 
                   ((data.revenue - revenueData[index + 1].revenue) / revenueData[index + 1].revenue * 100);
                 
                 return (
-                  <tr key={index} className="hover:bg-slate-50">
-                    <td className="px-4 sm:px-6 py-3.5 text-xs sm:text-sm font-medium text-slate-900">{data.month}</td>
-                    <td className="px-4 sm:px-6 py-3.5 text-xs sm:text-sm text-right font-semibold text-slate-900">Rp {(data.revenue / 1000).toFixed(1)}K</td>
-                    <td className="px-4 sm:px-6 py-3.5 text-xs sm:text-sm text-right text-slate-600">{data.transactions}</td>
-                    <td className="px-4 sm:px-6 py-3.5 text-xs sm:text-sm text-right text-slate-600">Rp {(data.revenue / data.transactions).toFixed(0)}</td>
+                  <tr key={index} className="hover:bg-bg">
+                    <td className="px-4 sm:px-6 py-3.5 text-xs sm:text-sm font-medium text-ink">{data.month}</td>
+                    <td className="px-4 sm:px-6 py-3.5 text-xs sm:text-sm text-right font-semibold text-ink">Rp {(data.revenue / 1000).toFixed(1)}K</td>
+                    <td className="px-4 sm:px-6 py-3.5 text-xs sm:text-sm text-right text-muted">{data.transactions}</td>
+                    <td className="px-4 sm:px-6 py-3.5 text-xs sm:text-sm text-right text-muted">Rp {(data.revenue / data.transactions).toFixed(0)}</td>
                     <td className="px-4 sm:px-6 py-3.5 text-center">
                       {growth !== null && (
-                        <span className={`inline-flex items-center gap-1 text-xs font-semibold ${growth >= 0 ? 'text-emerald-600' : 'text-rose-600'}`}>
+                        <span className={`inline-flex items-center gap-1 text-xs font-semibold ${growth >= 0 ? 'text-success' : 'text-danger'}`}>
                           {growth >= 0 ? <ArrowUpRight className="w-3 h-3" /> : <ArrowDownRight className="w-3 h-3" />}
                           {Math.abs(growth).toFixed(1)}%
                         </span>

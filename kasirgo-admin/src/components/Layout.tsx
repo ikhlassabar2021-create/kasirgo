@@ -27,29 +27,29 @@ export const Layout: React.FC<LayoutProps> = ({ onLogout, role = 'superadmin' })
   }
 
   return (
-    <div className="min-h-screen bg-slate-50 text-slate-800 flex flex-col font-sans">
-      {/* Mobile Top App Bar */}
-      <header className="lg:hidden sticky top-0 z-40 h-[60px] bg-white/95 backdrop-blur-md border-b border-slate-200/80 shadow-xs px-4 flex items-center justify-between">
+    <div className="min-h-screen bg-bg text-ink flex flex-col font-sans">
+      {/* Mobile Top App Bar - selaras dengan header owner (60px) */}
+      <header className="lg:hidden sticky top-0 z-40 h-[60px] bg-surface/95 backdrop-blur-md border-b border-border px-4 flex items-center justify-between">
         <div className="flex items-center gap-2.5">
           <button 
             onClick={() => setSidebarOpen(true)}
             aria-label="Open navigation menu"
-            className="w-9 h-9 bg-slate-100 hover:bg-slate-200 active:bg-slate-200 rounded-lg flex items-center justify-center text-slate-700 border border-slate-200"
+            className="w-9 h-9 bg-bg hover:bg-border/60 active:bg-border/60 rounded-lg flex items-center justify-center text-ink border border-border"
           >
             <Menu className="w-4 h-4" />
           </button>
           <div>
-            <div className="text-[10px] font-bold uppercase tracking-wider text-sky-600 flex items-center gap-1">
-              <LayoutDashboard className="w-3 h-3" /> KasirGo Centennial
+            <div className="text-[10px] font-bold uppercase tracking-wider text-primary flex items-center gap-1">
+              <LayoutDashboard className="w-3 h-3" /> KasirGo Superadmin
             </div>
-            <h1 className="text-xs sm:text-sm font-bold text-slate-900 truncate max-w-[190px]">
+            <h1 className="text-xs sm:text-sm font-bold text-ink truncate max-w-[190px]">
               {getPageTitle()}
             </h1>
           </div>
         </div>
 
         <div className="flex items-center gap-2">
-          <div className="w-7 h-7 rounded-lg bg-gradient-to-tr from-cyan-500 to-blue-600 text-white font-bold text-xs flex items-center justify-center shadow-xs">
+          <div className="bubble-glass w-8 h-8 rounded-xl text-white font-bold text-xs flex items-center justify-center">
             SA
           </div>
         </div>
@@ -63,8 +63,8 @@ export const Layout: React.FC<LayoutProps> = ({ onLogout, role = 'superadmin' })
         role={role}
       />
 
-      {/* Main Content Area - White clean container */}
-      <main className="lg:ml-60 flex-1 p-3 sm:p-5 lg:p-6 min-h-[calc(100vh-60px)] lg:min-h-screen bg-slate-50">
+      {/* Main Content Area - konten maxWidth 1100 (selaras owner) */}
+      <main className="lg:ml-60 flex-1 p-3 sm:p-5 lg:p-6 min-h-[calc(100vh-60px)] lg:min-h-screen bg-bg">
         <div className="mx-auto max-w-[1100px]">
           <Outlet />
         </div>
