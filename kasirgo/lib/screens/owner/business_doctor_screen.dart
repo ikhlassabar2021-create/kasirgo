@@ -7,6 +7,7 @@ import '../../providers/auth_provider.dart';
 import '../../providers/module_provider.dart';
 import '../../providers/outlet_provider.dart';
 import '../../services/business_doctor_service.dart';
+import '../../services/voice_service.dart';
 import '../../widgets/common/app_button.dart';
 import '../../widgets/common/business_doctor/doctor_blocks.dart';
 import '../../widgets/common/centennial_background.dart';
@@ -27,6 +28,8 @@ import 'recipe_screen.dart';
 import 'report_screen.dart';
 import 'whatsapp_broadcast_screen.dart';
 import '../../utils/error_messages.dart';
+import '../../utils/formatters.dart';
+import '../../utils/wa_helper.dart';
 
 class BusinessDoctorScreen extends ConsumerStatefulWidget {
   const BusinessDoctorScreen(
@@ -96,6 +99,8 @@ class _BusinessDoctorScreenState extends ConsumerState<BusinessDoctorScreen> {
   String _tone = 'hangat';
   int _dailyStreak = 0;
   bool _overduePrompted = false;
+  bool _reprimandSpoken = false;
+  String? _bossWa;
 
   @override
   void initState() {
@@ -150,6 +155,7 @@ class _BusinessDoctorScreenState extends ConsumerState<BusinessDoctorScreen> {
         _tone = p['preferred_tone']?.toString() ?? _tone;
         _dailyStreak =
             int.tryParse(p['daily_streak']?.toString() ?? '') ?? _dailyStreak;
+        _bossWa = p['boss_wa_number']?.toString();
       });
     } catch (_) {}
   }
@@ -163,6 +169,109 @@ class _BusinessDoctorScreenState extends ConsumerState<BusinessDoctorScreen> {
           .setPreferredTone(outletId: outletId, tone: tone);
     } catch (e) {
       _snack(friendlyError(e));
+    }
+  }
+
+  Future<void> _editBossWa() async {
+    final ctrl = TextEditingController(text: _bossWa ?? '');
+    final res = await showDialog<String>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: Text(
+          'Nomor WhatsApp Bos',
+          style: GoogleFonts.plusJakartaSans(fontWeight: FontWeight.w800),
+        ),
+        content: TextField(
+          controller: ctrl,
+          keyboardType: TextInputType.phone,
+          decoration: const InputDecoration(hintText: '08xxxxxxxxxx'),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('Batal'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(ctx, ctrl.text.trim()),
+            child: const Text('Simpan'),
+          ),
+        ],
+      ),
+    );
+    if (res == null) return;
+    setState(() => _bossWa = res);
+    final outletId = ref.read(currentUserProvider)?.outletId;
+    if (outletId == null || outletId.isEmpty) return;
+    try {
+      await (widget.service ?? BusinessDoctorService())
+          .setBossWaNumber(outletId: outletId, number: res);
+      if (mounted) _snack('Nomor Bos disimpan.');
+    } catch (e) {
+      _snack(friendlyError(e));
+    }
+  }
+
+  String _buildBossMessage() {
+    final outletName = ref.read(currentUserProvider)?.name ?? 'Toko';
+    final b = StringBuffer();
+    b.writeln('*Laporan Toko: $outletName*');
+    b.writeln('Tanggal: ${Formatters.date(DateTime.now())}');
+    b.writeln('');
+    final br = _briefing;
+    if (br != null) {
+      b.writeln('*Ringkasan Hari Ini*');
+      final s = br['summary']?.toString() ?? '';
+      if (s.isNotEmpty) b.writeln(s);
+      final items = (br['items'] is List) ? br['items'] as List : const [];
+      for (final it in items) {
+        final m = (it is Map) ? it.cast<String, dynamic>() : const {};
+        b.writeln('- ${m['label'] ?? ''}: ${m['text'] ?? ''}');
+      }
+      b.writeln('');
+    }
+    final wr = _weeklyReport;
+    if (wr != null) {
+      b.writeln('*Laporan Mingguan*');
+      b.writeln(wr['content']?.toString() ?? '');
+      final data = (wr['data'] is Map)
+          ? (wr['data'] as Map).cast<String, dynamic>()
+          : const {};
+      if (data['top_product'] != null) {
+        b.writeln('Terlaris: ${data['top_product']}');
+      }
+      b.writeln('');
+    }
+    final dd = _dailyDose;
+    if (dd != null) {
+      b.writeln('*Dosis Harian*');
+      b.writeln(dd['title']?.toString() ?? 'Dosis Harian');
+    }
+    b.writeln('');
+    b.writeln('-- dikirim via Dokter Bisnis AI KasirGo');
+    return b.toString();
+  }
+
+  Future<void> _reportToBoss() async {
+    final outletId = ref.read(currentUserProvider)?.outletId;
+    if (outletId == null || outletId.isEmpty) return;
+    if (_bossWa == null || _bossWa!.trim().isEmpty) {
+      await _editBossWa();
+      if (_bossWa == null || _bossWa!.trim().isEmpty) return;
+    }
+    final msg = _buildBossMessage();
+    final ok = await WaHelper.sendWhatsAppMessage(phone: _bossWa!, message: msg);
+    if (!mounted) return;
+    if (ok) {
+      try {
+        await (widget.service ?? BusinessDoctorService()).logBossReport(
+          outletId: outletId,
+          kind: 'laporan',
+          summary: _briefing?['summary']?.toString(),
+        );
+      } catch (_) {}
+      _snack('Laporan dibuka di WhatsApp.');
+    } else {
+      _snack('Tidak bisa membuka WhatsApp.');
     }
   }
 
@@ -222,7 +331,18 @@ class _BusinessDoctorScreenState extends ConsumerState<BusinessDoctorScreen> {
           .getLatestReprimand(outletId);
       if (!mounted || r == null) return;
       setState(() => _reprimand = r);
+      _speakReprimand(r);
     } catch (_) {}
+  }
+
+  /// Bacakan teguran Dokter Bisnis (di-gate config Control Plane).
+  void _speakReprimand(Map<String, dynamic> r) {
+    if (_reprimandSpoken) return;
+    _reprimandSpoken = true;
+    final title = r['title']?.toString() ?? '';
+    final content = r['content']?.toString() ?? '';
+    final text = [title, content].where((e) => e.trim().isNotEmpty).join('. ');
+    if (text.isNotEmpty) VoiceService().announceReprimand(text);
   }
 
   Future<void> _loadPrescription() async {
@@ -767,6 +887,11 @@ class _BusinessDoctorScreenState extends ConsumerState<BusinessDoctorScreen> {
         elevation: 0,
         scrolledUnderElevation: 0,
         actions: [
+          IconButton(
+            tooltip: 'Lapor ke Bos',
+            icon: const Icon(Icons.forward_to_inbox_rounded),
+            onPressed: _reportToBoss,
+          ),
           IconButton(
             tooltip: 'Riwayat Kasus',
             icon: const Icon(Icons.history_rounded),

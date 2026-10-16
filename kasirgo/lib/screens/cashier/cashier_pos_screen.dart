@@ -12,6 +12,7 @@ import '../../providers/module_provider.dart';
 import '../../providers/outlet_provider.dart';
 import '../../services/offline_transaction_service.dart';
 import '../../services/supabase_service.dart';
+import '../../services/voice_service.dart';
 import '../../utils/receipt_generator.dart';
 import '../owner/product_list_screen.dart';
 import '../../widgets/pos/product_grid.dart';
@@ -291,6 +292,13 @@ class _CashierPosScreenState extends ConsumerState<CashierPosScreen> {
         });
 
         final outletName = ref.read(currentUserProvider)?.name ?? 'KasirGo';
+        // Soundbox: bacakan nominal pembayaran (di-gate config Control Plane).
+        VoiceService().announcePayment(
+          amount: result.amount,
+          method: result.paymentMethod,
+          change: result.change,
+          customerName: result.customerName,
+        );
         final changeMsg = result.change > 0
             ? 'Kembalian: Rp ${result.change.toStringAsFixed(0)}'
             : '';

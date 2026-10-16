@@ -333,10 +333,40 @@ class BusinessDoctorService {
   Future<Map<String, dynamic>?> getProfile(String outletId) async {
     final res = await _client
         .from('doctor_outlet_profile')
-        .select('preferred_tone, daily_streak, last_dose_at')
+        .select(
+            'preferred_tone, daily_streak, last_dose_at, boss_wa_number')
         .eq('outlet_id', outletId)
         .maybeSingle();
     return res;
+  }
+
+  /// Simpan nomor WhatsApp "Bos Besar" untuk laporan otomatis.
+  Future<void> setBossWaNumber({
+    required String outletId,
+    required String number,
+  }) async {
+    await _client.from('doctor_outlet_profile').upsert({
+      'outlet_id': outletId,
+      'boss_wa_number': number.trim(),
+      'updated_at': DateTime.now().toIso8601String(),
+    }, onConflict: 'outlet_id');
+  }
+
+  /// Catat bahwa laporan sudah dikirim ke Bos via WhatsApp (jejak audit).
+  Future<void> logBossReport({
+    required String outletId,
+    required String kind,
+    String? summary,
+  }) async {
+    await _client.from('doctor_action_logs').insert({
+      'outlet_id': outletId,
+      'action_type': 'boss_report',
+      'channel': 'whatsapp',
+      'description': '$kind: ${summary ?? ''}'.trim(),
+      'action_date': DateTime.now().toIso8601String().substring(0, 10),
+      'result': {'kind': kind},
+      'outcome': 'sent',
+    });
   }
 
   /// Simpan pilihan persona/nada bicara Dokter Bisnis.
