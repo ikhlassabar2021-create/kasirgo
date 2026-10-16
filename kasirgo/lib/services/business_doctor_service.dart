@@ -326,4 +326,75 @@ class BusinessDoctorService {
         .maybeSingle();
     return res;
   }
+
+  // --- Dokter Bisnis 3.0: persona, dosis harian, briefing ---
+
+  /// Persona & gamifikasi ringan (nada bicara + rentetan hari).
+  Future<Map<String, dynamic>?> getProfile(String outletId) async {
+    final res = await _client
+        .from('doctor_outlet_profile')
+        .select('preferred_tone, daily_streak, last_dose_at')
+        .eq('outlet_id', outletId)
+        .maybeSingle();
+    return res;
+  }
+
+  /// Simpan pilihan persona/nada bicara Dokter Bisnis.
+  Future<void> setPreferredTone({
+    required String outletId,
+    required String tone,
+  }) async {
+    await _client.from('doctor_outlet_profile').upsert({
+      'outlet_id': outletId,
+      'preferred_tone': tone,
+      'updated_at': DateTime.now().toIso8601String(),
+    }, onConflict: 'outlet_id');
+  }
+
+  /// Dosis harian hari ini (checklist harian); null bila belum dibuat.
+  Future<Map<String, dynamic>?> getDailyDose(String outletId) async {
+    final today = DateTime.now().toIso8601String().substring(0, 10);
+    final res = await _client
+        .from('doctor_daily_doses')
+        .select('id, dose_date, title, items, total_items, done_items, status')
+        .eq('outlet_id', outletId)
+        .eq('dose_date', today)
+        .maybeSingle();
+    return res;
+  }
+
+  /// Perbarui progres dosis harian (centang langkah) langsung di DB.
+  Future<void> updateDailyDose({
+    required String outletId,
+    required List items,
+    required int doneItems,
+    required String status,
+  }) async {
+    final today = DateTime.now().toIso8601String().substring(0, 10);
+    await _client
+        .from('doctor_daily_doses')
+        .update({
+          'items': items,
+          'done_items': doneItems,
+          'total_items': items.length,
+          'status': status,
+          'updated_at': DateTime.now().toIso8601String(),
+        })
+        .eq('outlet_id', outletId)
+        .eq('dose_date', today);
+  }
+
+  /// Briefing "Apel Pagi" hari ini via Edge Function doctor_briefing.
+  Future<Map<String, dynamic>?> getBriefing(String outletId) async {
+    try {
+      final res = await _client.functions.invoke(
+        'doctor_briefing',
+        body: {'outlet_id': outletId},
+      ).timeout(const Duration(seconds: 30));
+      if (res.data is Map) return (res.data as Map).cast<String, dynamic>();
+      return null;
+    } on TimeoutException {
+      return null;
+    }
+  }
 }

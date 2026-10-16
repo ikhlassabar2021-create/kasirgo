@@ -12,6 +12,9 @@ class DoctorBlocks extends StatelessWidget {
       Map<String, dynamic> block, Map<String, dynamic> step, int index)? onPrescription;
   final void Function(Map<String, dynamic> block, int index)?
       onTogglePrescription;
+  final void Function(
+      Map<String, dynamic> block, Map<String, dynamic> step, int index)? onDoseStep;
+  final void Function(Map<String, dynamic> block, int index)? onToggleDose;
 
   const DoctorBlocks({
     super.key,
@@ -20,6 +23,8 @@ class DoctorBlocks extends StatelessWidget {
     this.onAction,
     this.onPrescription,
     this.onTogglePrescription,
+    this.onDoseStep,
+    this.onToggleDose,
   });
 
   @override
@@ -62,6 +67,8 @@ class DoctorBlocks extends StatelessWidget {
         return _action(b);
       case 'prescription':
         return _prescription(b);
+      case 'dose':
+        return _dose(b);
       default:
         return null;
     }
@@ -541,6 +548,207 @@ class DoctorBlocks extends StatelessWidget {
           ),
         ),
       ),
+    );
+  }
+
+  Widget _dose(Map<String, dynamic> b) {
+    final items = ((b['items'] as List?) ?? const [])
+        .whereType<Map>()
+        .map((e) => e.cast<String, dynamic>())
+        .toList();
+    final total = (b['total_items'] as num?)?.toInt() ?? items.length;
+    final done = (b['done_items'] as num?)?.toInt() ??
+        items.where((e) => e['done'] == true).length;
+    final allDone = total > 0 && done >= total;
+    final accent = allDone ? AppTheme.successColor : AppTheme.primaryColor;
+    final progress = total <= 0 ? 0.0 : (done / total).clamp(0.0, 1.0);
+    return Container(
+      width: double.infinity,
+      decoration: BoxDecoration(
+        color: AppTheme.surfaceColor,
+        borderRadius: BorderRadius.circular(AppTheme.radiusLarge),
+        border: Border.all(color: accent.withValues(alpha: 0.4)),
+        boxShadow: AppTheme.shadowSoft,
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Container(
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              gradient: allDone
+                  ? LinearGradient(colors: [
+                      AppTheme.successColor.withValues(alpha: 0.9),
+                      AppTheme.successColor,
+                    ])
+                  : AppTheme.aiBadgeGradient,
+              borderRadius: const BorderRadius.vertical(
+                  top: Radius.circular(AppTheme.radiusLarge - 1)),
+            ),
+            child: Row(
+              children: [
+                const Icon(Icons.medication_rounded,
+                    color: Colors.white, size: 20),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    _s(b['title']).isEmpty ? 'Dosis Harian' : _s(b['title']),
+                    style: GoogleFonts.plusJakartaSans(
+                      fontSize: 14,
+                      fontWeight: FontWeight.w800,
+                      color: Colors.white,
+                    ),
+                  ),
+                ),
+                Container(
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                  decoration: BoxDecoration(
+                    color: Colors.white.withValues(alpha: 0.22),
+                    borderRadius: BorderRadius.circular(20),
+                  ),
+                  child: Text(
+                    allDone ? 'TUNTAS' : '$done/$total',
+                    style: GoogleFonts.plusJakartaSans(
+                      fontSize: 9,
+                      fontWeight: FontWeight.w800,
+                      color: Colors.white,
+                      letterSpacing: 0.5,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          Padding(
+            padding: const EdgeInsets.all(12),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                ClipRRect(
+                  borderRadius: BorderRadius.circular(20),
+                  child: LinearProgressIndicator(
+                    value: progress,
+                    minHeight: 6,
+                    backgroundColor: AppTheme.surfaceMutedColor,
+                    valueColor: AlwaysStoppedAnimation<Color>(accent),
+                  ),
+                ),
+                const SizedBox(height: 10),
+                for (var i = 0; i < items.length; i++) ...[
+                  _doseStep(b, items[i], i, accent),
+                  if (i < items.length - 1) const SizedBox(height: 8),
+                ],
+                if (allDone)
+                  Padding(
+                    padding: const EdgeInsets.only(top: 10),
+                    child: Text(
+                      'Dosis hari ini tuntas. Besok lanjut lagi ya!',
+                      style: GoogleFonts.plusJakartaSans(
+                        fontSize: 11,
+                        height: 1.35,
+                        color: AppTheme.successColor,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                  ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _doseStep(Map<String, dynamic> block, Map<String, dynamic> step,
+      int index, Color accent) {
+    final done = step['done'] == true;
+    final key = _s(step['action_key']);
+    final hasFeature = key.isNotEmpty;
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Container(
+          width: 22,
+          height: 22,
+          alignment: Alignment.center,
+          decoration: BoxDecoration(
+            color: done
+                ? AppTheme.successColor
+                : AppTheme.primaryColor.withValues(alpha: 0.12),
+            shape: BoxShape.circle,
+          ),
+          child: done
+              ? const Icon(Icons.check_rounded, size: 14, color: Colors.white)
+              : Text(
+                  '${index + 1}',
+                  style: GoogleFonts.plusJakartaSans(
+                    fontSize: 11,
+                    fontWeight: FontWeight.w800,
+                    color: AppTheme.primaryColor,
+                  ),
+                ),
+        ),
+        const SizedBox(width: 8),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                _s(step['text']),
+                style: GoogleFonts.plusJakartaSans(
+                  fontSize: 13,
+                  height: 1.35,
+                  color: done ? AppTheme.textSecondary : AppTheme.textPrimary,
+                  decoration: done ? TextDecoration.lineThrough : null,
+                ),
+              ),
+              if (hasFeature)
+                Padding(
+                  padding: const EdgeInsets.only(top: 4),
+                  child: Text(
+                    _featureLabel(key),
+                    style: GoogleFonts.plusJakartaSans(
+                      fontSize: 10,
+                      fontWeight: FontWeight.w700,
+                      color: AppTheme.accentColor,
+                    ),
+                  ),
+                ),
+              Padding(
+                padding: const EdgeInsets.only(top: 6),
+                child: Wrap(
+                  spacing: 8,
+                  runSpacing: 6,
+                  children: [
+                    if (hasFeature && !done)
+                      _stepButton(
+                        label: 'Jalankan',
+                        icon: Icons.play_arrow_rounded,
+                        onTap: onDoseStep == null
+                            ? null
+                            : () => onDoseStep!(block, step, index),
+                        filled: true,
+                        color: accent,
+                      ),
+                    _stepButton(
+                      label: done ? 'Sudah' : 'Tandai',
+                      icon: done
+                          ? Icons.check_circle_rounded
+                          : Icons.radio_button_unchecked_rounded,
+                      onTap: onToggleDose == null
+                          ? null
+                          : () => onToggleDose!(block, index),
+                      filled: done,
+                      color: done ? AppTheme.successColor : accent,
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
+      ],
     );
   }
 

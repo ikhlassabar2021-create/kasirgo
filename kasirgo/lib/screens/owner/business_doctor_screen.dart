@@ -91,6 +91,10 @@ class _BusinessDoctorScreenState extends ConsumerState<BusinessDoctorScreen> {
   Map<String, dynamic>? _weeklyReport;
   List<Map<String, dynamic>> _pendingActions = const [];
   Map<String, dynamic>? _identity;
+  Map<String, dynamic>? _briefing;
+  Map<String, dynamic>? _dailyDose;
+  String _tone = 'hangat';
+  int _dailyStreak = 0;
   bool _overduePrompted = false;
 
   @override
@@ -103,6 +107,9 @@ class _BusinessDoctorScreenState extends ConsumerState<BusinessDoctorScreen> {
     _loadIdentity();
     _loadWeeklyReport();
     _loadPendingActions();
+    _loadProfile();
+    _loadDailyDose();
+    _loadBriefing();
     if (_conversationId != null) _loadHistory();
     final initial = widget.initialMessage?.trim();
     if (initial != null && initial.isNotEmpty) {
@@ -129,6 +136,55 @@ class _BusinessDoctorScreenState extends ConsumerState<BusinessDoctorScreen> {
           .getLatestWeeklyReport(outletId);
       if (!mounted || r == null) return;
       setState(() => _weeklyReport = r);
+    } catch (_) {}
+  }
+
+  Future<void> _loadProfile() async {
+    final outletId = ref.read(currentUserProvider)?.outletId;
+    if (outletId == null || outletId.isEmpty) return;
+    try {
+      final p = await (widget.service ?? BusinessDoctorService())
+          .getProfile(outletId);
+      if (!mounted || p == null) return;
+      setState(() {
+        _tone = p['preferred_tone']?.toString() ?? _tone;
+        _dailyStreak =
+            int.tryParse(p['daily_streak']?.toString() ?? '') ?? _dailyStreak;
+      });
+    } catch (_) {}
+  }
+
+  Future<void> _setTone(String tone) async {
+    final outletId = ref.read(currentUserProvider)?.outletId;
+    if (outletId == null || outletId.isEmpty) return;
+    setState(() => _tone = tone);
+    try {
+      await (widget.service ?? BusinessDoctorService())
+          .setPreferredTone(outletId: outletId, tone: tone);
+    } catch (e) {
+      _snack(friendlyError(e));
+    }
+  }
+
+  Future<void> _loadDailyDose() async {
+    final outletId = ref.read(currentUserProvider)?.outletId;
+    if (outletId == null || outletId.isEmpty) return;
+    try {
+      final d = await (widget.service ?? BusinessDoctorService())
+          .getDailyDose(outletId);
+      if (!mounted) return;
+      setState(() => _dailyDose = d);
+    } catch (_) {}
+  }
+
+  Future<void> _loadBriefing() async {
+    final outletId = ref.read(currentUserProvider)?.outletId;
+    if (outletId == null || outletId.isEmpty) return;
+    try {
+      final b = await (widget.service ?? BusinessDoctorService())
+          .getBriefing(outletId);
+      if (!mounted || b == null) return;
+      setState(() => _briefing = b);
     } catch (_) {}
   }
 
@@ -310,6 +366,12 @@ class _BusinessDoctorScreenState extends ConsumerState<BusinessDoctorScreen> {
         _loading = false;
       });
       if (pendingBlock != null) _loadPendingActions();
+      final hasDose =
+          blocks.whereType<Map>().any((b) => b['type'] == 'dose');
+      if (hasDose) {
+        _loadDailyDose();
+        _loadProfile();
+      }
     } catch (e) {
       if (!mounted) return;
       setState(() {
@@ -456,6 +518,97 @@ class _BusinessDoctorScreenState extends ConsumerState<BusinessDoctorScreen> {
     } catch (_) {}
     if (allDone && mounted) {
       _snack('Semua langkah resep selesai. Mantap!');
+    }
+  }
+
+  List<Map<String, dynamic>> _doseItems(Map<String, dynamic> block) =>
+      ((block['items'] as List?) ?? const [])
+          .whereType<Map>()
+          .map((e) => Map<String, dynamic>.from(e))
+          .toList();
+
+  /// "Jalankan" langkah dosis: buka fitur terkait lalu tandai selesai.
+  Future<void> _onDoseStep(
+      Map<String, dynamic> block, Map<String, dynamic> step, int index) async {
+    final items = _doseItems(block);
+    if (index < 0 || index >= items.length) return;
+    final key = items[index]['action_key']?.toString() ?? '';
+    if (key.isNotEmpty) {
+      final hasScreen = key == 'upgrade' ||
+          key == 'catat_promosi' ||
+          _actionScreen(key) != null;
+      if (hasScreen) {
+        _handleAction(key, items[index]['text']?.toString() ?? '');
+      }
+    }
+    await _markDoseStep(block, index, true);
+  }
+
+  /// Checklist dosis: tandai selesai / batal tanpa membuka fitur.
+  Future<void> _toggleDoseStep(Map<String, dynamic> block, int index) async {
+    final items = _doseItems(block);
+    if (index < 0 || index >= items.length) return;
+    final done = items[index]['done'] == true;
+    await _markDoseStep(block, index, !done);
+  }
+
+  Future<void> _markDoseStep(
+      Map<String, dynamic> block, int index, bool done) async {
+    final outletId = ref.read(currentUserProvider)?.outletId;
+    if (outletId == null || outletId.isEmpty) return;
+    final items = _doseItems(block);
+    if (index < 0 || index >= items.length) return;
+    items[index]['done'] = done;
+    final doneItems = items.where((e) => e['done'] == true).length;
+    final status = doneItems >= items.length
+        ? 'done'
+        : (doneItems == 0 ? 'pending' : 'partial');
+    final updated = {
+      ...block,
+      'items': items,
+      'done_items': doneItems,
+      'total_items': items.length,
+      'status': status,
+    };
+    final doseDate = updated['dose_date']?.toString();
+    setState(() {
+      _dailyDose = updated;
+      // Sinkronkan blok dosis di gelembung chat (bila ada) agar langsung tercoret.
+      for (var mi = 0; mi < _messages.length; mi++) {
+        final msg = _messages[mi];
+        if (msg.blocks.isEmpty) continue;
+        var changed = false;
+        final newBlocks = <dynamic>[];
+        for (final raw in msg.blocks) {
+          if (raw is Map && raw['type'] == 'dose') {
+            final sameRef = identical(raw, block);
+            final bd = raw['dose_date']?.toString();
+            final sameDate =
+                doseDate != null && doseDate.isNotEmpty && bd == doseDate;
+            if (sameRef || sameDate) {
+              newBlocks.add(updated);
+              changed = true;
+              continue;
+            }
+          }
+          newBlocks.add(raw);
+        }
+        if (changed) {
+          _messages[mi] = _Msg(msg.role, msg.text, newBlocks);
+        }
+      }
+    });
+    try {
+      await (widget.service ?? BusinessDoctorService()).updateDailyDose(
+        outletId: outletId,
+        items: items,
+        doneItems: doneItems,
+        status: status,
+      );
+    } catch (_) {}
+    if (doneItems >= items.length && items.isNotEmpty && mounted) {
+      _snack('Dosis hari ini tuntas. Mantap!');
+      _loadProfile();
     }
   }
 
@@ -651,6 +804,16 @@ class _BusinessDoctorScreenState extends ConsumerState<BusinessDoctorScreen> {
           _buildIdentityCard(),
           const SizedBox(height: 12),
         ],
+        _buildPersonaBar(),
+        const SizedBox(height: 12),
+        if (_briefing != null) ...[
+          _buildBriefingCard(),
+          const SizedBox(height: 12),
+        ],
+        if (_dailyDose != null) ...[
+          _buildDailyDoseCard(),
+          const SizedBox(height: 12),
+        ],
         if (_weeklyReport != null) ...[
           _buildWeeklyReportCard(),
           const SizedBox(height: 12),
@@ -790,6 +953,9 @@ class _BusinessDoctorScreenState extends ConsumerState<BusinessDoctorScreen> {
                     'Tenggat: ${id['deadline'].toString().substring(0, 10)}'),
               if (age != null && age != 'null')
                 _identityChip('Usia usaha: $age hari'),
+              if (_dailyStreak > 0)
+                _identityChip('Streak $_dailyStreak hari',
+                    color: AppTheme.successColor),
             ],
           ),
         ],
@@ -814,6 +980,208 @@ class _BusinessDoctorScreenState extends ConsumerState<BusinessDoctorScreen> {
           color: AppTheme.textPrimary,
         ),
       ),
+    );
+  }
+
+  static const _tonePresets = [
+    ['hangat', 'Hangat', Icons.emoji_emotions_outlined],
+    ['tegas', 'Tegas', Icons.gavel_rounded],
+    ['santai', 'Santai', Icons.weekend_outlined],
+    ['singkat', 'Singkat', Icons.bolt_rounded],
+  ];
+
+  Widget _buildPersonaBar() {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: AppTheme.surfaceColor,
+        borderRadius: BorderRadius.circular(AppTheme.radiusLarge),
+        border: Border.all(color: AppTheme.borderColor),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              const Icon(Icons.record_voice_over_outlined,
+                  color: AppTheme.primaryColor, size: 20),
+              const SizedBox(width: 8),
+              Text(
+                'Gaya Bicara Dokter',
+                style: GoogleFonts.plusJakartaSans(
+                  fontSize: 13,
+                  fontWeight: FontWeight.w800,
+                  color: AppTheme.textPrimary,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 10),
+          Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            children: [
+              for (final t in _tonePresets)
+                ChoiceChip(
+                  avatar: Icon(
+                    t[2] as IconData,
+                    size: 16,
+                    color: _tone == t[0]
+                        ? AppTheme.surfaceColor
+                        : AppTheme.textSecondary,
+                  ),
+                  label: Text(
+                    t[1] as String,
+                    style: GoogleFonts.plusJakartaSans(
+                      fontSize: 12,
+                      fontWeight: FontWeight.w700,
+                      color: _tone == t[0]
+                          ? AppTheme.surfaceColor
+                          : AppTheme.textPrimary,
+                    ),
+                  ),
+                  selected: _tone == t[0],
+                  selectedColor: AppTheme.primaryColor,
+                  backgroundColor: AppTheme.surfaceMutedColor,
+                  onSelected: (_) => _setTone(t[0] as String),
+                ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  IconData _briefIcon(String? icon) {
+    switch (icon) {
+      case 'weather':
+        return Icons.wb_sunny_rounded;
+      case 'calendar':
+        return Icons.event_rounded;
+      case 'stock':
+        return Icons.inventory_2_rounded;
+      default:
+        return Icons.info_outline_rounded;
+    }
+  }
+
+  Widget _buildBriefingCard() {
+    final b = _briefing!;
+    final items = ((b['items'] as List?) ?? const [])
+        .whereType<Map>()
+        .map((e) => Map<String, dynamic>.from(e))
+        .toList();
+    final date = b['briefing_date']?.toString() ?? '';
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: AppTheme.surfaceColor,
+        borderRadius: BorderRadius.circular(AppTheme.radiusLarge),
+        border: Border.all(color: AppTheme.primaryColor.withValues(alpha: 0.35)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Container(
+                width: 34,
+                height: 34,
+                decoration: const BoxDecoration(
+                  gradient: AppTheme.aiBadgeGradient,
+                  shape: BoxShape.circle,
+                ),
+                child: const Icon(Icons.wb_twilight_rounded,
+                    size: 18, color: Colors.white),
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Apel Pagi',
+                      style: GoogleFonts.plusJakartaSans(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w800,
+                        color: AppTheme.textPrimary,
+                      ),
+                    ),
+                    if (date.isNotEmpty)
+                      Text(
+                        date,
+                        style: GoogleFonts.plusJakartaSans(
+                          fontSize: 11,
+                          color: AppTheme.textSecondary,
+                        ),
+                      ),
+                  ],
+                ),
+              ),
+              IconButton(
+                tooltip: 'Tutup',
+                icon: const Icon(Icons.close, size: 18),
+                color: AppTheme.textSecondary,
+                onPressed: () => setState(() => _briefing = null),
+              ),
+            ],
+          ),
+          const SizedBox(height: 6),
+          Text(
+            b['summary']?.toString() ?? '',
+            style: GoogleFonts.plusJakartaSans(
+              fontSize: 13,
+              height: 1.45,
+              color: AppTheme.textPrimary,
+            ),
+          ),
+          for (final it in items) ...[
+            const SizedBox(height: 10),
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Icon(_briefIcon(it['icon']?.toString()),
+                    size: 18, color: AppTheme.primaryColor),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        it['label']?.toString() ?? '',
+                        style: GoogleFonts.plusJakartaSans(
+                          fontSize: 12,
+                          fontWeight: FontWeight.w800,
+                          color: AppTheme.textPrimary,
+                        ),
+                      ),
+                      Text(
+                        it['text']?.toString() ?? '',
+                        style: GoogleFonts.plusJakartaSans(
+                          fontSize: 12,
+                          height: 1.4,
+                          color: AppTheme.textSecondary,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+
+  Widget _buildDailyDoseCard() {
+    final block = <String, dynamic>{..._dailyDose!, 'type': 'dose'};
+    return DoctorBlocks(
+      blocks: [block],
+      onDoseStep: _onDoseStep,
+      onToggleDose: _toggleDoseStep,
     );
   }
 
@@ -1408,6 +1776,8 @@ class _BusinessDoctorScreenState extends ConsumerState<BusinessDoctorScreen> {
                     onAction: _handleAction,
                     onPrescription: _onPrescriptionStep,
                     onTogglePrescription: _togglePrescriptionStep,
+                    onDoseStep: _onDoseStep,
+                    onToggleDose: _toggleDoseStep,
                   ),
           ),
         ),
