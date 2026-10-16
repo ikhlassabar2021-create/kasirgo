@@ -78,11 +78,22 @@ class _ProductListScreenState extends ConsumerState<ProductListScreen> {
       context: context,
       builder: (ctx) => AlertDialog(
         backgroundColor: AppTheme.surfaceColor,
-        title: const Row(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        titlePadding: const EdgeInsets.fromLTRB(20, 16, 8, 0),
+        title: Row(
           children: [
-            Icon(Icons.qr_code_scanner, color: AppTheme.primaryColor),
-            SizedBox(width: 8),
-            Text('Scan Barcode'),
+            const Icon(Icons.qr_code_scanner, color: AppTheme.primaryColor),
+            const SizedBox(width: 8),
+            const Expanded(
+              child: Text('Scan Barcode',
+                  style: TextStyle(fontSize: 17, fontWeight: FontWeight.w800)),
+            ),
+            IconButton(
+              tooltip: 'Tutup',
+              icon: const Icon(Icons.close_rounded,
+                  color: AppTheme.textSecondary),
+              onPressed: () => Navigator.pop(ctx),
+            ),
           ],
         ),
         content: Column(
@@ -91,7 +102,7 @@ class _ProductListScreenState extends ConsumerState<ProductListScreen> {
             TextField(
               controller: barcodeController,
               autofocus: true,
-              style: const TextStyle(color: Colors.white),
+              style: const TextStyle(color: AppTheme.textPrimary),
               decoration: const InputDecoration(
                 hintText: 'Arahkan scanner atau ketik barcode...',
                 prefixIcon: Icon(Icons.barcode_reader, color: AppTheme.textSecondary),
@@ -109,10 +120,6 @@ class _ProductListScreenState extends ConsumerState<ProductListScreen> {
           ],
         ),
         actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx),
-            child: const Icon(Icons.close_rounded, size: 20),
-          ),
           ElevatedButton(
             style: ElevatedButton.styleFrom(backgroundColor: AppTheme.primaryColor),
             onPressed: () {
