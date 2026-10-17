@@ -1122,3 +1122,32 @@ Commit `ff04bb3` (main) + deploy web gh-pages `050051c` (live md5
   `/tmp/opencode/backup_anon_users.json`. Hasil: users 56 -> 27, outlets 41 -> 11,
   orphan 0. Sisa 27 akun: 24 `ikhlassabar2021*` + superadmin + 2 akun lama
   (`marketingaps2016`, `sabarberkah2017`) yang TIDAK dihapus (menunggu keputusan).
+
+## Sesi 2026-10-17 (2): Fix 5 Keluhan Bos - Dropdown, Login Pembeli, Checkout, Kunci Premium (SELESAI)
+- KATEGORI USAHA (pembeli) & TIPE USAHA (Lapak Live owner) kini dropdown bottom-sheet
+  via widget baru `widgets/common/app_dropdown_field.dart` (menggantikan chip horizontal
+  yang terpotong). Opsi dari `AppConstants.businessTypes`.
+- LOGIN PEMBELI: `buyer_auth_screen.dart` mendeteksi email sudah terdaftar -> otomatis
+  mode Masuk (bukan signup senyap); `email_not_confirmed` -> kartu konfirmasi + kirim
+  ulang tautan. `utils/error_messages.dart` +`errorCode()`/`isEmailNotConfirmed()`.
+- CHECKOUT PEMBELI: `buyer_checkout_screen.dart` validasi `_submit` + peta pesan error
+  RPC (`EMPTY_CART`, `OUTLET_NOT_FOUND`, `ADDRESS_REQUIRED`, `AUTH_REQUIRED`,
+  `PRODUCT_NOT_FOUND`, `PRODUCT_NOT_PUBLISHED`, `OUT_OF_DELIVERY_RANGE`,
+  `BUYER_BLOCKED`) + `_promptRelogin`. `order_service.submitOrder` -> rpc `submit_order`.
+- KUNCI PREMIUM TANPA TRIAL: migrasi `docs/migrations/2026-11-23-kasirgo-lock-premium-no-trial.sql`
+  (DITERAPKAN) - bersihkan trial basi, `outlet_supporter_active()` hanya mengakui trial
+  bila `billing.trial_enabled=true` (default FALSE). `supporter_service.dart`:
+  `hasAccess => isSupporter || isTrialActive`, KYC tidak lagi membuka fitur,
+  `ensureTrial` di-skip saat flag OFF. `owner_home_screen.dart`: Business Doctor &
+  Lapak Live via `_pushGated` + kartu "Konsultasi" pakai `SupporterFeatureGate`.
+- AUDIT GATE: semua `premiumFeatures` ber-UI sudah ter-gate (wa_marketing, online_catalog,
+  qr_table, health_score_pro, export_excel/pdf, multi_outlet, extra_staff, custom_receipt,
+  auto_bos_report, business_doctor, lapak_live, ad_free via AdService). `ai_pro`,
+  `advanced_report`, `backup_cloud` tanpa entry point UI (tidak perlu gate).
+- Commit `0d09ba0` (9 file); build web release + deploy gh-pages `34d8570`;
+  live md5 `main.dart.js` = `855fa5c5ea5d1f913fb5c5b792f0af4a` (cocok build).
+- Uji REST: login pembeli OK; submit_order EMPTY_CART/OUTLET_NOT_FOUND sesuai;
+  sukses `ORD26101700040` (Toko Test, total 15000, unique_code 140, pay 15140).
+  `outlet_supporter_active`: Toko Test true, Gerobak/Warung Test false (terkunci).
+- `flutter analyze lib`: 22 info (0 warning/error). Data uji order belum dihapus
+  (menunggu izin).
