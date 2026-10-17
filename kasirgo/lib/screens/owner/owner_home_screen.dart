@@ -16,6 +16,7 @@ import '../../utils/ai_engine.dart';
 import '../../utils/qris_config.dart';
 import '../../widgets/common/app_drawer.dart';
 import '../../widgets/common/bubble_glass.dart';
+
 import '../../widgets/common/glass_card.dart';
 import '../../widgets/common/centennial_background.dart';
 import '../../widgets/common/supporter_gate.dart';
@@ -1965,7 +1966,7 @@ class _MarketIntelCardState extends State<_MarketIntelCard> {
           const SizedBox(height: 10),
           Align(
             alignment: Alignment.centerRight,
-            child: ElevatedButton.icon(
+            child: BubbleButton.icon(
               onPressed: () {
                 // Arahkan ke tab Produk (index 1)
                 final state = context.findAncestorStateOfType<_OwnerHomeScreenState>();
@@ -2296,12 +2297,7 @@ class _ModuleCard extends StatelessWidget {
       borderRadius: BorderRadius.circular(AppTheme.radiusLarge),
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
-        decoration: BoxDecoration(
-          color: AppTheme.surfaceColor,
-          borderRadius: BorderRadius.circular(AppTheme.radiusLarge),
-          border: Border.all(color: AppTheme.borderColor),
-          boxShadow: AppTheme.shadowSoft,
-        ),
+        decoration: AppTheme.raisedDecoration(),
         child: Row(
           children: [
             BubbleGlass(

@@ -19,6 +19,8 @@ import '../../utils/receipt_generator.dart';
 import '../../widgets/common/supporter_gate.dart';
 import '../../utils/error_messages.dart';
 
+import '../../widgets/common/bubble_glass.dart';
+
 enum ReportPeriod { today, last7Days, last30Days, thisMonth, custom }
 
 class ReportScreen extends ConsumerStatefulWidget {
@@ -1676,7 +1678,7 @@ class _TransactionDetailSheetState extends State<TransactionDetailSheet> {
             onPressed: () => Navigator.pop(ctx, false),
             child: const Text('Batal'),
           ),
-          FilledButton(
+          BubbleButton(
             style: FilledButton.styleFrom(backgroundColor: AppTheme.errorColor),
             onPressed: () => Navigator.pop(ctx, true),
             child: const Text('Hapus'),
@@ -1817,7 +1819,7 @@ class _TransactionDetailSheetState extends State<TransactionDetailSheet> {
                     const SizedBox(width: 12),
                     Expanded(
                       flex: 2,
-                      child: FilledButton.icon(
+                      child: BubbleButton.icon(
                         onPressed: (_busy || !_changed) ? null : _save,
                         style: FilledButton.styleFrom(
                           minimumSize: const Size(0, 48),

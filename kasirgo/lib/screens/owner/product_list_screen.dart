@@ -11,6 +11,8 @@ import '../../services/local_db_service.dart';
 import '../../services/supabase_service.dart';
 import '../../utils/formatters.dart';
 
+import '../../widgets/common/bubble_glass.dart';
+
 /// Katalog produk offline-first: online -> Supabase + cache SQLite;
 /// offline -> baca cache SQLite (stok terakhir termasuk hasil penjualan offline).
 final productsProvider = FutureProvider<List<Product>>((ref) async {
@@ -120,7 +122,7 @@ class _ProductListScreenState extends ConsumerState<ProductListScreen> {
           ],
         ),
         actions: [
-          ElevatedButton(
+          BubbleButton(
             style: ElevatedButton.styleFrom(backgroundColor: AppTheme.primaryColor),
             onPressed: () {
               final val = barcodeController.text.trim();
@@ -175,7 +177,7 @@ class _ProductListScreenState extends ConsumerState<ProductListScreen> {
           SizedBox(
             width: double.infinity,
             height: 48,
-            child: ElevatedButton.icon(
+            child: BubbleButton.icon(
               style: ElevatedButton.styleFrom(
                 backgroundColor: AppTheme.errorColor,
                 foregroundColor: Colors.white,
@@ -288,7 +290,7 @@ class _ProductListScreenState extends ConsumerState<ProductListScreen> {
                     style: const TextStyle(color: AppTheme.textSecondary),
                   ),
                   const SizedBox(height: 16),
-                  ElevatedButton(
+                  BubbleButton(
                     onPressed: () => ref.invalidate(productsProvider),
                     child: const Text('Coba Lagi'),
                   ),

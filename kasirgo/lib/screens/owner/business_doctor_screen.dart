@@ -33,6 +33,8 @@ import '../../utils/error_messages.dart';
 import '../../utils/formatters.dart';
 import '../../utils/wa_helper.dart';
 
+import '../../widgets/common/bubble_glass.dart';
+
 class BusinessDoctorScreen extends ConsumerStatefulWidget {
   const BusinessDoctorScreen(
       {super.key, this.service, this.conversationId, this.initialMessage});
@@ -193,7 +195,7 @@ class _BusinessDoctorScreenState extends ConsumerState<BusinessDoctorScreen> {
             onPressed: () => Navigator.pop(ctx),
             child: const Text('Batal'),
           ),
-          FilledButton(
+          BubbleButton(
             onPressed: () => Navigator.pop(ctx, ctrl.text.trim()),
             child: const Text('Simpan'),
           ),
@@ -380,7 +382,7 @@ class _BusinessDoctorScreenState extends ConsumerState<BusinessDoctorScreen> {
               onPressed: () => Navigator.pop(context),
               child: const Text('Nanti'),
             ),
-            FilledButton(
+            BubbleButton(
               onPressed: () => Navigator.pop(context),
               child: const Text('Lihat Resep'),
             ),

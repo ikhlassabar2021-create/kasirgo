@@ -9,6 +9,8 @@ import '../../utils/formatters.dart';
 import '../../widgets/common/app_close_button.dart';
 import '../../utils/error_messages.dart';
 
+import '../../widgets/common/bubble_glass.dart';
+
 class PpobScreen extends ConsumerStatefulWidget {
   const PpobScreen({super.key});
 
@@ -338,7 +340,7 @@ class _PpobScreenState extends ConsumerState<PpobScreen> {
                     const SizedBox(height: 16),
                     SizedBox(
                       height: 52,
-                      child: ElevatedButton(
+                      child: BubbleButton(
                         onPressed: inquiry.isValid
                             ? () async {
                                 final method = paymentMethodCtl.value;

@@ -86,6 +86,36 @@ class AppTheme {
     BoxShadow(color: Color(0x140F172A), blurRadius: 20, offset: Offset(0, 8)),
   ];
 
+  /// Bayangan berlapis ala kartu 3D (kontak rapat + ambient lebar).
+  static const List<BoxShadow> shadowRaised = [
+    BoxShadow(color: Color(0x1A0F172A), blurRadius: 24, offset: Offset(0, 10)),
+    BoxShadow(color: Color(0x0F0F172A), blurRadius: 4, offset: Offset(0, 2)),
+  ];
+
+  /// Dekorasi kartu timbul (Bubble Glass 3D): permukaan putih dengan gradasi
+  /// sangat halus dari atas ke bawah + garis kilau tipis di tepi atas.
+  static BoxDecoration raisedDecoration({
+    double radius = radiusLarge,
+    Color? borderColor,
+  }) {
+    final Color line = borderColor ?? AppTheme.borderColor;
+    return BoxDecoration(
+      borderRadius: BorderRadius.circular(radius),
+      border: Border(
+        top: const BorderSide(color: Color(0xFFFFFFFF), width: 1.5),
+        left: BorderSide(color: line),
+        right: BorderSide(color: line),
+        bottom: BorderSide(color: line),
+      ),
+      gradient: const LinearGradient(
+        begin: Alignment.topCenter,
+        end: Alignment.bottomCenter,
+        colors: [Color(0xFFFFFFFF), Color(0xFFF5F8FA)],
+      ),
+      boxShadow: shadowRaised,
+    );
+  }
+
   static bool isMobile(BuildContext context) =>
       MediaQuery.of(context).size.width < breakpointTablet;
 
@@ -132,6 +162,22 @@ class AppTheme {
           backgroundColor: secondaryColor,
           foregroundColor: Colors.white,
           minimumSize: const Size(double.infinity, 52),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12),
+          ),
+          textStyle: const TextStyle(
+            fontSize: 14,
+            fontWeight: FontWeight.w700,
+          ),
+        ),
+      ),
+      outlinedButtonTheme: OutlinedButtonThemeData(
+        style: OutlinedButton.styleFrom(
+          backgroundColor: surfaceColor,
+          foregroundColor: secondaryColor,
+          elevation: 2,
+          shadowColor: const Color(0x1A0F172A),
+          side: const BorderSide(color: borderColor),
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(12),
           ),

@@ -11,6 +11,8 @@ import '../../services/notification_service.dart';
 import '../../services/order_service.dart';
 import '../../utils/formatters.dart';
 
+import '../../widgets/common/bubble_glass.dart';
+
 /// ST17-2 (Phase 17 - Ekosistem Hyper-Local): layar "Pesanan Online" untuk
 /// owner/kasir. Pesanan dari app Pembeli (`orders`) ditampilkan realtime;
 /// pembayaran QRIS statis/transfer divalidasi manual oleh kasir, lalu
@@ -291,7 +293,7 @@ class _OnlineOrdersViewState extends ConsumerState<OnlineOrdersView>
             onPressed: () => Navigator.of(ctx).pop(),
             child: const Text('Batal'),
           ),
-          FilledButton(
+          BubbleButton(
             onPressed: () => Navigator.of(ctx).pop(ctrl.text.trim()),
             child: const Text('Konfirmasi'),
           ),
@@ -1255,7 +1257,7 @@ class _OnlineOrdersViewState extends ConsumerState<OnlineOrdersView>
       {bool busy = false}) {
     return SizedBox(
       height: 44,
-      child: ElevatedButton(
+      child: BubbleButton(
         style: ElevatedButton.styleFrom(
           backgroundColor: color,
           foregroundColor: Colors.white,

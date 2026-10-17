@@ -3,6 +3,8 @@ import 'package:google_fonts/google_fonts.dart';
 
 import '../../config/app_theme.dart';
 
+import '../common/bubble_glass.dart';
+
 /// Dialog sukses setelah checkout.
 ///
 /// Aksi struk (bila callback tersedia):
@@ -134,7 +136,7 @@ class CheckoutSuccessDialog extends StatelessWidget {
     return SizedBox(
       width: double.infinity,
       height: 48,
-      child: FilledButton.icon(
+      child: BubbleButton.icon(
         onPressed: onPressed,
         icon: Icon(icon, size: 20),
         label: Text(

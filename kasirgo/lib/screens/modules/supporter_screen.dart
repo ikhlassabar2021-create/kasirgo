@@ -9,6 +9,8 @@ import '../../utils/formatters.dart';
 import '../../widgets/common/centennial_background.dart';
 import '../../widgets/common/dynamic_qris_sheet.dart';
 
+import '../../widgets/common/bubble_glass.dart';
+
 class SupporterScreen extends ConsumerStatefulWidget {
   const SupporterScreen({super.key});
 
@@ -212,7 +214,7 @@ class _SupporterScreenState extends ConsumerState<SupporterScreen> {
               SizedBox(
                 width: double.infinity,
                 height: 48,
-                child: ElevatedButton.icon(
+                child: BubbleButton.icon(
                   onPressed: () async {
                     final outletId =
                         ref.read(currentUserProvider)?.outletId ?? '';
@@ -475,7 +477,7 @@ class _SupporterScreenState extends ConsumerState<SupporterScreen> {
                         SizedBox(
                           width: double.infinity,
                           height: 48,
-                          child: ElevatedButton.icon(
+                          child: BubbleButton.icon(
                             onPressed: _busy ? null : _support,
                             icon: const Icon(Icons.favorite_rounded, size: 18),
                             label: Text(

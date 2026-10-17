@@ -8,6 +8,8 @@ import '../../config/supabase_config.dart';
 import '../../providers/auth_provider.dart';
 import '../../services/supabase_service.dart';
 
+import '../../widgets/common/bubble_glass.dart';
+
 class QrTableScreen extends ConsumerStatefulWidget {
   const QrTableScreen({super.key, this.service});
 
@@ -233,7 +235,7 @@ class _QrTableScreenState extends ConsumerState<QrTableScreen> {
               );
             },
           ),
-          ElevatedButton.icon(
+          BubbleButton.icon(
             style: ElevatedButton.styleFrom(
               backgroundColor: AppTheme.primaryColor,
               foregroundColor: Colors.white,
@@ -325,7 +327,7 @@ class _QrTableScreenState extends ConsumerState<QrTableScreen> {
                 const SizedBox(width: 12),
                 SizedBox(
                   height: AppTheme.touchTargetLarge,
-                  child: ElevatedButton.icon(
+                  child: BubbleButton.icon(
                     style: ElevatedButton.styleFrom(
                       backgroundColor: AppTheme.primaryColor,
                       foregroundColor: Colors.white,

@@ -5,6 +5,8 @@ import '../../providers/auth_provider.dart';
 import '../../screens/modules/supporter_screen.dart';
 import '../../services/supporter_service.dart';
 
+import 'bubble_glass.dart';
+
 /// Buka layar Program Pendukung (tempat tombol "Coba Trial Gratis" dan
 /// "Upgrade via QRIS" berada).
 void _openSupporter(BuildContext context) {
@@ -74,7 +76,7 @@ Future<void> showSupporterLockedDialog(
             SizedBox(
               width: double.infinity,
               height: 48,
-              child: ElevatedButton.icon(
+              child: BubbleButton.icon(
                 onPressed: () {
                   Navigator.pop(ctx);
                   _openSupporter(context);
@@ -95,7 +97,7 @@ Future<void> showSupporterLockedDialog(
           SizedBox(
             width: double.infinity,
             height: 48,
-            child: ElevatedButton.icon(
+            child: BubbleButton.icon(
               onPressed: () {
                 Navigator.pop(ctx);
                 _openSupporter(context);
@@ -294,7 +296,7 @@ class _LockedScaffold extends StatelessWidget {
                 ],
                 const SizedBox(height: 22),
                 if (kycNotVerified)
-                  ElevatedButton.icon(
+                  BubbleButton.icon(
                     onPressed: onUpgrade,
                     icon: const Icon(Icons.check_circle_rounded, size: 18),
                     label: const Text('Hubungi Admin',
@@ -311,7 +313,7 @@ class _LockedScaffold extends StatelessWidget {
                   SizedBox(
                     width: double.infinity,
                     height: 48,
-                    child: ElevatedButton.icon(
+                    child: BubbleButton.icon(
                       onPressed: onUpgrade,
                       icon: const Icon(Icons.shopping_cart_rounded, size: 18),
                       label: const Text('Beli Sekarang',

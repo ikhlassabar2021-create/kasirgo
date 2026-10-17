@@ -10,6 +10,8 @@ import '../../widgets/common/centennial_background.dart';
 import 'business_doctor_screen.dart';
 import '../../utils/error_messages.dart';
 
+import '../../widgets/common/bubble_glass.dart';
+
 class DoctorCasesScreen extends ConsumerStatefulWidget {
   const DoctorCasesScreen({super.key, this.service});
 
@@ -495,7 +497,7 @@ class _DoctorCasesScreenState extends ConsumerState<DoctorCasesScreen> {
             onPressed: () => Navigator.pop(ctx, false),
             child: const Text('Batal'),
           ),
-          FilledButton(
+          BubbleButton(
             style: FilledButton.styleFrom(
               backgroundColor: AppTheme.errorColor,
             ),

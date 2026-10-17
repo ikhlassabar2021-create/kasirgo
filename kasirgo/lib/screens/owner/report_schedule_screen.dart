@@ -11,6 +11,8 @@ import '../../services/report_scheduler_service.dart';
 import '../../utils/formatters.dart';
 import '../../utils/error_messages.dart';
 
+import '../../widgets/common/bubble_glass.dart';
+
 class ReportScheduleScreen extends ConsumerStatefulWidget {
   const ReportScheduleScreen({super.key});
 
@@ -433,7 +435,7 @@ class _ReportScheduleScreenState extends ConsumerState<ReportScheduleScreen> {
                         ),
                         const SizedBox(width: 12),
                         Expanded(
-                          child: ElevatedButton.icon(
+                          child: BubbleButton.icon(
                             onPressed: _saving ? null : _save,
                             icon: _saving
                                 ? const SizedBox(

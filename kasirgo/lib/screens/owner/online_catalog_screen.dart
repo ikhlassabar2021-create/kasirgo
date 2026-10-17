@@ -10,6 +10,8 @@ import '../../services/supabase_service.dart';
 import '../../utils/formatters.dart';
 import '../../utils/wa_helper.dart';
 
+import '../../widgets/common/bubble_glass.dart';
+
 class OnlineCatalogScreen extends ConsumerStatefulWidget {
   const OnlineCatalogScreen({super.key});
 
@@ -298,7 +300,7 @@ class _OnlineCatalogScreenState extends ConsumerState<OnlineCatalogScreen> {
                                           SizedBox(
                                             width: double.infinity,
                                             height: 24,
-                                            child: ElevatedButton.icon(
+                                            child: BubbleButton.icon(
                                               style: ElevatedButton.styleFrom(
                                                 backgroundColor: AppTheme.whatsAppColor,
                                                 foregroundColor: Colors.white,

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../config/app_theme.dart';
+import 'bubble_glass.dart';
 
 enum AppButtonVariant { primary, secondary, outline, danger }
 
@@ -57,34 +58,20 @@ class AppButton extends StatelessWidget {
 
     switch (variant) {
       case AppButtonVariant.primary:
-        return DecoratedBox(
-          decoration: BoxDecoration(
-            gradient: AppTheme.primaryGradient,
-            borderRadius: BorderRadius.circular(AppTheme.radiusMedium),
-            boxShadow: [
-              BoxShadow(
-                color: AppTheme.primaryColor.withValues(alpha: 0.25),
-                blurRadius: 12,
-                offset: const Offset(0, 4),
-              ),
-            ],
-          ),
-          child: ElevatedButton(
-            onPressed: isLoading ? null : onPressed,
-            style: ElevatedButton.styleFrom(
-              backgroundColor: Colors.transparent,
-              foregroundColor: Colors.white,
-              shadowColor: Colors.transparent,
-              minimumSize: const Size(double.infinity, AppTheme.touchTargetMedium),
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(AppTheme.radiusMedium),
-              ),
+        return BubbleButton(
+          onPressed: isLoading ? null : onPressed,
+          style: ElevatedButton.styleFrom(
+            backgroundColor: AppTheme.primaryColor,
+            foregroundColor: Colors.white,
+            minimumSize: const Size(double.infinity, AppTheme.touchTargetMedium),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(AppTheme.radiusMedium),
             ),
-            child: child,
           ),
+          child: child,
         );
       case AppButtonVariant.secondary:
-        return ElevatedButton(
+        return BubbleButton(
           onPressed: isLoading ? null : onPressed,
           style: ElevatedButton.styleFrom(
             backgroundColor: AppTheme.primaryColor,
@@ -110,7 +97,7 @@ class AppButton extends StatelessWidget {
           child: child,
         );
       case AppButtonVariant.danger:
-        return ElevatedButton(
+        return BubbleButton(
           onPressed: isLoading ? null : onPressed,
           style: ElevatedButton.styleFrom(
             backgroundColor: AppTheme.errorColor,

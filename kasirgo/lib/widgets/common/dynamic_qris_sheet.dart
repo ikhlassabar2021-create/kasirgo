@@ -10,6 +10,8 @@ import '../../services/payment_service.dart';
 import '../../services/supporter_service.dart';
 import '../../utils/formatters.dart';
 
+import 'bubble_glass.dart';
+
 /// Sheet QRIS dinamis dengan polling status pembayaran otomatis.
 ///
 /// Dipakai oleh alur Program Pendukung (upgrade/perpanjang) agar pembayaran
@@ -75,17 +77,32 @@ class _DynamicQrisSheetState extends State<DynamicQrisSheet> {
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            Center(
-              child: Container(
-                width: 40,
-                height: 4,
-                decoration: BoxDecoration(
-                  color: AppTheme.borderColor,
-                  borderRadius: BorderRadius.circular(4),
+            Stack(
+              alignment: Alignment.center,
+              children: [
+                Center(
+                  child: Container(
+                    width: 40,
+                    height: 4,
+                    decoration: BoxDecoration(
+                      color: AppTheme.borderColor,
+                      borderRadius: BorderRadius.circular(4),
+                    ),
+                  ),
                 ),
-              ),
+                Positioned(
+                  right: -4,
+                  top: -10,
+                  child: IconButton(
+                    tooltip: 'Tutup',
+                    onPressed: () => Navigator.pop(context),
+                    icon: const Icon(Icons.close_rounded,
+                        color: AppTheme.textSecondary),
+                  ),
+                ),
+              ],
             ),
-            const SizedBox(height: 14),
+            const SizedBox(height: 10),
             Text(_paid ? 'Pembayaran Berhasil' : 'Pembayaran QRIS',
                 textAlign: TextAlign.center,
                 style: GoogleFonts.plusJakartaSans(
@@ -188,7 +205,7 @@ class _DynamicQrisSheetState extends State<DynamicQrisSheet> {
             SizedBox(
               width: double.infinity,
               height: 48,
-              child: ElevatedButton.icon(
+              child: BubbleButton.icon(
                 onPressed: () => Navigator.pop(context, _paid),
                 icon: Icon(_paid ? Icons.check_rounded : Icons.close_rounded,
                     size: 18),

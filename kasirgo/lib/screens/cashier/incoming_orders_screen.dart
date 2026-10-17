@@ -10,6 +10,8 @@ import '../../services/supabase_service.dart';
 import '../../utils/formatters.dart';
 import 'online_orders_screen.dart';
 
+import '../../widgets/common/bubble_glass.dart';
+
 class IncomingOrdersScreen extends ConsumerStatefulWidget {
   const IncomingOrdersScreen({super.key});
 
@@ -557,7 +559,7 @@ class _IncomingOrdersScreenState extends ConsumerState<IncomingOrdersScreen>
   Widget _actionBtn(String label, Color color, VoidCallback onTap) {
     return SizedBox(
       height: 42,
-      child: ElevatedButton(
+      child: BubbleButton(
         style: ElevatedButton.styleFrom(
           backgroundColor: color,
           foregroundColor: Colors.white,

@@ -13,6 +13,8 @@ import '../../widgets/common/app_button.dart';
 import '../../widgets/common/app_card.dart';
 import '../../widgets/common/centennial_background.dart';
 
+import '../../widgets/common/bubble_glass.dart';
+
 /// ST17-6 (Phase 17 - Ekosistem Hyper-Local): pelacakan pesanan Pembeli.
 ///
 /// Status realtime via `OrderService.watchOrder` (Supabase Realtime):
@@ -125,7 +127,7 @@ class _BuyerOrderTrackingScreenState extends State<BuyerOrderTrackingScreen> {
             onPressed: () => Navigator.of(ctx).pop(false),
             child: const Text('Belum'),
           ),
-          FilledButton(
+          BubbleButton(
             onPressed: () => Navigator.of(ctx).pop(true),
             child: const Text('Ya, Sudah Diterima'),
           ),

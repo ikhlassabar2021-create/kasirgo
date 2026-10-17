@@ -12,6 +12,8 @@ import '../../services/supabase_service.dart';
 import '../../widgets/common/supporter_gate.dart';
 import '../../utils/error_messages.dart';
 
+import '../../widgets/common/bubble_glass.dart';
+
 class EmployeeScreen extends ConsumerStatefulWidget {
   const EmployeeScreen({super.key});
 
@@ -219,7 +221,7 @@ class _EmployeeScreenState extends ConsumerState<EmployeeScreen> with SingleTick
             onPressed: () => Navigator.pop(ctx, false),
             child: const Text('Batal'),
           ),
-          ElevatedButton(
+          BubbleButton(
             style: ElevatedButton.styleFrom(
               backgroundColor: AppTheme.errorColor,
               foregroundColor: Colors.white,
@@ -411,7 +413,7 @@ class _EmployeeScreenState extends ConsumerState<EmployeeScreen> with SingleTick
                   onPressed: isSubmitting ? null : () => Navigator.pop(dialogCtx),
                   child: const Icon(Icons.close_rounded, size: 20),
                 ),
-                ElevatedButton(
+                BubbleButton(
                   style: ElevatedButton.styleFrom(
                     backgroundColor: AppTheme.primaryColor,
                     foregroundColor: Colors.white,
@@ -590,7 +592,7 @@ class _EmployeeScreenState extends ConsumerState<EmployeeScreen> with SingleTick
                   onPressed: isSubmitting ? null : () => Navigator.pop(dialogCtx),
                   child: const Icon(Icons.close_rounded, size: 20),
                 ),
-                ElevatedButton(
+                BubbleButton(
                   style: ElevatedButton.styleFrom(
                     backgroundColor: AppTheme.primaryColor,
                     foregroundColor: Colors.white,
@@ -737,7 +739,7 @@ class _EmployeeScreenState extends ConsumerState<EmployeeScreen> with SingleTick
                 SizedBox(
                   width: double.infinity,
                   height: 54,
-                  child: ElevatedButton.icon(
+                  child: BubbleButton.icon(
                     style: ElevatedButton.styleFrom(
                       backgroundColor: isCheckedIn ? AppTheme.errorColor : AppTheme.successColor,
                       foregroundColor: Colors.white,

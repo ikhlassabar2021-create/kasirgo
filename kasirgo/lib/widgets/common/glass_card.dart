@@ -27,17 +27,23 @@ class GlassCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final bool raised = backgroundColor == null;
     Widget content = Container(
       padding: padding,
-      decoration: BoxDecoration(
-        color: backgroundColor ?? AppTheme.surfaceColor,
-        borderRadius: BorderRadius.circular(borderRadius),
-        border: Border.all(
-          color: borderColor ?? AppTheme.borderColor,
-          width: 1,
-        ),
-        boxShadow: AppTheme.shadowSoft,
-      ),
+      decoration: raised
+          ? AppTheme.raisedDecoration(
+              radius: borderRadius,
+              borderColor: borderColor,
+            )
+          : BoxDecoration(
+              color: backgroundColor,
+              borderRadius: BorderRadius.circular(borderRadius),
+              border: Border.all(
+                color: borderColor ?? AppTheme.borderColor,
+                width: 1,
+              ),
+              boxShadow: AppTheme.shadowSoft,
+            ),
       child: child,
     );
 

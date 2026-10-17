@@ -9,6 +9,8 @@ import '../../services/fintech_service.dart';
 import '../../services/supabase_service.dart';
 import '../../utils/formatters.dart';
 
+import '../../widgets/common/bubble_glass.dart';
+
 /// Modal Usaha (Fintech Lead) - Phase 10 / ST10-1.
 ///
 /// Estimasi plafon dihitung dari arus kas (AI engine lokal). Pengajuan
@@ -323,7 +325,7 @@ class _FintechScreenState extends ConsumerState<FintechScreen> {
           const SizedBox(height: 12),
           SizedBox(
             height: 46,
-            child: ElevatedButton.icon(
+            child: BubbleButton.icon(
               onPressed: _apply,
               icon: const Icon(Icons.trending_up_rounded, size: 18),
               label: Text('Ajukan Modal',

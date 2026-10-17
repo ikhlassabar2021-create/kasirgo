@@ -10,6 +10,8 @@ import '../../utils/formatters.dart';
 import '../../widgets/common/centennial_background.dart';
 import '../../utils/error_messages.dart';
 
+import '../../widgets/common/bubble_glass.dart';
+
 /// ST15-3 (13.25.5): manajer bundling — paket produk dijual 1 harga.
 /// Diakses dari dashboard owner / aksi resep Dokter Bisnis.
 class BundleManagerScreen extends ConsumerStatefulWidget {
@@ -161,7 +163,7 @@ class _BundleManagerScreenState extends ConsumerState<BundleManagerScreen> {
                                   TextButton(
                                       onPressed: () => Navigator.pop(ctx, false),
                                       child: const Text('Batal')),
-                                  FilledButton(
+                                  BubbleButton(
                                       style: FilledButton.styleFrom(
                                           backgroundColor: AppTheme.errorColor),
                                       onPressed: () => Navigator.pop(ctx, true),
@@ -592,7 +594,7 @@ class _BundleFormSheetState extends State<_BundleFormSheet> {
             SizedBox(
               width: double.infinity,
               height: 48,
-              child: FilledButton.icon(
+              child: BubbleButton.icon(
                 style: FilledButton.styleFrom(
                     backgroundColor: AppTheme.primaryColor),
                 onPressed: _saving ? null : _save,

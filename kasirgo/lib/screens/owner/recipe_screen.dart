@@ -8,6 +8,8 @@ import '../../providers/auth_provider.dart';
 import '../../services/supabase_service.dart';
 import '../../utils/formatters.dart';
 
+import '../../widgets/common/bubble_glass.dart';
+
 class RecipeScreen extends ConsumerStatefulWidget {
   const RecipeScreen({super.key});
 
@@ -445,7 +447,7 @@ class _RecipeEditorState extends State<_RecipeEditor> {
               const SizedBox(height: 16),
               SizedBox(
                 height: 52,
-                child: ElevatedButton(
+                child: BubbleButton(
                   onPressed: _saving ? null : _save,
                   style: ElevatedButton.styleFrom(
                     backgroundColor: AppTheme.primaryColor,

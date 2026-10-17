@@ -11,6 +11,8 @@ import '../../services/supabase_service.dart';
 import '../../utils/formatters.dart';
 import '../../utils/error_messages.dart';
 
+import '../../widgets/common/bubble_glass.dart';
+
 /// Embedded B2B Restock (Phase 9 / ST9-3).
 ///
 /// - Link distributor dari config superadmin (platform_configs
@@ -371,7 +373,7 @@ class _RestockScreenState extends ConsumerState<RestockScreen> {
           const SizedBox(height: 10),
           SizedBox(
             height: 44,
-            child: ElevatedButton.icon(
+            child: BubbleButton.icon(
               onPressed: _openCatalog,
               icon: const Icon(Icons.open_in_new_rounded, size: 18),
               label: Text('Buka Katalog Distributor',
@@ -567,7 +569,7 @@ class _RestockWebViewScreenState extends State<RestockWebViewScreen> {
                                 fontSize: 13,
                                 color: AppTheme.textSecondary)),
                         const SizedBox(height: 12),
-                        ElevatedButton(
+                        BubbleButton(
                           onPressed: () {
                             setState(() => _loadFailed = false);
                             _controller.loadRequest(

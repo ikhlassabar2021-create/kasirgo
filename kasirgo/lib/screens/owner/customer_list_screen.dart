@@ -9,6 +9,8 @@ import '../../providers/auth_provider.dart';
 import '../../services/supabase_service.dart';
 import '../../utils/formatters.dart';
 
+import '../../widgets/common/bubble_glass.dart';
+
 class CustomerListScreen extends ConsumerStatefulWidget {
   const CustomerListScreen({super.key});
 
@@ -133,7 +135,7 @@ class _CustomerListScreenState extends ConsumerState<CustomerListScreen> {
                 SizedBox(
                   width: double.infinity,
                   height: 48,
-                  child: ElevatedButton.icon(
+                  child: BubbleButton.icon(
                     style: ElevatedButton.styleFrom(
                       backgroundColor: AppTheme.primaryColor,
                       foregroundColor: Colors.white,
@@ -278,7 +280,7 @@ class _CustomerListScreenState extends ConsumerState<CustomerListScreen> {
                 SizedBox(
                   width: double.infinity,
                   height: 48,
-                  child: ElevatedButton.icon(
+                  child: BubbleButton.icon(
                     style: ElevatedButton.styleFrom(
                       backgroundColor: AppTheme.primaryColor,
                       foregroundColor: Colors.white,

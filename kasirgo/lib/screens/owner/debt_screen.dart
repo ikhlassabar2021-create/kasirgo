@@ -11,6 +11,8 @@ import '../../utils/formatters.dart';
 import '../../widgets/common/centennial_background.dart';
 import '../../widgets/common/glass_card.dart';
 
+import '../../widgets/common/bubble_glass.dart';
+
 class DebtScreen extends ConsumerStatefulWidget {
   const DebtScreen({super.key});
 
@@ -145,7 +147,7 @@ class _DebtScreenState extends ConsumerState<DebtScreen> {
             onPressed: () => Navigator.pop(ctx),
             child: const Icon(Icons.close_rounded, size: 20),
           ),
-          ElevatedButton(
+          BubbleButton(
             style: ElevatedButton.styleFrom(backgroundColor: AppTheme.primaryColor),
             onPressed: () async {
               if (!formKey.currentState!.validate()) return;
@@ -467,7 +469,7 @@ class _DebtScreenState extends ConsumerState<DebtScreen> {
                                           ),
                                         ),
                                         const SizedBox(width: 8),
-                                        ElevatedButton.icon(
+                                        BubbleButton.icon(
                                           style: ElevatedButton.styleFrom(
                                             backgroundColor: AppTheme.primaryColor,
                                             padding: const EdgeInsets.symmetric(

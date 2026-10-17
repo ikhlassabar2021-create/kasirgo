@@ -4,6 +4,8 @@ import 'package:go_router/go_router.dart';
 import '../../config/app_theme.dart';
 import '../../providers/auth_provider.dart';
 
+import 'bubble_glass.dart';
+
 /// Tombol keluar yang dapat dipakai di header desktop maupun app bar mobile.
 class LogoutButton extends ConsumerWidget {
   final bool compact;
@@ -29,7 +31,7 @@ class LogoutButton extends ConsumerWidget {
             onPressed: () => Navigator.pop(ctx, false),
             child: const Icon(Icons.close_rounded, size: 20),
           ),
-          ElevatedButton(
+          BubbleButton(
             style: ElevatedButton.styleFrom(
               backgroundColor: AppTheme.errorColor,
               foregroundColor: Colors.white,

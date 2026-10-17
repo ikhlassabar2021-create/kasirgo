@@ -16,6 +16,8 @@ import '../../widgets/common/glass_card.dart';
 import '../../widgets/common/logout_button.dart';
 import '../../widgets/common/responsive.dart';
 
+import '../../widgets/common/bubble_glass.dart';
+
 final activeShiftProvider = FutureProvider.autoDispose<Shift?>((ref) async {
   final user = ref.watch(currentUserProvider);
   if (user?.outletId == null) return null;
@@ -79,7 +81,7 @@ class _CashierHomeScreenState extends ConsumerState<CashierHomeScreen> {
             ],
           ),
           actions: [
-            ElevatedButton(
+            BubbleButton(
               onPressed: () async {
                 final openingCash = double.tryParse(cashController.text) ?? 0.0;
                 final messenger = ScaffoldMessenger.of(parentContext);
@@ -152,7 +154,7 @@ class _CashierHomeScreenState extends ConsumerState<CashierHomeScreen> {
           ],
         ),
         actions: [
-          ElevatedButton(
+          BubbleButton(
             style: ElevatedButton.styleFrom(backgroundColor: AppTheme.errorColor),
             onPressed: () async {
               final closingCash = double.tryParse(cashController.text) ?? 0.0;
@@ -218,7 +220,7 @@ class _CashierHomeScreenState extends ConsumerState<CashierHomeScreen> {
           ),
         ),
         actions: [
-          ElevatedButton(
+          BubbleButton(
             onPressed: () async {
               final amount = double.tryParse(tipController.text) ?? 0.0;
               if (amount <= 0) return;
@@ -432,7 +434,7 @@ class _CashierHomeScreenState extends ConsumerState<CashierHomeScreen> {
           SizedBox(
             width: double.infinity,
             height: 52,
-            child: ElevatedButton.icon(
+            child: BubbleButton.icon(
               style: ElevatedButton.styleFrom(
                 backgroundColor: Colors.white,
                 foregroundColor: AppTheme.primaryColor,

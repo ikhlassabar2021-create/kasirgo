@@ -5,6 +5,8 @@ import '../../providers/auth_provider.dart';
 import '../../services/business_doctor_service.dart';
 import 'business_doctor_screen.dart';
 
+import '../../widgets/common/bubble_glass.dart';
+
 class DoctorScalingScreen extends ConsumerStatefulWidget {
   final BusinessDoctorService? service;
   const DoctorScalingScreen({super.key, this.service});
@@ -105,7 +107,7 @@ class _DoctorScalingScreenState extends ConsumerState<DoctorScalingScreen> {
               ),
             ),
             const SizedBox(height: 20),
-            ElevatedButton.icon(
+            BubbleButton.icon(
               onPressed: () {
                 Navigator.push(
                   context,

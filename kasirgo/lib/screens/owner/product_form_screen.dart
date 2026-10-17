@@ -17,6 +17,8 @@ import '../../utils/validators.dart';
 import 'product_list_screen.dart' show productsProvider;
 import '../../utils/error_messages.dart';
 
+import '../../widgets/common/bubble_glass.dart';
+
 class ProductFormScreen extends ConsumerStatefulWidget {
   final Product? product;
 
@@ -393,7 +395,7 @@ class _ProductFormScreenState extends ConsumerState<ProductFormScreen> {
             onPressed: () => Navigator.pop(ctx, false),
             child: const Icon(Icons.close_rounded, size: 20),
           ),
-          ElevatedButton(
+          BubbleButton(
             style: ElevatedButton.styleFrom(backgroundColor: AppTheme.errorColor),
             onPressed: () => Navigator.pop(ctx, true),
             child: const Text('Hapus'),
@@ -1187,7 +1189,7 @@ class _ProductFormScreenState extends ConsumerState<ProductFormScreen> {
                     const SizedBox(height: 24),
                     SizedBox(
                       height: 48,
-                      child: ElevatedButton(
+                      child: BubbleButton(
                         onPressed: _isLoading ? null : _save,
                         child: _isLoading
                             ? const SizedBox(

@@ -11,6 +11,8 @@ import '../../widgets/common/centennial_background.dart';
 import '../../widgets/common/glass_card.dart';
 import '../../utils/error_messages.dart';
 
+import '../../widgets/common/bubble_glass.dart';
+
 class RegisterScreen extends ConsumerStatefulWidget {
   const RegisterScreen({super.key});
 
@@ -282,23 +284,10 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                           const SizedBox(height: 24),
                           SizedBox(
                             height: AppTheme.touchTargetLarge,
-                            child: Container(
-                              decoration: BoxDecoration(
-                                gradient: AppTheme.primaryGradient,
-                                borderRadius: BorderRadius.circular(AppTheme.radiusMedium),
-                                boxShadow: [
-                                  BoxShadow(
-                                    color: AppTheme.primaryColor.withValues(alpha: 0.25),
-                                    blurRadius: 12,
-                                    offset: const Offset(0, 4),
-                                  ),
-                                ],
-                              ),
-                              child: ElevatedButton(
+                            child: BubbleButton(
                                 onPressed: _isLoading ? null : _register,
                                 style: ElevatedButton.styleFrom(
-                                  backgroundColor: Colors.transparent,
-                                  shadowColor: Colors.transparent,
+                                  backgroundColor: AppTheme.primaryColor,
                                   foregroundColor: Colors.white,
                                   shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppTheme.radiusMedium)),
                                   elevation: 0,
@@ -314,7 +303,6 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                                         style: GoogleFonts.plusJakartaSans(fontSize: 16, fontWeight: FontWeight.w800),
                                       ),
                               ),
-                            ),
                           ),
                           const SizedBox(height: 12),
                           Row(

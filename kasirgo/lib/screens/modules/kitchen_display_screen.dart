@@ -9,6 +9,8 @@ import '../../providers/auth_provider.dart';
 import '../../services/supabase_service.dart';
 import '../../widgets/common/centennial_background.dart';
 
+import '../../widgets/common/bubble_glass.dart';
+
 class KitchenOrder {
   final String id;
   final String orderNumber;
@@ -433,7 +435,7 @@ class _KitchenDisplayScreenState extends ConsumerState<KitchenDisplayScreen> {
                                       SizedBox(
                                         width: double.infinity,
                                         height: AppTheme.touchTargetLarge,
-                                        child: ElevatedButton(
+                                        child: BubbleButton(
                                           style: ElevatedButton.styleFrom(
                                             backgroundColor: order.status == 'ready'
                                                 ? AppTheme.textSecondary

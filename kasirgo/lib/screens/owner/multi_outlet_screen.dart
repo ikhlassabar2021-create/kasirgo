@@ -7,6 +7,8 @@ import '../../services/supabase_service.dart';
 import '../../widgets/common/app_close_button.dart';
 import '../../widgets/common/supporter_gate.dart';
 
+import '../../widgets/common/bubble_glass.dart';
+
 /// Multi-Outlet (Program Pendukung): kelola banyak outlet dalam 1 akun owner.
 /// Tap outlet untuk berpindah outlet aktif di seluruh aplikasi.
 class MultiOutletScreen extends ConsumerStatefulWidget {
@@ -104,7 +106,7 @@ class _MultiOutletScreenState extends ConsumerState<MultiOutletScreen> {
               onPressed: isSubmitting ? null : () => Navigator.pop(dialogCtx),
               child: const Text('Batal'),
             ),
-            ElevatedButton(
+            BubbleButton(
               onPressed: isSubmitting
                   ? null
                   : () async {
@@ -202,7 +204,7 @@ class _MultiOutletScreenState extends ConsumerState<MultiOutletScreen> {
             onPressed: () => Navigator.pop(dialogCtx, false),
             child: const Text('Batal'),
           ),
-          ElevatedButton(
+          BubbleButton(
             style: ElevatedButton.styleFrom(
                 backgroundColor: AppTheme.errorColor,
                 foregroundColor: Colors.white),

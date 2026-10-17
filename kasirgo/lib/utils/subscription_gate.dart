@@ -3,6 +3,8 @@ import 'package:go_router/go_router.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../config/app_theme.dart';
 
+import '../widgets/common/bubble_glass.dart';
+
 class SupporterGate {
   static bool isFree(String? tier) => false;
   static bool isBasic(String? tier) => true;
@@ -73,7 +75,7 @@ class SupporterGate {
             onPressed: () => Navigator.pop(ctx),
             child: const Text('Tutup', style: TextStyle(color: AppTheme.textSecondary)),
           ),
-          ElevatedButton(
+          BubbleButton(
             style: ElevatedButton.styleFrom(
               backgroundColor: AppTheme.primaryColor,
               foregroundColor: Colors.white,

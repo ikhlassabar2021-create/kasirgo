@@ -8,6 +8,8 @@ import '../../providers/auth_provider.dart';
 import '../../services/insurance_service.dart';
 import '../../utils/formatters.dart';
 
+import '../../widgets/common/bubble_glass.dart';
+
 /// Micro-Insurance Toko - Phase 10 / ST10-3.
 /// Produk + premi dari config superadmin; komisi platform tercatat
 /// otomatis untuk rekap superadmin.
@@ -316,7 +318,7 @@ class _InsuranceScreenState extends ConsumerState<InsuranceScreen> {
           SizedBox(
             height: 42,
             width: double.infinity,
-            child: ElevatedButton.icon(
+            child: BubbleButton.icon(
               onPressed: () => _apply(p),
               icon: const Icon(Icons.send_rounded, size: 16),
               label: Text('Ajukan',

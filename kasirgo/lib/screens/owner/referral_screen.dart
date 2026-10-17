@@ -11,6 +11,8 @@ import '../../services/supporter_service.dart';
 import '../../utils/formatters.dart';
 import '../../widgets/common/centennial_background.dart';
 
+import '../../widgets/common/bubble_glass.dart';
+
 /// ST15-3 (13.25.6): Referral berjenjang — kode pembawa + hadiah teman.
 /// Tracking konversi + laporan + bagikan via wa.me.
 class ReferralScreen extends ConsumerStatefulWidget {
@@ -462,7 +464,7 @@ class _ReferralFormSheetState extends State<_ReferralFormSheet> {
             SizedBox(
               width: double.infinity,
               height: 48,
-              child: FilledButton.icon(
+              child: BubbleButton.icon(
                 style: FilledButton.styleFrom(
                     backgroundColor: AppTheme.primaryColor),
                 onPressed: _submit,

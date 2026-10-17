@@ -10,6 +10,8 @@ import '../../services/supabase_service.dart';
 import '../../widgets/common/centennial_background.dart';
 import '../../utils/error_messages.dart';
 
+import '../../widgets/common/bubble_glass.dart';
+
 /// Layar Afiliasi untuk owner: kode & link referral otomatis per outlet,
 /// laporan komisi (closing), rekening pembayaran komisi, dan panduan singkat.
 class AffiliateOwnerScreen extends ConsumerStatefulWidget {
@@ -429,7 +431,7 @@ class _AffiliateOwnerScreenState extends ConsumerState<AffiliateOwnerScreen> {
               SizedBox(
                 width: double.infinity,
                 height: 48,
-                child: FilledButton.icon(
+                child: BubbleButton.icon(
                   style: FilledButton.styleFrom(
                     backgroundColor: AppTheme.primaryColor,
                     shape: RoundedRectangleBorder(

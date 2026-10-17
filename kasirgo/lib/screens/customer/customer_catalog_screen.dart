@@ -9,6 +9,8 @@ import '../../utils/formatters.dart';
 import '../../utils/wa_helper.dart';
 import '../../widgets/ads/sponsor_ad_slot.dart';
 
+import '../../widgets/common/bubble_glass.dart';
+
 /// Katalog online publik (tanpa login, mode tanpa meja).
 ///
 /// Dibuka lewat deep-link `{appUrl}#/catalog?outlet=<OUTLET_ID>` sehingga satu
@@ -472,7 +474,7 @@ class _CustomerCatalogScreenState extends State<CustomerCatalogScreen> {
                 SizedBox(
                   width: double.infinity,
                   height: 50,
-                  child: ElevatedButton.icon(
+                  child: BubbleButton.icon(
                     onPressed: () {
                       final id = _outletController.text.trim();
                       if (id.isNotEmpty) _load(id);
@@ -591,7 +593,7 @@ class _CustomerCatalogScreenState extends State<CustomerCatalogScreen> {
                     SizedBox(
                       height: 34,
                       width: double.infinity,
-                      child: ElevatedButton.icon(
+                      child: BubbleButton.icon(
                         style: ElevatedButton.styleFrom(
                           backgroundColor: AppTheme.whatsAppColor,
                           foregroundColor: Colors.white,

@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import '../../config/app_theme.dart';
 
+import 'bubble_glass.dart';
+
 class EmptyStateWidget extends StatelessWidget {
   final IconData icon;
   final String title;
@@ -52,7 +54,7 @@ class EmptyStateWidget extends StatelessWidget {
             ],
             if (actionLabel != null && onAction != null) ...[
               const SizedBox(height: 20),
-              ElevatedButton(
+              BubbleButton(
                 onPressed: onAction,
                 child: Text(actionLabel!),
               ),

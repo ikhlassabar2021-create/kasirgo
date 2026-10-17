@@ -7,6 +7,8 @@ import '../../providers/auth_provider.dart';
 import '../../services/supabase_service.dart';
 import '../../utils/formatters.dart';
 
+import '../../widgets/common/bubble_glass.dart';
+
 class ShiftScreen extends ConsumerStatefulWidget {
   const ShiftScreen({super.key});
 
@@ -71,7 +73,7 @@ class _ShiftScreenState extends ConsumerState<ShiftScreen> {
           TextButton(
               onPressed: () => Navigator.pop(ctx, false),
               child: const Icon(Icons.close_rounded, size: 20)),
-          FilledButton(
+          BubbleButton(
               style: FilledButton.styleFrom(
                   backgroundColor: AppTheme.primaryColor),
               onPressed: () => Navigator.pop(ctx, true),
@@ -154,7 +156,7 @@ class _ShiftScreenState extends ConsumerState<ShiftScreen> {
           TextButton(
               onPressed: () => Navigator.pop(ctx, false),
               child: const Icon(Icons.close_rounded, size: 20)),
-          FilledButton(
+          BubbleButton(
               style: FilledButton.styleFrom(
                   backgroundColor: AppTheme.errorColor),
               onPressed: () => Navigator.pop(ctx, true),
@@ -260,7 +262,7 @@ class _ShiftScreenState extends ConsumerState<ShiftScreen> {
           SizedBox(
             width: double.infinity,
             height: 52,
-            child: ElevatedButton.icon(
+            child: BubbleButton.icon(
               onPressed: _openShiftDialog,
               icon: const Icon(Icons.play_arrow_rounded, size: 20),
               label: Text('Buka Shift',
@@ -320,7 +322,7 @@ class _ShiftScreenState extends ConsumerState<ShiftScreen> {
           SizedBox(
             width: double.infinity,
             height: 52,
-            child: ElevatedButton.icon(
+            child: BubbleButton.icon(
               onPressed: _closeShiftDialog,
               icon: const Icon(Icons.stop_circle_rounded, size: 20),
               label: Text('Tutup Shift & Hitung Kas',

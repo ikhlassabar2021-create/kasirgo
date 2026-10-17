@@ -13,6 +13,10 @@ class AppCard extends StatelessWidget {
   final Gradient? gradient;
   final bool elevated;
 
+  /// Tampilan kartu timbul 3D (Bubble Glass): gradasi permukaan + bayangan
+  /// berlapis + kilau tipis di tepi atas. Default aktif.
+  final bool raised;
+
   const AppCard({
     super.key,
     required this.child,
@@ -24,27 +28,35 @@ class AppCard extends StatelessWidget {
     this.borderColor,
     this.gradient,
     this.elevated = false,
+    this.raised = true,
   });
 
   @override
   Widget build(BuildContext context) {
+    final base = raised && gradient == null && color == null
+        ? AppTheme.raisedDecoration(
+            radius: borderRadius,
+            borderColor: borderColor,
+          )
+        : BoxDecoration(
+            color: gradient == null ? (color ?? AppTheme.surfaceColor) : null,
+            gradient: gradient,
+            borderRadius: BorderRadius.circular(borderRadius),
+            border: Border.all(color: borderColor ?? AppTheme.borderColor),
+            boxShadow: elevated
+                ? [
+                    BoxShadow(
+                      color: AppTheme.textPrimary.withValues(alpha: 0.06),
+                      blurRadius: 16,
+                      offset: const Offset(0, 6),
+                    ),
+                  ]
+                : null,
+          );
+
     Widget content = Container(
       padding: padding,
-      decoration: BoxDecoration(
-        color: gradient == null ? (color ?? AppTheme.surfaceColor) : null,
-        gradient: gradient,
-        borderRadius: BorderRadius.circular(borderRadius),
-        border: Border.all(color: borderColor ?? AppTheme.borderColor),
-        boxShadow: elevated
-            ? [
-                BoxShadow(
-                  color: AppTheme.textPrimary.withValues(alpha: 0.06),
-                  blurRadius: 16,
-                  offset: const Offset(0, 6),
-                ),
-              ]
-            : null,
-      ),
+      decoration: base,
       child: child,
     );
 

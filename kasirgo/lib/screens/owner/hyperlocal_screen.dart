@@ -8,6 +8,8 @@ import '../../services/hyperlocal_service.dart';
 import '../../services/supabase_service.dart';
 import '../../utils/formatters.dart';
 
+import '../../widgets/common/bubble_glass.dart';
+
 /// Hyperlocal Data - Phase 10 / ST10-2.
 ///
 /// Tren wilayah dari AGREGAT ANONIM (tanpa data pelanggan, UU PDP).
@@ -262,7 +264,7 @@ class _HyperlocalScreenState extends ConsumerState<HyperlocalScreen> {
           SizedBox(
             height: 44,
             width: double.infinity,
-            child: ElevatedButton.icon(
+            child: BubbleButton.icon(
               onPressed: (_consent && !_sending) ? _submitReport : null,
               icon: _sending
                   ? const SizedBox(

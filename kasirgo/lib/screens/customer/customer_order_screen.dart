@@ -11,6 +11,8 @@ import '../../utils/formatters.dart';
 import '../../widgets/ads/sponsor_ad_slot.dart';
 import '../../widgets/pos/cart_panel.dart';
 
+import '../../widgets/common/bubble_glass.dart';
+
 class CustomerOrderScreen extends StatefulWidget {
   final String outletId;
   final String outletName;
@@ -330,7 +332,7 @@ class _CustomerOrderScreenState extends State<CustomerOrderScreen> {
               SizedBox(
                 width: double.infinity,
                 height: AppTheme.touchTargetLarge,
-                child: ElevatedButton(
+                child: BubbleButton(
                   style: ElevatedButton.styleFrom(
                     backgroundColor: AppTheme.primaryColor,
                     foregroundColor: Colors.white,
@@ -860,7 +862,7 @@ class _CustomerOrderScreenState extends State<CustomerOrderScreen> {
                         SizedBox(
                           height: 34,
                           width: double.infinity,
-                          child: ElevatedButton.icon(
+                          child: BubbleButton.icon(
                             style: ElevatedButton.styleFrom(
                               backgroundColor: AppTheme.primaryColor,
                               foregroundColor: Colors.white,
@@ -1108,7 +1110,7 @@ class _CustomerCheckoutDialogState extends State<CustomerCheckoutDialog> {
                           SizedBox(
                             width: double.infinity,
                             height: AppTheme.touchTargetLarge,
-                            child: ElevatedButton.icon(
+                            child: BubbleButton.icon(
                               style: ElevatedButton.styleFrom(
                                 backgroundColor: AppTheme.primaryColor,
                                 foregroundColor: Colors.white,

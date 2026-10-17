@@ -7,6 +7,8 @@ import '../../providers/module_provider.dart';
 import '../../services/supabase_service.dart';
 import 'customer_order_screen.dart';
 
+import '../../widgets/common/bubble_glass.dart';
+
 class CustomerMenuScreen extends ConsumerStatefulWidget {
   final String initialOutletId;
   final String initialTable;
@@ -205,7 +207,7 @@ class _CustomerMenuScreenState extends ConsumerState<CustomerMenuScreen> {
                 SizedBox(
                   width: double.infinity,
                   height: 52,
-                  child: ElevatedButton.icon(
+                  child: BubbleButton.icon(
                     style: ElevatedButton.styleFrom(
                       backgroundColor: AppTheme.secondaryColor,
                       foregroundColor: Colors.white,
@@ -245,7 +247,7 @@ class _CustomerMenuScreenState extends ConsumerState<CustomerMenuScreen> {
                 SizedBox(
                   width: double.infinity,
                   height: 50,
-                  child: ElevatedButton.icon(
+                  child: BubbleButton.icon(
                     style: ElevatedButton.styleFrom(
                       backgroundColor: AppTheme.primaryColor,
                       foregroundColor: Colors.white,

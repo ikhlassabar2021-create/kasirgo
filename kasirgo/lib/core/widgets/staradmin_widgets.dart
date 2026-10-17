@@ -2,6 +2,8 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 
+import '../../widgets/common/bubble_glass.dart';
+
 /// StarAdmin Card Component - White card dengan rounded corners 24-32px
 class StarAdminCard extends StatelessWidget {
   final Widget child;
@@ -148,7 +150,7 @@ class RoyalBlueButton extends StatelessWidget {
   Widget build(BuildContext context) {
     return SizedBox(
       width: width,
-      child: ElevatedButton(
+      child: BubbleButton(
         onPressed: isLoading ? null : onPressed,
         style: ElevatedButton.styleFrom(
           backgroundColor: const Color(0xFF0284C7),

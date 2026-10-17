@@ -6,6 +6,8 @@ import '../../config/app_theme.dart';
 import '../../services/dm_service.dart';
 import '../../utils/error_messages.dart';
 
+import 'bubble_glass.dart';
+
 /// Bottom sheet self-service untuk owner menghubungkan akun kanal
 /// (media sosial / iklan) sendiri TANPA superadmin.
 ///
@@ -506,7 +508,7 @@ class _ChannelFormSheetState extends State<_ChannelFormSheet> {
                   SizedBox(
                     width: double.infinity,
                     height: AppTheme.touchTargetMedium,
-                    child: FilledButton.icon(
+                    child: BubbleButton.icon(
                       onPressed: () => Navigator.pop(
                           context, <String, String>{'action': 'oauth'}),
                       icon: const Icon(Icons.login_rounded, size: 20),

@@ -21,6 +21,8 @@ import 'multi_outlet_screen.dart';
 import '../../utils/receipt_generator.dart';
 import '../../utils/error_messages.dart';
 
+import '../../widgets/common/bubble_glass.dart';
+
 class SettingsScreen extends ConsumerStatefulWidget {
   const SettingsScreen({super.key});
 
@@ -199,13 +201,22 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
       builder: (ctx) => AlertDialog(
         backgroundColor: AppTheme.surfaceColor,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        title: const Row(
+        titlePadding: const EdgeInsets.fromLTRB(20, 16, 8, 0),
+        title: Row(
           children: [
-            Icon(Icons.favorite, color: AppTheme.secondaryColor),
-            SizedBox(width: 8),
-            Text('Dukung KasirGo',
-                style: TextStyle(
-                    color: AppTheme.textPrimary, fontWeight: FontWeight.bold)),
+            const Icon(Icons.favorite, color: AppTheme.secondaryColor),
+            const SizedBox(width: 8),
+            const Expanded(
+              child: Text('Dukung KasirGo',
+                  style: TextStyle(
+                      color: AppTheme.textPrimary, fontWeight: FontWeight.bold)),
+            ),
+            IconButton(
+              tooltip: 'Tutup',
+              onPressed: () => Navigator.pop(ctx),
+              icon: const Icon(Icons.close_rounded,
+                  color: AppTheme.textSecondary),
+            ),
           ],
         ),
         content: Column(
@@ -265,11 +276,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
           ],
         ),
         actions: [
-          TextButton(
-            onPressed: () => Navigator.of(ctx).pop(false),
-            child: const Icon(Icons.close_rounded, size: 20),
-          ),
-          ElevatedButton(
+          BubbleButton(
             style: ElevatedButton.styleFrom(
               backgroundColor: AppTheme.primaryColor,
               foregroundColor: Colors.white,
@@ -551,7 +558,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
           SizedBox(
             width: double.infinity,
             height: 46,
-            child: ElevatedButton.icon(
+            child: BubbleButton.icon(
               onPressed: _isLoading ? null : _handleSupport,
               icon: const Icon(Icons.favorite_rounded, size: 18),
               label: Text(
@@ -734,8 +741,21 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
         builder: (context, setDialogState) {
           return AlertDialog(
             backgroundColor: AppTheme.surfaceColor,
-            title: const Text('Struk & Logo',
-                style: TextStyle(fontWeight: FontWeight.bold)),
+            titlePadding: const EdgeInsets.fromLTRB(20, 16, 8, 0),
+            title: Row(
+              children: [
+                Expanded(
+                  child: Text('Struk & Logo',
+                      style: const TextStyle(fontWeight: FontWeight.bold)),
+                ),
+                IconButton(
+                  tooltip: 'Tutup',
+                  onPressed: () => Navigator.pop(dialogContext),
+                  icon: const Icon(Icons.close_rounded,
+                      color: AppTheme.textSecondary),
+                ),
+              ],
+            ),
             content: SizedBox(
               width: 420,
               child: SingleChildScrollView(
@@ -831,7 +851,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                 onPressed: () => Navigator.pop(dialogContext),
                 child: const Text('Tutup'),
               ),
-              ElevatedButton(
+              BubbleButton(
                 onPressed: () async {
                   try {
                     await ReceiptGenerator.saveTagline(
@@ -985,7 +1005,21 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: const Text('Tautkan Akun Google', style: TextStyle(fontWeight: FontWeight.bold)),
+        titlePadding: const EdgeInsets.fromLTRB(20, 16, 8, 0),
+        title: Row(
+          children: [
+            Expanded(
+              child: Text('Tautkan Akun Google',
+                  style: const TextStyle(fontWeight: FontWeight.bold)),
+            ),
+            IconButton(
+              tooltip: 'Tutup',
+              onPressed: () => Navigator.pop(ctx),
+              icon: const Icon(Icons.close_rounded,
+                  color: AppTheme.textSecondary),
+            ),
+          ],
+        ),
         content: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -1023,10 +1057,6 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
           ],
         ),
         actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx),
-            child: const Icon(Icons.close_rounded, size: 20),
-          ),
         ],
       ),
     );
@@ -1123,7 +1153,21 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
         builder: (context, setDialogState) {
           return AlertDialog(
             backgroundColor: AppTheme.surfaceColor,
-            title: const Text('QRIS & Pembayaran Toko', style: TextStyle(fontWeight: FontWeight.bold)),
+            titlePadding: const EdgeInsets.fromLTRB(20, 16, 8, 0),
+            title: Row(
+              children: [
+                Expanded(
+                  child: Text('QRIS & Pembayaran Toko',
+                      style: const TextStyle(fontWeight: FontWeight.bold)),
+                ),
+                IconButton(
+                  tooltip: 'Tutup',
+                  onPressed: () => Navigator.pop(ctx),
+                  icon: const Icon(Icons.close_rounded,
+                      color: AppTheme.textSecondary),
+                ),
+              ],
+            ),
             content: SizedBox(
               width: 420,
               child: SingleChildScrollView(
@@ -1272,11 +1316,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
               ),
             ),
             actions: [
-              TextButton(
-                onPressed: () => Navigator.pop(ctx),
-                child: const Icon(Icons.close_rounded, size: 20),
-              ),
-              ElevatedButton.icon(
+              BubbleButton.icon(
                 style: ElevatedButton.styleFrom(
                   backgroundColor: AppTheme.primaryColor,
                   foregroundColor: Colors.white,
@@ -1357,9 +1397,20 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
         builder: (context, setDialogState) {
           return AlertDialog(
             backgroundColor: AppTheme.surfaceColor,
-            title: const Text(
-              'Pengiriman / Diantar',
-              style: TextStyle(fontWeight: FontWeight.bold),
+            titlePadding: const EdgeInsets.fromLTRB(20, 16, 8, 0),
+            title: Row(
+              children: [
+                Expanded(
+                  child: Text('Pengiriman / Diantar',
+                      style: const TextStyle(fontWeight: FontWeight.bold)),
+                ),
+                IconButton(
+                  tooltip: 'Tutup',
+                  onPressed: () => Navigator.pop(ctx),
+                  icon: const Icon(Icons.close_rounded,
+                      color: AppTheme.textSecondary),
+                ),
+              ],
             ),
             content: SizedBox(
               width: 420,
@@ -1449,11 +1500,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
               ),
             ),
             actions: [
-              TextButton(
-                onPressed: () => Navigator.pop(ctx),
-                child: const Icon(Icons.close_rounded, size: 20),
-              ),
-              ElevatedButton.icon(
+              BubbleButton.icon(
                 style: ElevatedButton.styleFrom(
                   backgroundColor: AppTheme.primaryColor,
                   foregroundColor: Colors.white,
@@ -1499,7 +1546,21 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: const Text('Edit Profil Usaha', style: TextStyle(fontWeight: FontWeight.bold)),
+        titlePadding: const EdgeInsets.fromLTRB(20, 16, 8, 0),
+        title: Row(
+          children: [
+            Expanded(
+              child: Text('Edit Profil Usaha',
+                  style: const TextStyle(fontWeight: FontWeight.bold)),
+            ),
+            IconButton(
+              tooltip: 'Tutup',
+              onPressed: () => Navigator.pop(ctx),
+              icon: const Icon(Icons.close_rounded,
+                  color: AppTheme.textSecondary),
+            ),
+          ],
+        ),
         content: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
@@ -1523,11 +1584,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
           ],
         ),
         actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx),
-            child: const Icon(Icons.close_rounded, size: 20),
-          ),
-          ElevatedButton(
+          BubbleButton(
             onPressed: () async {
               final newName = nameController.text.trim();
               final newPhone = phoneController.text.trim();
@@ -1565,7 +1622,21 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: const Text('Ubah Password', style: TextStyle(fontWeight: FontWeight.bold)),
+        titlePadding: const EdgeInsets.fromLTRB(20, 16, 8, 0),
+        title: Row(
+          children: [
+            Expanded(
+              child: Text('Ubah Password',
+                  style: const TextStyle(fontWeight: FontWeight.bold)),
+            ),
+            IconButton(
+              tooltip: 'Tutup',
+              onPressed: () => Navigator.pop(ctx),
+              icon: const Icon(Icons.close_rounded,
+                  color: AppTheme.textSecondary),
+            ),
+          ],
+        ),
         content: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
@@ -1591,11 +1662,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
           ],
         ),
         actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx),
-            child: const Icon(Icons.close_rounded, size: 20),
-          ),
-          ElevatedButton(
+          BubbleButton(
             onPressed: () async {
               final newPass = passController.text;
               final confirmPass = confirmController.text;
@@ -1730,7 +1797,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
             style: TextStyle(color: AppTheme.textSecondary, fontSize: 12, height: 1.4),
           ),
           const SizedBox(height: 12),
-          ElevatedButton.icon(
+          BubbleButton.icon(
             onPressed: isVerified
                 ? null
                 : () => Navigator.push(
@@ -1847,7 +1914,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
             SizedBox(
               width: double.infinity,
               height: 42,
-              child: ElevatedButton.icon(
+              child: BubbleButton.icon(
                 onPressed: () => _showUpgradeModal(),
                 icon: const Icon(Icons.upgrade, size: 18),
                 label: const Text('Upgrade Plan'),
@@ -1874,19 +1941,31 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),
       builder: (ctx) => Padding(
-        padding: const EdgeInsets.all(24),
+        padding: const EdgeInsets.fromLTRB(24, 12, 12, 24),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Text(
-              'Tambah Slot Staf',
-              style: TextStyle(
-                  fontSize: 20,
-                  fontWeight: FontWeight.bold,
-                  color: AppTheme.textPrimary),
+            Row(
+              children: [
+                const Expanded(
+                  child: Text(
+                    'Tambah Slot Staf',
+                    style: TextStyle(
+                        fontSize: 20,
+                        fontWeight: FontWeight.bold,
+                        color: AppTheme.textPrimary),
+                  ),
+                ),
+                IconButton(
+                  tooltip: 'Tutup',
+                  onPressed: () => Navigator.pop(ctx),
+                  icon: const Icon(Icons.close_rounded,
+                      color: AppTheme.textSecondary),
+                ),
+              ],
             ),
-            const SizedBox(height: 8),
+            const SizedBox(height: 4),
             const Text(
               'Kuota gratis sudah penuh. Buka slot staf tambahan lewat '
               'Program Pendukung KasirGo - satu harga untuk semua fitur bonus.',
@@ -1923,7 +2002,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
             SizedBox(
               width: double.infinity,
               height: 48,
-              child: ElevatedButton(
+              child: BubbleButton(
                 onPressed: () {
                   Navigator.pop(ctx);
                   _handleSupport();

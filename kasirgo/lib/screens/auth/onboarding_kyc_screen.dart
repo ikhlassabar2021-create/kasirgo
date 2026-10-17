@@ -16,6 +16,8 @@ import '../../utils/kyc_checks.dart';
 import '../../widgets/common/centennial_background.dart';
 import '../../utils/error_messages.dart';
 
+import '../../widgets/common/bubble_glass.dart';
+
 /// Wizard KYC wajib (6 field) — foto disimpan LOKAL di HP.
 ///
 /// Alur: unsubmitted -> draft -> pending_review -> verified/rejected.
@@ -1007,7 +1009,7 @@ class _OnboardingKycScreenState extends ConsumerState<OnboardingKycScreen> {
               ),
             Expanded(
               flex: 2,
-              child: ElevatedButton(
+              child: BubbleButton(
                 onPressed: _loading
                     ? null
                     : (_step < 2 ? _next : _submit),
@@ -1059,7 +1061,7 @@ class _OnboardingKycScreenState extends ConsumerState<OnboardingKycScreen> {
                 style: const TextStyle(color: AppTheme.textSecondary)),
             const SizedBox(height: 20),
             if (!widget.gated)
-              ElevatedButton(
+              BubbleButton(
                 onPressed: () => context.go('/owner'),
                 style: ElevatedButton.styleFrom(
                   backgroundColor: AppTheme.primaryColor,

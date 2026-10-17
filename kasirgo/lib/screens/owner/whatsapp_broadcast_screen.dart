@@ -7,6 +7,8 @@ import '../../providers/auth_provider.dart';
 import '../../services/supabase_service.dart';
 import '../../utils/wa_helper.dart';
 
+import '../../widgets/common/bubble_glass.dart';
+
 class WhatsappBroadcastScreen extends ConsumerStatefulWidget {
   const WhatsappBroadcastScreen({super.key});
 
@@ -374,7 +376,7 @@ class _WhatsappBroadcastScreenState extends ConsumerState<WhatsappBroadcastScree
             SizedBox(
               width: double.infinity,
               height: AppTheme.touchTargetLarge,
-              child: ElevatedButton.icon(
+              child: BubbleButton.icon(
                 style: ElevatedButton.styleFrom(
                           backgroundColor: AppTheme.whatsAppColor,
                   foregroundColor: Colors.white,
@@ -551,7 +553,7 @@ class _WhatsappBroadcastScreenState extends ConsumerState<WhatsappBroadcastScree
                       SizedBox(
                         width: double.infinity,
                         height: AppTheme.touchTargetMedium,
-                        child: ElevatedButton.icon(
+                        child: BubbleButton.icon(
                           style: ElevatedButton.styleFrom(
                 backgroundColor: AppTheme.whatsAppColor,
                             foregroundColor: Colors.white,
