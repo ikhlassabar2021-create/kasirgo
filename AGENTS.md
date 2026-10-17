@@ -1101,3 +1101,24 @@ Commit `ff04bb3` (main) + deploy web gh-pages `050051c` (live md5
   superadmin). `outlets` 103 -> 7; `products` 12; `transactions` 37; `customers` 3;
   `user_roles` 14. Verifikasi orphan (products/tx/customers/user_roles terhadap
   outlets) = 0. Tidak ada perubahan kode (operasi data murni).
+
+## Sesi 2026-10-17: Squad DM Live + Hapus Onboarding Anonim (SELESAI)
+- ROOT CAUSE kartu "Squad DM" tak pernah tampil: RLS `platform_configs` menutup
+  key `digital_marketing_llm` untuk klien (agar api_key tidak bocor), sehingga
+  `SupporterService.getConfig` mengembalikan kosong -> `dmEnabledProvider=false`.
+- MIGRASI `docs/migrations/2026-11-22-kasirgo-dm-enabled-flag.sql` (DITERAPKAN):
+  RPC `dm_enabled()` SECURITY DEFINER, hanya balas boolean `aktif`, EXECUTE
+  authenticated+service_role (anon 401). `dmEnabledProvider` kini panggil RPC.
+- `design_studio_screen.dart`: tambah aksi AppBar "Studio Promosi" +
+  "Studio Iklan" (sebelumnya kedua layar tak punya entry point).
+- Commit `0d362a1` (main), deploy web gh-pages `10f4d07`; live md5
+  `ad763aa3e299eb911f1d83c7ad2beab3`. Verifikasi Playwright owner Gerobak
+  (1280x900): Studio Desain (panel Pratinjau), Studio Promosi, Studio Iklan
+  render, 0 request gagal.
+- `external_anonymous_users_enabled=false` (provider level) + onboarding anonim
+  dihapus dari app (sesi sebelumnya) -> signup anon kini 422.
+- BERSIH DATA: 30 user `is_anonymous` (tanpa email) + 30 outlet "Toko Baru"
+  (0 produk, 0 transaksi) dihapus via Management API. Backup daftar id di
+  `/tmp/opencode/backup_anon_users.json`. Hasil: users 56 -> 27, outlets 41 -> 11,
+  orphan 0. Sisa 27 akun: 24 `ikhlassabar2021*` + superadmin + 2 akun lama
+  (`marketingaps2016`, `sabarberkah2017`) yang TIDAK dihapus (menunggu keputusan).
