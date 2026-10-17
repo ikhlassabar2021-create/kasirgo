@@ -40,119 +40,12 @@ class AuthService {
     return newUuid;
   }
 
-  Future<User?> initializeAnonymousOnboarding() async {
-    try {
-      final deviceUuid = await getOrCreateDeviceUuid();
-
-      if (_client.auth.currentUser == null) {
-        try {
-          await _client.auth.signInAnonymously();
-        } catch (_) {}
-      }
-
-      final authUser = _client.auth.currentUser;
-      final userId = authUser?.id;
-
-      if (userId == null) {
-        // No authenticated (or anonymous) session available.
-        // Anonymous sign-in is disabled on this project, so require login.
-        return null;
-      }
-
-      try {
-        final response = await _client.functions.invoke(
-          'onboard_merchant',
-          body: {
-            'device_uuid': deviceUuid,
-            'store_name': 'Warung Saya',
-            'outlet_type': 'kelontong',
-          },
-        );
-
-        final data = response.data;
-        if (data is Map && data['outlet'] != null) {
-          final outlet = data['outlet'] as Map;
-          final outletId = outlet['id'] as String?;
-          final outletName = outlet['name'] as String? ?? 'Warung Saya';
-          return User(
-            id: userId,
-            email: authUser!.email ?? '',
-            name: outletName,
-            role: 'owner',
-            outletId: outletId,
-            createdAt: DateTime.tryParse(authUser.createdAt),
-          );
-        }
-      } catch (_) {}
-
-      final existingRole = await _client
-          .from('user_roles')
-          .select('*, outlets(*)')
-          .eq('user_id', userId);
-
-      final roleList = (existingRole as List).cast<Map<String, dynamic>>();
-      final roleRow = roleList.isNotEmpty ? roleList.first : null;
-
-      if (roleRow != null) {
-        return User(
-          id: userId,
-          email: authUser?.email ?? '',
-          name: roleRow['name'] as String?,
-          role: roleRow['role'] as String? ?? 'owner',
-          outletId: roleRow['outlet_id'] as String?,
-          createdAt: DateTime.tryParse(authUser?.createdAt ?? ''),
-        );
-      }
-
-      return User(
-        id: userId,
-        email: authUser?.email ?? '',
-        name: 'Warung Saya',
-        role: 'owner',
-        outletId: null,
-        createdAt: DateTime.now(),
-      );
-    } catch (_) {
-      return null;
-    }
-  }
-
   Future<User?> getCurrentUser() async {
     try {
       final authUser = _client.auth.currentUser;
-      if (authUser == null) {
-        final anonUser = await initializeAnonymousOnboarding();
-        final sessionUser = _client.auth.currentUser;
-        if (anonUser != null &&
-            (anonUser.outletId == null || anonUser.outletId!.isEmpty) &&
-            sessionUser != null) {
-          // Ensure anonymous session also has a valid outlet row (with owner_id)
-          try {
-            final owned = await _client
-                .from('outlets')
-                .select('id')
-                .eq('owner_id', sessionUser.id)
-                .limit(1)
-                .maybeSingle();
-            if (owned != null) {
-              return anonUser.copyWith(outletId: owned['id'].toString());
-            }
-            final newOutlet = await _client
-                .from('outlets')
-                .insert({
-                  'owner_id': sessionUser.id,
-                  'name': 'Warung Saya',
-                  'type': 'kelontong',
-                })
-                .select()
-                .single();
-            return anonUser.copyWith(outletId: newOutlet['id'].toString());
-          } catch (_) {
-            return anonUser;
-          }
-        }
-        return anonUser;
-      }
+      // Pembeli & penjual WAJIB punya akun (email terkonfirmasi / Google).
+      // Tidak ada lagi sesi anonim otomatis: tamu diarahkan ke /mode -> /login.
+      if (authUser == null) return null;
 
       // 1. Try to find existing user_roles
       final rolesResponse = await _client

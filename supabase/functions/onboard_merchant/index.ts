@@ -1,15 +1,22 @@
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import { createClient } from "jsr:@supabase/supabase-js@2";
 
+const corsHeaders = {
+  "Access-Control-Allow-Origin": "*",
+  "Access-Control-Allow-Methods": "POST, OPTIONS",
+  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
+};
+
+function json(body: unknown, status = 200) {
+  return new Response(JSON.stringify(body), {
+    status,
+    headers: { ...corsHeaders, "Content-Type": "application/json" },
+  });
+}
+
 Deno.serve(async (req: Request) => {
   if (req.method === "OPTIONS") {
-    return new Response("ok", {
-      headers: {
-        "Access-Control-Allow-Origin": "*",
-        "Access-Control-Allow-Methods": "POST, OPTIONS",
-        "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
-      },
-    });
+    return new Response("ok", { headers: corsHeaders });
   }
 
   try {
@@ -17,143 +24,87 @@ Deno.serve(async (req: Request) => {
     const supabaseServiceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "";
     const supabase = createClient(supabaseUrl, supabaseServiceRoleKey);
 
-    const body = await req.json().catch(() => ({}));
-    const { device_uuid, store_name, outlet_type } = body;
-
-    if (!device_uuid || typeof device_uuid !== "string") {
-      return new Response(
-        JSON.stringify({ error: "device_uuid is required" }),
-        {
-          status: 400,
-          headers: {
-            "Content-Type": "application/json",
-            "Access-Control-Allow-Origin": "*",
-          },
-        },
-      );
-    }
-
     const authHeader = req.headers.get("Authorization");
-    let userId: string | null = null;
-    if (authHeader) {
-      const token = authHeader.replace("Bearer ", "");
-      const { data: userData } = await supabase.auth.getUser(token);
-      userId = userData?.user?.id ?? null;
+    if (!authHeader) {
+      return json({ error: "Authorization header is required" }, 401);
     }
 
-    const name = store_name || "Warung Saya";
-    const type = outlet_type || "kelontong";
-
-    let { data: merchant } = await supabase
-      .from("merchants")
-      .select("id, device_uuid, store_name, is_verified")
-      .eq("device_uuid", device_uuid)
-      .maybeSingle();
-
-    if (!merchant) {
-      const { data: newMerchant, error: merchantErr } = await supabase
-        .from("merchants")
-        .insert({
-          device_uuid,
-          store_name: name,
-          is_verified: false,
-        })
-        .select("id, device_uuid, store_name, is_verified")
-        .single();
-
-      if (merchantErr) {
-        return new Response(
-          JSON.stringify({ error: merchantErr.message }),
-          {
-            status: 500,
-            headers: {
-              "Content-Type": "application/json",
-              "Access-Control-Allow-Origin": "*",
-            },
-          },
-        );
-      }
-      merchant = newMerchant;
+    const token = authHeader.replace("Bearer ", "");
+    const { data: userData, error: userErr } = await supabase.auth.getUser(token);
+    const userId = userData?.user?.id ?? null;
+    if (userErr || !userId) {
+      return json({ error: "Sesi tidak valid" }, 401);
     }
 
-    let { data: outlet } = await supabase
+    const body = await req.json().catch(() => ({}));
+    const rawName = typeof body.store_name === "string" ? body.store_name.trim() : "";
+    const name = rawName || "Warung Saya";
+    const type = typeof body.outlet_type === "string" && body.outlet_type
+      ? body.outlet_type
+      : "kelontong";
+
+    let { data: outlet, error: outletLookupErr } = await supabase
       .from("outlets")
-      .select("id, name, outlet_type, merchant_id, owner_id")
-      .eq("merchant_id", merchant.id)
+      .select("id, name, type, owner_id")
+      .eq("owner_id", userId)
+      .order("created_at", { ascending: true })
+      .limit(1)
       .maybeSingle();
+
+    if (outletLookupErr) {
+      return json({ error: outletLookupErr.message }, 500);
+    }
 
     if (!outlet) {
       const { data: newOutlet, error: outletErr } = await supabase
         .from("outlets")
         .insert({
-          merchant_id: merchant.id,
-          device_uuid,
-          name,
-          outlet_type: type,
           owner_id: userId,
+          name,
+          type,
         })
-        .select("id, name, outlet_type, merchant_id, owner_id")
+        .select("id, name, type, owner_id")
         .single();
 
       if (outletErr) {
-        return new Response(
-          JSON.stringify({ error: outletErr.message }),
-          {
-            status: 500,
-            headers: {
-              "Content-Type": "application/json",
-              "Access-Control-Allow-Origin": "*",
-            },
-          },
-        );
+        return json({ error: outletErr.message }, 500);
       }
       outlet = newOutlet;
-    } else if (userId && !outlet.owner_id) {
-      await supabase
-        .from("outlets")
-        .update({ owner_id: userId })
-        .eq("id", outlet.id);
     }
 
-    if (userId) {
-      const { data: existingRole } = await supabase
-        .from("user_roles")
-        .select("id")
-        .eq("user_id", userId)
-        .maybeSingle();
+    const { data: existingRole, error: roleLookupErr } = await supabase
+      .from("user_roles")
+      .select("id, role, outlet_id")
+      .eq("user_id", userId)
+      .limit(1)
+      .maybeSingle();
 
-      if (!existingRole) {
-        await supabase.from("user_roles").insert({
-          user_id: userId,
-          outlet_id: outlet.id,
-          role: "owner",
-          name: name,
-        });
+    if (roleLookupErr) {
+      return json({ error: roleLookupErr.message }, 500);
+    }
+
+    if (!existingRole) {
+      const { error: roleErr } = await supabase.from("user_roles").insert({
+        user_id: userId,
+        outlet_id: outlet.id,
+        role: "owner",
+        display_name: name,
+      });
+      if (roleErr) {
+        return json({ error: roleErr.message }, 500);
       }
     }
 
-    return new Response(
-      JSON.stringify({
-        success: true,
-        merchant,
-        outlet,
-      }),
-      {
-        status: 200,
-        headers: {
-          "Content-Type": "application/json",
-          "Access-Control-Allow-Origin": "*",
-        },
-      },
-    );
-  } catch (err: unknown) {
-    const errorMsg = err instanceof Error ? err.message : String(err);
-    return new Response(JSON.stringify({ error: errorMsg }), {
-      status: 500,
-      headers: {
-        "Content-Type": "application/json",
-        "Access-Control-Allow-Origin": "*",
+    return json({
+      success: true,
+      outlet: {
+        id: outlet.id,
+        name: outlet.name ?? name,
+        type: outlet.type ?? type,
       },
     });
+  } catch (err: unknown) {
+    const errorMsg = err instanceof Error ? err.message : String(err);
+    return json({ error: errorMsg }, 500);
   }
 });
