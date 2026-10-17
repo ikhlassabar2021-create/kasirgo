@@ -1782,9 +1782,16 @@ class _TargetProgressCardState extends State<_TargetProgressCard> {
               ),
             ),
             TextButton(
-              onPressed: () {
-                Navigator.push(context, MaterialPageRoute(builder: (_) => const BusinessDoctorScreen()));
-              },
+              onPressed: () => Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (_) => const SupporterFeatureGate(
+                    featureKey: 'business_doctor',
+                    title: 'Dokter Bisnis AI',
+                    child: BusinessDoctorScreen(),
+                  ),
+                ),
+              ),
               child: const Text('Konsultasi', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
             ),
           ],

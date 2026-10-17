@@ -83,6 +83,19 @@ String friendlyError(
   return fallback;
 }
 
+/// Kode error teknis dari Supabase (bila ada), mis. `email_not_confirmed`.
+String? errorCode(Object error) {
+  if (error is AuthException) return error.code;
+  if (error is PostgrestException) return error.code;
+  return null;
+}
+
+/// True bila kegagalan login karena email pendaftaran belum dikonfirmasi.
+bool isEmailNotConfirmed(Object error) {
+  if (errorCode(error) == 'email_not_confirmed') return true;
+  return _rawMessage(error).toLowerCase().contains('email not confirmed');
+}
+
 String _rawMessage(Object error) {
   if (error is AuthException) return error.message;
   if (error is PostgrestException) return error.message;

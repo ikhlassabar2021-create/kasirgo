@@ -3,6 +3,7 @@ import 'dart:typed_data';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -116,9 +117,75 @@ class _BuyerCheckoutScreenState extends ConsumerState<BuyerCheckoutScreen> {
     return v == null ? '' : v.toString();
   }
 
+  /// Terjemahkan kode error RPC `submit_order` menjadi pesan yang bisa
+  /// ditindaklanjuti pembeli (bukan kode mentah).
+  String _orderErrorMessage(String raw) {
+    switch (raw) {
+      case 'AUTH_REQUIRED':
+        return 'Sesi Anda berakhir. Silakan masuk lagi untuk melanjutkan.';
+      case 'OUTLET_NOT_FOUND':
+        return 'Warung tidak ditemukan atau sedang tidak menerima pesanan.';
+      case 'EMPTY_CART':
+        return 'Keranjang kosong. Pilih produk terlebih dahulu.';
+      case 'ADDRESS_REQUIRED':
+        return 'Alamat lengkap wajib diisi untuk pengantaran.';
+      case 'PRODUCT_NOT_FOUND':
+        return 'Salah satu produk tidak lagi tersedia. Hapus dari keranjang lalu pilih lagi.';
+      case 'PRODUCT_NOT_PUBLISHED':
+        return 'Salah satu produk sedang tidak dijual online. Hapus dari keranjang lalu pilih produk lain.';
+      case 'OUT_OF_DELIVERY_RANGE':
+        return 'Alamat Anda di luar jangkauan antar warung ini. Silakan pilih ambil sendiri.';
+      case 'BUYER_BLOCKED':
+        return 'Pesanan tidak dapat dibuat. Silakan hubungi warung langsung.';
+      default:
+        // Kode teknis (mis. OUTLET_CLOSED) jangan ditampilkan mentah.
+        if (raw.isEmpty || RegExp(r'^[A-Z_]+$').hasMatch(raw)) {
+          return 'Pesanan gagal dibuat. Periksa koneksi lalu coba lagi.';
+        }
+        return friendlyError(
+          raw,
+          fallback: 'Pesanan gagal dibuat. Periksa koneksi lalu coba lagi.',
+        );
+    }
+  }
+
+  Future<void> _promptRelogin() async {
+    ref.invalidate(appCustomerProvider);
+    final goLogin = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Sesi berakhir'),
+        content: const Text(
+            'Silakan masuk kembali supaya pesanan bisa dibuat dan dipantau.'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(),
+            child: const Text('Nanti'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(true),
+            child: const Text('Masuk'),
+          ),
+        ],
+      ),
+    );
+    if (!mounted || goLogin != true) return;
+    Navigator.of(context).pop();
+    if (mounted) context.go('/buyer');
+  }
+
   Future<void> _submit() async {
     final cart = ref.read(cartProvider);
     if (cart.isEmpty) return;
+    if (cart.outletId.isNotEmpty && cart.outletId != widget.outletId) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text(
+              'Keranjang berisi produk dari warung lain. Kosongkan dulu lalu pilih produk warung ini.'),
+        ),
+      );
+      return;
+    }
     if (_phoneCtrl.text.trim().isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Nomor WhatsApp wajib diisi.')),
@@ -152,11 +219,15 @@ class _BuyerCheckoutScreenState extends ConsumerState<BuyerCheckoutScreen> {
       ref.read(cartProvider.notifier).clear();
       setState(() => _created = res);
     } else {
+      final raw = res['error']?.toString() ?? '';
+      if (raw == 'AUTH_REQUIRED') {
+        await _promptRelogin();
+        return;
+      }
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text(
-            'Gagal membuat pesanan: ${res['error'] ?? 'coba lagi'}',
-          ),
+          content: Text(_orderErrorMessage(raw)),
+          duration: const Duration(seconds: 5),
         ),
       );
     }

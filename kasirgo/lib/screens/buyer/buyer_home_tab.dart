@@ -22,6 +22,7 @@ import '../../utils/formatters.dart';
 import '../../widgets/ads/sponsor_ad_slot.dart';
 import '../../widgets/common/app_button.dart';
 import '../../widgets/common/app_card.dart';
+import '../../widgets/common/app_dropdown_field.dart';
 import '../../widgets/common/app_text_field.dart';
 import 'buyer_checkout_screen.dart';
 
@@ -585,55 +586,18 @@ class _BuyerHomeTabState extends ConsumerState<BuyerHomeTab> {
     );
   }
 
-  /// Item 2/3: chip kategori (tipe usaha). Menyaring TOKO terdekat lalu
+  /// Item 2/3: pemilih kategori (tipe usaha). Menyaring TOKO terdekat lalu
   /// menggulir ke section TOKO; bila ada kata kunci tetap mencari produk.
   Widget _buildTypeFilter() {
     final types = AppConstants.businessTypes;
-    return SizedBox(
-      height: 36,
-      child: ListView.separated(
-        scrollDirection: Axis.horizontal,
-        itemCount: types.length + 1,
-        separatorBuilder: (_, _) => const SizedBox(width: 8),
-        itemBuilder: (context, i) {
-          if (i == 0) {
-            final active = _typeFilter == null;
-            return _typeChip('Semua', active, () => _selectCategory(null));
-          }
-          final t = types[i - 1];
-          final active = _typeFilter?.toLowerCase() == t.toLowerCase();
-          return _typeChip(t, active, () => _selectCategory(active ? null : t));
-        },
-      ),
-    );
-  }
-
-  Widget _typeChip(String label, bool active, VoidCallback onTap) {
-    return GestureDetector(
-      onTap: onTap,
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 150),
-        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
-        decoration: BoxDecoration(
-          color: active
-              ? AppTheme.primaryColor
-              : AppTheme.primaryColor.withValues(alpha: 0.08),
-          borderRadius: BorderRadius.circular(18),
-          border: Border.all(
-            color: active ? AppTheme.primaryColor : AppTheme.borderColor,
-          ),
-        ),
-        child: Center(
-          child: Text(
-            label,
-            style: GoogleFonts.plusJakartaSans(
-              fontSize: 12.5,
-              fontWeight: FontWeight.w600,
-              color: active ? Colors.white : AppTheme.primaryColor,
-            ),
-          ),
-        ),
-      ),
+    return AppDropdownField(
+      label: 'Kategori Usaha',
+      hint: 'Semua kategori',
+      allLabel: 'Semua kategori',
+      value: _typeFilter,
+      prefixIcon: Icons.storefront_rounded,
+      options: types,
+      onChanged: _selectCategory,
     );
   }
 

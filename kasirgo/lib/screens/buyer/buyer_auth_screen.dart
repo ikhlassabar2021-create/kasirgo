@@ -73,6 +73,27 @@ class _BuyerAuthScreenState extends ConsumerState<BuyerAuthScreen> {
           name: _nameCtrl.text,
         );
         if (!mounted) return;
+        // Supabase mengembalikan user "obfuscated" tanpa identitas bila email
+        // sudah terdaftar (anti-enumeration). Perlakukan sebagai sudah punya
+        // akun: arahkan ke mode Masuk, bukan menunggu konfirmasi yang tak akan
+        // pernah datang.
+        final alreadyRegistered =
+            (res.user?.identities?.isEmpty ?? false) && res.session == null;
+        if (alreadyRegistered) {
+          setState(() {
+            _mode = _BuyerAuthMode.login;
+            _awaitingConfirmation = false;
+            _passwordCtrl.clear();
+          });
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text(
+                  'Email sudah terdaftar. Silakan masuk dengan kata sandi Anda.'),
+              duration: Duration(seconds: 5),
+            ),
+          );
+          return;
+        }
         if (res.session != null) {
           // Konfirmasi email dimatikan di project -> langsung masuk.
           _afterSession();
@@ -89,6 +110,21 @@ class _BuyerAuthScreenState extends ConsumerState<BuyerAuthScreen> {
       }
     } catch (e) {
       if (mounted) {
+        // Login ditolak karena email belum dikonfirmasi: tampilkan kartu
+        // konfirmasi + tombol kirim ulang, jangan bilang "kata sandi salah".
+        if (_mode == _BuyerAuthMode.login && isEmailNotConfirmed(e)) {
+          setState(() {
+            _awaitingConfirmation = true;
+            _confirmationEmail = email;
+          });
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(friendlyError(e)),
+              duration: const Duration(seconds: 6),
+            ),
+          );
+          return;
+        }
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text(friendlyError(e,

@@ -31,8 +31,10 @@ class Entitlements {
   bool get isTrialActive =>
       trialEndsAt != null && DateTime.now().isBefore(trialEndsAt!);
 
-  /// Akses premium terbuka bila verified KYC atau (trial/active).
-  bool get hasAccess => kycVerified || (isSupporter || isTrialActive);
+  /// Akses premium HANYA untuk Pendukung aktif atau trial yang masih berjalan.
+  /// KYC verified tidak lagi membuka fitur berbayar: semua fitur Pendukung
+  /// terkunci sampai owner benar-benar upgrade (tidak ada trial implisit).
+  bool get hasAccess => isSupporter || isTrialActive;
 
   int get trialDaysLeft {
     if (!isTrialActive) return 0;
@@ -310,7 +312,9 @@ class SupporterService {
         final isActive = status == 'active' &&
             (end == null || DateTime.now().isBefore(end));
         ent = ent.copyWith(
-          isSupporter: ent.isSupporter || isActive,
+          // Status baris supporters adalah sumber kebenaran: langganan yang
+          // sudah lewat end_date tidak boleh tetap membuka fitur premium.
+          isSupporter: isActive,
           status: ent.isTrialActive ? 'trial' : status,
           supporterEndDate: end,
           adFree: ent.adFree || isActive,
@@ -333,9 +337,23 @@ class SupporterService {
       }
     } catch (_) {}
 
+    // Trial hanya diakui bila superadmin mengaktifkannya. Baris trial lama
+    // (dibuat saat flag masih aktif) tidak boleh membuka fitur premium.
+    final billing = await getConfig('billing');
+    final trialEnabled = billing['trial_enabled'] == true;
+    if (!trialEnabled && !ent.isSupporter && ent.isTrialActive) {
+      ent = Entitlements(
+        outletId: ent.outletId,
+        isSupporter: ent.isSupporter,
+        adFree: ent.adFree,
+        features: ent.features,
+        supporterEndDate: ent.supporterEndDate,
+        status: 'expired',
+        kycVerified: ent.kycVerified,
+      );
+    }
     if (ent.status == 'none' && ent.isTrialActive) ent = ent.copyWith(status: 'trial');
     // Trial memberi akses premium (ad_free mengikuti harga config).
-    final billing = await getConfig('billing');
     if (ent.isTrialActive && billing['ad_free_for_supporter'] != false) {
       ent = ent.copyWith(adFree: ent.adFree);
     }
