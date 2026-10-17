@@ -4,7 +4,7 @@ import '../services/ppob_service.dart';
 import '../services/fintech_service.dart';
 import '../services/hyperlocal_service.dart';
 import '../services/insurance_service.dart';
-import '../services/supporter_service.dart';
+import '../services/supabase_service.dart';
 import 'outlet_provider.dart';
 
 enum BusinessModule {
@@ -208,9 +208,15 @@ final ppobEnabledProvider = FutureProvider<bool>((ref) async {
 /// Squad DM (Digital Marketing AI) aktif via config superadmin
 /// (platform_configs 'digital_marketing_llm'.aktif). Default OFF bila config
 /// belum ada — fitur baru tidak membebani merchant lama.
+/// Dibaca via RPC `dm_enabled` karena config LLM sengaja tidak terbaca klien
+/// (kredensial provider hanya boleh di server).
 final dmEnabledProvider = FutureProvider<bool>((ref) async {
-  final cfg = await SupporterService().getConfig('digital_marketing_llm');
-  return cfg['aktif'] == true;
+  try {
+    final res = await SupabaseService().rpc('dm_enabled');
+    return res == true;
+  } catch (_) {
+    return false;
+  }
 });
 
 /// Modal Usaha (fintech lead) aktif via config superadmin.

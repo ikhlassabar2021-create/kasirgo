@@ -17,6 +17,8 @@ import '../../utils/formatters.dart';
 import '../../widgets/common/app_button.dart';
 import '../../widgets/common/app_card.dart';
 import '../../widgets/common/centennial_background.dart';
+import 'ads_studio_screen.dart';
+import 'promotion_screen.dart';
 
 /// ST16-2 (13.28): Studio Desain - Team Desain AI.
 /// Brief -> 3 opsi copy + preview gambar produk; naskah video 15-30 detik.
@@ -255,6 +257,20 @@ class _DesignStudioScreenState extends ConsumerState<DesignStudioScreen>
       appBar: AppBar(
         title: Text('Studio Desain',
             style: GoogleFonts.plusJakartaSans(fontWeight: FontWeight.w700)),
+        actions: [
+          IconButton(
+            tooltip: 'Studio Promosi',
+            icon: const Icon(Icons.event_note_rounded),
+            onPressed: () => Navigator.push(context,
+                MaterialPageRoute(builder: (_) => const PromotionScreen())),
+          ),
+          IconButton(
+            tooltip: 'Studio Iklan',
+            icon: const Icon(Icons.campaign_rounded),
+            onPressed: () => Navigator.push(context,
+                MaterialPageRoute(builder: (_) => const AdsStudioScreen())),
+          ),
+        ],
         bottom: PreferredSize(
           preferredSize: const Size.fromHeight(48),
           child: Center(
