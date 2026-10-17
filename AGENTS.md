@@ -1151,3 +1151,14 @@ Commit `ff04bb3` (main) + deploy web gh-pages `050051c` (live md5
   `outlet_supporter_active`: Toko Test true, Gerobak/Warung Test false (terkunci).
 - `flutter analyze lib`: 22 info (0 warning/error). Data uji order belum dihapus
   (menunggu izin).
+- E2E LIVE UI (Playwright, 1280x1400): login pembeli `qa.checkout@kasirgo.test` OK
+  (catatan: isi password via Tab dari field Email; klik langsung field sandi gagal fokus)
+  -> isi koordinat manual -> radar -> Lihat Katalog Toko Test -> tombol `Keranjang`
+  -> `Lihat Keranjang` -> `Lanjut ke Checkout` -> isi Nama/WA -> `Buat Pesanan` ->
+  RPC `submit_order` 200 -> kartu "Pesanan Dibuat" `ORD26101700042` (Roti Bakar,
+  total Rp12.000, kode unik +142).
+- E2E LIVE gate premium outlet terkunci: login owner `+warung@gmail.com` ->
+  klik kartu "Dokter Bisnis AI" -> dialog "Fitur ini bagian dari Program Pendukung
+  KasirGo (Rp50.000/bulan)" + tombol "Beli Sekarang". (Gerobak Test sudah diuji
+  sesi sebelumnya.)
+- Data uji order: `ORD26101700040`, `ORD26101700041` (REST), `ORD26101700042` (UI).
