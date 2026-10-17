@@ -13,6 +13,8 @@ import '../../widgets/common/centennial_background.dart';
 import '../../widgets/common/dm_channel_connect_sheet.dart';
 import 'business_doctor_screen.dart';
 
+import '../../widgets/common/bubble_glass.dart';
+
 /// ST16-4 (13.28): Studio Iklan - Team Iklan AI.
 /// Campaign draft (Meta/Google/TikTok/Shopee Ads) -> approval WAJIB owner ->
 /// aktivasi (API bila kanal terhubung, else checklist manual) -> monitor
@@ -427,13 +429,13 @@ class _AdsStudioScreenState extends ConsumerState<AdsStudioScreen> {
       context: context,
       builder: (ctx) => AlertDialog(
         title: Text(title,
-            style: GoogleFonts.inter(fontWeight: FontWeight.w700)),
-        content: Text(body, style: GoogleFonts.inter()),
+            style: GoogleFonts.plusJakartaSans(fontWeight: FontWeight.w700)),
+        content: Text(body, style: GoogleFonts.plusJakartaSans()),
         actions: [
           TextButton(
               onPressed: () => Navigator.pop(ctx, false),
               child: const Text('Batal')),
-          FilledButton(
+          BubbleButton(
               onPressed: () => Navigator.pop(ctx, true), child: Text(action)),
         ],
       ),
@@ -455,7 +457,7 @@ class _AdsStudioScreenState extends ConsumerState<AdsStudioScreen> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text('Pasang Iklan Manual',
-                style: GoogleFonts.inter(
+                style: GoogleFonts.plusJakartaSans(
                     fontSize: 17,
                     fontWeight: FontWeight.w800,
                     color: AppTheme.textPrimary)),
@@ -463,7 +465,7 @@ class _AdsStudioScreenState extends ConsumerState<AdsStudioScreen> {
             Text(
               'Akun ${_adsChannels[channel] ?? channel} belum terhubung. '
               'Buat kampanye di platform iklan dengan pengaturan berikut:',
-              style: GoogleFonts.inter(
+              style: GoogleFonts.plusJakartaSans(
                   fontSize: 13, color: AppTheme.textSecondary),
             ),
             const SizedBox(height: 12),
@@ -527,7 +529,7 @@ class _AdsStudioScreenState extends ConsumerState<AdsStudioScreen> {
           const SizedBox(width: 8),
           Expanded(
             child: Text(text,
-                style: GoogleFonts.inter(
+                style: GoogleFonts.plusJakartaSans(
                     fontSize: 13, color: AppTheme.textPrimary)),
           ),
         ],
@@ -541,26 +543,32 @@ class _AdsStudioScreenState extends ConsumerState<AdsStudioScreen> {
       backgroundColor: AppTheme.backgroundColor,
       appBar: AppBar(
         title: Text('Studio Iklan',
-            style: GoogleFonts.inter(fontWeight: FontWeight.w700)),
+            style: GoogleFonts.plusJakartaSans(fontWeight: FontWeight.w700)),
       ),
       body: CentennialBackground(
         child: _loading
             ? const Center(child: CircularProgressIndicator())
             : RefreshIndicator(
                 onRefresh: _load,
-                child: ListView(
-                  padding: const EdgeInsets.all(16),
-                  children: [
-                    _buildGuardrail(),
-                    const SizedBox(height: 12),
-                    _buildChannelConnectCard(),
-                    const SizedBox(height: 12),
-                    _buildControls(),
-                    const SizedBox(height: 12),
-                    _buildWeeklyReport(),
-                    const SizedBox(height: 16),
-                    ..._buildCampaigns(),
-                  ],
+                child: Center(
+                  child: ConstrainedBox(
+                    constraints: const BoxConstraints(
+                        maxWidth: AppTheme.contentMaxWidth),
+                    child: ListView(
+                      padding: const EdgeInsets.all(16),
+                      children: [
+                        _buildGuardrail(),
+                        const SizedBox(height: 12),
+                        _buildChannelConnectCard(),
+                        const SizedBox(height: 12),
+                        _buildControls(),
+                        const SizedBox(height: 12),
+                        _buildWeeklyReport(),
+                        const SizedBox(height: 16),
+                        ..._buildCampaigns(),
+                      ],
+                    ),
+                  ),
                 ),
               ),
       ),
@@ -589,7 +597,7 @@ class _AdsStudioScreenState extends ConsumerState<AdsStudioScreen> {
               const SizedBox(width: 8),
               Expanded(
                 child: Text('Akun Platform Iklan',
-                    style: GoogleFonts.inter(
+                    style: GoogleFonts.plusJakartaSans(
                         fontWeight: FontWeight.w700,
                         color: AppTheme.textPrimary)),
               ),
@@ -604,7 +612,7 @@ class _AdsStudioScreenState extends ConsumerState<AdsStudioScreen> {
                   borderRadius: BorderRadius.circular(8),
                 ),
                 child: Text('$connected/$total terhubung',
-                    style: GoogleFonts.inter(
+                    style: GoogleFonts.plusJakartaSans(
                         fontSize: 11,
                         fontWeight: FontWeight.w700,
                         color: allConnected
@@ -618,7 +626,7 @@ class _AdsStudioScreenState extends ConsumerState<AdsStudioScreen> {
             'Hubungkan akun iklan kamu sendiri agar kampanye bisa dipantau '
             'otomatis (ROAS/CTR/CPC). Tanpa koneksi, kampanye tetap bisa '
             'dibuat sebagai draf dan dijalankan manual di platform iklan.',
-            style: GoogleFonts.inter(
+            style: GoogleFonts.plusJakartaSans(
                 fontSize: 13, color: AppTheme.textSecondary, height: 1.5),
           ),
           const SizedBox(height: 10),
@@ -649,7 +657,7 @@ class _AdsStudioScreenState extends ConsumerState<AdsStudioScreen> {
               const Icon(Icons.shield_rounded, color: AppTheme.primaryColor),
               const SizedBox(width: 8),
               Text('Batas Aman Iklan',
-                  style: GoogleFonts.inter(
+                  style: GoogleFonts.plusJakartaSans(
                       fontWeight: FontWeight.w700,
                       color: AppTheme.textPrimary)),
             ],
@@ -660,7 +668,7 @@ class _AdsStudioScreenState extends ConsumerState<AdsStudioScreen> {
             'Batas platform: ${global > 0 ? 'Rp${Formatters.number(global.toInt())}' : 'Tanpa batas'}\n'
             'Terpakai (disetujui): Rp${Formatters.number(committed.toInt())}/hari\n'
             'Target ROAS: ${roas > 0 ? roas.toStringAsFixed(1) : '-'} (pause otomatis bila di bawah)',
-            style: GoogleFonts.inter(
+            style: GoogleFonts.plusJakartaSans(
                 fontSize: 13, color: AppTheme.textSecondary, height: 1.5),
           ),
         ],
@@ -721,26 +729,24 @@ class _AdsStudioScreenState extends ConsumerState<AdsStudioScreen> {
     final roas = spend > 0 ? revenue / spend : 0;
     final rec = _recommendation();
     return AppCard(
-      gradient: const LinearGradient(
-        colors: [Color(0xFF06B6D4), Color(0xFF4F46E5)],
-      ),
+      gradient: AppTheme.aiBadgeGradient,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text('Laporan Iklan Mingguan',
-              style: GoogleFonts.inter(
+              style: GoogleFonts.plusJakartaSans(
                   fontWeight: FontWeight.w800, color: Colors.white)),
           const SizedBox(height: 8),
           Text(
             'Belanja: Rp${Formatters.number(spend.toInt())}  |  '
             'Omzet: Rp${Formatters.number(revenue.toInt())}  |  '
             'ROAS: ${roas.toStringAsFixed(2)}',
-            style: GoogleFonts.inter(
+            style: GoogleFonts.plusJakartaSans(
                 fontSize: 13, color: Colors.white, height: 1.4),
           ),
           const SizedBox(height: 10),
           Text(rec,
-              style: GoogleFonts.inter(
+              style: GoogleFonts.plusJakartaSans(
                   fontSize: 12, color: Colors.white.withValues(alpha: 0.92))),
           const SizedBox(height: 12),
           AppButton(
@@ -761,7 +767,7 @@ class _AdsStudioScreenState extends ConsumerState<AdsStudioScreen> {
           child: Text(
             'Belum ada kampanye iklan. Buat kampanye dari kreatif Studio Desain, '
             'lalu setujui untuk memulai.',
-            style: GoogleFonts.inter(color: AppTheme.textSecondary),
+            style: GoogleFonts.plusJakartaSans(color: AppTheme.textSecondary),
           ),
         ),
       ];
@@ -803,7 +809,7 @@ class _AdsStudioScreenState extends ConsumerState<AdsStudioScreen> {
                 const SizedBox(width: 8),
                 Expanded(
                   child: Text(_adsChannels[channel] ?? channel,
-                      style: GoogleFonts.inter(
+                      style: GoogleFonts.plusJakartaSans(
                           fontWeight: FontWeight.w700,
                           color: AppTheme.textPrimary)),
                 ),
@@ -815,7 +821,7 @@ class _AdsStudioScreenState extends ConsumerState<AdsStudioScreen> {
                     borderRadius: BorderRadius.circular(8),
                   ),
                   child: Text(statusLabel,
-                      style: GoogleFonts.inter(
+                      style: GoogleFonts.plusJakartaSans(
                           fontSize: 11,
                           fontWeight: FontWeight.w700,
                           color: statusColor)),
@@ -827,13 +833,13 @@ class _AdsStudioScreenState extends ConsumerState<AdsStudioScreen> {
               '${_objectives[c['objective']] ?? c['objective'] ?? '-'}  |  '
               'Rp${Formatters.number(_num(c['budget_daily']).toInt())}/hari  |  '
               '${_num(c['radius_km']).toInt()} km',
-              style: GoogleFonts.inter(
+              style: GoogleFonts.plusJakartaSans(
                   fontSize: 12, color: AppTheme.textSecondary),
             ),
             if (assetTitle.isNotEmpty) ...[
               const SizedBox(height: 4),
               Text('Kreatif: $assetTitle',
-                  style: GoogleFonts.inter(
+                  style: GoogleFonts.plusJakartaSans(
                       fontSize: 12, color: AppTheme.textSecondary)),
             ],
             if (metrics['roas'] != null || metrics['spend'] != null) ...[
@@ -853,7 +859,7 @@ class _AdsStudioScreenState extends ConsumerState<AdsStudioScreen> {
                 (c['paused_reason'] ?? '').toString().isNotEmpty) ...[
               const SizedBox(height: 8),
               Text(c['paused_reason'].toString(),
-                  style: GoogleFonts.inter(
+                  style: GoogleFonts.plusJakartaSans(
                       fontSize: 12, color: AppTheme.warningColor)),
             ],
             const SizedBox(height: 10),
@@ -873,7 +879,7 @@ class _AdsStudioScreenState extends ConsumerState<AdsStudioScreen> {
         border: Border.all(color: AppTheme.borderColor),
       ),
       child: Text('$label $value',
-          style: GoogleFonts.inter(
+          style: GoogleFonts.plusJakartaSans(
               fontSize: 11,
               fontWeight: FontWeight.w600,
               color: AppTheme.textPrimary)),
@@ -912,7 +918,7 @@ class _AdsStudioScreenState extends ConsumerState<AdsStudioScreen> {
               borderRadius: BorderRadius.circular(8),
             ),
             child: Text('Kanal terhubung',
-                style: GoogleFonts.inter(
+                style: GoogleFonts.plusJakartaSans(
                     fontSize: 11,
                     fontWeight: FontWeight.w600,
                     color: AppTheme.successColor)),
@@ -927,7 +933,7 @@ class _AdsStudioScreenState extends ConsumerState<AdsStudioScreen> {
       onPressed: _busy ? null : onTap,
       icon: Icon(icon, size: 16, color: color),
       label: Text(label,
-          style: GoogleFonts.inter(fontSize: 12, color: color)),
+          style: GoogleFonts.plusJakartaSans(fontSize: 12, color: color)),
       style: OutlinedButton.styleFrom(
         padding: const EdgeInsets.symmetric(horizontal: 10),
         minimumSize: const Size(0, AppTheme.touchTargetMedium),
@@ -1056,7 +1062,7 @@ class _NewCampaignSheetState extends State<_NewCampaignSheet> {
           mainAxisSize: MainAxisSize.min,
           children: [
             Text('Buat Kampanye Iklan',
-                style: GoogleFonts.inter(
+                style: GoogleFonts.plusJakartaSans(
                     fontWeight: FontWeight.w700, color: AppTheme.textPrimary)),
             const SizedBox(height: 4),
             Card(
@@ -1072,21 +1078,21 @@ class _NewCampaignSheetState extends State<_NewCampaignSheet> {
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text('Panduan Penghubungan Akun',
-                              style: GoogleFonts.inter(
+                              style: GoogleFonts.plusJakartaSans(
                                   fontWeight: FontWeight.w600, color: AppTheme.primaryColor)),
                           const SizedBox(height: 4),
                           Text(
                             'Pilih platform iklan di bawah. Jika akun platform belum terhubung, '
                             'kampanye tetap bisa dibuat sebagai draf dan dijalankan manual di '
                             'dashboard platform (KasirGo tidak menampung uang iklan).',
-                            style: GoogleFonts.inter(fontSize: 12, color: AppTheme.textSecondary),
+                            style: GoogleFonts.plusJakartaSans(fontSize: 12, color: AppTheme.textSecondary),
                           ),
                           const SizedBox(height: 2),
                           Text(
                             'Hubungkan akun platform sendiri (tanpa superadmin) lewat tombol '
                             'di bawah untuk mengelola kampanye otomatis (monitoring ROAS/CTR/CPC). '
                             'Token hanya dikirim ke server KasirGo dan tidak pernah ditampilkan lagi.',
-                            style: GoogleFonts.inter(fontSize: 12, color: AppTheme.textSecondary),
+                            style: GoogleFonts.plusJakartaSans(fontSize: 12, color: AppTheme.textSecondary),
                           ),
                           const SizedBox(height: 8),
                           Align(
@@ -1151,7 +1157,7 @@ class _NewCampaignSheetState extends State<_NewCampaignSheet> {
                           Icon(Icons.info_outline, color: AppTheme.warningColor, size: 18),
                           const SizedBox(width: 6),
                           Text('Akun belum terhubung',
-                              style: GoogleFonts.inter(
+                              style: GoogleFonts.plusJakartaSans(
                                   fontWeight: FontWeight.w600,
                                   fontSize: 13,
                                   color: AppTheme.warningColor)),
@@ -1162,7 +1168,7 @@ class _NewCampaignSheetState extends State<_NewCampaignSheet> {
                         'Akun ${widget.channels[_channel] ?? _channel} belum terhubung ke KasirGo. '
                         'Kampanye tetap bisa disimpan sebagai draf dan dijalankan manual. '
                         'Hubungkan akun sendiri agar kampanye bisa dikelola otomatis.',
-                        style: GoogleFonts.inter(fontSize: 12, color: AppTheme.textPrimary),
+                        style: GoogleFonts.plusJakartaSans(fontSize: 12, color: AppTheme.textPrimary),
                       ),
                       const SizedBox(height: 8),
                       OutlinedButton.icon(
@@ -1218,7 +1224,7 @@ class _NewCampaignSheetState extends State<_NewCampaignSheet> {
             ),
             const SizedBox(height: 12),
             Text('Radius area toko: ${_radius.toInt()} km',
-                style: GoogleFonts.inter(
+                style: GoogleFonts.plusJakartaSans(
                     fontSize: 13, color: AppTheme.textSecondary)),
             Slider(
               value: _radius,
@@ -1325,13 +1331,13 @@ class _MetricsSheetState extends State<_MetricsSheet> {
           mainAxisSize: MainAxisSize.min,
           children: [
             Text('Hasil Kampanye',
-                style: GoogleFonts.inter(
+                style: GoogleFonts.plusJakartaSans(
                     fontWeight: FontWeight.w700, color: AppTheme.textPrimary)),
             const SizedBox(height: 4),
             Text(
               'Masukkan angka dari laporan platform iklan (atau perkiraan). '
               'CTR/CPC/ROAS dihitung otomatis.',
-              style: GoogleFonts.inter(
+              style: GoogleFonts.plusJakartaSans(
                   fontSize: 12, color: AppTheme.textSecondary),
             ),
             const SizedBox(height: 12),

@@ -254,35 +254,145 @@ class _DesignStudioScreenState extends ConsumerState<DesignStudioScreen>
       backgroundColor: AppTheme.backgroundColor,
       appBar: AppBar(
         title: Text('Studio Desain',
-            style: GoogleFonts.inter(fontWeight: FontWeight.w700)),
-        bottom: TabBar(
-          controller: _tabs,
-          labelColor: AppTheme.primaryColor,
-          indicatorColor: AppTheme.primaryColor,
-          tabs: const [
-            Tab(text: 'Copy & Gambar'),
-            Tab(text: 'Video'),
-            Tab(text: 'Aset'),
-          ],
+            style: GoogleFonts.plusJakartaSans(fontWeight: FontWeight.w700)),
+        bottom: PreferredSize(
+          preferredSize: const Size.fromHeight(48),
+          child: Center(
+            child: ConstrainedBox(
+              constraints:
+                  const BoxConstraints(maxWidth: AppTheme.contentMaxWidth),
+              child: TabBar(
+                controller: _tabs,
+                labelColor: AppTheme.primaryColor,
+                indicatorColor: AppTheme.primaryColor,
+                labelStyle: GoogleFonts.plusJakartaSans(fontWeight: FontWeight.w700),
+                unselectedLabelStyle:
+                    GoogleFonts.plusJakartaSans(fontWeight: FontWeight.w500),
+                tabs: const [
+                  Tab(text: 'Copy & Gambar'),
+                  Tab(text: 'Video'),
+                  Tab(text: 'Aset'),
+                ],
+              ),
+            ),
+          ),
         ),
       ),
       body: CentennialBackground(
         child: _loading
             ? const Center(child: CircularProgressIndicator())
-            : TabBarView(
-                controller: _tabs,
-                children: [_buildCopyTab(), _buildVideoTab(), _buildAssetsTab()],
+            : Center(
+                child: ConstrainedBox(
+                  constraints:
+                      const BoxConstraints(maxWidth: AppTheme.contentMaxWidth),
+                  child: TabBarView(
+                    controller: _tabs,
+                    children: [
+                      _buildCopyTab(),
+                      _buildVideoTab(),
+                      _buildAssetsTab(),
+                    ],
+                  ),
+                ),
               ),
       ),
     );
   }
 
   Widget _buildCopyTab() {
-    return ListView(
-      padding: const EdgeInsets.all(16),
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final isWide = constraints.maxWidth >= AppTheme.breakpointDesktop;
+
+        if (isWide) {
+          return Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Expanded(
+                flex: 5,
+                child: ListView(
+                  padding: const EdgeInsets.all(16),
+                  children: [
+                    _buildBriefForm(),
+                    const SizedBox(height: 16),
+                    _buildCopyActionButtons(),
+                    if (_tips != null) ...[
+                      const SizedBox(height: 16),
+                      _buildTipsCard(_tips!),
+                    ],
+                    if (_cardBlocks.isNotEmpty) ...[
+                      const SizedBox(height: 16),
+                      ..._cardBlocks.map((b) => _buildCardBlock(b)),
+                    ],
+                  ],
+                ),
+              ),
+              const VerticalDivider(
+                  width: 1, thickness: 1, color: AppTheme.borderColor),
+              Expanded(
+                flex: 6,
+                child: ListView(
+                  padding: const EdgeInsets.all(16),
+                  children: [
+                    if (_generatedImage != null ||
+                        _generatedImageLocalPath != null) ...[
+                      _buildGeneratedImageCard(),
+                      const SizedBox(height: 16),
+                    ],
+                    if (_copyResults.isNotEmpty) ...[
+                      ..._copyResults.asMap().entries.map(
+                            (e) => _buildCopyResult(e.key, e.value),
+                          ),
+                    ] else if (_generatedImage == null &&
+                        _generatedImageLocalPath == null) ...[
+                      _buildEmptyPreviewCard(
+                        icon: Icons.auto_awesome_rounded,
+                        title: 'Pratinjau Hasil Konten & Gambar',
+                        subtitle:
+                            'Isi brief promosi di panel kiri lalu klik "Buat Konten" atau "Buat Gambar AI". Rekomendasi teks, hashtag, dan poster akan tampil di sini.',
+                      ),
+                    ],
+                  ],
+                ),
+              ),
+            ],
+          );
+        }
+
+        return ListView(
+          padding: const EdgeInsets.all(16),
+          children: [
+            _buildBriefForm(),
+            const SizedBox(height: 16),
+            _buildCopyActionButtons(),
+            if (_tips != null) ...[
+              const SizedBox(height: 16),
+              _buildTipsCard(_tips!),
+            ],
+            if (_cardBlocks.isNotEmpty) ...[
+              const SizedBox(height: 16),
+              ..._cardBlocks.map((b) => _buildCardBlock(b)),
+            ],
+            if (_generatedImage != null ||
+                _generatedImageLocalPath != null) ...[
+              const SizedBox(height: 16),
+              _buildGeneratedImageCard(),
+            ],
+            if (_copyResults.isNotEmpty) ...[
+              const SizedBox(height: 16),
+              ..._copyResults.asMap().entries.map(
+                    (e) => _buildCopyResult(e.key, e.value),
+                  ),
+            ],
+          ],
+        );
+      },
+    );
+  }
+
+  Widget _buildCopyActionButtons() {
+    return Column(
       children: [
-        _buildBriefForm(),
-        const SizedBox(height: 16),
         Row(
           children: [
             Expanded(
@@ -313,147 +423,300 @@ class _DesignStudioScreenState extends ConsumerState<DesignStudioScreen>
           variant: AppButtonVariant.outline,
           onPressed: _busy ? null : _pickImage,
         ),
-        if (_tips != null) ...[
-          const SizedBox(height: 16),
-          _buildTipsCard(_tips!),
-        ],
-        if (_cardBlocks.isNotEmpty) ...[
-          const SizedBox(height: 16),
-          ..._cardBlocks.map((b) => _buildCardBlock(b)),
-        ],
-        if (_generatedImage != null || _generatedImageLocalPath != null) ...[
-          const SizedBox(height: 16),
-          _buildGeneratedImageCard(),
-        ],
-        const SizedBox(height: 16),
-        ..._copyResults.asMap().entries.map(
-              (e) => _buildCopyResult(e.key, e.value),
-            ),
       ],
     );
   }
 
   Widget _buildVideoTab() {
-    return ListView(
-      padding: const EdgeInsets.all(16),
-      children: [
-        _buildBriefForm(showProducts: false),
-        const SizedBox(height: 12),
-        AppCard(
-          child: Column(
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final isWide = constraints.maxWidth >= AppTheme.breakpointDesktop;
+
+        if (isWide) {
+          return Row(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text('Durasi video: $_duration detik',
-                  style: GoogleFonts.inter(
-                      fontWeight: FontWeight.w600,
-                      color: AppTheme.textPrimary)),
-              Slider(
-                value: _duration.toDouble(),
-                min: 15,
-                max: 30,
-                divisions: 3,
-                label: '$_duration dtk',
-                activeColor: AppTheme.primaryColor,
-                onChanged: (v) => setState(() => _duration = v.round()),
+              Expanded(
+                flex: 5,
+                child: ListView(
+                  padding: const EdgeInsets.all(16),
+                  children: [
+                    _buildBriefForm(showProducts: false),
+                    const SizedBox(height: 12),
+                    _buildVideoDurationCard(),
+                    const SizedBox(height: 12),
+                    _buildVideoActionButtons(),
+                    if (_tips != null) ...[
+                      const SizedBox(height: 16),
+                      _buildTipsCard(_tips!),
+                    ],
+                    if (_cardBlocks.isNotEmpty) ...[
+                      const SizedBox(height: 16),
+                      ..._cardBlocks.map((b) => _buildCardBlock(b)),
+                    ],
+                  ],
+                ),
+              ),
+              const VerticalDivider(
+                  width: 1, thickness: 1, color: AppTheme.borderColor),
+              Expanded(
+                flex: 6,
+                child: ListView(
+                  padding: const EdgeInsets.all(16),
+                  children: [
+                    if (_videoResult != null || _videoGifLocalPath != null)
+                      _buildVideoResultWithPreview(
+                          _videoResult ?? <String, dynamic>{})
+                    else
+                      _buildEmptyPreviewCard(
+                        icon: Icons.movie_creation_rounded,
+                        title: 'Pratinjau Naskah Video & Storyboard',
+                        subtitle:
+                            'Atur durasi dan brief video di panel kiri, lalu klik "Buat Naskah Video". Rincian adegan per detik, naskah, dan voiceover akan ditampilkan di sini.',
+                      ),
+                  ],
+                ),
               ),
             ],
+          );
+        }
+
+        return ListView(
+          padding: const EdgeInsets.all(16),
+          children: [
+            _buildBriefForm(showProducts: false),
+            const SizedBox(height: 12),
+            _buildVideoDurationCard(),
+            const SizedBox(height: 12),
+            _buildVideoActionButtons(),
+            if (_tips != null) ...[
+              const SizedBox(height: 16),
+              _buildTipsCard(_tips!),
+            ],
+            if (_cardBlocks.isNotEmpty) ...[
+              const SizedBox(height: 16),
+              ..._cardBlocks.map((b) => _buildCardBlock(b)),
+            ],
+            if (_videoResult != null || _videoGifLocalPath != null) ...[
+              const SizedBox(height: 16),
+              _buildVideoResultWithPreview(
+                  _videoResult ?? <String, dynamic>{}),
+            ],
+          ],
+        );
+      },
+    );
+  }
+
+  Widget _buildVideoDurationCard() {
+    return AppCard(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text('Durasi video: $_duration detik',
+              style: GoogleFonts.plusJakartaSans(
+                  fontWeight: FontWeight.w600,
+                  color: AppTheme.textPrimary)),
+          Slider(
+            value: _duration.toDouble(),
+            min: 15,
+            max: 30,
+            divisions: 3,
+            label: '$_duration dtk',
+            activeColor: AppTheme.primaryColor,
+            onChanged: (v) => setState(() => _duration = v.round()),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildVideoActionButtons() {
+    return Row(
+      children: [
+        Expanded(
+          child: AppButton(
+            label: 'Buat Naskah Video',
+            icon: Icons.movie_creation_rounded,
+            isLoading: _busy,
+            onPressed: _busy ? null : () => _generate(video: true),
           ),
         ),
-        const SizedBox(height: 12),
-        Row(
+        const SizedBox(width: 8),
+        Expanded(
+          child: AppButton(
+            label: 'Upload Video',
+            icon: Icons.upload_rounded,
+            isLoading: _busy,
+            variant: AppButtonVariant.outline,
+            onPressed: _busy ? null : _pickVideo,
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildEmptyPreviewCard({
+    required IconData icon,
+    required String title,
+    required String subtitle,
+  }) {
+    return AppCard(
+      padding: const EdgeInsets.all(32),
+      child: Center(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
           children: [
-            Expanded(
-              child: AppButton(
-                label: 'Buat Naskah Video',
-                icon: Icons.movie_creation_rounded,
-                isLoading: _busy,
-                onPressed: _busy ? null : () => _generate(video: true),
+            Container(
+              padding: const EdgeInsets.all(18),
+              decoration: BoxDecoration(
+                color: AppTheme.primaryColor.withValues(alpha: 0.08),
+                shape: BoxShape.circle,
+              ),
+              child: Icon(icon, size: 40, color: AppTheme.primaryColor),
+            ),
+            const SizedBox(height: 16),
+            Text(
+              title,
+              textAlign: TextAlign.center,
+              style: GoogleFonts.plusJakartaSans(
+                fontSize: 16,
+                fontWeight: FontWeight.w700,
+                color: AppTheme.textPrimary,
               ),
             ),
-            const SizedBox(width: 8),
-            Expanded(
-              child: AppButton(
-                label: 'Upload Video',
-                icon: Icons.upload_rounded,
-                isLoading: _busy,
-                variant: AppButtonVariant.outline,
-                onPressed: _busy ? null : _pickVideo,
+            const SizedBox(height: 8),
+            ConstrainedBox(
+              constraints: const BoxConstraints(maxWidth: 360),
+              child: Text(
+                subtitle,
+                textAlign: TextAlign.center,
+                style: GoogleFonts.plusJakartaSans(
+                  fontSize: 13,
+                  color: AppTheme.textSecondary,
+                  height: 1.5,
+                ),
               ),
             ),
           ],
         ),
-        if (_tips != null) ...[
-          const SizedBox(height: 16),
-          _buildTipsCard(_tips!),
-        ],
-        if (_cardBlocks.isNotEmpty) ...[
-          const SizedBox(height: 16),
-          ..._cardBlocks.map((b) => _buildCardBlock(b)),
-        ],
-        if (_videoResult != null || _videoGifLocalPath != null) ...[
-          const SizedBox(height: 16),
-          _buildVideoResultWithPreview(_videoResult ?? <String, dynamic>{}),
-        ],
-      ],
+      ),
     );
   }
 
   Widget _buildAssetsTab() {
     if (_assets.isEmpty) {
-      return const Center(child: Text('Belum ada aset tersimpan.'));
-    }
-    return ListView.separated(
-      padding: const EdgeInsets.all(16),
-      itemCount: _assets.length,
-      separatorBuilder: (_, _) => const SizedBox(height: 12),
-      itemBuilder: (_, i) {
-        final a = _assets[i];
-        final kind = (a['kind'] ?? 'copy').toString();
-        final icon = kind == 'video'
-            ? Icons.movie_rounded
-            : kind == 'image'
-                ? Icons.image_rounded
-                : Icons.notes_rounded;
-        final filePath = a['file_path']?.toString() ?? a['filePath']?.toString() ?? '';
-        final thumb = kind == 'image' ? _mediaThumb(filePath) : null;
-        return AppCard(
-          child: Row(
+      return Center(
+        child: Padding(
+          padding: const EdgeInsets.all(24),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
             children: [
-              // Thumbnail for image (video: icon)
-              if (thumb != null)
-                ClipRRect(
-                  borderRadius: BorderRadius.circular(AppTheme.radiusMedium),
-                  child: thumb,
-                )
-              else
-                CircleAvatar(
-                  backgroundColor: AppTheme.primaryColor.withValues(alpha: 0.12),
-                  child: Icon(icon, color: AppTheme.primaryColor),
-                ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(a['title']?.toString() ?? '-',
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: GoogleFonts.inter(
-                            fontWeight: FontWeight.w600, color: AppTheme.textPrimary)),
-                    const SizedBox(height: 4),
-                    Text('${kind.toUpperCase()} - ${a['status'] ?? 'draft'}',
-                        style: GoogleFonts.inter(fontSize: 12, color: AppTheme.textSecondary)),
-                  ],
-                ),
+              Icon(Icons.inventory_2_outlined,
+                  size: 56,
+                  color: AppTheme.textSecondary.withValues(alpha: 0.4)),
+              const SizedBox(height: 12),
+              Text(
+                'Belum ada aset tersimpan.',
+                style: GoogleFonts.plusJakartaSans(
+                    fontSize: 15,
+                    fontWeight: FontWeight.w600,
+                    color: AppTheme.textPrimary),
               ),
-              IconButton(
-                icon: const Icon(Icons.delete_outline_rounded, color: AppTheme.errorColor),
-                onPressed: () => _deleteAsset(a['id'].toString()),
+              const SizedBox(height: 4),
+              Text(
+                'Konten copy, gambar AI, dan video yang Anda simpan akan muncul di sini.',
+                textAlign: TextAlign.center,
+                style: GoogleFonts.plusJakartaSans(
+                    fontSize: 13, color: AppTheme.textSecondary),
               ),
             ],
           ),
+        ),
+      );
+    }
+
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final isDesktop = constraints.maxWidth >= 900;
+        final isTablet = constraints.maxWidth >= 600 && !isDesktop;
+        final crossAxisCount = isDesktop ? 3 : (isTablet ? 2 : 1);
+
+        if (crossAxisCount == 1) {
+          return ListView.separated(
+            padding: const EdgeInsets.all(16),
+            itemCount: _assets.length,
+            separatorBuilder: (_, _) => const SizedBox(height: 12),
+            itemBuilder: (_, i) => _buildAssetItem(_assets[i]),
+          );
+        }
+
+        return GridView.builder(
+          padding: const EdgeInsets.all(16),
+          gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+            crossAxisCount: crossAxisCount,
+            crossAxisSpacing: 12,
+            mainAxisSpacing: 12,
+            childAspectRatio: 3.2,
+          ),
+          itemCount: _assets.length,
+          itemBuilder: (_, i) => _buildAssetItem(_assets[i]),
         );
       },
+    );
+  }
+
+  Widget _buildAssetItem(Map<String, dynamic> a) {
+    final kind = (a['kind'] ?? 'copy').toString();
+    final icon = kind == 'video'
+        ? Icons.movie_rounded
+        : kind == 'image'
+            ? Icons.image_rounded
+            : Icons.notes_rounded;
+    final filePath =
+        a['file_path']?.toString() ?? a['filePath']?.toString() ?? '';
+    final thumb = kind == 'image' ? _mediaThumb(filePath) : null;
+    return AppCard(
+      child: Row(
+        children: [
+          // Thumbnail for image (video: icon)
+          if (thumb != null)
+            ClipRRect(
+              borderRadius: BorderRadius.circular(AppTheme.radiusMedium),
+              child: thumb,
+            )
+          else
+            CircleAvatar(
+              backgroundColor:
+                  AppTheme.primaryColor.withValues(alpha: 0.12),
+              child: Icon(icon, color: AppTheme.primaryColor),
+            ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(a['title']?.toString() ?? '-',
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: GoogleFonts.plusJakartaSans(
+                        fontWeight: FontWeight.w600,
+                        color: AppTheme.textPrimary)),
+                const SizedBox(height: 4),
+                Text('${kind.toUpperCase()} - ${a['status'] ?? 'draft'}',
+                    style: GoogleFonts.plusJakartaSans(
+                        fontSize: 12, color: AppTheme.textSecondary)),
+              ],
+            ),
+          ),
+          IconButton(
+            icon: const Icon(Icons.delete_outline_rounded,
+                color: AppTheme.errorColor),
+            onPressed: () => _deleteAsset(a['id'].toString()),
+          ),
+        ],
+      ),
     );
   }
 
@@ -463,7 +726,7 @@ class _DesignStudioScreenState extends ConsumerState<DesignStudioScreen>
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text('Brief promosi',
-              style: GoogleFonts.inter(
+              style: GoogleFonts.plusJakartaSans(
                   fontWeight: FontWeight.w700, color: AppTheme.textPrimary)),
           const SizedBox(height: 8),
           TextField(
@@ -485,7 +748,7 @@ class _DesignStudioScreenState extends ConsumerState<DesignStudioScreen>
           ),
           const SizedBox(height: 12),
           Text('Gaya bahasa',
-              style: GoogleFonts.inter(
+              style: GoogleFonts.plusJakartaSans(
                   fontSize: 13, color: AppTheme.textSecondary)),
           const SizedBox(height: 6),
           Wrap(
@@ -501,12 +764,12 @@ class _DesignStudioScreenState extends ConsumerState<DesignStudioScreen>
           if (showProducts) ...[
             const SizedBox(height: 12),
             Text('Produk (opsional)',
-                style: GoogleFonts.inter(
+                style: GoogleFonts.plusJakartaSans(
                     fontSize: 13, color: AppTheme.textSecondary)),
             const SizedBox(height: 6),
             if (_products.isEmpty)
               Text('Belum ada produk.',
-                  style: GoogleFonts.inter(
+                  style: GoogleFonts.plusJakartaSans(
                       fontSize: 12, color: AppTheme.textSecondary))
             else
               Wrap(
@@ -569,7 +832,7 @@ class _DesignStudioScreenState extends ConsumerState<DesignStudioScreen>
           const SizedBox(width: 8),
           Expanded(
             child: Text(tips,
-                style: GoogleFonts.inter(
+                style: GoogleFonts.plusJakartaSans(
                     fontSize: 13, color: AppTheme.textPrimary)),
           ),
         ],
@@ -639,7 +902,7 @@ class _DesignStudioScreenState extends ConsumerState<DesignStudioScreen>
                     color: color, size: 20),
                 const SizedBox(width: 8),
                 Text(title,
-                    style: GoogleFonts.inter(
+                    style: GoogleFonts.plusJakartaSans(
                         fontWeight: FontWeight.w600, color: color)),
               ],
             ),
@@ -649,7 +912,7 @@ class _DesignStudioScreenState extends ConsumerState<DesignStudioScreen>
               const SizedBox(height: 8),
               Text(
                 disclaimer,
-                style: GoogleFonts.inter(
+                style: GoogleFonts.plusJakartaSans(
                     fontSize: 10, color: AppTheme.textSecondary),
               ),
             ],
@@ -939,13 +1202,13 @@ class _DesignStudioScreenState extends ConsumerState<DesignStudioScreen>
                   Text(name,
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
-                      style: GoogleFonts.inter(
+                      style: GoogleFonts.plusJakartaSans(
                           fontSize: 18,
                           fontWeight: FontWeight.w800,
                           color: Colors.white)),
                   if (price > 0)
                     Text(Formatters.currency(price),
-                        style: GoogleFonts.inter(
+                        style: GoogleFonts.plusJakartaSans(
                             fontSize: 16,
                             fontWeight: FontWeight.w700,
                             color: Colors.white)),
@@ -969,7 +1232,7 @@ class _DesignStudioScreenState extends ConsumerState<DesignStudioScreen>
               const SizedBox(width: 8),
               Expanded(
                 child: Text('Gambar AI',
-                    style: GoogleFonts.inter(
+                    style: GoogleFonts.plusJakartaSans(
                         fontWeight: FontWeight.w700, color: AppTheme.textPrimary)),
               ),
               IconButton(
@@ -1005,7 +1268,7 @@ class _DesignStudioScreenState extends ConsumerState<DesignStudioScreen>
                   _generatedImage?['title']?.toString() ?? 'Gambar AI',
                   maxLines: 2,
                   overflow: TextOverflow.ellipsis,
-                  style: GoogleFonts.inter(fontSize: 13, color: AppTheme.textSecondary),
+                  style: GoogleFonts.plusJakartaSans(fontSize: 13, color: AppTheme.textSecondary),
                 ),
               ),
               if (_generatedImageLocalPath != null ||
@@ -1075,7 +1338,7 @@ class _DesignStudioScreenState extends ConsumerState<DesignStudioScreen>
               const SizedBox(width: 8),
               Expanded(
                 child: Text(v['title']?.toString() ?? 'Video Promo',
-                    style: GoogleFonts.inter(
+                    style: GoogleFonts.plusJakartaSans(
                         fontWeight: FontWeight.w700, color: AppTheme.textPrimary)),
               ),
             ],
@@ -1095,12 +1358,12 @@ class _DesignStudioScreenState extends ConsumerState<DesignStudioScreen>
             ),
             const SizedBox(height: 4),
             Text('Pratinjau animasi dari naskah scene (tersimpan lokal)',
-                style: GoogleFonts.inter(fontSize: 11, color: AppTheme.textSecondary)),
+                style: GoogleFonts.plusJakartaSans(fontSize: 11, color: AppTheme.textSecondary)),
             const SizedBox(height: 12),
           ],
           Text(
             '${v['duration'] ?? _duration} detik - musik: ${v['music'] ?? '-'}',
-            style: GoogleFonts.inter(fontSize: 12, color: AppTheme.textSecondary),
+            style: GoogleFonts.plusJakartaSans(fontSize: 12, color: AppTheme.textSecondary),
           ),
           const SizedBox(height: 12),
           // Scene list
@@ -1115,14 +1378,14 @@ class _DesignStudioScreenState extends ConsumerState<DesignStudioScreen>
                     radius: 12,
                     backgroundColor: AppTheme.accentColor,
                     child: Text('${e.key + 1}',
-                        style: GoogleFonts.inter(
+                        style: GoogleFonts.plusJakartaSans(
                             fontSize: 11, color: Colors.white, fontWeight: FontWeight.w700)),
                   ),
                   const SizedBox(width: 8),
                   Expanded(
                     child: Text(
                       '${s['text'] ?? ''} (${s['duration'] ?? 4} dtk)',
-                      style: GoogleFonts.inter(fontSize: 13, color: AppTheme.textPrimary),
+                      style: GoogleFonts.plusJakartaSans(fontSize: 13, color: AppTheme.textPrimary),
                     ),
                   ),
                 ],
@@ -1132,11 +1395,11 @@ class _DesignStudioScreenState extends ConsumerState<DesignStudioScreen>
           if ((v['voiceover']?.toString() ?? '').isNotEmpty) ...[
             const SizedBox(height: 8),
             Text('Voice over',
-                style: GoogleFonts.inter(
+                style: GoogleFonts.plusJakartaSans(
                     fontSize: 12, fontWeight: FontWeight.w700, color: AppTheme.textSecondary)),
             const SizedBox(height: 4),
             Text(v['voiceover'].toString(),
-                style: GoogleFonts.inter(fontSize: 13, color: AppTheme.textPrimary)),
+                style: GoogleFonts.plusJakartaSans(fontSize: 13, color: AppTheme.textPrimary)),
           ],
           const SizedBox(height: 12),
           Row(

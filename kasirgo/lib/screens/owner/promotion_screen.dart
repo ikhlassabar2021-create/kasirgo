@@ -292,24 +292,29 @@ class _PromotionScreenState extends ConsumerState<PromotionScreen> {
       backgroundColor: AppTheme.backgroundColor,
       appBar: AppBar(
         title: Text('Studio Promosi',
-            style: GoogleFonts.inter(fontWeight: FontWeight.w700)),
+            style: GoogleFonts.plusJakartaSans(fontWeight: FontWeight.w700)),
       ),
       body: CentennialBackground(
         child: _loading
             ? const Center(child: CircularProgressIndicator())
             : RefreshIndicator(
                 onRefresh: _load,
-                child: Padding(
-                  padding: const EdgeInsets.only(top: 80),
-                  child: Column(
-                    children: [
-                      _buildConnectionGuide(),
-                      _buildSummary(),
-                      const SizedBox(height: 12),
-                      _buildControls(),
-                      const SizedBox(height: 16),
-                      ..._buildCalendar(),
-                    ],
+                child: Center(
+                  child: ConstrainedBox(
+                    constraints: const BoxConstraints(
+                        maxWidth: AppTheme.contentMaxWidth),
+                    child: ListView(
+                      padding: const EdgeInsets.all(16),
+                      children: [
+                        _buildConnectionGuide(),
+                        const SizedBox(height: 12),
+                        _buildSummary(),
+                        const SizedBox(height: 12),
+                        _buildControls(),
+                        const SizedBox(height: 16),
+                        ..._buildCalendar(),
+                      ],
+                    ),
                   ),
                 ),
               ),
@@ -321,7 +326,7 @@ class _PromotionScreenState extends ConsumerState<PromotionScreen> {
     final connected = _channelStatus.where((c) => c['is_connected'] == true).length;
     final total = _channels.length;
     return Card(
-      margin: const EdgeInsets.all(16),
+      margin: EdgeInsets.zero,
       child: Padding(
         padding: const EdgeInsets.all(12),
         child: Column(
@@ -333,7 +338,7 @@ class _PromotionScreenState extends ConsumerState<PromotionScreen> {
                 const SizedBox(width: 8),
                 Expanded(
                   child: Text('Koneksi Akun Kanal ($connected/$total terhubung)',
-                      style: GoogleFonts.inter(fontWeight: FontWeight.w600, color: AppTheme.primaryColor)),
+                      style: GoogleFonts.plusJakartaSans(fontWeight: FontWeight.w600, color: AppTheme.primaryColor)),
                 ),
               ],
             ),
@@ -365,7 +370,7 @@ class _PromotionScreenState extends ConsumerState<PromotionScreen> {
             Text(
               'Posting manual (salin caption + buka WhatsApp/Website) SELALU bisa tanpa koneksi akun. '
               'Hubungkan akun untuk melacak status kanal - bisa Anda atur sendiri di sini.',
-              style: GoogleFonts.inter(fontSize: 12, color: AppTheme.textSecondary),
+              style: GoogleFonts.plusJakartaSans(fontSize: 12, color: AppTheme.textSecondary),
             ),
             const SizedBox(height: 10),
             SizedBox(
@@ -374,7 +379,7 @@ class _PromotionScreenState extends ConsumerState<PromotionScreen> {
                 onPressed: _openChannelConnect,
                 icon: const Icon(Icons.link_rounded, size: 18),
                 label: Text('Hubungkan Akun Kanal',
-                    style: GoogleFonts.inter(fontWeight: FontWeight.w700)),
+                    style: GoogleFonts.plusJakartaSans(fontWeight: FontWeight.w700)),
                 style: OutlinedButton.styleFrom(
                   foregroundColor: AppTheme.primaryColor,
                   side: const BorderSide(color: AppTheme.primaryColor),
@@ -416,7 +421,7 @@ class _PromotionScreenState extends ConsumerState<PromotionScreen> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text('Laporan Posting',
-              style: GoogleFonts.inter(
+              style: GoogleFonts.plusJakartaSans(
                   fontWeight: FontWeight.w700, color: AppTheme.textPrimary)),
           const SizedBox(height: 12),
           Row(
@@ -430,7 +435,7 @@ class _PromotionScreenState extends ConsumerState<PromotionScreen> {
             const SizedBox(height: 12),
             Text(
               'Jam ramai pelanggan: ${_bestHours.map((h) => '${h.toString().padLeft(2, '0')}:00').join(', ')}',
-              style: GoogleFonts.inter(
+              style: GoogleFonts.plusJakartaSans(
                   fontSize: 12, color: AppTheme.textSecondary),
             ),
           ],
@@ -444,10 +449,10 @@ class _PromotionScreenState extends ConsumerState<PromotionScreen> {
       child: Column(
         children: [
           Text('$value',
-              style: GoogleFonts.inter(
+              style: GoogleFonts.plusJakartaSans(
                   fontSize: 22, fontWeight: FontWeight.w700, color: color)),
           Text(label,
-              style: GoogleFonts.inter(
+              style: GoogleFonts.plusJakartaSans(
                   fontSize: 12, color: AppTheme.textSecondary)),
         ],
       ),
@@ -508,7 +513,7 @@ class _PromotionScreenState extends ConsumerState<PromotionScreen> {
         AppCard(
           child: Text(
             'Belum ada jadwal konten. Buat konten di Studio Desain lalu jadwalkan di sini.',
-            style: GoogleFonts.inter(color: AppTheme.textSecondary),
+            style: GoogleFonts.plusJakartaSans(color: AppTheme.textSecondary),
           ),
         ),
       ];
@@ -534,7 +539,7 @@ class _PromotionScreenState extends ConsumerState<PromotionScreen> {
           firstDt == null
               ? key
               : '${Formatters.date(firstDt)} (${_weekday(firstDt.weekday)})',
-          style: GoogleFonts.inter(
+          style: GoogleFonts.plusJakartaSans(
               fontWeight: FontWeight.w700, color: AppTheme.textPrimary),
         ),
       ));
@@ -579,7 +584,7 @@ class _PromotionScreenState extends ConsumerState<PromotionScreen> {
                 const SizedBox(width: 8),
                 Expanded(
                   child: Text(_channels[channel] ?? channel,
-                      style: GoogleFonts.inter(
+                      style: GoogleFonts.plusJakartaSans(
                           fontWeight: FontWeight.w600,
                           color: AppTheme.textPrimary)),
                 ),
@@ -591,7 +596,7 @@ class _PromotionScreenState extends ConsumerState<PromotionScreen> {
                     borderRadius: BorderRadius.circular(8),
                   ),
                   child: Text(status.toUpperCase(),
-                      style: GoogleFonts.inter(
+                      style: GoogleFonts.plusJakartaSans(
                           fontSize: 11,
                           fontWeight: FontWeight.w700,
                           color: statusColor)),
@@ -601,18 +606,18 @@ class _PromotionScreenState extends ConsumerState<PromotionScreen> {
             const SizedBox(height: 6),
             if (dt != null)
               Text('${Formatters.date(dt)} - ${Formatters.time(dt)}',
-                  style: GoogleFonts.inter(
+                  style: GoogleFonts.plusJakartaSans(
                       fontSize: 12, color: AppTheme.textSecondary)),
             if (assetTitle.isNotEmpty)
               Text('Aset: $assetTitle',
-                  style: GoogleFonts.inter(
+                  style: GoogleFonts.plusJakartaSans(
                       fontSize: 12, color: AppTheme.textSecondary)),
             if ((post['caption'] ?? '').toString().isNotEmpty) ...[
               const SizedBox(height: 6),
               Text(post['caption'].toString(),
                   maxLines: 3,
                   overflow: TextOverflow.ellipsis,
-                  style: GoogleFonts.inter(
+                  style: GoogleFonts.plusJakartaSans(
                       fontSize: 13, color: AppTheme.textPrimary)),
             ],
             const SizedBox(height: 8),
@@ -777,7 +782,7 @@ class _NewPostSheetState extends State<_NewPostSheet> {
           mainAxisSize: MainAxisSize.min,
           children: [
             Text('Jadwalkan Konten',
-                style: GoogleFonts.inter(
+                style: GoogleFonts.plusJakartaSans(
                     fontWeight: FontWeight.w700, color: AppTheme.textPrimary)),
             const SizedBox(height: 12),
             DropdownButtonFormField<String>(
@@ -822,7 +827,7 @@ class _NewPostSheetState extends State<_NewPostSheet> {
                           Icon(Icons.info_outline, color: AppTheme.warningColor, size: 18),
                           const SizedBox(width: 6),
                           Text('Kanal belum terhubung',
-                              style: GoogleFonts.inter(
+                              style: GoogleFonts.plusJakartaSans(
                                   fontWeight: FontWeight.w600,
                                   fontSize: 13,
                                   color: AppTheme.warningColor)),
@@ -833,7 +838,7 @@ class _NewPostSheetState extends State<_NewPostSheet> {
                         'Kanal ini belum terhubung ke akun Anda. Posting manual tetap bisa: '
                         'isi caption, lalu aplikasi akan membuka ${_channelLabel(_channel)} '
                         'untuk Anda posting sendiri.',
-                        style: GoogleFonts.inter(fontSize: 12, color: AppTheme.textPrimary),
+                        style: GoogleFonts.plusJakartaSans(fontSize: 12, color: AppTheme.textPrimary),
                       ),
                       const SizedBox(height: 8),
                       SizedBox(
@@ -842,7 +847,7 @@ class _NewPostSheetState extends State<_NewPostSheet> {
                           onPressed: _openConnect,
                           icon: const Icon(Icons.link_rounded, size: 18),
                           label: Text('Hubungkan Akun ${_channelLabel(_channel)}',
-                              style: GoogleFonts.inter(
+                              style: GoogleFonts.plusJakartaSans(
                                   fontSize: 12, fontWeight: FontWeight.w700)),
                           style: OutlinedButton.styleFrom(
                             foregroundColor: AppTheme.primaryColor,
