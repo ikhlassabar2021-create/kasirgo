@@ -1205,3 +1205,21 @@ Commit `ff04bb3` (main) + deploy web gh-pages `050051c` (live md5
 - APK rilis dibangun via GitHub Actions (sandbox TIDAK punya Android SDK/Java;
   RAM tersisa ~400MB sehingga build lokal tidak layak). Tag `v1.0.0-apk-20261018`
   memicu workflow `release-apk.yml` (`--split-per-abi --obfuscate`).
+
+### Lanjutan: Build APK rilis (v1.0.2) + kendala ukuran
+- CI `release-apk.yml` gagal 2x lalu SUKSES pada tag `v1.0.2-apk-20261018`
+  (run `39133305966`). Dua fix build yang diperlukan:
+  1. `android/app/build.gradle.kts`: `isCoreLibraryDesugaringEnabled = true` +
+     `coreLibraryDesugaring("com.android.tools:desugar_jdk_libs:2.1.4")`
+     (flutter_local_notifications 22.x mewajibkan desugaring).
+  2. `pubspec.yaml`: `sqlcipher_flutter_libs` DIHAPUS (namespace
+     `eu.simonbinder.sqlite3_flutter_libs` bentrok dengan `sqlite3_flutter_libs`
+     -> manifest merger gagal). Kode memang memakai `sqlite3.open`, bukan SQLCipher.
+- Artifact `apk-release` diunduh + dipublikasikan sebagai GitHub Release
+  `v1.0.2-apk-20261018` (prerelease): `kasirgo-1.0.2-arm64-v8a.apk` 58,4 MB,
+  `armeabi-v7a` 47,4 MB, `x86_64` 62,9 MB.
+- CATATAN UKURAN: target <10 MB TIDAK mungkin untuk build ini. Baseline Flutter
+  saja `libflutter.so` 11,7 MB + `libapp.so` 11,7 MB (~23 MB). Penyumbang besar:
+  `libmlkit_google_ocr_pipeline.so` 11,1 MB + model OCR, `libface_detector_v2_jni.so`
+  8,5 MB, `libbarhopper_v3.so` (barcode) 4,9 MB. Melepas seluruh ML Kit hanya
+  menurunkan ke ~28 MB.
