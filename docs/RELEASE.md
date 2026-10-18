@@ -36,6 +36,25 @@ Sertifikat (untuk verifikasi Play Console / APK):
 | `KEY_ALIAS` | `kasirgo` |
 | `KEY_PASSWORD` | sama dengan password keystore |
 
+Bila keempat secret BELUM diisi, langkah "Siapkan keystore rilis" gagal
+(disengaja: APK debug tidak boleh lolos sebagai rilis). Untuk build darurat
+tanpa secret, dispatch workflow dengan input `debug_sign_fallback=true`, lalu
+tanda tangani ulang APK/AAB secara lokal (lihat bawah).
+
+### Tanda tangan ulang lokal (bila CI memakai debug_sign_fallback)
+```bash
+# APK: zipalign lalu apksigner (build-tools Android)
+zipalign -p -f 4 app-arm64-v8a-release.apk aligned.apk
+apksigner sign --ks kasirgo-upload.p12 --ks-type PKCS12 --ks-key-alias kasirgo \
+  --out kasirgo-1.0.2-arm64-v8a.apk aligned.apk
+apksigner verify --print-certs kasirgo-1.0.2-arm64-v8a.apk
+
+# AAB: buang META-INF tanda tangan lama, lalu jarsigner
+jarsigner -keystore kasirgo-upload.p12 -storetype PKCS12 \
+  -sigalg SHA256withRSA -digestalg SHA-256 kasirgo-1.0.2.aab kasirgo
+keytool -printcert -jarfile kasirgo-1.0.2.aab
+```
+
 ### Build lokal dengan keystore
 ```bash
 cd kasirgo
@@ -47,6 +66,21 @@ flutter build apk --release --split-per-abi
 
 CATATAN: bila `key.properties` tidak ada, build otomatis memakai debug key
 (hanya untuk uji lokal). APK debug-signed TIDAK boleh didistribusikan.
+
+## Rilis 1.0.2 (18 Okt 2026) - release-signed
+
+- Tag/Release: `v1.0.2-signed-20261018`
+  (https://github.com/ikhlassabar2021-create/kasirgo/releases/tag/v1.0.2-signed-20261018)
+- Aset: `kasirgo-1.0.2-arm64-v8a.apk` (58,4 MB), `armeabi-v7a.apk` (47,4 MB),
+  `x86_64.apk` (63,0 MB), `kasirgo-1.0.2.aab` (106,3 MB), `SHA256SUMS.txt`.
+- APK ditandatangani v1+v2+v3, sudah `zipalign`; AAB ditandatangani upload key
+  (v1). Sertifikat terverifikasi = SHA-1/SHA-256 di atas.
+- Token CI yang tersedia (GitHub App installation) TIDAK bisa menulis
+  `actions/secrets` (403), jadi build memakai `debug_sign_fallback=true` lalu
+  ditandatangani ulang lokal. Isi 4 secret di atas agar build berikutnya
+  langsung release-signed dari CI.
+- Sisa langkah manusia: backup `kasirgo-upload.p12` + password ke tempat aman
+  (kehilangan = tidak bisa update app).
 
 ## Play Store (AAB)
 CI juga membangun `app-release.aab` (artifact `aab-release`).

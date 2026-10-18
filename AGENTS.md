@@ -1228,3 +1228,27 @@ Commit `ff04bb3` (main) + deploy web gh-pages `050051c` (live md5
 - Bos memilih opsi 1 (pertahankan semua fitur, ~58 MB arm64). Tidak ada
   pemangkasan ML Kit. Release `v1.0.2-apk-20261018` = versi rilis resmi saat ini.
 - Link terverifikasi HTTP 200 (arm64/armeabi-v7a/x86_64).
+
+### Rilis 1.0.2 RELEASE-SIGNED (18 Okt 2026) - SELESAI
+- Keystore rilis dibuat agen: PKCS12 alias `kasirgo`, RSA 2048, valid s.d. 2054
+  (`/tmp/opencode/keystore/kasirgo-upload.p12`; JKS + `pass.txt` di folder sama;
+  JANGAN commit). SHA-1 `A6:17:30:2D:91:C6:A0:9C:F3:22:14:73:2B:6C:51:42:3A:41:4C:28`.
+- Signing wiring: `android/app/build.gradle.kts` baca `android/key.properties`
+  (release-if-exists-else-debug); `.gitignore` menutup `key.properties`/`*.p12`/`*.jks`/`*.keystore`.
+- `.github/workflows/release-apk.yml`: setup-java 17 + flutter-action, langkah
+  "Siapkan keystore rilis" dari secrets (`KEYSTORE_BASE64`, `KEYSTORE_PASSWORD`,
+  `KEY_ALIAS`, `KEY_PASSWORD`), build APK split-per-abi + AAB, checksum SHA-256,
+  `apksigner verify`, artifact `apk-release`/`aab-release`, input
+  `debug_sign_fallback` untuk build tanpa secret.
+- Label aplikasi diperbaiki: `android:label="KasirGo"` (commit `6e1f0a9`).
+- BLOCKER: token git credential = GitHub App installation token -> PUT
+  `/actions/secrets/*` 403. Build dipicu `debug_sign_fallback=true`
+  (run `39144383963` SUKSES), lalu ditandatangani ulang LOKAL:
+  `zipalign -p -f 4` + `apksigner sign` (APK v1+v2+v3) dan
+  `jarsigner` AAB setelah META-INF lama dibuang.
+- GitHub Release **`v1.0.2-signed-20261018`** (id `416571011`, bukan prerelease):
+  3 APK signed + `kasirgo-1.0.2.aab` + `SHA256SUMS.txt`. Verifikasi
+  `apksigner verify --print-certs` = sertifikat keystore di atas.
+- Prosedur + checklist Play Console: `docs/RELEASE.md`.
+- TINDAK LANJUT MANUSIA: (1) isi 4 GitHub Secrets agar CI langsung signed,
+  (2) backup keystore + password (hilang = tak bisa update app).
