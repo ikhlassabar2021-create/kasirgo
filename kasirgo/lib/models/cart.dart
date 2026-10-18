@@ -48,14 +48,24 @@ class Cart {
   final String outletName;
   final List<CartItem> items;
 
+  /// Outlet tujuan menerima pengantaran (dari `nearby_outlets.has_delivery`).
+  /// Disimpan di keranjang agar opsi "Diantar" tetap ada walau outlet yang
+  /// dipilih sudah tidak aktif di layar.
+  final bool hasDelivery;
+
   const Cart({
     required this.outletId,
     required this.outletName,
     required this.items,
+    this.hasDelivery = false,
   });
 
-  static const Cart empty =
-      Cart(outletId: '', outletName: '', items: <CartItem>[]);
+  static const Cart empty = Cart(
+    outletId: '',
+    outletName: '',
+    items: <CartItem>[],
+    hasDelivery: false,
+  );
 
   bool get isEmpty => items.isEmpty;
   bool get isNotEmpty => items.isNotEmpty;

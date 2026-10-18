@@ -1500,10 +1500,50 @@ Deno.serve(async (req: Request) => {
     if (!blocks.length && replyText) blocks = [{ type: "text", text: replyText }];
     if (fallbackReason) blocks = fallbackBlocks(snap, fallbackReason);
     if (!blocks.length) blocks = fallbackBlocks(snap, "Belum ada jawaban dari AI.");
+    // Rapikan blok kembar: model kadang mengirim dua "dose"/"prescription"
+    // dengan judul berbeda -> hasil diagnosa tampil dobel.
+    const seenSingleton = new Set<string>();
+    const itemTexts = (b: Json): string[] =>
+      (Array.isArray(b?.items) ? b.items : [])
+        .map((it: Json) => String(it?.text ?? "").trim())
+        .filter(Boolean);
+    blocks = blocks.filter((b: Json) => {
+      const t = String(b?.type ?? "");
+      if (t !== "dose" && t !== "prescription") return true;
+      if (seenSingleton.has(t)) return false;
+      seenSingleton.add(t);
+      return true;
+    });
+    // Buang "dose" yang isinya sama persis dengan peta resep/checklist yang sudah tampil.
+    blocks = blocks.filter((b: Json) => {
+      if (String(b?.type ?? "") !== "dose") return true;
+      const doseItems = JSON.stringify(itemTexts(b));
+      if (!doseItems || doseItems === "[]") return true;
+      return !blocks.some((o: Json) =>
+        (o?.type === "prescription" || o?.type === "checklist") &&
+        JSON.stringify(itemTexts(o)) === doseItems);
+    });
     // Pastikan kartu resep / target / peta ekspansi tampil walau model lupa menyertakannya.
     for (const key of ["prescription", "target", "scaling", "bundle", "referral", "pending", "dose"] as const) {
       const s = sink[key];
-      if (!fallbackReason && s && !blocks.some((b: Json) => b?.type === s.type && b?.title === s.title)) {
+      if (fallbackReason || !s) continue;
+      const sameType = blocks.some((b: Json) => b?.type === s.type);
+      if (s.type === "prescription" || s.type === "dose") {
+        if (sameType) {
+          // Versi server (punya memory_id/progres) menggantikan versi model.
+          blocks = blocks.filter((b: Json) => b?.type !== s.type);
+        }
+        if (s.type === "dose") {
+          const doseItems = JSON.stringify(itemTexts(s));
+          const dupRecipe = doseItems !== "[]" && blocks.some((b: Json) =>
+            (b?.type === "prescription" || b?.type === "checklist") &&
+            JSON.stringify(itemTexts(b)) === doseItems);
+          if (dupRecipe) continue;
+        }
+        blocks.push(s);
+        continue;
+      }
+      if (!blocks.some((b: Json) => b?.type === s.type && b?.title === s.title)) {
         blocks.push(s);
       }
     }

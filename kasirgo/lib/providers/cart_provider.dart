@@ -13,10 +13,16 @@ class CartNotifier extends StateNotifier<Cart> {
     required String outletId,
     required String outletName,
     required CartItem item,
+    bool hasDelivery = false,
   }) {
     var replaced = false;
     if (state.outletId.isNotEmpty && state.outletId != outletId) {
-      state = Cart(outletId: outletId, outletName: outletName, items: [item]);
+      state = Cart(
+        outletId: outletId,
+        outletName: outletName,
+        items: [item],
+        hasDelivery: hasDelivery,
+      );
       return true;
     }
 
@@ -27,7 +33,12 @@ class CartNotifier extends StateNotifier<Cart> {
     } else {
       items.add(item);
     }
-    state = Cart(outletId: outletId, outletName: outletName, items: items);
+    state = Cart(
+      outletId: outletId,
+      outletName: outletName,
+      items: items,
+      hasDelivery: hasDelivery || state.hasDelivery,
+    );
     return replaced;
   }
 
@@ -44,6 +55,7 @@ class CartNotifier extends StateNotifier<Cart> {
       outletId: state.outletId,
       outletName: state.outletName,
       items: items,
+      hasDelivery: state.hasDelivery,
     );
   }
 
@@ -66,6 +78,7 @@ class CartNotifier extends StateNotifier<Cart> {
       outletId: state.outletId,
       outletName: state.outletName,
       items: items,
+      hasDelivery: state.hasDelivery,
     );
   }
 

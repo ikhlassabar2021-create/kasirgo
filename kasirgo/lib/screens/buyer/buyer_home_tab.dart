@@ -463,6 +463,7 @@ class _BuyerHomeTabState extends ConsumerState<BuyerHomeTab> {
     final replaced = ref.read(cartProvider.notifier).add(
           outletId: outlet.id,
           outletName: outlet.name,
+          hasDelivery: outlet.hasDelivery,
           item: CartItem(
             productId: product.id,
             name: product.name,
@@ -1608,7 +1609,8 @@ class _CartSheet extends ConsumerWidget {
                         outletId: cart.outletId,
                         outletName: cart.outletName,
                         customer: customer,
-                        hasDelivery: outlet?.hasDelivery ?? false,
+                        hasDelivery:
+                            outlet?.hasDelivery ?? cart.hasDelivery,
                         buyerLat: buyerLat,
                         buyerLng: buyerLng,
                       ),

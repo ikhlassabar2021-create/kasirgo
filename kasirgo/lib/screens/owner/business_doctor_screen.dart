@@ -952,6 +952,14 @@ class _BusinessDoctorScreenState extends ConsumerState<BusinessDoctorScreen> {
     );
   }
 
+  /// Peta resep sudah tampil di dalam gelembung chat?
+  bool get _chatShowsRecipe => _messages.any((m) => m.blocks.any((b) {
+        if (b is! Map) return false;
+        if (b['type'] == 'prescription') return true;
+        if (b['type'] != 'checklist') return false;
+        return (b['title']?.toString().toLowerCase() ?? '').contains('resep');
+      }));
+
   Widget _buildList() {
     return ListView(
       controller: _scroll,
@@ -990,12 +998,15 @@ class _BusinessDoctorScreenState extends ConsumerState<BusinessDoctorScreen> {
           const SizedBox(height: 12),
         ],
         if (_activePrescription != null) ...[
-          DoctorBlocks(
-            blocks: [_activePrescription!],
-            onPrescription: _onPrescriptionStep,
-            onTogglePrescription: _togglePrescriptionStep,
-          ),
-          const SizedBox(height: 8),
+          // Bila chat sudah menampilkan peta resep, jangan ulangi kartu yang sama.
+          if (!_chatShowsRecipe) ...[
+            DoctorBlocks(
+              blocks: [_activePrescription!],
+              onPrescription: _onPrescriptionStep,
+              onTogglePrescription: _togglePrescriptionStep,
+            ),
+            const SizedBox(height: 8),
+          ],
           SizedBox(
             height: AppTheme.touchTargetMedium,
             child: AppButton(
@@ -1980,6 +1991,13 @@ class _BusinessDoctorScreenState extends ConsumerState<BusinessDoctorScreen> {
   }
 
   Widget _buildBubble(_Msg msg) {
+    // Kartu dosis harian sudah tampil menetap di atas chat; sembunyikan versi
+    // di dalam gelembung agar hasil diagnosa tidak dobel.
+    final blocks = _dailyDose == null
+        ? msg.blocks
+        : msg.blocks
+            .where((b) => !(b is Map && b['type'] == 'dose'))
+            .toList();
     final isUser = msg.role == 'user';
     if (isUser) {
       return Align(
@@ -2026,7 +2044,7 @@ class _BusinessDoctorScreenState extends ConsumerState<BusinessDoctorScreen> {
               borderRadius: BorderRadius.circular(AppTheme.radiusLarge),
               border: Border.all(color: AppTheme.borderColor),
             ),
-            child: msg.blocks.isEmpty
+            child: blocks.isEmpty
                 ? Text(
                     msg.text.isEmpty ? 'Maaf, tidak ada jawaban.' : msg.text,
                     style: GoogleFonts.plusJakartaSans(
@@ -2036,7 +2054,7 @@ class _BusinessDoctorScreenState extends ConsumerState<BusinessDoctorScreen> {
                     ),
                   )
                 : DoctorBlocks(
-                    blocks: msg.blocks,
+                    blocks: blocks,
                     onChoice: _send,
                     onAction: _handleAction,
                     onPrescription: _onPrescriptionStep,
