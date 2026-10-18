@@ -1240,7 +1240,7 @@ Commit `ff04bb3` (main) + deploy web gh-pages `050051c` (live md5
   `KEY_ALIAS`, `KEY_PASSWORD`), build APK split-per-abi + AAB, checksum SHA-256,
   `apksigner verify`, artifact `apk-release`/`aab-release`, input
   `debug_sign_fallback` untuk build tanpa secret.
-- Label aplikasi diperbaiki: `android:label="KasirGo"` (commit `6e1f0a9`).
+- Label aplikasi diperbaiki: `android:label="KasirGo"` (commit `e84d571`).
 - BLOCKER: token git credential = GitHub App installation token -> PUT
   `/actions/secrets/*` 403. Build dipicu `debug_sign_fallback=true`
   (run `39144383963` SUKSES), lalu ditandatangani ulang LOKAL:
