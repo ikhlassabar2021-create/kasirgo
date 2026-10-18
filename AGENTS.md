@@ -1223,3 +1223,8 @@ Commit `ff04bb3` (main) + deploy web gh-pages `050051c` (live md5
   `libmlkit_google_ocr_pipeline.so` 11,1 MB + model OCR, `libface_detector_v2_jni.so`
   8,5 MB, `libbarhopper_v3.so` (barcode) 4,9 MB. Melepas seluruh ML Kit hanya
   menurunkan ke ~28 MB.
+
+### Keputusan Bos: APK tetap fitur lengkap
+- Bos memilih opsi 1 (pertahankan semua fitur, ~58 MB arm64). Tidak ada
+  pemangkasan ML Kit. Release `v1.0.2-apk-20261018` = versi rilis resmi saat ini.
+- Link terverifikasi HTTP 200 (arm64/armeabi-v7a/x86_64).
