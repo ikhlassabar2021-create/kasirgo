@@ -1,7 +1,8 @@
 name: Release APK
 
-# Build APK rilis di CI (BUKAN di mesin pengembang/sandbox).
+# Build APK + AAB rilis BERTANDA TANGAN di CI (BUKAN di mesin pengembang/sandbox).
 # Jalankan: push tag v* atau picu manual dari tab Actions.
+# Secret wajib: KEYSTORE_BASE64, KEYSTORE_PASSWORD, KEY_ALIAS, KEY_PASSWORD.
 
 on:
   push:
@@ -29,16 +30,56 @@ jobs:
 
       - run: flutter pub get
 
-      # Obfuscate Dart + split per ABI (target: tiap APK < 10MB).
-      # WAJIB sebelum publish: pasang keystore rilis sendiri (lihat
-      # docs/RELEASE.md -- signingConfig debug hanya untuk uji coba).
+      # Keystore rilis dari secret (base64) -> file sementara, tidak masuk repo.
+      - name: Siapkan keystore rilis
+        env:
+          KEYSTORE_BASE64: ${{ secrets.KEYSTORE_BASE64 }}
+          KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
+          KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
+        run: |
+          if [ -z "$KEYSTORE_BASE64" ]; then
+            echo "::error::Secret KEYSTORE_BASE64 kosong - build rilis dibatalkan."
+            exit 1
+          fi
+          echo "$KEYSTORE_BASE64" | base64 -d > android/app/kasirgo-release.p12
+          cat > android/key.properties <<EOF
+          storeFile=kasirgo-release.p12
+          storePassword=$KEYSTORE_PASSWORD
+          keyAlias=$KEY_ALIAS
+          keyPassword=$KEY_PASSWORD
+          EOF
+
+      # Obfuscate Dart + split per ABI.
       - run: >
           flutter build apk --release --split-per-abi --obfuscate
           --split-debug-info=build/debug-info
+
+      - run: >
+          flutter build appbundle --release --obfuscate
+          --split-debug-info=build/debug-info
+
+      - name: Checksum SHA-256
+        run: |
+          cd build/app/outputs
+          sha256sum flutter-apk/*-release.apk bundle/release/*.aab > checksums.txt
+          cat checksums.txt
+
+      - name: Verifikasi tanda tangan
+        run: |
+          APK=build/app/outputs/flutter-apk/app-arm64-v8a-release.apk
+          APKSIGNER=$(find "$ANDROID_HOME/build-tools" -name apksigner -type f | sort -V | tail -1)
+          "$APKSIGNER" verify --print-certs "$APK" | head -5
 
       - uses: actions/upload-artifact@v4
         with:
           name: apk-release
           path: |
             kasirgo/build/app/outputs/flutter-apk/*-release.apk
+            kasirgo/build/app/outputs/checksums.txt
             kasirgo/build/debug-info/
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: aab-release
+          path: kasirgo/build/app/outputs/bundle/release/*.aab
