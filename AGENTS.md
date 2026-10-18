@@ -1182,3 +1182,26 @@ Commit `ff04bb3` (main) + deploy web gh-pages `050051c` (live md5
     Toko Baju, Apotek, Gerobak, Lainnya. Catatan: klik label `Tipe Usaha`
     (bukan tombol "Simpan Tipe Usaha") untuk membuka sheet.
 - Data uji `ORD26101700040..42` sudah dihapus; `orders_left=0`, orphan 0.
+
+## Sesi 2026-10-18 (2): Dedupe Dokter Bisnis + Opsi Diantar + Bersih 2 Akun (SELESAI)
+- FIX DUPLIKASI DOKTER BISNIS (server): `supabase/functions/business_doctor_chat/index.ts`
+  merge blok kini dedupe singleton `dose`/`prescription` (versi server menang:
+  `blocks = blocks.filter(b => b?.type !== s.type)`). EF SUDAH dideploy. Uji EF live:
+  200, 3 blok (`text,prescription,dose`), masing-masing 1.
+- FIX RENDER GANDA (app): `business_doctor_screen.dart` `_buildBubble` menyaring blok
+  `dose` bila `_dailyDose != null`; getter `_chatShowsRecipe`; kartu `_activePrescription`
+  di `_buildList` hanya tampil bila chat belum memuat peta resep.
+  Verifikasi Playwright: `JALANKAN_COUNT 1`, `TUTUP_COUNT 1` (tidak dobel).
+- FIX OPSI "DIANTAR" HILANG: `Cart.hasDelivery` + `Cart.empty`; `CartNotifier.add`
+  menerima `hasDelivery` dan `setQty`/`remove` mempertahankannya; `buyer_home_tab`
+  `_addToCart` mengirim `outlet.hasDelivery`; `_CartSheet` -> checkout memakai
+  `outlet?.hasDelivery ?? cart.hasDelivery`. Verifikasi data: `nearby_outlets`
+  Toko Test `true`, Gerobak Test `false`. Playwright `delivery_final.js`:
+  `HAS_DIANTAR true`, `HAS_AMBIL true`.
+- HAPUS 2 AKUN (disetujui Bos): `sabarberkah2017@gmail.com` + `marketingaps2016@gmail.com`
+  via Management API; cascade 3 outlet kosong. Sisa users 27, outlets 10.
+- Analyze: `flutter analyze lib` 22 info (0 error/warning).
+- Commit `0ff7d4d` (5 file); deploy web gh-pages `2d078d0`.
+- APK rilis dibangun via GitHub Actions (sandbox TIDAK punya Android SDK/Java;
+  RAM tersisa ~400MB sehingga build lokal tidak layak). Tag `v1.0.0-apk-20261018`
+  memicu workflow `release-apk.yml` (`--split-per-abi --obfuscate`).
