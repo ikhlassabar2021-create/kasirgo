@@ -295,9 +295,20 @@ class SupporterService {
       }
     } catch (_) {}
 
-    // Lengkapi status + end date dari tabel supporters (aktif terbaru).
+    // Lengkapi status + end date dari tabel supporters. Baris `pending` baru
+    // (mis. checkout yang belum dibayar) TIDAK boleh menutupi langganan
+    // `active` yang masih berjalan: cari baris aktif dulu, baru fallback ke
+    // baris terbaru untuk keperluan status tampilan.
     try {
-      final sup = await _client
+      Map<String, dynamic>? sup = await _client
+          .from('supporters')
+          .select('tier, status, start_date, end_date')
+          .eq('outlet_id', outletId)
+          .eq('status', 'active')
+          .order('start_date', ascending: false)
+          .limit(1)
+          .maybeSingle();
+      sup ??= await _client
           .from('supporters')
           .select('tier, status, start_date, end_date')
           .eq('outlet_id', outletId)
