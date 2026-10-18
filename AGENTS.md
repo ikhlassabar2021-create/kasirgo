@@ -1162,3 +1162,23 @@ Commit `ff04bb3` (main) + deploy web gh-pages `050051c` (live md5
   KasirGo (Rp50.000/bulan)" + tombol "Beli Sekarang". (Gerobak Test sudah diuji
   sesi sebelumnya.)
 - Data uji order: `ORD26101700040`, `ORD26101700041` (REST), `ORD26101700042` (UI).
+
+## Sesi 2026-10-18: Fix Gate Palsu Owner Aktif + Verifikasi Dropdown Lapak Live (SELESAI)
+- ROOT CAUSE gate Program Pendukung muncul untuk outlet yang SUDAH berlangganan:
+  `SupporterService.getEntitlements` mengambil baris `supporters` TERBARU
+  (`order start_date desc limit 1`) TANPA filter status. Baris `pending` baru
+  (checkout belum dibayar, Toko Test 2026-10-17 20:59) menutupi baris `active`
+  (2026-10-10 s/d 2026-11-09) -> `isSupporter=false` -> `hasAccess=false`.
+- FIX `lib/services/supporter_service.dart`: query baris `status='active'`
+  lebih dulu, fallback ke baris terbaru hanya untuk status tampilan.
+  `flutter analyze` file bersih. Commit `4543d74`.
+- Deploy web: build release + gh-pages `225da11` (md5 `main.dart.js`
+  `c4e64ae47345e624f9a076e4dee8d729`).
+- VERIFIKASI LIVE (Playwright, serviceWorkers block + cache-bust):
+  - Owner Toko Test login -> "Lapak Live" TERBUKA, tidak ada dialog Pendukung
+    (`gate dialog present: false`, `gate after click: false`).
+  - Dropdown "Tipe Usaha" membuka bottom sheet berisi 12 opsi: Warung Sembako,
+    Warung Madura, Kelontong, Retail, Cafe, Restoran, Kedai Kopi, Minimarket,
+    Toko Baju, Apotek, Gerobak, Lainnya. Catatan: klik label `Tipe Usaha`
+    (bukan tombol "Simpan Tipe Usaha") untuk membuka sheet.
+- Data uji `ORD26101700040..42` sudah dihapus; `orders_left=0`, orphan 0.
