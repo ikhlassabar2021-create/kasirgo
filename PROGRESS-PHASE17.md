@@ -98,6 +98,21 @@ Sumber spec: `KASIRGO-WORKFLOW-LENGKAP.md` BAGIAN 17 (SUB-TASK ~2943; ST17-1..ST
   (target per ABI < 10MB, kebijakan existing).
 - `dart analyze` file tersentuh: hanya info pre-existing (bukan blocker).
 
+### KDS Menampilkan Pesanan Online + Update Status Dapur - SELESAI
+- `screens/modules/kitchen_display_screen.dart`: `KitchenOrder.source` (`dine_in`/`online`),
+  realtime channel `owner-kds-$outletId` ikut subscribe `orders`, `_loadOnlineOrders()` baca
+  `OrderService.listOrders(outletId, paymentStatus: 'divalidasi', limit: 30)` difilter hari ini
+  + status `baru|diproses|siap`; badge `ONLINE`; tombol status berhenti di `ready`
+  (`SIAP - TUNGGU KASIR`) karena penutupan order dilakukan kasir (`complete_order`).
+- Commit `89fc628`; deploy web gh-pages `3157c6c` (bundle live memuat "TUNGGU KASIR").
+- VERIFIKASI LIVE (Playwright gh-pages, outlet Toko Test sementara `type=Cafe`):
+  - Kartu pesanan online tampil: `ORD26101909999 / ONLINE / Ambil di toko / DIMASAK / TANDAI SIAP SAJI`.
+  - Klik status -> `SIAP SAJI` + label tombol `SIAP - TUNGGU KASIR`; DB `orders.status` = `siap`.
+  - Login role kitchen (`+kokitest`) langsung masuk KDS dan melihat kartu yang sama;
+    REST PATCH status oleh role kitchen -> 200 (RLS `is_outlet_member` OK). `ERRORS 0`.
+  - Cleanup: order + order_item uji dihapus; `outlets.type` Toko Test dikembalikan
+    ke `Warung Sembako`.
+
 ## Catatan
 - `flutter_map`/`latlong2`/`geolocator` TIDAK dipasang (hemat token Phase 17); radar `CustomPaint`.
 - Supabase Storage TIDAK dipakai (q30 `[]`); bukti transfer LOKAL; thumbnail online opt-in R2.
