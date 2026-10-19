@@ -73,6 +73,14 @@ class ModuleConfig {
       BusinessModule.shifts,
       BusinessModule.dailyDigest,
     },
+    // Jasa (bengkel, cukur, servis, laundry): POS + stok suku cadang.
+    // Tanpa QR Meja, KDS, resep, PPOB, kulakan B2B.
+    'jasa': {
+      BusinessModule.pos,
+      BusinessModule.inventory,
+      BusinessModule.shifts,
+      BusinessModule.dailyDigest,
+    },
   };
 
   /// Memetakan label tipe usaha (yang dipilih saat daftar) ke kunci modul.
@@ -108,6 +116,18 @@ class ModuleConfig {
     'gerobak': 'gerobak',
     'gerobak keliling': 'gerobak',
     'food truck': 'gerobak',
+    'jasa': 'jasa',
+    'jasa servis': 'jasa',
+    'service': 'jasa',
+    'servis': 'jasa',
+    'bengkel': 'jasa',
+    'cukur': 'jasa',
+    'salon': 'jasa',
+    'barbershop': 'jasa',
+    'laundry': 'jasa',
+    'reparasi': 'jasa',
+    'perbaikan': 'jasa',
+    'montir': 'jasa',
     'lainnya': 'kelontong',
   };
 
@@ -140,6 +160,14 @@ class ModuleConfig {
     ('baju', 'retail'),
     ('butik', 'retail'),
     ('retail', 'retail'),
+    ('jasa', 'jasa'),
+    ('servis', 'jasa'),
+    ('service', 'jasa'),
+    ('bengkel', 'jasa'),
+    ('cukur', 'jasa'),
+    ('salon', 'jasa'),
+    ('laundry', 'jasa'),
+    ('reparasi', 'jasa'),
   ];
 
   /// Normalisasi tipe usaha bebas -> kunci modul yang dikenal.

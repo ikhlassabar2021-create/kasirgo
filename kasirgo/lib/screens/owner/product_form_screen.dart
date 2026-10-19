@@ -49,6 +49,7 @@ class _ProductFormScreenState extends ConsumerState<ProductFormScreen> {
     'Rokok',
     'Kebersihan',
     'Kesehatan',
+    'Jasa',
     'Lainnya',
   ];
 
@@ -70,6 +71,7 @@ class _ProductFormScreenState extends ConsumerState<ProductFormScreen> {
   DateTime? _discountStartDate;
   DateTime? _discountEndDate;
   bool _isFlashSale = false;
+  bool _isService = false;
   String? _existingDiscountId;
 
   @override
@@ -85,6 +87,7 @@ class _ProductFormScreenState extends ConsumerState<ProductFormScreen> {
     _barcodeController = TextEditingController(text: p?.barcode ?? '');
     _unitController = TextEditingController(text: p?.unit ?? 'pcs');
     _selectedCategory = p?.category ?? 'Makanan';
+    _isService = p?.isService ?? false;
     if (_selectedCategory != null && !_categories.contains(_selectedCategory)) {
       _categories.add(_selectedCategory!);
     }
@@ -437,13 +440,14 @@ class _ProductFormScreenState extends ConsumerState<ProductFormScreen> {
       barcode: _barcodeController.text.trim().isEmpty ? null : _barcodeController.text.trim(),
       costPrice: double.tryParse(_costPriceController.text),
       basePrice: double.tryParse(_priceController.text) ?? 0.0,
-      stock: int.tryParse(_stockController.text) ?? 0,
+      stock: _isService ? 0 : (int.tryParse(_stockController.text) ?? 0),
       unit: _unitController.text.trim().isEmpty ? 'pcs' : _unitController.text.trim(),
       expiredDate: _expiredDate,
       imageLocalPath: kIsWeb ? null : _imageLocalPath,
       thumbKey: widget.product?.thumbKey,
       isActive: true,
       hasVariants: false,
+      isService: _isService,
     );
 
     final service = SupabaseService();
@@ -1111,16 +1115,31 @@ class _ProductFormScreenState extends ConsumerState<ProductFormScreen> {
                       ],
                     ),
                     const SizedBox(height: 12),
+                    SwitchListTile(
+                      contentPadding: EdgeInsets.zero,
+                      title: const Text('Produk Jasa / Layanan',
+                          style: TextStyle(fontSize: 13)),
+                      subtitle: const Text(
+                          'Tanpa stok (bengkel, cukur, servis, laundry)',
+                          style: TextStyle(fontSize: 11)),
+                      value: _isService,
+                      onChanged: (val) => setState(() => _isService = val),
+                      activeThumbColor: AppTheme.accentColor,
+                    ),
+                    const SizedBox(height: 12),
                     Row(
                       children: [
                         Expanded(
                           child: TextFormField(
                             controller: _stockController,
+                            enabled: !_isService,
                             keyboardType: TextInputType.number,
-                            validator: (v) => Validators.positiveNumber(v, 'Stok'),
-                            decoration: const InputDecoration(
-                              labelText: 'Stok *',
-                              prefixIcon: Icon(Icons.warehouse),
+                            validator: (v) => _isService
+                                ? null
+                                : Validators.positiveNumber(v, 'Stok'),
+                            decoration: InputDecoration(
+                              labelText: _isService ? 'Stok (tidak dipakai)' : 'Stok *',
+                              prefixIcon: const Icon(Icons.warehouse),
                             ),
                           ),
                         ),

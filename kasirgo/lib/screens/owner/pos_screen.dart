@@ -241,7 +241,7 @@ class _PosScreenState extends ConsumerState<PosScreen> {
   }
 
   Future<void> _addToCart(Product product) async {
-    if (product.stock <= 0) {
+    if (product.stock <= 0 && !product.isService) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Stok produk habis'), backgroundColor: AppTheme.errorColor),
       );

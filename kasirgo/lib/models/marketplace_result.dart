@@ -21,6 +21,7 @@ class MarketplaceResult {
   final double? distanceKm;
   final bool hasDelivery;
   final bool isOpen;
+  final bool isService;
 
   const MarketplaceResult({
     required this.outletId,
@@ -35,6 +36,7 @@ class MarketplaceResult {
     this.distanceKm,
     this.hasDelivery = false,
     this.isOpen = false,
+    this.isService = false,
   });
 
   factory MarketplaceResult.fromJson(Map<String, dynamic> json) {
@@ -53,6 +55,7 @@ class MarketplaceResult {
           : _toDouble(json['distance_km']),
       hasDelivery: json['has_delivery'] == true,
       isOpen: json['is_open'] == true,
+      isService: json['is_service'] == true,
     );
   }
 
@@ -73,6 +76,7 @@ class MarketplaceResult {
         stock: stock,
         unit: unit,
         isPublished: true,
+        isService: isService,
       );
 
   /// Ubah ke [NearbyOutlet] agar bisa membuka katalog outlet terkait.

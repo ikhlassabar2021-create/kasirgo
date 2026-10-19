@@ -284,7 +284,7 @@ class AIEngine {
     final suggestions = <Map<String, dynamic>>[];
 
     for (final product in products) {
-      if (product.stock <= 0) continue;
+      if (product.stock <= 0 && !product.isService) continue;
 
       final lastSold = lastSaleDateMap[product.id];
       final referenceDate = lastSold ?? product.updatedAt ?? product.createdAt ?? DateTime.fromMillisecondsSinceEpoch(0);

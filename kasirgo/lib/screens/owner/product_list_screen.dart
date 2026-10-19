@@ -196,12 +196,16 @@ class _ProductListScreenState extends ConsumerState<ProductListScreen> {
     );
   }
 
-  Widget _buildStockBadge(int stock, String? unit) {
+  Widget _buildStockBadge(int stock, String? unit, {bool isService = false}) {
     Color bg;
     Color text;
     String label;
 
-    if (stock <= 0) {
+    if (isService) {
+      bg = AppTheme.accentColor.withValues(alpha: 0.18);
+      text = AppTheme.accentColor;
+      label = 'Layanan';
+    } else if (stock <= 0) {
       bg = AppTheme.errorColor.withValues(alpha: 0.18);
       text = AppTheme.errorColor;
       label = 'Habis (0)';
@@ -463,7 +467,8 @@ class _ProductListScreenState extends ConsumerState<ProductListScreen> {
                                                           color: AppTheme.accentColor,
                                                         ),
                                                       ),
-                                                      _buildStockBadge(product.stock, product.unit),
+                                                      _buildStockBadge(product.stock, product.unit,
+                                                          isService: product.isService),
                                                     ],
                                                   ),
                                                 ],

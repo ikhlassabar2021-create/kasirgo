@@ -70,10 +70,18 @@ class LocalDatabase {
         image_local_path TEXT,
         thumb_key TEXT,
         is_active INTEGER DEFAULT 1,
+        is_service INTEGER DEFAULT 0,
         created_at TEXT,
         updated_at TEXT
       )
     ''');
+
+    // Migrasi aditif: DB lama belum punya kolom is_service.
+    final productCols = _db!.select('PRAGMA table_info(products)');
+    if (!productCols.any((c) => c['name'] == 'is_service')) {
+      _db!.execute(
+          'ALTER TABLE products ADD COLUMN is_service INTEGER DEFAULT 0');
+    }
 
     _db!.execute('''
       CREATE TABLE IF NOT EXISTS transactions (
@@ -191,13 +199,13 @@ class LocalDatabase {
   void insertProduct(Product product) {
     _ensureDb.execute(
       '''INSERT OR REPLACE INTO products 
-      (id, outlet_id, name, category, price, cost_price, stock, unit, barcode, image_local_path, thumb_key, is_active, created_at, updated_at) 
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)''',
+      (id, outlet_id, name, category, price, cost_price, stock, unit, barcode, image_local_path, thumb_key, is_active, is_service, created_at, updated_at) 
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)''',
       [
         product.id, product.outletId, product.name, product.category,
         product.price, product.costPrice, product.stock, product.unit,
         product.barcode, product.imageLocalPath, product.thumbKey,
-        product.isActive ? 1 : 0,
+        product.isActive ? 1 : 0, product.isService ? 1 : 0,
         product.createdAt?.toIso8601String(),
         product.updatedAt?.toIso8601String(),
       ],
@@ -207,12 +215,13 @@ class LocalDatabase {
   void updateProduct(Product product) {
     _ensureDb.execute(
       '''UPDATE products SET name=?, category=?, price=?, cost_price=?, stock=?, 
-      unit=?, barcode=?, image_local_path=?, thumb_key=?, is_active=?, 
+      unit=?, barcode=?, image_local_path=?, thumb_key=?, is_active=?, is_service=?, 
       updated_at=? WHERE id=?''',
       [
         product.name, product.category, product.price, product.costPrice,
         product.stock, product.unit, product.barcode, product.imageLocalPath,
         product.thumbKey, product.isActive ? 1 : 0,
+        product.isService ? 1 : 0,
         product.updatedAt?.toIso8601String(), product.id,
       ],
     );

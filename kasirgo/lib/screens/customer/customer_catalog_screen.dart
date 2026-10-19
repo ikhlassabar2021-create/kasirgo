@@ -501,7 +501,7 @@ class _CustomerCatalogScreenState extends State<CustomerCatalogScreen> {
   }
 
   Widget _buildProductCard(Product product) {
-    final isOut = product.stock <= 0;
+    final isOut = product.stock <= 0 && !product.isService;
     return Material(
       color: AppTheme.surfaceColor,
       borderRadius: BorderRadius.circular(14),
@@ -540,7 +540,9 @@ class _CustomerCatalogScreenState extends State<CustomerCatalogScreen> {
                         padding: const EdgeInsets.symmetric(
                             horizontal: 7, vertical: 3),
                         decoration: BoxDecoration(
-                          color: isOut
+                          color: product.isService
+                              ? AppTheme.accentColor
+                              : isOut
                               ? AppTheme.errorColor
                               : product.stock <= 10
                                   ? AppTheme.warningColor
@@ -548,7 +550,9 @@ class _CustomerCatalogScreenState extends State<CustomerCatalogScreen> {
                           borderRadius: BorderRadius.circular(8),
                         ),
                         child: Text(
-                          isOut
+                          product.isService
+                              ? 'LAYANAN'
+                              : isOut
                               ? 'HABIS'
                               : '${product.stock} ${product.unit ?? 'pcs'}',
                           style: const TextStyle(

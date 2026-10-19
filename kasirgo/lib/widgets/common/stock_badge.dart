@@ -6,21 +6,25 @@ class StockBadge extends StatelessWidget {
   final int stock;
   final bool showLabel;
   final bool compact;
+  final bool isService;
 
   const StockBadge({
     super.key,
     required this.stock,
     this.showLabel = false,
     this.compact = true,
+    this.isService = false,
   });
 
   Color get _color {
+    if (isService) return AppTheme.accentColor;
     if (stock <= 0) return AppTheme.errorColor;
     if (stock <= 10) return AppTheme.warningColor;
     return AppTheme.successColor;
   }
 
   String get _text {
+    if (isService) return showLabel ? 'Layanan' : 'Svc';
     if (showLabel) {
       if (stock <= 0) return 'Habis';
       return 'Stok $stock';

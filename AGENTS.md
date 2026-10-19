@@ -1252,3 +1252,20 @@ Commit `ff04bb3` (main) + deploy web gh-pages `050051c` (live md5
 - Prosedur + checklist Play Console: `docs/RELEASE.md`.
 - TINDAK LANJUT MANUSIA: (1) isi 4 GitHub Secrets agar CI langsung signed,
   (2) backup keystore + password (hilang = tak bisa update app).
+
+### Tipe Usaha "Jasa" + Produk Layanan Tanpa Stok (19 Okt 2026) - SELESAI
+- Migrasi `docs/migrations/2026-10-19-kasirgo-jasa-service-products.sql` (DITERAPKAN):
+  `products.is_service BOOLEAN NOT NULL DEFAULT false` + index
+  `idx_products_outlet_is_service`; `decrement_stock()` skip produk layanan;
+  `get_public_catalog`/`get_public_menu`/`search_marketplace` mengembalikan
+  `is_service` dan meloloskan produk layanan walau `stock=0`.
+- Client: `AppConstants.businessTypes` + "Jasa"; `ModuleConfig` modul/alias/contains
+  `jasa`; `Product.isService`; form produk toggle "Produk Jasa / Layanan" (stok
+  disabled, tersimpan `isService`); guard stok di POS/katalog/keranjang/AI engine
+  skip layanan; badge "Layanan" di daftar produk, grid POS, katalog pelanggan;
+  `MarketplaceResult.isService`; SQLite lokal kolom `is_service` (migrasi aditif).
+- Verifikasi live Playwright: produk layanan `stock=0` tetap tampil di POS dengan
+  badge "Layanan" + bisa masuk keranjang tanpa error stok; `get_public_catalog` &
+  `get_public_menu` memuat produk layanan stok 0. Data uji dikembalikan ke semula.
+- Build web release + deploy gh-pages commit `abb7e64` (sebelumnya `2d078d0`).
+- Commit kode+migrasi: `2ffbfa5` (main).

@@ -129,10 +129,10 @@ class _CustomerOrderScreenState extends State<CustomerOrderScreen> {
   }
 
   void _add(Product product) {
-    if (product.stock <= 0) return;
+    if (product.stock <= 0 && !product.isService) return;
     final index = _cart.indexWhere((item) => item.productId == product.id);
     final current = index < 0 ? 0 : _cart[index].quantity;
-    if (current >= product.stock) {
+    if (!product.isService && current >= product.stock) {
       _notify('Stok ${product.name} tersisa ${product.stock}',
           AppTheme.warningColor);
       return;
@@ -760,7 +760,7 @@ class _CustomerOrderScreenState extends State<CustomerOrderScreen> {
   Widget _buildProductCard(Product product) {
     final qty = _qtyOf(product.id);
     final inCart = qty > 0;
-    final isOut = product.stock <= 0;
+    final isOut = product.stock <= 0 && !product.isService;
 
     return Material(
       color: AppTheme.surfaceColor,
@@ -806,7 +806,9 @@ class _CustomerOrderScreenState extends State<CustomerOrderScreen> {
                           padding: const EdgeInsets.symmetric(
                               horizontal: 7, vertical: 3),
                           decoration: BoxDecoration(
-                            color: isOut
+                            color: product.isService
+                                ? AppTheme.accentColor
+                                : isOut
                                 ? AppTheme.errorColor
                                 : product.stock <= 10
                                     ? AppTheme.warningColor
@@ -814,7 +816,9 @@ class _CustomerOrderScreenState extends State<CustomerOrderScreen> {
                             borderRadius: BorderRadius.circular(8),
                           ),
                           child: Text(
-                            isOut
+                            product.isService
+                                ? 'LAYANAN'
+                                : isOut
                                 ? 'HABIS'
                                 : '${product.stock} ${product.unit ?? 'pcs'}',
                             style: const TextStyle(

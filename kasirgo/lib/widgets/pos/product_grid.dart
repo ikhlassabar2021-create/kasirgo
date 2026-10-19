@@ -127,7 +127,7 @@ class _ProductCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final isOutOfStock = product.stock <= 0;
+    final isOutOfStock = product.stock <= 0 && !product.isService;
     final hasInCart = inCartQty > 0;
     final hasDiscount = discountBadge != null && discountBadge!.isNotEmpty;
 
@@ -223,11 +223,15 @@ class _ProductCard extends StatelessWidget {
                             ],
                             const SizedBox(height: 1),
                             Text(
-                              isOutOfStock
-                                  ? 'Habis'
-                                  : 'Stok ${product.stock}',
+                              product.isService
+                                  ? 'Layanan'
+                                  : isOutOfStock
+                                      ? 'Habis'
+                                      : 'Stok ${product.stock}',
                               style: GoogleFonts.plusJakartaSans(
-                                color: product.stock <= 0
+                                color: product.isService
+                                    ? AppTheme.accentColor
+                                    : product.stock <= 0
                                     ? AppTheme.errorColor
                                     : product.stock <= 10
                                         ? AppTheme.warningColor
@@ -251,7 +255,7 @@ class _ProductCard extends StatelessWidget {
                             variant: AppBadgeVariant.danger,
                             compact: true,
                           )
-                        : StockBadge(stock: product.stock),
+                        : StockBadge(stock: product.stock, isService: product.isService),
                   ),
                   if (hasInCart)
                     Positioned(

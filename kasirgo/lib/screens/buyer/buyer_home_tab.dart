@@ -664,7 +664,7 @@ class _BuyerHomeTabState extends ConsumerState<BuyerHomeTab> {
   Widget _buildSearchResultCard(MarketplaceResult r) {
     final cart = ref.watch(cartProvider);
     final qty = cart.outletId == r.outletId ? cart.qtyOf(r.productId) : 0;
-    final isOut = r.stock <= 0;
+    final isOut = r.stock <= 0 && !r.isService;
     return AppCard(
       onTap: () => _openSearchResult(r),
       child: Row(
@@ -745,7 +745,11 @@ class _BuyerHomeTabState extends ConsumerState<BuyerHomeTab> {
                       icon: isOut
                           ? Icons.remove_shopping_cart_rounded
                           : Icons.inventory_2_rounded,
-                      label: isOut ? 'Stok habis' : 'Stok ${r.stock}',
+                      label: r.isService
+                          ? 'Layanan'
+                          : isOut
+                              ? 'Stok habis'
+                              : 'Stok ${r.stock}',
                     ),
                   ],
                 ),
@@ -1325,7 +1329,7 @@ class _ProductCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final isOut = product.stock <= 0;
+    final isOut = product.stock <= 0 && !product.isService;
     return Container(
       decoration: BoxDecoration(
         color: AppTheme.surfaceColor,
@@ -1408,7 +1412,11 @@ class _ProductCard extends StatelessWidget {
                   ),
                   const Spacer(),
                   Text(
-                    isOut ? 'Stok habis' : 'Stok ${product.stock}',
+                    product.isService
+                        ? 'Layanan'
+                        : isOut
+                            ? 'Stok habis'
+                            : 'Stok ${product.stock}',
                     style: GoogleFonts.plusJakartaSans(
                       fontSize: 11,
                       color: isOut ? AppTheme.errorColor : AppTheme.textSecondary,

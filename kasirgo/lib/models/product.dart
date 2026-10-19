@@ -14,6 +14,7 @@ class Product {
   final bool isActive;
   final bool hasVariants;
   final bool isPublished;
+  final bool isService;
   final DateTime? createdAt;
   final DateTime? updatedAt;
 
@@ -36,6 +37,7 @@ class Product {
     this.isActive = true,
     this.hasVariants = false,
     this.isPublished = false,
+    this.isService = false,
     this.createdAt,
     this.updatedAt,
   }) : basePrice = basePrice ?? price ?? 0.0;
@@ -63,6 +65,7 @@ class Product {
           : (json['is_active'] == true || json['is_active'] == 1),
       hasVariants: json['has_variants'] == true,
       isPublished: json['is_published'] == true,
+      isService: json['is_service'] == true,
       createdAt: json['created_at'] != null
           ? DateTime.tryParse(json['created_at'].toString())
           : null,
@@ -84,6 +87,7 @@ class Product {
       'thumb_key': thumbKey,
       'has_variants': hasVariants,
       'is_published': isPublished,
+      'is_service': isService,
     };
     if (includeId && id.isNotEmpty) {
       data['id'] = id;
@@ -114,6 +118,7 @@ class Product {
       'thumb_key': thumbKey,
       'is_active': isActive ? 1 : 0,
       'has_variants': hasVariants ? 1 : 0,
+      'is_service': isService ? 1 : 0,
       'created_at': createdAt?.toIso8601String(),
       'updated_at': updatedAt?.toIso8601String(),
     };
@@ -140,6 +145,7 @@ class Product {
       isActive: map['is_active'] == 1 || map['is_active'] == true,
       hasVariants: map['has_variants'] == 1 || map['has_variants'] == true,
       isPublished: map['is_published'] == 1 || map['is_published'] == true,
+      isService: map['is_service'] == 1 || map['is_service'] == true,
       createdAt: map['created_at'] != null
           ? DateTime.tryParse(map['created_at'].toString())
           : null,
@@ -166,6 +172,7 @@ class Product {
     bool? isActive,
     bool? hasVariants,
     bool? isPublished,
+    bool? isService,
     DateTime? createdAt,
     DateTime? updatedAt,
   }) {
@@ -185,6 +192,7 @@ class Product {
       isActive: isActive ?? this.isActive,
       hasVariants: hasVariants ?? this.hasVariants,
       isPublished: isPublished ?? this.isPublished,
+      isService: isService ?? this.isService,
       createdAt: createdAt ?? this.createdAt,
       updatedAt: updatedAt ?? this.updatedAt,
     );
