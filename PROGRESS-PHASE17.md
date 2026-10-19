@@ -148,6 +148,29 @@ Sumber spec: `KASIRGO-WORKFLOW-LENGKAP.md` BAGIAN 17 (SUB-TASK ~2943; ST17-1..ST
   dengan `validated_at`/`validated_by` NULL.
 - Tidak ada perubahan build web -> tidak perlu deploy gh-pages.
 
+### Perbaikan Semantik Tombol Kartu Pesanan (a11y) - SELESAI
+- Akar masalah: `BubbleButton` (`lib/widgets/common/bubble_glass.dart`) membungkus
+  isinya dengan `Semantics(button: true, ...)` TANPA `container: true`. Pada kartu
+  yang hanya punya SATU tombol aksi (chip "Aktif"), semantik tombol melebur ke node
+  kartu induk -> kartu terpapar `role=button` dan tombol "Selesai" tak punya node
+  sendiri (tak bisa diklik via selector semantik / pembaca layar).
+- Fix: tambah `container: true` pada `Semantics` di `_BubbleButtonState.build`
+  (berlaku untuk semua kartu, bukan tambal per layar).
+- Test regresi baru `test/bubble_button_semantics_test.dart` (3 test): tombol tunggal
+  tetap node terpisah dari kartu, dua tombol tetap terpisah, tombol disabled
+  melaporkan `isEnabled == Tristate.isFalse`. Terbukti GAGAL tanpa fix, LULUS
+  dengan fix (`+3 All tests passed`). `flutter analyze` 2 file bersih.
+- VERIFIKASI LIVE (Playwright gh-pages, `/workspace/e2e/a11y_semantics_verify.mjs`):
+  fixture order `ORD26101907777` (Toko Test, pickup, 2 x __QA_A11Y__ Rp10.000)
+  divalidasi -> chip "Aktif" -> kartu terpapar `role=group` (BUKAN button) dengan
+  `aria-label` berisi data pesanan, dan "Selesai" menjadi node `role=button`
+  terpisah di dalam kartu -> klik label berhasil: DB `orders.status=selesai`,
+  `transaction_id` terisi; `transactions` `channel=online`, `final_amount=10000`,
+  `status=completed`; `ERRORS 0`. Cleanup penuh (RPC `delete_transaction`,
+  order/order_items/produk/pelanggan) -> residu 0.
+- Deploy web release gh-pages `37b4817` (md5 `main.dart.js`
+  `0d78ae79f501fb42ba7e6a631ebd0134` cocok build lokal).
+
 ## Catatan
 - `flutter_map`/`latlong2`/`geolocator` TIDAK dipasang (hemat token Phase 17); radar `CustomPaint`.
 - Supabase Storage TIDAK dipakai (q30 `[]`); bukti transfer LOKAL; thumbnail online opt-in R2.

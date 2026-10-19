@@ -346,6 +346,7 @@ class _BubbleButtonState extends State<BubbleButton> {
     );
 
     button = Semantics(
+      container: true,
       button: true,
       enabled: enabled,
       child: Focus(
