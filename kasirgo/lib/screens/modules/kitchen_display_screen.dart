@@ -6,6 +6,7 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:supabase_flutter/supabase_flutter.dart' as sb;
 import '../../config/app_theme.dart';
 import '../../providers/auth_provider.dart';
+import '../../services/order_service.dart';
 import '../../services/supabase_service.dart';
 import '../../widgets/common/centennial_background.dart';
 
@@ -20,6 +21,9 @@ class KitchenOrder {
   String status; // 'pending' | 'cooking' | 'ready' | 'served'
   final String? notes;
 
+  /// 'dine_in' (transaksi QR meja) atau 'online' (pesanan dari katalog web).
+  final String source;
+
   KitchenOrder({
     required this.id,
     required this.orderNumber,
@@ -28,6 +32,7 @@ class KitchenOrder {
     required this.items,
     this.status = 'pending',
     this.notes,
+    this.source = 'dine_in',
   });
 }
 
@@ -90,6 +95,17 @@ class _KitchenDisplayScreenState extends ConsumerState<KitchenDisplayScreen> {
           ),
           callback: (_) => _loadRealTransactions(),
         )
+        .onPostgresChanges(
+          event: sb.PostgresChangeEvent.all,
+          schema: 'public',
+          table: 'orders',
+          filter: sb.PostgresChangeFilter(
+            type: sb.PostgresChangeFilterType.eq,
+            column: 'outlet_id',
+            value: outletId,
+          ),
+          callback: (_) => _loadRealTransactions(),
+        )
         .subscribe();
   }
 
@@ -119,8 +135,11 @@ class _KitchenDisplayScreenState extends ConsumerState<KitchenDisplayScreen> {
 
     setState(() => _isLoading = true);
     try {
-      final txs = await SupabaseService()
-          .getDineInOrders(user!.outletId!, limit: 30);
+      final dineInFuture =
+          SupabaseService().getDineInOrders(user!.outletId!, limit: 30);
+      final onlineFuture = _loadOnlineOrders(user.outletId!);
+      final txs = await dineInFuture;
+      final online = await onlineFuture;
       if (mounted) {
         // Hanya pesanan yang SUDAH dikonfirmasi bayar oleh kasir yang
         // diteruskan ke dapur (payment_status != 'unpaid').
@@ -146,7 +165,8 @@ class _KitchenDisplayScreenState extends ConsumerState<KitchenDisplayScreen> {
         setState(() {
           _orders
             ..clear()
-            ..addAll(realOrders);
+            ..addAll(realOrders)
+            ..addAll(online);
         });
       }
     } catch (_) {
@@ -154,6 +174,43 @@ class _KitchenDisplayScreenState extends ConsumerState<KitchenDisplayScreen> {
     } finally {
       if (mounted) setState(() => _isLoading = false);
     }
+  }
+
+  /// Pesanan online (katalog web) yang SUDAH divalidasi kasir dan masih
+  /// diproses dapur. Transaksi baru dibuat saat kasir menekan "Selesaikan"
+  /// (complete_order), jadi dapur hanya menggerakkan status order.
+  Future<List<KitchenOrder>> _loadOnlineOrders(String outletId) async {
+    final orders = await OrderService().listOrders(
+      outletId,
+      paymentStatus: 'divalidasi',
+      limit: 30,
+    );
+    final startOfDay = DateTime.now().toLocal();
+    final dayStart = DateTime(startOfDay.year, startOfDay.month, startOfDay.day);
+    return orders.where((o) {
+      final created = o.createdAt?.toLocal();
+      if (created != null && created.isBefore(dayStart)) return false;
+      return o.status == 'baru' || o.status == 'diproses' || o.status == 'siap';
+    }).map((o) {
+      final isDelivery = o.fulfillment == 'delivery';
+      return KitchenOrder(
+        id: o.id,
+        orderNumber: (o.code?.isNotEmpty ?? false)
+            ? o.code!
+            : '#${o.id.substring(0, o.id.length >= 4 ? 4 : o.id.length).toUpperCase()}',
+        tableNumber: isDelivery ? 'Antar (kurir)' : 'Ambil di toko',
+        orderTime: o.createdAt?.toLocal() ?? DateTime.now(),
+        status: _mapStatus(o.status),
+        notes: o.note,
+        source: 'online',
+        items: o.items
+            .map((i) => KitchenOrderItem(
+                  name: i.nameSnapshot,
+                  quantity: i.qty.round(),
+                ))
+            .toList(),
+      );
+    }).toList();
   }
 
   Color _getStatusColor(String status) {
@@ -191,13 +248,19 @@ class _KitchenDisplayScreenState extends ConsumerState<KitchenDisplayScreen> {
       } else if (order.status == 'cooking') {
         order.status = 'ready';
         dbStatus = 'siap';
-      } else if (order.status == 'ready') {
+      } else if (order.status == 'ready' && order.source != 'online') {
+        // Pesanan online tidak ditutup dari dapur: kasir yang menjalankan
+        // complete_order agar transaksi & pelanggan tercatat.
         order.status = 'served';
         dbStatus = 'selesai';
       }
     });
     if (dbStatus != null && !order.id.startsWith('kds-')) {
-      SupabaseService().setOrderStatus(order.id, dbStatus!);
+      if (order.source == 'online') {
+        OrderService().setOrderStatus(order.id, dbStatus!);
+      } else {
+        SupabaseService().setOrderStatus(order.id, dbStatus!);
+      }
     }
   }
 
@@ -317,13 +380,42 @@ class _KitchenDisplayScreenState extends ConsumerState<KitchenDisplayScreen> {
                                                   color: AppTheme.textPrimary,
                                                 ),
                                               ),
-                                              Text(
-                                                order.tableNumber,
-                                                style: const TextStyle(
-                                                  fontWeight: FontWeight.bold,
-                                                  fontSize: 13,
-                                                  color: AppTheme.primaryColor,
-                                                ),
+                                              Row(
+                                                mainAxisSize: MainAxisSize.min,
+                                                children: [
+                                                  if (order.source == 'online') ...[
+                                                    Container(
+                                                      padding: const EdgeInsets.symmetric(
+                                                          horizontal: 6, vertical: 2),
+                                                      decoration: BoxDecoration(
+                                                        color: AppTheme.primaryColor
+                                                            .withValues(alpha: 0.12),
+                                                        borderRadius:
+                                                            BorderRadius.circular(6),
+                                                      ),
+                                                      child: const Text(
+                                                        'ONLINE',
+                                                        style: TextStyle(
+                                                          fontSize: 9,
+                                                          fontWeight: FontWeight.w800,
+                                                          color: AppTheme.primaryColor,
+                                                        ),
+                                                      ),
+                                                    ),
+                                                    const SizedBox(width: 6),
+                                                  ],
+                                                  Flexible(
+                                                    child: Text(
+                                                      order.tableNumber,
+                                                      overflow: TextOverflow.ellipsis,
+                                                      style: const TextStyle(
+                                                        fontWeight: FontWeight.bold,
+                                                        fontSize: 13,
+                                                        color: AppTheme.primaryColor,
+                                                      ),
+                                                    ),
+                                                  ),
+                                                ],
                                               ),
                                             ],
                                           ),
@@ -446,13 +538,18 @@ class _KitchenDisplayScreenState extends ConsumerState<KitchenDisplayScreen> {
                                             elevation: 0,
                                             shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                                           ),
-                                          onPressed: () => _nextStatus(order),
+                                          onPressed: (order.status == 'ready' &&
+                                                  order.source == 'online')
+                                              ? null
+                                              : () => _nextStatus(order),
                                           child: Text(
                                             order.status == 'pending'
                                                 ? 'MULAI MASAK'
                                                 : order.status == 'cooking'
                                                     ? 'TANDAI SIAP SAJI'
-                                                    : 'SELESAIKAN ORDER',
+                                                    : order.source == 'online'
+                                                        ? 'SIAP - TUNGGU KASIR'
+                                                        : 'SELESAIKAN ORDER',
                                             style: GoogleFonts.plusJakartaSans(fontWeight: FontWeight.w800, fontSize: 13),
                                           ),
                                         ),
