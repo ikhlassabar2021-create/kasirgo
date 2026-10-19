@@ -1268,4 +1268,4 @@ Commit `ff04bb3` (main) + deploy web gh-pages `050051c` (live md5
   badge "Layanan" + bisa masuk keranjang tanpa error stok; `get_public_catalog` &
   `get_public_menu` memuat produk layanan stok 0. Data uji dikembalikan ke semula.
 - Build web release + deploy gh-pages commit `abb7e64` (sebelumnya `2d078d0`).
-- Commit kode+migrasi: `2ffbfa5` (main).
+- Commit kode+migrasi: `333ab15` (main).
