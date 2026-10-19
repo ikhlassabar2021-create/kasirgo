@@ -113,6 +113,41 @@ Sumber spec: `KASIRGO-WORKFLOW-LENGKAP.md` BAGIAN 17 (SUB-TASK ~2943; ST17-1..ST
   - Cleanup: order + order_item uji dihapus; `outlets.type` Toko Test dikembalikan
     ke `Warung Sembako`.
 
+### Kasir Validasi + Selesaikan Pesanan Online (Order -> Transaksi + Pelanggan) - SELESAI
+- Tujuan: verifikasi alur kasir "Pesanan Masuk" di build live gh-pages: order online
+  `belum_konfirmasi` -> "Pembayaran Valid & Proses" (`validate_order_payment`) ->
+  "Selesai" (`complete_order`) -> transaksi + pelanggan otomatis.
+- Fixture uji (Toko Test `229c94d7-...`): produk `__QA_KASIR__` (base_price 5000,
+  stock 10, unpublished), order `ORD26101908888` (`pickup`, total 10000, buyer
+  `QA Kasir` / `089900000123`), item qty 2 line_total 10000.
+- VERIFIKASI LIVE (Playwright gh-pages, `/workspace/e2e/cashier_orders.mjs` +
+  `cashier_complete2.mjs`):
+  - Login owner -> "Pesanan Masuk" -> "Pesanan Online" -> chip "Menunggu Pengecekan".
+  - Klik "Pembayaran Valid & Proses" -> snackbar "Pembayaran valid. Pesanan diproses.",
+    kartu pindah ke chip "Aktif"; DB `orders`: `status=diproses`,
+    `payment_status=divalidasi`, `validated_at` terisi. `ERRORS 0`.
+  - Klik "Selesai" pada kartu -> kartu hilang dari daftar aktif; DB `orders`:
+    `status=selesai`, `transaction_id` terisi; `transactions` dibuat
+    (`channel=online`, `payment_method=qris`, `final_amount=10000`,
+    `status=completed`, `order_id` = order uji, `product_revenue=10000`);
+    `transaction_items` 2 x 5000 = 10000; `customers` baru
+    (`QA Kasir` / `089900000123`, `total_spent=10000`).
+- CATATAN A11Y (temuan, belum diubah): pada chip "Aktif", kartu pesanan terpapar
+  sebagai SATU node `role="button"` (aria-label kosong, seluruh teks kartu di
+  `textContent`) sehingga tombol "Selesai" tidak bisa diklik lewat selector
+  semantik; klik koordinat pada baris aksi tetap berfungsi dan alur DB terbukti
+  benar. Pada chip "Menunggu" tombol anak tetap terpapar normal. Tidak ada
+  perubahan kode (murni verifikasi); perlu widget/semantics test terpisah bila
+  ingin memperbaiki.
+- CLEANUP (REST, owner JWT): order + order_item + product dihapus; transaksi
+  dihapus via RPC `delete_transaction` (stok produk sudah tidak ada -> 0 baris,
+  `stock_logs` koreksi yang terbentuk ikut dihapus); baris `customers` uji
+  dihapus. Residu diverifikasi 0 (orders/order_items/transactions/
+  transaction_items/customers/products/stock_logs). Order `ORD26101900049`
+  (uji pertama yang salah sasaran) dikembalikan ke `baru`/`belum_konfirmasi`
+  dengan `validated_at`/`validated_by` NULL.
+- Tidak ada perubahan build web -> tidak perlu deploy gh-pages.
+
 ## Catatan
 - `flutter_map`/`latlong2`/`geolocator` TIDAK dipasang (hemat token Phase 17); radar `CustomPaint`.
 - Supabase Storage TIDAK dipakai (q30 `[]`); bukti transfer LOKAL; thumbnail online opt-in R2.
