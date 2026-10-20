@@ -100,8 +100,11 @@ class _BusinessDoctorScreenState extends ConsumerState<BusinessDoctorScreen> {
   Map<String, dynamic>? _identity;
   Map<String, dynamic>? _briefing;
   Map<String, dynamic>? _dailyDose;
-  String _tone = 'hangat';
+  String _tone = 'bos_tegas';
   int _dailyStreak = 0;
+  bool _audioAktif = true;
+  bool _audioSoundbox = true;
+  bool _audioTeguran = true;
   bool _overduePrompted = false;
   bool _reprimandSpoken = false;
   String? _bossWa;
@@ -160,7 +163,23 @@ class _BusinessDoctorScreenState extends ConsumerState<BusinessDoctorScreen> {
         _dailyStreak =
             int.tryParse(p['daily_streak']?.toString() ?? '') ?? _dailyStreak;
         _bossWa = p['boss_wa_number']?.toString();
+        final audio = p['audio_prefs'];
+        if (audio is Map && audio.isNotEmpty) {
+          bool pick(String k, bool d) {
+            final v = audio[k];
+            if (v is bool) return v;
+            final s = v?.toString().toLowerCase();
+            if (s == 'true' || s == '1' || s == 'ya') return true;
+            if (s == 'false' || s == '0' || s == 'tidak') return false;
+            return d;
+          }
+
+          _audioAktif = pick('aktif', _audioAktif);
+          _audioSoundbox = pick('soundbox_pos', _audioSoundbox);
+          _audioTeguran = pick('teguran', _audioTeguran);
+        }
       });
+      VoiceService().applyOutletPrefs(outletId);
     } catch (_) {}
   }
 
@@ -346,7 +365,48 @@ class _BusinessDoctorScreenState extends ConsumerState<BusinessDoctorScreen> {
     final title = r['title']?.toString() ?? '';
     final content = r['content']?.toString() ?? '';
     final text = [title, content].where((e) => e.trim().isNotEmpty).join('. ');
-    if (text.isNotEmpty) VoiceService().announceReprimand(text);
+    if (text.isNotEmpty) {
+      VoiceService().announceReprimand(
+        text,
+        outletId: ref.read(currentUserProvider)?.outletId,
+      );
+    }
+  }
+
+  /// Simpan master switch suara (dipakai soundbox POS + teguran).
+  Future<void> _setAudioPrefs({
+    bool? aktif,
+    bool? soundbox,
+    bool? teguran,
+  }) async {
+    final outletId = ref.read(currentUserProvider)?.outletId;
+    if (outletId == null || outletId.isEmpty) return;
+    final nextAktif = aktif ?? _audioAktif;
+    final nextSoundbox = soundbox ?? _audioSoundbox;
+    final nextTeguran = teguran ?? _audioTeguran;
+    setState(() {
+      _audioAktif = nextAktif;
+      _audioSoundbox = nextSoundbox;
+      _audioTeguran = nextTeguran;
+    });
+    try {
+      await (widget.service ?? BusinessDoctorService()).setAudioPrefs(
+        outletId: outletId,
+        aktif: nextAktif,
+        soundboxPos: nextSoundbox,
+        teguran: nextTeguran,
+      );
+      await VoiceService().setOutletPrefs(outletId, {
+        'aktif': nextAktif,
+        'soundbox_pos': nextSoundbox,
+        'teguran': nextTeguran,
+      });
+      if (nextAktif && nextTeguran) {
+        await VoiceService().speak('Suara Dokter Bisnis aktif.');
+      }
+    } catch (e) {
+      _snack(friendlyError(e));
+    }
   }
 
   Future<void> _loadPrescription() async {
@@ -971,6 +1031,8 @@ class _BusinessDoctorScreenState extends ConsumerState<BusinessDoctorScreen> {
         ],
         _buildPersonaBar(),
         const SizedBox(height: 12),
+        _buildAudioCard(),
+        const SizedBox(height: 12),
         if (_briefing != null) ...[
           _buildBriefingCard(),
           const SizedBox(height: 12),
@@ -1156,10 +1218,24 @@ class _BusinessDoctorScreenState extends ConsumerState<BusinessDoctorScreen> {
   }
 
   static const _tonePresets = [
-    ['hangat', 'Hangat', Icons.emoji_emotions_outlined],
-    ['tegas', 'Tegas', Icons.gavel_rounded],
-    ['santai', 'Santai', Icons.weekend_outlined],
-    ['singkat', 'Singkat', Icons.bolt_rounded],
+    [
+      'bos_tegas',
+      'Bos Tegas',
+      'Tegas & to the point',
+      Icons.gavel_rounded,
+    ],
+    [
+      'partner_santai',
+      'Partner Santai',
+      'Ramah & membesarkan hati',
+      Icons.weekend_outlined,
+    ],
+    [
+      'analis_taktis',
+      'Analis Taktis',
+      'Tenang & berbasis data',
+      Icons.query_stats_rounded,
+    ],
   ];
 
   Widget _buildPersonaBar() {
@@ -1179,46 +1255,207 @@ class _BusinessDoctorScreenState extends ConsumerState<BusinessDoctorScreen> {
               const Icon(Icons.record_voice_over_outlined,
                   color: AppTheme.primaryColor, size: 20),
               const SizedBox(width: 8),
-              Text(
-                'Gaya Bicara Dokter',
-                style: GoogleFonts.plusJakartaSans(
-                  fontSize: 13,
-                  fontWeight: FontWeight.w800,
-                  color: AppTheme.textPrimary,
+              Expanded(
+                child: Text(
+                  'Persona Dokter',
+                  style: GoogleFonts.plusJakartaSans(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w800,
+                    color: AppTheme.textPrimary,
+                  ),
                 ),
               ),
             ],
           ),
           const SizedBox(height: 10),
-          Wrap(
-            spacing: 8,
-            runSpacing: 8,
+          Column(
             children: [
-              for (final t in _tonePresets)
-                ChoiceChip(
-                  avatar: Icon(
-                    t[2] as IconData,
-                    size: 16,
-                    color: _tone == t[0]
-                        ? AppTheme.surfaceColor
-                        : AppTheme.textSecondary,
-                  ),
-                  label: Text(
-                    t[1] as String,
-                    style: GoogleFonts.plusJakartaSans(
-                      fontSize: 12,
-                      fontWeight: FontWeight.w700,
-                      color: _tone == t[0]
-                          ? AppTheme.surfaceColor
-                          : AppTheme.textPrimary,
-                    ),
-                  ),
-                  selected: _tone == t[0],
-                  selectedColor: AppTheme.primaryColor,
-                  backgroundColor: AppTheme.surfaceMutedColor,
-                  onSelected: (_) => _setTone(t[0] as String),
+              for (final t in _tonePresets) ...[
+                _personaTile(
+                  key: t[0] as String,
+                  label: t[1] as String,
+                  hint: t[2] as String,
+                  icon: t[3] as IconData,
                 ),
+                if (t != _tonePresets.last) const SizedBox(height: 8),
+              ],
             ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _personaTile({
+    required String key,
+    required String label,
+    required String hint,
+    required IconData icon,
+  }) {
+    final selected = _tone == key;
+    return Semantics(
+      button: true,
+      selected: selected,
+      label: 'Persona $label',
+      child: InkWell(
+        borderRadius: BorderRadius.circular(AppTheme.radiusMedium),
+        onTap: () => _setTone(key),
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+          decoration: BoxDecoration(
+            color:
+                selected ? AppTheme.infoSoftColor : AppTheme.surfaceMutedColor,
+            borderRadius: BorderRadius.circular(AppTheme.radiusMedium),
+            border: Border.all(
+              color: selected ? AppTheme.primaryColor : AppTheme.borderColor,
+              width: selected ? 1.5 : 1,
+            ),
+          ),
+          child: Row(
+            children: [
+              Icon(
+                icon,
+                size: 20,
+                color: selected ? AppTheme.primaryColor : AppTheme.textSecondary,
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      label,
+                      style: GoogleFonts.plusJakartaSans(
+                        fontSize: 13,
+                        fontWeight: FontWeight.w800,
+                        color: AppTheme.textPrimary,
+                      ),
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      hint,
+                      style: GoogleFonts.plusJakartaSans(
+                        fontSize: 11,
+                        color: AppTheme.textSecondary,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              if (selected)
+                const Icon(Icons.check_circle_rounded,
+                    size: 18, color: AppTheme.primaryColor),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildAudioCard() {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: AppTheme.surfaceColor,
+        borderRadius: BorderRadius.circular(AppTheme.radiusLarge),
+        border: Border.all(color: AppTheme.borderColor),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              const Icon(Icons.volume_up_rounded,
+                  color: AppTheme.primaryColor, size: 20),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Text(
+                  'Suara Interaktif',
+                  style: GoogleFonts.plusJakartaSans(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w800,
+                    color: AppTheme.textPrimary,
+                  ),
+                ),
+              ),
+              Switch(
+                value: _audioAktif,
+                activeThumbColor: AppTheme.primaryColor,
+                onChanged: (v) => _setAudioPrefs(aktif: v),
+              ),
+            ],
+          ),
+          Text(
+            _audioAktif
+                ? 'Dokter Bisnis boleh bersuara di outlet ini.'
+                : 'Semua suara dimatikan untuk outlet ini.',
+            style: GoogleFonts.plusJakartaSans(
+              fontSize: 11,
+              color: AppTheme.textSecondary,
+            ),
+          ),
+          const SizedBox(height: 4),
+          _audioTile(
+            label: 'Soundbox POS',
+            hint: 'Bacakan nominal pembayaran saat transaksi sukses.',
+            value: _audioSoundbox && _audioAktif,
+            onChanged: _audioAktif
+                ? (v) => _setAudioPrefs(soundbox: v)
+                : null,
+          ),
+          Divider(height: 1, color: AppTheme.borderColor),
+          _audioTile(
+            label: 'Teguran Suara',
+            hint: 'Bacakan teguran Dokter Bisnis agar langsung terdengar.',
+            value: _audioTeguran && _audioAktif,
+            onChanged:
+                _audioAktif ? (v) => _setAudioPrefs(teguran: v) : null,
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _audioTile({
+    required String label,
+    required String hint,
+    required bool value,
+    required ValueChanged<bool>? onChanged,
+  }) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 6),
+      child: Row(
+        children: [
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  label,
+                  style: GoogleFonts.plusJakartaSans(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w700,
+                    color: onChanged == null
+                        ? AppTheme.textSecondary
+                        : AppTheme.textPrimary,
+                  ),
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  hint,
+                  style: GoogleFonts.plusJakartaSans(
+                    fontSize: 11,
+                    color: AppTheme.textSecondary,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          Switch(
+            value: value,
+            activeThumbColor: AppTheme.primaryColor,
+            onChanged: onChanged,
           ),
         ],
       ),

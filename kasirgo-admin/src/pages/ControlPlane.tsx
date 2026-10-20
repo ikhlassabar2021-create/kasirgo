@@ -2444,18 +2444,17 @@ function DoctorTab() {
         <div className="max-w-[760px] space-y-3.5">
           <div>
             <label className={labelCls}>Nada Bicara Default (Persona)</label>
-            <select className={inputCls} value={v.default_tone ?? 'hangat'} onChange={(e) => set('default_tone', e.target.value)}>
-              <option value="hangat">Hangat</option>
-              <option value="tegas">Tegas</option>
-              <option value="santai">Santai</option>
-              <option value="singkat">Singkat</option>
+            <select className={inputCls} value={v.default_tone ?? 'bos_tegas'} onChange={(e) => set('default_tone', e.target.value)}>
+              <option value="bos_tegas">Bos Tegas</option>
+              <option value="partner_santai">Partner Santai</option>
+              <option value="analis_taktis">Analis Taktis</option>
             </select>
             <p className="text-[11px] text-muted mt-1">Owner tetap bisa mengganti nada per outlet dari aplikasi.</p>
           </div>
           <div>
             <p className="text-[11px] font-bold text-muted uppercase tracking-wider mb-1.5">Nada Bicara (tone preset)</p>
             <div className="space-y-2">
-              {(['hangat', 'tegas', 'santai', 'singkat'] as const).map((k) => (
+              {(['bos_tegas', 'partner_santai', 'analis_taktis'] as const).map((k) => (
                 <div key={k}>
                   <label className={labelCls}>{k}</label>
                   <input className={inputCls} value={tp[k] ?? ''} onChange={(e) => setTp(k, e.target.value)} />
@@ -2521,6 +2520,10 @@ function DoctorTab() {
             <label className="flex items-center gap-2 text-xs font-semibold text-muted">
               <input type="checkbox" checked={!!au.teguran} onChange={(e) => setAu('teguran', e.target.checked)} />
               Bacakan teguran Dokter Bisnis
+            </label>
+            <label className="flex items-center gap-2 text-xs font-semibold text-muted">
+              <input type="checkbox" checked={au.per_outlet !== false} onChange={(e) => setAu('per_outlet', e.target.checked)} />
+              Izinkan owner mengatur master switch suara per outlet
             </label>
           </div>
 

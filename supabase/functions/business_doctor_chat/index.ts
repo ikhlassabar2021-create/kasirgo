@@ -1014,9 +1014,9 @@ function buildSystem(cfg: Json, snap: Json, profile: Json | null, openCases: Jso
     ? `\nSKILL AKTIF (hanya fitur/tool ini yang tersedia untuk Anda): ${sk.join(", ")}. Jangan menjanjikan fitur di luar daftar ini.`
     : "";
   // Persona / nada bicara (Dokter Bisnis 3.0): pilihan owner -> default config.
-  const toneKey = String(profile?.preferred_tone ?? cfg.default_tone ?? "hangat");
+  const toneKey = String(profile?.preferred_tone ?? cfg.default_tone ?? "bos_tegas");
   const toneMap = (cfg.tone_presets ?? {}) as Json;
-  const toneDesc = String(toneMap?.[toneKey] ?? toneMap?.[cfg.default_tone ?? "hangat"] ?? "Ramah, membesarkan hati, bahasa sederhana.");
+  const toneDesc = String(toneMap?.[toneKey] ?? toneMap?.[cfg.default_tone ?? "bos_tegas"] ?? "Tegas, lugas, dan langsung ke inti masalah.");
   const doseCfg = (cfg.daily_dose ?? {}) as Json;
   const doseLine = doseCfg?.aktif === false
     ? "- Dosis Harian sedang dimatikan; jangan menawarkan dosis harian."

@@ -334,10 +334,28 @@ class BusinessDoctorService {
     final res = await _client
         .from('doctor_outlet_profile')
         .select(
-            'preferred_tone, daily_streak, last_dose_at, boss_wa_number')
+            'preferred_tone, daily_streak, last_dose_at, boss_wa_number, audio_prefs')
         .eq('outlet_id', outletId)
         .maybeSingle();
     return res;
+  }
+
+  /// Simpan master switch suara Dokter Bisnis per outlet.
+  Future<void> setAudioPrefs({
+    required String outletId,
+    required bool aktif,
+    required bool soundboxPos,
+    required bool teguran,
+  }) async {
+    await _client.from('doctor_outlet_profile').upsert({
+      'outlet_id': outletId,
+      'audio_prefs': {
+        'aktif': aktif,
+        'soundbox_pos': soundboxPos,
+        'teguran': teguran,
+      },
+      'updated_at': DateTime.now().toIso8601String(),
+    }, onConflict: 'outlet_id');
   }
 
   /// Simpan nomor WhatsApp "Bos Besar" untuk laporan otomatis.

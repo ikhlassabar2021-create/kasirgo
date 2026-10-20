@@ -12,10 +12,14 @@ class VoiceAudioConfig {
   final bool teguran;
   final bool soundboxPos;
 
+  /// Bila false, master switch per outlet diabaikan (diatur admin global).
+  final bool perOutlet;
+
   const VoiceAudioConfig({
     this.aktif = true,
     this.teguran = true,
     this.soundboxPos = true,
+    this.perOutlet = true,
   });
 
   static const fallback = VoiceAudioConfig();
@@ -32,6 +36,7 @@ class VoiceAudioConfig {
       aktif: b(m['aktif'], true),
       teguran: b(m['teguran'], true),
       soundboxPos: b(m['soundbox_pos'], true),
+      perOutlet: b(m['per_outlet'], true),
     );
   }
 
@@ -39,7 +44,29 @@ class VoiceAudioConfig {
         'aktif': aktif,
         'teguran': teguran,
         'soundbox_pos': soundboxPos,
+        'per_outlet': perOutlet,
       };
+
+  /// Gabungkan preferensi per outlet (master switch owner) di atas config
+  /// global Control Plane. Field yang tidak diisi tetap ikut global.
+  VoiceAudioConfig overrideWith(Map<String, dynamic>? prefs) {
+    if (prefs == null || prefs.isEmpty) return this;
+    bool? b(dynamic v) {
+      if (v == null) return null;
+      if (v is bool) return v;
+      final s = v.toString().toLowerCase();
+      if (s == 'true' || s == '1' || s == 'ya') return true;
+      if (s == 'false' || s == '0' || s == 'tidak') return false;
+      return null;
+    }
+
+    return VoiceAudioConfig(
+      aktif: b(prefs['aktif']) ?? aktif,
+      teguran: b(prefs['teguran']) ?? teguran,
+      soundboxPos: b(prefs['soundbox_pos']) ?? soundboxPos,
+      perOutlet: perOutlet,
+    );
+  }
 }
 
 /// Layanan suara interaktif KasirGo 3.0.
@@ -60,18 +87,25 @@ class VoiceService {
   static const _cacheTtlSeconds = 3600;
 
   final FlutterTts _tts = FlutterTts();
+  VoiceAudioConfig _global = VoiceAudioConfig.fallback;
   VoiceAudioConfig _config = VoiceAudioConfig.fallback;
+  Map<String, dynamic> _outletPrefs = const {};
+  String? _outletId;
   bool _ready = false;
   bool _available = true;
 
   VoiceAudioConfig get config => _config;
   bool get available => _available && _config.aktif;
+  String? get outletId => _outletId;
 
   SupabaseClient get _client => Supabase.instance.client;
 
   /// Siapkan mesin TTS + muat config (cache 1 jam, fallback default).
-  Future<void> init({bool forceRefresh = false}) async {
+  Future<void> init({bool forceRefresh = false, String? outletId}) async {
     await loadConfig(forceRefresh: forceRefresh);
+    if (outletId != null && outletId.isNotEmpty) {
+      await applyOutletPrefs(outletId);
+    }
     if (_ready) return;
     try {
       await _tts.setLanguage('id-ID');
@@ -96,8 +130,9 @@ class VoiceService {
       final cached = prefs.getString(_cacheKey);
       if (cached != null) {
         try {
-          _config = VoiceAudioConfig.fromMap(
+          _global = VoiceAudioConfig.fromMap(
               Map<String, dynamic>.from(_decode(cached) as Map));
+          _config = _global.overrideWith(_outletPrefs);
           return _config;
         } catch (_) {}
       }
@@ -114,9 +149,10 @@ class VoiceService {
           .maybeSingle();
       final value = res?['value'];
       if (value is Map && value['audio'] is Map) {
-        _config = VoiceAudioConfig.fromMap(
+        _global = VoiceAudioConfig.fromMap(
             Map<String, dynamic>.from(value['audio'] as Map));
-        await prefs.setString(_cacheKey, _encode(_config.toMap()));
+        _config = _global.overrideWith(_outletPrefs);
+        await prefs.setString(_cacheKey, _encode(_global.toMap()));
         await prefs.setInt(_cacheTsKey, DateTime.now().millisecondsSinceEpoch);
         return _config;
       }
@@ -127,13 +163,85 @@ class VoiceService {
     final cached = prefs.getString(_cacheKey);
     if (cached != null) {
       try {
-        _config = VoiceAudioConfig.fromMap(
+        _global = VoiceAudioConfig.fromMap(
             Map<String, dynamic>.from(_decode(cached) as Map));
+        _config = _global.overrideWith(_outletPrefs);
         return _config;
       } catch (_) {}
     }
-    _config = VoiceAudioConfig.fallback;
+    _global = VoiceAudioConfig.fallback;
+    _config = _global.overrideWith(_outletPrefs);
     return _config;
+  }
+
+  /// Muat master switch suara milik outlet (kolom
+  /// `doctor_outlet_profile.audio_prefs`). Cache lokal 1 jam.
+  Future<VoiceAudioConfig> applyOutletPrefs(
+    String outletId, {
+    bool forceRefresh = false,
+  }) async {
+    if (outletId.trim().isEmpty) return _config;
+    if (!_global.perOutlet) {
+      _outletId = outletId;
+      _outletPrefs = const <String, dynamic>{};
+      _config = _global;
+      return _config;
+    }
+    final prefs = await SharedPreferences.getInstance();
+    final key = 'kasirgo_voice_outlet_prefs_$outletId';
+    final tsKey = '${key}_ts';
+    final ts = prefs.getInt(tsKey) ?? 0;
+    final fresh =
+        DateTime.now().millisecondsSinceEpoch - ts < _cacheTtlSeconds * 1000;
+
+    if (!forceRefresh && fresh && _outletId == outletId) return _config;
+
+    if (!forceRefresh && fresh) {
+      final cached = prefs.getString(key);
+      if (cached != null) {
+        try {
+          _outletPrefs = Map<String, dynamic>.from(_decode(cached) as Map);
+          _outletId = outletId;
+          _config = _global.overrideWith(_outletPrefs);
+          return _config;
+        } catch (_) {}
+      }
+    }
+
+    try {
+      final res = await _client
+          .from('doctor_outlet_profile')
+          .select('audio_prefs')
+          .eq('outlet_id', outletId)
+          .maybeSingle();
+      final raw = res?['audio_prefs'];
+      _outletPrefs = raw is Map
+          ? Map<String, dynamic>.from(raw)
+          : const <String, dynamic>{};
+      _outletId = outletId;
+      _config = _global.overrideWith(_outletPrefs);
+      await prefs.setString(key, _encode(_outletPrefs));
+      await prefs.setInt(tsKey, DateTime.now().millisecondsSinceEpoch);
+      return _config;
+    } catch (e) {
+      debugPrint('VoiceService.applyOutletPrefs error: $e');
+    }
+    return _config;
+  }
+
+  /// Simpan master switch suara outlet (dipanggil setelah DB tersimpan).
+  Future<void> setOutletPrefs(
+    String outletId,
+    Map<String, dynamic> prefs,
+  ) async {
+    if (outletId.trim().isEmpty) return;
+    _outletId = outletId;
+    _outletPrefs = Map<String, dynamic>.from(prefs);
+    _config = _global.overrideWith(_outletPrefs);
+    final sp = await SharedPreferences.getInstance();
+    final key = 'kasirgo_voice_outlet_prefs_$outletId';
+    await sp.setString(key, _encode(_outletPrefs));
+    await sp.setInt(key + '_ts', DateTime.now().millisecondsSinceEpoch);
   }
 
   /// Soundbox POS: bacakan nominal pembayaran yang diterima.
@@ -142,7 +250,11 @@ class VoiceService {
     String? method,
     double change = 0,
     String? customerName,
+    String? outletId,
   }) async {
+    if (outletId != null && outletId.isNotEmpty) {
+      await applyOutletPrefs(outletId);
+    }
     if (!available || !_config.soundboxPos) return;
     await init();
     if (!available) return;
@@ -165,7 +277,10 @@ class VoiceService {
   }
 
   /// Teguran Dokter Bisnis: bacakan agar terdengar langsung oleh owner.
-  Future<void> announceReprimand(String text) async {
+  Future<void> announceReprimand(String text, {String? outletId}) async {
+    if (outletId != null && outletId.isNotEmpty) {
+      await applyOutletPrefs(outletId);
+    }
     if (!available || !_config.teguran) return;
     final clean = text.trim();
     if (clean.isEmpty) return;

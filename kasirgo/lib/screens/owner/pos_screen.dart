@@ -455,6 +455,7 @@ class _PosScreenState extends ConsumerState<PosScreen> {
           method: result.paymentMethod,
           change: result.change,
           customerName: result.customerName,
+          outletId: ref.read(currentUserProvider)?.outletId,
         );
         final changeMsg = result.change > 0
             ? 'Kembalian: Rp ${result.change.toStringAsFixed(0)}'
