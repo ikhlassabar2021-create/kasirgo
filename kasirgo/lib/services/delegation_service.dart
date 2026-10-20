@@ -79,6 +79,84 @@ class DoctorDelegation {
   }
 }
 
+/// Satu baris peringkat staf pada papan apresiasi tugas delegasi.
+class DoctorLeaderboardEntry {
+  final String userId;
+  final String name;
+  final String role;
+  final int selesai;
+  final int aktif;
+  final int terlambat;
+  final int tepatWaktu;
+  final int penyelesaian;
+  final int xp;
+  final int rank;
+  final List<String> badges;
+
+  const DoctorLeaderboardEntry({
+    required this.userId,
+    required this.name,
+    this.role = '',
+    this.selesai = 0,
+    this.aktif = 0,
+    this.terlambat = 0,
+    this.tepatWaktu = 0,
+    this.penyelesaian = 0,
+    this.xp = 0,
+    this.rank = 0,
+    this.badges = const [],
+  });
+
+  factory DoctorLeaderboardEntry.fromMap(Map<String, dynamic> m) {
+    int n(String key) => (m[key] as num?)?.toInt() ?? 0;
+    final rawBadges = m['badges'];
+    return DoctorLeaderboardEntry(
+      userId: m['user_id']?.toString() ?? '',
+      name: (m['name']?.toString().trim().isNotEmpty ?? false)
+          ? m['name'].toString().trim()
+          : 'Staf',
+      role: m['role']?.toString() ?? '',
+      selesai: n('selesai'),
+      aktif: n('aktif'),
+      terlambat: n('terlambat'),
+      tepatWaktu: n('tepat_waktu'),
+      penyelesaian: n('penyelesaian'),
+      xp: n('xp'),
+      rank: n('rank'),
+      badges: rawBadges is List
+          ? rawBadges.map((e) => e.toString()).toList()
+          : const [],
+    );
+  }
+
+  bool get hasBadges => badges.isNotEmpty;
+}
+
+/// Hasil papan peringkat staf satu outlet.
+class DoctorLeaderboard {
+  final int days;
+  final int xpPerTugas;
+  final List<DoctorLeaderboardEntry> items;
+  final Map<String, int> totals;
+
+  const DoctorLeaderboard({
+    this.days = 30,
+    this.xpPerTugas = 8,
+    this.items = const [],
+    this.totals = const {},
+  });
+
+  bool get isEmpty => items.isEmpty;
+
+  DoctorLeaderboardEntry? entryFor(String? userId) {
+    if (userId == null || userId.isEmpty) return null;
+    for (final item in items) {
+      if (item.userId == userId) return item;
+    }
+    return null;
+  }
+}
+
 /// Delegasi tugas Dokter Bisnis ke Admin / Kasir / Koki.
 class DelegationService {
   DelegationService({SupabaseClient? client})
@@ -271,5 +349,41 @@ class DelegationService {
       if (res is Map) return res.cast<String, dynamic>();
     } catch (_) {}
     return const {'total': 0, 'pending': 0, 'dikerjakan': 0, 'selesai': 0, 'terlambat': 0};
+  }
+
+  /// Papan peringkat staf (selesai, tepat waktu, XP, badge) satu outlet.
+  Future<DoctorLeaderboard> leaderboard(
+    String outletId, {
+    int days = 30,
+  }) async {
+    try {
+      final res = await _client.rpc('delegation_leaderboard', params: {
+        'p_outlet': outletId,
+        'p_days': days,
+      });
+      if (res is Map) {
+        final map = res.cast<String, dynamic>();
+        final rawItems = map['items'];
+        final rawTotals = map['totals'];
+        return DoctorLeaderboard(
+          days: (map['days'] as num?)?.toInt() ?? days,
+          xpPerTugas: (map['xp_per_tugas'] as num?)?.toInt() ?? 8,
+          items: rawItems is List
+              ? rawItems
+                  .whereType<Map>()
+                  .map((e) => DoctorLeaderboardEntry.fromMap(
+                        e.cast<String, dynamic>(),
+                      ))
+                  .toList()
+              : const [],
+          totals: rawTotals is Map
+              ? rawTotals.map(
+                  (k, v) => MapEntry(k.toString(), (v as num?)?.toInt() ?? 0),
+                )
+              : const {},
+        );
+      }
+    } catch (_) {}
+    return DoctorLeaderboard(days: days);
   }
 }

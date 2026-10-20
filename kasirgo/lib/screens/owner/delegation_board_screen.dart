@@ -8,6 +8,7 @@ import '../../services/delegation_service.dart';
 import '../../widgets/common/app_button.dart';
 import '../../widgets/common/app_dropdown_field.dart';
 import '../../widgets/common/centennial_background.dart';
+import '../../widgets/common/doctor_badge_chip.dart';
 
 /// Papan delegasi tugas Dokter Bisnis ke Admin / Kasir / Koki.
 ///
@@ -43,6 +44,7 @@ class _DelegationBoardScreenState extends ConsumerState<DelegationBoardScreen> {
   List<DoctorDelegation> _items = const [];
   List<Map<String, dynamic>> _staff = const [];
   Map<String, dynamic> _summary = const {};
+  DoctorLeaderboard _board = const DoctorLeaderboard();
   bool _loading = true;
   String _filter = 'aktif';
 
@@ -74,11 +76,13 @@ class _DelegationBoardScreenState extends ConsumerState<DelegationBoardScreen> {
     final items = await _service.listForOutlet(outletId);
     final staff = await _service.staffOptions(outletId);
     final summary = await _service.summary(outletId);
+    final board = await _service.leaderboard(outletId);
     if (!mounted) return;
     setState(() {
       _items = items;
       _staff = staff;
       _summary = summary;
+      _board = board;
       _loading = false;
     });
   }
@@ -229,6 +233,10 @@ class _DelegationBoardScreenState extends ConsumerState<DelegationBoardScreen> {
                   children: [
                     _summaryRow(),
                     const SizedBox(height: 16),
+                    if (!_loading && !_board.isEmpty) ...[
+                      _leaderboardSection(),
+                      const SizedBox(height: 16),
+                    ],
                     _filterRow(),
                     const SizedBox(height: 12),
                     if (_loading)
@@ -303,6 +311,172 @@ class _DelegationBoardScreenState extends ConsumerState<DelegationBoardScreen> {
           ],
         ),
       ),
+    );
+  }
+
+  String _roleLabel(String role) {
+    switch (role) {
+      case 'admin':
+        return 'Admin';
+      case 'cashier':
+        return 'Kasir';
+      case 'kitchen':
+        return 'Koki';
+      case 'owner':
+        return 'Owner';
+      default:
+        return 'Staf';
+    }
+  }
+
+  Widget _leaderboardSection() {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: AppTheme.surfaceColor,
+        borderRadius: BorderRadius.circular(AppTheme.radiusLarge),
+        border: Border.all(color: AppTheme.borderColor),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              const Icon(Icons.emoji_events_rounded,
+                  size: 20, color: AppTheme.warningColor),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Papan Apresiasi Staf',
+                      style: GoogleFonts.plusJakartaSans(
+                        fontSize: 13,
+                        fontWeight: FontWeight.w800,
+                        color: AppTheme.textPrimary,
+                      ),
+                    ),
+                    Text(
+                      '${_board.days} hari terakhir - '
+                      '${_board.xpPerTugas} XP per tugas selesai',
+                      style: GoogleFonts.plusJakartaSans(
+                        fontSize: 10,
+                        color: AppTheme.textSecondary,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              Container(
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                decoration: BoxDecoration(
+                  color: AppTheme.warningSoftColor,
+                  borderRadius: BorderRadius.circular(20),
+                ),
+                child: Text(
+                  '${_board.items.length} staf',
+                  style: GoogleFonts.plusJakartaSans(
+                    fontSize: 10,
+                    fontWeight: FontWeight.w800,
+                    color: AppTheme.warningTextColor,
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          for (var i = 0; i < _board.items.length; i++) ...[
+            if (i > 0) const Divider(height: 16, color: AppTheme.borderColor),
+            _leaderboardRow(_board.items[i]),
+          ],
+        ],
+      ),
+    );
+  }
+
+  Widget _leaderboardRow(DoctorLeaderboardEntry entry) {
+    final isTop = entry.rank == 1;
+    final rankColor = isTop ? AppTheme.warningColor : AppTheme.textSecondary;
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Container(
+          width: 28,
+          height: 28,
+          alignment: Alignment.center,
+          decoration: BoxDecoration(
+            color: isTop
+                ? AppTheme.warningSoftColor
+                : AppTheme.surfaceMutedColor,
+            shape: BoxShape.circle,
+          ),
+          child: isTop
+              ? Icon(Icons.emoji_events_rounded, size: 16, color: rankColor)
+              : Text(
+                  '${entry.rank}',
+                  style: GoogleFonts.plusJakartaSans(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w800,
+                    color: rankColor,
+                  ),
+                ),
+        ),
+        const SizedBox(width: 8),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  Expanded(
+                    child: Text(
+                      entry.name,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: GoogleFonts.plusJakartaSans(
+                        fontSize: 12,
+                        fontWeight: FontWeight.w700,
+                        color: AppTheme.textPrimary,
+                      ),
+                    ),
+                  ),
+                  Text(
+                    '${entry.selesai} selesai',
+                    style: GoogleFonts.plusJakartaSans(
+                      fontSize: 11,
+                      fontWeight: FontWeight.w800,
+                      color: AppTheme.successTextColor,
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 1),
+              Text(
+                '${_roleLabel(entry.role)} - ${entry.xp} XP'
+                '${entry.terlambat > 0 ? ' - ${entry.terlambat} terlambat' : ''}',
+                style: GoogleFonts.plusJakartaSans(
+                  fontSize: 10,
+                  color: AppTheme.textSecondary,
+                ),
+              ),
+              if (entry.hasBadges) ...[
+                const SizedBox(height: 5),
+                Wrap(
+                  spacing: 5,
+                  runSpacing: 5,
+                  children: [
+                    for (final badge in entry.badges)
+                      DoctorBadgeChip(badge: badge, compact: true),
+                  ],
+                ),
+              ],
+            ],
+          ),
+        ),
+      ],
     );
   }
 

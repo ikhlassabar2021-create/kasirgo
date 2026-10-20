@@ -1,14 +1,17 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 
 import '../../config/app_theme.dart';
+import '../../providers/auth_provider.dart';
 import '../../services/delegation_service.dart';
+import 'doctor_badge_chip.dart';
 
 /// Daftar tugas yang didelegasikan owner kepada staf yang sedang login.
 ///
 /// Dipakai di beranda Kasir/Admin/Koki. Staf hanya bisa mengubah status
 /// (lewat RPC `delegation_set_status`), bukan isi tugas.
-class DelegationTasksCard extends StatefulWidget {
+class DelegationTasksCard extends ConsumerStatefulWidget {
   const DelegationTasksCard({
     super.key,
     this.service,
@@ -19,13 +22,17 @@ class DelegationTasksCard extends StatefulWidget {
   final VoidCallback? onChanged;
 
   @override
-  State<DelegationTasksCard> createState() => _DelegationTasksCardState();
+  ConsumerState<DelegationTasksCard> createState() =>
+      _DelegationTasksCardState();
 }
 
-class _DelegationTasksCardState extends State<DelegationTasksCard> {
+class _DelegationTasksCardState extends ConsumerState<DelegationTasksCard> {
   late final DelegationService _service =
       widget.service ?? DelegationService();
   List<DoctorDelegation> _items = const [];
+  DoctorLeaderboardEntry? _me;
+  int _staffCount = 0;
+  int _periodDays = 30;
   bool _loading = true;
   bool _busy = false;
 
@@ -36,10 +43,24 @@ class _DelegationTasksCardState extends State<DelegationTasksCard> {
   }
 
   Future<void> _load() async {
+    final user = ref.read(currentUserProvider);
     final items = await _service.listMine();
+    DoctorLeaderboardEntry? me;
+    var staffCount = 0;
+    var periodDays = 30;
+    final outletId = user?.outletId;
+    if (outletId != null && outletId.isNotEmpty) {
+      final board = await _service.leaderboard(outletId);
+      me = board.entryFor(user?.id);
+      staffCount = board.items.length;
+      periodDays = board.days;
+    }
     if (!mounted) return;
     setState(() {
       _items = items;
+      _me = me;
+      _staffCount = staffCount;
+      _periodDays = periodDays;
       _loading = false;
     });
   }
@@ -114,7 +135,9 @@ class _DelegationTasksCardState extends State<DelegationTasksCard> {
         ),
       );
     }
-    if (_items.isEmpty) return const SizedBox.shrink();
+    final me = _me;
+    final hasAchievement = me != null && me.selesai > 0;
+    if (_items.isEmpty && !hasAchievement) return const SizedBox.shrink();
 
     return Container(
       width: double.infinity,
@@ -161,9 +184,119 @@ class _DelegationTasksCardState extends State<DelegationTasksCard> {
             ],
           ),
           const SizedBox(height: 10),
+          if (hasAchievement) ...[
+            _rankStrip(me),
+            const SizedBox(height: 10),
+          ],
+          if (_items.isEmpty)
+            Text(
+              'Semua tugas sudah selesai. Kerja bagus!',
+              style: GoogleFonts.plusJakartaSans(
+                fontSize: 12,
+                fontWeight: FontWeight.w600,
+                color: AppTheme.successTextColor,
+              ),
+            ),
           for (var i = 0; i < _items.length; i++) ...[
             if (i > 0) const Divider(height: 18, color: AppTheme.borderColor),
             _taskRow(_items[i]),
+          ],
+        ],
+      ),
+    );
+  }
+
+  Widget _rankStrip(DoctorLeaderboardEntry me) {
+    final isTop = me.rank == 1;
+    final accent = isTop ? AppTheme.warningColor : AppTheme.primaryColor;
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(10),
+      decoration: BoxDecoration(
+        color: accent.withValues(alpha: 0.08),
+        borderRadius: BorderRadius.circular(AppTheme.radiusMedium),
+        border: Border.all(color: accent.withValues(alpha: 0.25)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Container(
+                width: 32,
+                height: 32,
+                alignment: Alignment.center,
+                decoration: BoxDecoration(
+                  color: AppTheme.surfaceColor,
+                  shape: BoxShape.circle,
+                  border: Border.all(color: accent.withValues(alpha: 0.35)),
+                ),
+                child: isTop
+                    ? Icon(Icons.emoji_events_rounded, size: 18, color: accent)
+                    : Text(
+                        '${me.rank}',
+                        style: GoogleFonts.plusJakartaSans(
+                          fontSize: 13,
+                          fontWeight: FontWeight.w800,
+                          color: accent,
+                        ),
+                      ),
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      isTop ? 'Peringkat 1 - Terbaik!' : 'Peringkat ${me.rank}',
+                      style: GoogleFonts.plusJakartaSans(
+                        fontSize: 12,
+                        fontWeight: FontWeight.w800,
+                        color: AppTheme.textPrimary,
+                      ),
+                    ),
+                    const SizedBox(height: 1),
+                    Text(
+                      '${me.selesai} tugas selesai'
+                      '${_staffCount > 1 ? ' dari $_staffCount staf' : ''}'
+                      ' - $_periodDays hari terakhir',
+                      style: GoogleFonts.plusJakartaSans(
+                        fontSize: 10,
+                        color: AppTheme.textSecondary,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              Container(
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                decoration: BoxDecoration(
+                  color: AppTheme.surfaceColor,
+                  borderRadius: BorderRadius.circular(20),
+                  border: Border.all(color: accent.withValues(alpha: 0.35)),
+                ),
+                child: Text(
+                  '${me.xp} XP',
+                  style: GoogleFonts.plusJakartaSans(
+                    fontSize: 10,
+                    fontWeight: FontWeight.w800,
+                    color: accent,
+                  ),
+                ),
+              ),
+            ],
+          ),
+          if (me.hasBadges) ...[
+            const SizedBox(height: 8),
+            Wrap(
+              spacing: 6,
+              runSpacing: 6,
+              children: [
+                for (final badge in me.badges)
+                  DoctorBadgeChip(badge: badge, compact: true),
+              ],
+            ),
           ],
         ],
       ),
