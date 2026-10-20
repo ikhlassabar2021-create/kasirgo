@@ -7,6 +7,7 @@ import '../../providers/auth_provider.dart';
 import '../../providers/module_provider.dart';
 import '../../providers/outlet_provider.dart';
 import '../../services/business_doctor_service.dart';
+import '../../services/speech_service.dart';
 import '../../services/voice_service.dart';
 import '../../widgets/common/app_button.dart';
 import '../../widgets/common/business_doctor/doctor_blocks.dart';
@@ -112,6 +113,9 @@ class _BusinessDoctorScreenState extends ConsumerState<BusinessDoctorScreen> {
   bool _overduePrompted = false;
   bool _reprimandSpoken = false;
   String? _bossWa;
+  final SpeechService _speech = SpeechService();
+  bool _listening = false;
+  String _speechStatus = '';
 
   @override
   void initState() {
@@ -494,14 +498,79 @@ class _BusinessDoctorScreenState extends ConsumerState<BusinessDoctorScreen> {
 
   @override
   void dispose() {
+    _speech.cancel();
     _input.dispose();
     _scroll.dispose();
     super.dispose();
   }
 
-  Future<void> _send(String text) async {
+  Future<void> _toggleMic() async {
+    if (_loading) return;
+    if (_listening) {
+      await _speech.stop();
+      if (!mounted) return;
+      setState(() {
+        _listening = false;
+        _speechStatus = '';
+      });
+      return;
+    }
+    final ok = await _speech.start(onResult: (text, finalResult) {
+      if (!mounted) return;
+      final clean = text.trim();
+      setState(() {
+        if (clean.isNotEmpty) {
+          _input.text = clean;
+          _input.selection =
+              TextSelection.collapsed(offset: _input.text.length);
+        }
+        _speechStatus = clean.isEmpty ? 'Mendengarkan...' : 'Mendengar: $clean';
+        if (finalResult) _listening = false;
+      });
+      if (finalResult && clean.isNotEmpty) {
+        _speechStatus = '';
+        _send(clean, spoken: true);
+      }
+    });
+    if (!mounted) return;
+    if (!ok) {
+      setState(() {
+        _listening = false;
+        _speechStatus = '';
+      });
+      _snack(_speech.error ?? 'Mikrofon tidak tersedia di perangkat ini.');
+      return;
+    }
+    setState(() {
+      _listening = true;
+      _speechStatus = 'Mendengarkan... bicara sekarang';
+    });
+  }
+
+  /// Ucapkan jawaban Dokter bila pemilik memakai input suara.
+  Future<void> _speakReply(String reply) async {
+    if (!_audioAktif) return;
+    final clean = reply
+        .replaceAll(RegExp(r'[*_`#>|]'), ' ')
+        .replaceAll(RegExp(r'\s+'), ' ')
+        .trim();
+    if (clean.isEmpty) return;
+    final short = clean.length > 700 ? '${clean.substring(0, 700)}...' : clean;
+    await VoiceService().speak(short);
+  }
+
+  Future<void> _send(String text, {bool spoken = false}) async {
     final message = text.trim();
     if (message.isEmpty || _loading) return;
+    if (_listening) {
+      await _speech.stop();
+      if (mounted) {
+        setState(() {
+          _listening = false;
+          _speechStatus = '';
+        });
+      }
+    }
     final outletId = ref.read(currentUserProvider)?.outletId;
     if (outletId == null || outletId.isEmpty) {
       _snack('Outlet tidak ditemukan.');
@@ -561,6 +630,9 @@ class _BusinessDoctorScreenState extends ConsumerState<BusinessDoctorScreen> {
       if (hasDose) {
         _loadDailyDose();
         _loadProfile();
+      }
+      if (spoken && reply.trim().isNotEmpty) {
+        _speakReply(reply);
       }
     } catch (e) {
       if (!mounted) return;
@@ -2539,40 +2611,118 @@ class _BusinessDoctorScreenState extends ConsumerState<BusinessDoctorScreen> {
       ),
       child: SafeArea(
         top: false,
-        child: Row(
-          crossAxisAlignment: CrossAxisAlignment.end,
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
           children: [
-            Expanded(
-              child: TextField(
-                controller: _input,
-                minLines: 1,
-                maxLines: 4,
-                textInputAction: TextInputAction.send,
-                onSubmitted: _loading ? null : _send,
-                decoration: const InputDecoration(
-                  hintText: 'Tulis pertanyaan bisnis Anda...',
+            if (_listening || _speechStatus.isNotEmpty)
+              Padding(
+                padding: const EdgeInsets.only(bottom: 8),
+                child: Row(
+                  children: [
+                    Icon(
+                      _listening ? Icons.graphic_eq_rounded : Icons.mic_none_rounded,
+                      size: 16,
+                      color: _listening
+                          ? AppTheme.errorColor
+                          : AppTheme.textSecondary,
+                    ),
+                    const SizedBox(width: 6),
+                    Expanded(
+                      child: Text(
+                        _speechStatus.isEmpty
+                            ? 'Mendengarkan...'
+                            : _speechStatus,
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                        style: GoogleFonts.plusJakartaSans(
+                          fontSize: 11,
+                          color: _listening
+                              ? AppTheme.errorColor
+                              : AppTheme.textSecondary,
+                        ),
+                      ),
+                    ),
+                  ],
                 ),
               ),
-            ),
-            const SizedBox(width: 8),
-            SizedBox(
-              width: AppTheme.touchTargetMedium,
-              height: AppTheme.touchTargetMedium,
-              child: Container(
-                decoration: BoxDecoration(
-                  gradient: AppTheme.primaryGradient,
-                  borderRadius: BorderRadius.circular(AppTheme.radiusMedium),
-                ),
-                child: Material(
-                  color: Colors.transparent,
-                  child: InkWell(
-                    borderRadius: BorderRadius.circular(AppTheme.radiusMedium),
-                    onTap: _loading ? null : () => _send(_input.text),
-                    child: const Icon(Icons.send_rounded,
-                        color: Colors.white, size: 20),
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.end,
+              children: [
+                Expanded(
+                  child: TextField(
+                    controller: _input,
+                    minLines: 1,
+                    maxLines: 4,
+                    textInputAction: TextInputAction.send,
+                    onSubmitted: _loading ? null : _send,
+                    decoration: InputDecoration(
+                      hintText: _listening
+                          ? 'Sedang mendengarkan suara Anda...'
+                          : 'Tulis atau ucapkan pertanyaan bisnis Anda...',
+                    ),
                   ),
                 ),
-              ),
+                const SizedBox(width: 8),
+                SizedBox(
+                  width: AppTheme.touchTargetMedium,
+                  height: AppTheme.touchTargetMedium,
+                  child: Tooltip(
+                    message: _listening ? 'Berhenti merekam' : 'Bicara',
+                    child: Container(
+                      decoration: BoxDecoration(
+                        color: _listening
+                            ? AppTheme.errorSoftColor
+                            : AppTheme.surfaceMutedColor,
+                        borderRadius:
+                            BorderRadius.circular(AppTheme.radiusMedium),
+                        border: Border.all(
+                          color: _listening
+                              ? AppTheme.errorColor
+                              : AppTheme.borderColor,
+                        ),
+                      ),
+                      child: Material(
+                        color: Colors.transparent,
+                        child: InkWell(
+                          borderRadius:
+                              BorderRadius.circular(AppTheme.radiusMedium),
+                          onTap: _loading ? null : _toggleMic,
+                          child: Icon(
+                            _listening
+                                ? Icons.stop_circle_rounded
+                                : Icons.mic_rounded,
+                            color: _listening
+                                ? AppTheme.errorColor
+                                : AppTheme.textPrimary,
+                            size: 22,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 8),
+                SizedBox(
+                  width: AppTheme.touchTargetMedium,
+                  height: AppTheme.touchTargetMedium,
+                  child: Container(
+                    decoration: BoxDecoration(
+                      gradient: AppTheme.primaryGradient,
+                      borderRadius: BorderRadius.circular(AppTheme.radiusMedium),
+                    ),
+                    child: Material(
+                      color: Colors.transparent,
+                      child: InkWell(
+                        borderRadius:
+                            BorderRadius.circular(AppTheme.radiusMedium),
+                        onTap: _loading ? null : () => _send(_input.text),
+                        child: const Icon(Icons.send_rounded,
+                            color: Colors.white, size: 20),
+                      ),
+                    ),
+                  ),
+                ),
+              ],
             ),
           ],
         ),

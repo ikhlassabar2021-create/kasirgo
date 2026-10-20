@@ -28,6 +28,8 @@ class AppTheme {
   static const Color warningSoftColor = Color(0xFFFEF3C7);
   static const Color warningSoftBorderColor = Color(0xFFFDE68A);
   static const Color warningTextColor = Color(0xFF92400E);
+  static const Color errorSoftColor = Color(0xFFFEF2F2);
+  static const Color errorSoftBorderColor = Color(0xFFFECACA);
   static const Color violetSoftColor = Color(0xFFF5F3FF);
   static const Color violetSoftBorderColor = Color(0xFFDDD6FE);
 
