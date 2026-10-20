@@ -103,6 +103,9 @@ class _BusinessDoctorScreenState extends ConsumerState<BusinessDoctorScreen> {
   Map<String, dynamic>? _dailyDose;
   String _tone = 'bos_tegas';
   int _dailyStreak = 0;
+  int _xp = 0;
+  int _level = 1;
+  static const _levelStep = 100;
   bool _audioAktif = true;
   bool _audioSoundbox = true;
   bool _audioTeguran = true;
@@ -163,6 +166,8 @@ class _BusinessDoctorScreenState extends ConsumerState<BusinessDoctorScreen> {
         _tone = p['preferred_tone']?.toString() ?? _tone;
         _dailyStreak =
             int.tryParse(p['daily_streak']?.toString() ?? '') ?? _dailyStreak;
+        _xp = int.tryParse(p['xp']?.toString() ?? '') ?? _xp;
+        _level = int.tryParse(p['level']?.toString() ?? '') ?? _level;
         _bossWa = p['boss_wa_number']?.toString();
         final audio = p['audio_prefs'];
         if (audio is Map && audio.isNotEmpty) {
@@ -750,6 +755,10 @@ class _BusinessDoctorScreenState extends ConsumerState<BusinessDoctorScreen> {
     } catch (_) {}
     if (allDone && mounted) {
       _snack('Semua langkah resep selesai. Mantap!');
+      final key = (memoryId != null && memoryId.isNotEmpty)
+          ? memoryId
+          : DateTime.now().toIso8601String().substring(0, 10);
+      await _awardOnce('resep_selesai', 'resep:$key');
     }
   }
 
@@ -758,6 +767,31 @@ class _BusinessDoctorScreenState extends ConsumerState<BusinessDoctorScreen> {
           .whereType<Map>()
           .map((e) => Map<String, dynamic>.from(e))
           .toList();
+
+  /// Beri XP sekali per aktivitas (aman bila pengguna menandai lalu membatalkan).
+  Future<void> _awardOnce(String reason, String eventKey) async {
+    final outletId = ref.read(currentUserProvider)?.outletId;
+    if (outletId == null || outletId.isEmpty) return;
+    try {
+      final res = await (widget.service ?? BusinessDoctorService()).awardXpOnce(
+        outletId: outletId,
+        reason: reason,
+        eventKey: eventKey,
+      );
+      final gained = int.tryParse(res['gained']?.toString() ?? '') ?? 0;
+      final level = int.tryParse(res['level']?.toString() ?? '') ?? _level;
+      final xp = int.tryParse(res['xp']?.toString() ?? '') ?? _xp;
+      if (!mounted) return;
+      setState(() {
+        _xp = xp;
+        _level = level;
+      });
+      if (gained > 0) {
+        final up = res['leveled_up'] == true;
+        _snack(up ? '+$gained XP - Naik ke level $level!' : '+$gained XP');
+      }
+    } catch (_) {}
+  }
 
   /// "Jalankan" langkah dosis: buka fitur terkait lalu tandai selesai.
   Future<void> _onDoseStep(
@@ -841,6 +875,10 @@ class _BusinessDoctorScreenState extends ConsumerState<BusinessDoctorScreen> {
     if (doneItems >= items.length && items.isNotEmpty && mounted) {
       _snack('Dosis hari ini tuntas. Mantap!');
       _loadProfile();
+      final key = (doseDate != null && doseDate.isNotEmpty)
+          ? doseDate
+          : DateTime.now().toIso8601String().substring(0, 10);
+      await _awardOnce('dosis_selesai', 'dosis:$key');
     }
   }
 
@@ -1195,6 +1233,8 @@ class _BusinessDoctorScreenState extends ConsumerState<BusinessDoctorScreen> {
                 ),
             ],
           ),
+          const SizedBox(height: 12),
+          _buildGamificationRow(),
           const SizedBox(height: 10),
           Wrap(
             spacing: 8,
@@ -1217,6 +1257,67 @@ class _BusinessDoctorScreenState extends ConsumerState<BusinessDoctorScreen> {
           ),
         ],
       ),
+    );
+  }
+
+  Widget _buildGamificationRow() {
+    final inLevel = _xp % _levelStep;
+    final progress = (inLevel / _levelStep).clamp(0.0, 1.0);
+    return Row(
+      children: [
+        Container(
+          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+          decoration: BoxDecoration(
+            color: AppTheme.primaryColor.withValues(alpha: 0.10),
+            borderRadius: BorderRadius.circular(AppTheme.radiusMedium),
+            border: Border.all(
+                color: AppTheme.primaryColor.withValues(alpha: 0.30)),
+          ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Icon(Icons.military_tech_rounded,
+                  size: 15, color: AppTheme.primaryColor),
+              const SizedBox(width: 4),
+              Text(
+                'Level $_level',
+                style: GoogleFonts.plusJakartaSans(
+                  fontSize: 12,
+                  fontWeight: FontWeight.w800,
+                  color: AppTheme.primaryColor,
+                ),
+              ),
+            ],
+          ),
+        ),
+        const SizedBox(width: 10),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              ClipRRect(
+                borderRadius: BorderRadius.circular(AppTheme.radiusMedium),
+                child: LinearProgressIndicator(
+                  value: progress,
+                  minHeight: 6,
+                  backgroundColor: AppTheme.surfaceMutedColor,
+                  valueColor:
+                      const AlwaysStoppedAnimation(AppTheme.primaryColor),
+                ),
+              ),
+              const SizedBox(height: 4),
+              Text(
+                '$inLevel / $_levelStep XP menuju level ${_level + 1}',
+                style: GoogleFonts.plusJakartaSans(
+                  fontSize: 11,
+                  fontWeight: FontWeight.w600,
+                  color: AppTheme.textSecondary,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ],
     );
   }
 

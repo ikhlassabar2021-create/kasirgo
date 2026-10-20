@@ -329,12 +329,12 @@ class BusinessDoctorService {
 
   // --- Dokter Bisnis 3.0: persona, dosis harian, briefing ---
 
-  /// Persona & gamifikasi ringan (nada bicara + rentetan hari).
+  /// Persona & gamifikasi ringan (nada bicara, rentetan hari, XP/level).
   Future<Map<String, dynamic>?> getProfile(String outletId) async {
     final res = await _client
         .from('doctor_outlet_profile')
         .select(
-            'preferred_tone, daily_streak, last_dose_at, boss_wa_number, audio_prefs')
+            'preferred_tone, daily_streak, last_dose_at, boss_wa_number, audio_prefs, xp, level')
         .eq('outlet_id', outletId)
         .maybeSingle();
     return res;
@@ -472,6 +472,22 @@ class BusinessDoctorService {
     final res = await _client.rpc('doctor_award_xp', params: {
       'p_outlet': outletId,
       'p_reason': reason,
+    });
+    if (res is Map) return res.cast<String, dynamic>();
+    return <String, dynamic>{};
+  }
+
+  /// Beri XP satu kali per `eventKey` (mis. `dosis:2026-11-26`), sehingga
+  /// aktivitas yang dibatalkan lalu ditandai ulang tidak menambah XP ganda.
+  Future<Map<String, dynamic>> awardXpOnce({
+    required String outletId,
+    required String reason,
+    required String eventKey,
+  }) async {
+    final res = await _client.rpc('doctor_award_xp_once', params: {
+      'p_outlet': outletId,
+      'p_reason': reason,
+      'p_key': eventKey,
     });
     if (res is Map) return res.cast<String, dynamic>();
     return <String, dynamic>{};
