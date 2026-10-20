@@ -9,6 +9,7 @@ import '../../widgets/common/app_button.dart';
 import '../../widgets/common/app_dropdown_field.dart';
 import '../../widgets/common/centennial_background.dart';
 import '../../widgets/common/doctor_badge_chip.dart';
+import 'staff_performance_screen.dart';
 
 /// Papan delegasi tugas Dokter Bisnis ke Admin / Kasir / Koki.
 ///
@@ -167,6 +168,16 @@ class _DelegationBoardScreenState extends ConsumerState<DelegationBoardScreen> {
     await _toast('Tugas dihapus.');
   }
 
+  Future<void> _openPerformance() async {
+    await Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => StaffPerformanceScreen(service: _service),
+      ),
+    );
+    if (mounted) await _load();
+  }
+
   Future<void> _openSheet(DoctorDelegation? item) async {
     final outletId = ref.read(currentUserProvider)?.outletId;
     if (outletId == null || outletId.isEmpty) return;
@@ -207,6 +218,13 @@ class _DelegationBoardScreenState extends ConsumerState<DelegationBoardScreen> {
         foregroundColor: AppTheme.textPrimary,
         elevation: 0,
         scrolledUnderElevation: 0,
+        actions: [
+          IconButton(
+            onPressed: _openPerformance,
+            icon: const Icon(Icons.insights_rounded),
+            tooltip: 'Laporan Performa Staf',
+          ),
+        ],
       ),
       floatingActionButton: FloatingActionButton.extended(
         heroTag: 'delegation-create-fab',
@@ -387,7 +405,27 @@ class _DelegationBoardScreenState extends ConsumerState<DelegationBoardScreen> {
               ),
             ],
           ),
-          const SizedBox(height: 8),
+          Align(
+            alignment: Alignment.centerRight,
+            child: TextButton.icon(
+              onPressed: _openPerformance,
+              icon: const Icon(Icons.insights_rounded, size: 16),
+              label: Text(
+                'Laporan lengkap',
+                style: GoogleFonts.plusJakartaSans(
+                  fontSize: 11,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+              style: TextButton.styleFrom(
+                foregroundColor: AppTheme.primaryColor,
+                padding: const EdgeInsets.symmetric(horizontal: 4),
+                minimumSize: const Size(0, 32),
+                tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+              ),
+            ),
+          ),
+          const SizedBox(height: 2),
           for (var i = 0; i < _board.items.length; i++) ...[
             if (i > 0) const Divider(height: 16, color: AppTheme.borderColor),
             _leaderboardRow(_board.items[i]),
