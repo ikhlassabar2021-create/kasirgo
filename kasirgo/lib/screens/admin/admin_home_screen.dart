@@ -6,6 +6,7 @@ import '../../providers/auth_provider.dart';
 import '../../providers/module_provider.dart';
 import '../../providers/outlet_provider.dart';
 import '../../widgets/common/app_drawer.dart';
+import '../../widgets/common/delegation_tasks_card.dart';
 import '../../widgets/common/logout_button.dart';
 import '../../widgets/common/responsive.dart';
 import '../modules/kitchen_display_screen.dart';
@@ -56,18 +57,30 @@ class _AdminHomeScreenState extends ConsumerState<AdminHomeScreen> {
       mobileActions: const [LogoutButton()],
       sidebarFooter: _AdminSidebarFooter(email: user.email, role: user.role),
       mobileTitle: _RoleBadge(label: 'ADMIN • ${outletType.toUpperCase()}'),
-      body: IndexedStack(
-        index: _currentIndex,
-        children: isFood
-            ? const [
-                ProductListScreen(embedded: true),
-                KitchenDisplayScreen(embedded: true),
-                ReportScreen(embedded: true),
-              ]
-            : const [
-                ProductListScreen(embedded: true),
-                ReportScreen(embedded: true),
-              ],
+      body: SafeArea(
+        child: Column(
+          children: [
+            const Padding(
+              padding: EdgeInsets.fromLTRB(16, 12, 16, 0),
+              child: DelegationTasksCard(),
+            ),
+            Expanded(
+              child: IndexedStack(
+                index: _currentIndex,
+                children: isFood
+                    ? const [
+                        ProductListScreen(embedded: true),
+                        KitchenDisplayScreen(embedded: true),
+                        ReportScreen(embedded: true),
+                      ]
+                    : const [
+                        ProductListScreen(embedded: true),
+                        ReportScreen(embedded: true),
+                      ],
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }

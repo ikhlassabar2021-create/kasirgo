@@ -12,6 +12,7 @@ import '../../services/supabase_service.dart';
 import '../../utils/formatters.dart';
 import '../../widgets/common/app_drawer.dart';
 import '../../widgets/common/app_close_button.dart';
+import '../../widgets/common/delegation_tasks_card.dart';
 import '../../widgets/common/glass_card.dart';
 import '../../widgets/common/logout_button.dart';
 import '../../widgets/common/responsive.dart';
@@ -294,6 +295,8 @@ class _CashierHomeScreenState extends ConsumerState<CashierHomeScreen> {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               _buildHero(context, user.email, activeShiftAsync.value),
+              const SizedBox(height: 16),
+              const DelegationTasksCard(),
               const SizedBox(height: 24),
               _buildShiftAndTipSection(
                 context,

@@ -14,6 +14,7 @@ import '../../widgets/common/centennial_background.dart';
 import '../../widgets/common/supporter_gate.dart';
 import '../modules/supporter_screen.dart';
 import 'doctor_cases_screen.dart';
+import 'delegation_board_screen.dart';
 import 'doctor_intake_screen.dart';
 import 'doctor_promotion_log_screen.dart';
 import 'doctor_rapor_roi_screen.dart';
@@ -664,6 +665,25 @@ class _BusinessDoctorScreenState extends ConsumerState<BusinessDoctorScreen> {
     await _markPrescriptionDone(block, index, true);
   }
 
+  /// Buka papan delegasi dengan isian awal dari satu langkah resep.
+  Future<void> _onDelegateStep(
+      Map<String, dynamic> block, Map<String, dynamic> step, int index) async {
+    final text = step['text']?.toString().trim() ?? '';
+    if (text.isEmpty) return;
+    await Navigator.push<bool>(
+      context,
+      MaterialPageRoute(
+        builder: (_) => DelegationBoardScreen(
+          initialTitle: text,
+          initialBody: 'Langkah ${index + 1} dari resep Dokter Bisnis AI.',
+          source: 'prescription',
+          sourceRef: block['memory_id']?.toString(),
+          stepIndex: index,
+        ),
+      ),
+    );
+  }
+
   /// Checklist: tandai langkah selesai / batal selesai (tanpa membuka fitur).
   Future<void> _togglePrescriptionStep(
       Map<String, dynamic> block, int index) async {
@@ -1033,6 +1053,8 @@ class _BusinessDoctorScreenState extends ConsumerState<BusinessDoctorScreen> {
         const SizedBox(height: 12),
         _buildAudioCard(),
         const SizedBox(height: 12),
+        _buildDelegationCard(),
+        const SizedBox(height: 12),
         if (_briefing != null) ...[
           _buildBriefingCard(),
           const SizedBox(height: 12),
@@ -1066,6 +1088,7 @@ class _BusinessDoctorScreenState extends ConsumerState<BusinessDoctorScreen> {
               blocks: [_activePrescription!],
               onPrescription: _onPrescriptionStep,
               onTogglePrescription: _togglePrescriptionStep,
+              onDelegate: _onDelegateStep,
             ),
             const SizedBox(height: 8),
           ],
@@ -1413,6 +1436,66 @@ class _BusinessDoctorScreenState extends ConsumerState<BusinessDoctorScreen> {
                 _audioAktif ? (v) => _setAudioPrefs(teguran: v) : null,
           ),
         ],
+      ),
+    );
+  }
+
+  Widget _buildDelegationCard() {
+    return Material(
+      color: AppTheme.surfaceColor,
+      borderRadius: BorderRadius.circular(AppTheme.radiusLarge),
+      child: InkWell(
+        borderRadius: BorderRadius.circular(AppTheme.radiusLarge),
+        onTap: () => Navigator.push(
+          context,
+          MaterialPageRoute(builder: (_) => const DelegationBoardScreen()),
+        ),
+        child: Container(
+          width: double.infinity,
+          padding: const EdgeInsets.all(12),
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(AppTheme.radiusLarge),
+            border: Border.all(color: AppTheme.borderColor),
+          ),
+          child: Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: AppTheme.secondaryColor.withValues(alpha: 0.12),
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: const Icon(Icons.assignment_ind_rounded,
+                    color: AppTheme.secondaryColor, size: 20),
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Delegasi Tugas',
+                      style: GoogleFonts.plusJakartaSans(
+                        fontSize: 13,
+                        fontWeight: FontWeight.w800,
+                        color: AppTheme.textPrimary,
+                      ),
+                    ),
+                    Text(
+                      'Bagi langkah resep ke Admin, Kasir, atau Koki.',
+                      style: GoogleFonts.plusJakartaSans(
+                        fontSize: 11,
+                        color: AppTheme.textSecondary,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const Icon(Icons.chevron_right_rounded,
+                  color: AppTheme.textSecondary),
+            ],
+          ),
+        ),
       ),
     );
   }
@@ -2296,6 +2379,7 @@ class _BusinessDoctorScreenState extends ConsumerState<BusinessDoctorScreen> {
                     onAction: _handleAction,
                     onPrescription: _onPrescriptionStep,
                     onTogglePrescription: _togglePrescriptionStep,
+                    onDelegate: _onDelegateStep,
                     onDoseStep: _onDoseStep,
                     onToggleDose: _toggleDoseStep,
                   ),

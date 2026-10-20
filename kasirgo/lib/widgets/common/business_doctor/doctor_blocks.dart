@@ -10,6 +10,9 @@ class DoctorBlocks extends StatelessWidget {
   final void Function(String actionKey, String label)? onAction;
   final void Function(
       Map<String, dynamic> block, Map<String, dynamic> step, int index)? onPrescription;
+  final void Function(
+      Map<String, dynamic> block, Map<String, dynamic> step, int index)?
+      onDelegate;
   final void Function(Map<String, dynamic> block, int index)?
       onTogglePrescription;
   final void Function(
@@ -22,6 +25,7 @@ class DoctorBlocks extends StatelessWidget {
     this.onChoice,
     this.onAction,
     this.onPrescription,
+    this.onDelegate,
     this.onTogglePrescription,
     this.onDoseStep,
     this.onToggleDose,
@@ -506,6 +510,14 @@ class DoctorBlocks extends StatelessWidget {
                       filled: done,
                       color: done ? AppTheme.successColor : accent,
                     ),
+                    if (!done && onDelegate != null)
+                      _stepButton(
+                        label: 'Delegasikan',
+                        icon: Icons.person_add_alt_1_rounded,
+                        onTap: () => onDelegate!(block, step, index),
+                        filled: false,
+                        color: AppTheme.secondaryColor,
+                      ),
                   ],
                 ),
               ),
