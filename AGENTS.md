@@ -1269,3 +1269,22 @@ Commit `ff04bb3` (main) + deploy web gh-pages `050051c` (live md5
   `get_public_menu` memuat produk layanan stok 0. Data uji dikembalikan ke semula.
 - Build web release + deploy gh-pages commit `abb7e64` (sebelumnya `2d078d0`).
 - Commit kode+migrasi: `333ab15` (main).
+
+### Notifikasi Tugas Terlambat + Teguran Otomatis (Dokter Bisnis 13.21B) - SELESAI
+- `lib/services/doctor_alert_service.dart` (BARU): `checkAndNotify(outletId, userId, role)`
+  -> notifikasi LOKAL (bukan push) saat login. Owner: 1 rekap tugas staf terlambat
+  (`N tugas staf terlambat`, 3 nama) + 1 notifikasi teguran terbaru
+  (`BusinessDoctorService.getLatestReprimand`). Staf: maks 3 notifikasi per tugas
+  (`Terlambat:` / `Jatuh tempo:`). Anti-spam harian via SharedPreferences
+  `doctor_alert_seen_v1` (prune 200), ID notifikasi per tugas = base 78210 + hash.
+- `notification_service.dart`: channel baru `kasirgo_delegations` ("Tugas & Delegasi")
+  + `kasirgo_doctor` ("Dokter Bisnis"), method `showDelegationNotification` /
+  `showDoctorNotification`.
+- `app.dart`: `_maybeTriggerAlerts` dipanggil sekali per user (guard `_alertsForUserId`)
+  dari `_initialize` & `_listenAuth`, delay 3 dtk agar plugin siap; tap payload
+  `delegation:`/`doctor:` -> route ke home sesuai role (payload `report:` tetap).
+- Unit test `test/doctor_alert_service_test.dart` 3/3 PASS (fake service + client dummy).
+- E2E `e2e/doctor_alerts_verify.mjs` (seed `__ALERT_QA__` + cleanup): owner 2 pengingat
+  (rekap+teguran), kasir 1 pengingat, `DelegationTasksCard` tampil, 0 console error.
+  `doctor_delegations` & memori uji kembali 0 baris.
+- `flutter analyze` bersih; `flutter build web --release --base-href /kasirgo/` sukses.

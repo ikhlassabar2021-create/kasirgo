@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'config/app_theme.dart';
 import 'models/app_mode.dart';
+import 'models/user.dart';
 import 'models/product.dart';
 import 'screens/auth/login_screen.dart';
 import 'screens/auth/register_screen.dart';
@@ -27,6 +28,7 @@ import 'screens/customer/customer_catalog_screen.dart';
 import 'services/local_db_service.dart';
 import 'services/sync_service.dart';
 import 'services/auth_service.dart';
+import 'services/doctor_alert_service.dart';
 import 'services/notification_service.dart';
 import 'services/report_scheduler_service.dart';
 import 'providers/auth_provider.dart';
@@ -143,6 +145,8 @@ class KasirGoApp extends ConsumerStatefulWidget {
 }
 
 class _KasirGoAppState extends ConsumerState<KasirGoApp> {
+  String? _alertsForUserId;
+
   @override
   void initState() {
     super.initState();
@@ -158,6 +162,7 @@ class _KasirGoAppState extends ConsumerState<KasirGoApp> {
         final user = await authService.getCurrentUser();
         if (user != null && mounted) {
           ref.read(currentUserProvider.notifier).setUserDirectly(user);
+          _maybeTriggerAlerts(user);
           final route = switch (user.role) {
             'admin' => '/admin',
             'cashier' => '/cashier',
@@ -191,6 +196,7 @@ class _KasirGoAppState extends ConsumerState<KasirGoApp> {
     if (!mounted || user == null) return;
 
     ref.read(currentUserProvider.notifier).setUserDirectly(user);
+    _maybeTriggerAlerts(user);
     final route = switch (user.role) {
       'admin' => '/admin',
       'cashier' => '/cashier',
@@ -200,7 +206,37 @@ class _KasirGoAppState extends ConsumerState<KasirGoApp> {
     _router.go(route);
   }
 
+  void _maybeTriggerAlerts(User user) {
+    if (_alertsForUserId == user.id) return;
+    _alertsForUserId = user.id;
+    _triggerDoctorAlerts(user);
+  }
+
+  /// Notifikasi lokal Dokter Bisnis 3.0: tugas terlambat + teguran.
+  /// Ditunda sebentar agar plugin notifikasi selesai inisialisasi.
+  Future<void> _triggerDoctorAlerts(User user) async {
+    final outletId = user.outletId;
+    if (outletId == null || outletId.isEmpty) return;
+    await Future.delayed(const Duration(seconds: 3));
+    await DoctorAlertService().checkAndNotify(
+      outletId: outletId,
+      userId: user.id,
+      role: user.role,
+    );
+  }
+
   Future<void> _handleNotificationTap(String? payload) async {
+    if (payload != null &&
+        (payload.startsWith('delegation:') || payload.startsWith('doctor:'))) {
+      final role = ref.read(currentUserProvider)?.role;
+      _router.go(switch (role) {
+        'admin' => '/admin',
+        'cashier' => '/cashier',
+        'kitchen' => '/kitchen',
+        _ => '/owner',
+      });
+      return;
+    }
     if (payload == null || !payload.startsWith('report:')) return;
     final outletId = payload.substring('report:'.length);
     if (outletId.isEmpty) return;

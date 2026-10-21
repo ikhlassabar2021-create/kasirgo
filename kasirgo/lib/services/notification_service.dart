@@ -20,6 +20,15 @@ class NotificationService {
   static const String orderChannelId = 'kasirgo_orders';
   static const String orderChannelName = 'Pesanan Online';
 
+  // Dokter Bisnis 3.0: teguran AI + tugas delegasi yang terlambat.
+  static const int delegationNotificationId = 78201;
+  static const String delegationChannelId = 'kasirgo_delegations';
+  static const String delegationChannelName = 'Tugas & Delegasi';
+
+  static const int doctorNotificationId = 78301;
+  static const String doctorChannelId = 'kasirgo_doctor';
+  static const String doctorChannelName = 'Dokter Bisnis';
+
   final FlutterLocalNotificationsPlugin _plugin =
       FlutterLocalNotificationsPlugin();
   bool _ready = false;
@@ -149,6 +158,69 @@ class NotificationService {
       );
     } catch (e) {
       debugPrint('Gagal menampilkan notifikasi pesanan: $e');
+    }
+  }
+
+  /// Notifikasi tugas delegasi yang mendekati/melewati tenggat.
+  /// [id] unik per tugas agar notifikasi tidak saling menimpa.
+  Future<void> showDelegationNotification({
+    required int id,
+    required String title,
+    required String body,
+    String? payload,
+  }) async {
+    if (!_ready) return;
+    try {
+      await _plugin.show(
+        id: id,
+        title: title,
+        body: body,
+        notificationDetails: const NotificationDetails(
+          android: AndroidNotificationDetails(
+            delegationChannelId,
+            delegationChannelName,
+            channelDescription: 'Pengingat tugas yang didelegasikan owner',
+            importance: Importance.high,
+            priority: Priority.high,
+            playSound: true,
+          ),
+          iOS: DarwinNotificationDetails(presentSound: true),
+        ),
+        payload: payload,
+      );
+    } catch (e) {
+      debugPrint('Gagal menampilkan notifikasi tugas: $e');
+    }
+  }
+
+  /// Notifikasi teguran Dokter Bisnis (pengingat/teguran/teguran keras).
+  Future<void> showDoctorNotification({
+    required String title,
+    required String body,
+    String? payload,
+  }) async {
+    if (!_ready) return;
+    try {
+      await _plugin.show(
+        id: doctorNotificationId,
+        title: title,
+        body: body,
+        notificationDetails: const NotificationDetails(
+          android: AndroidNotificationDetails(
+            doctorChannelId,
+            doctorChannelName,
+            channelDescription: 'Teguran dan pengingat dari Dokter Bisnis AI',
+            importance: Importance.max,
+            priority: Priority.high,
+            playSound: true,
+            enableVibration: true,
+          ),
+          iOS: DarwinNotificationDetails(presentSound: true),
+        ),
+        payload: payload,
+      );
+    } catch (e) {
+      debugPrint('Gagal menampilkan notifikasi Dokter Bisnis: $e');
     }
   }
 }
