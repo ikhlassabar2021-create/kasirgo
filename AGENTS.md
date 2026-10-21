@@ -1288,3 +1288,13 @@ Commit `ff04bb3` (main) + deploy web gh-pages `050051c` (live md5
   (rekap+teguran), kasir 1 pengingat, `DelegationTasksCard` tampil, 0 console error.
   `doctor_delegations` & memori uji kembali 0 baris.
 - `flutter analyze` bersih; `flutter build web --release --base-href /kasirgo/` sukses.
+
+### Polish Export Excel: Hapus Sheet Kosong "Sheet1" - SELESAI
+- `staff_performance_screen.dart` & `report_screen.dart`: setelah
+  `setDefaultSheet('Ringkasan')` tambah `if (excel.tables.containsKey('Sheet1')) excel.delete('Sheet1')`
+  -> berkas xlsx hanya berisi sheet yang dipakai (performa: Ringkasan + Detail Staf;
+  laporan: Ringkasan + Penjualan + Per Produk).
+- Verifikasi live Playwright (owner Toko Test): unduh `Performa_Staf_*.xlsx` &
+  `Laporan_Keuangan_*.xlsx`, cek `xl/workbook.xml` -> tidak ada `Sheet1`, 0 console error.
+  Data uji `__SHEET_QA__` dibersihkan (`doctor_delegations` 0 baris).
+- Commit `6bc2eb4` (main) + deploy gh-pages `0e74b07` (md5 `ff456cab2da8df0e645746b6bcd25296`).
