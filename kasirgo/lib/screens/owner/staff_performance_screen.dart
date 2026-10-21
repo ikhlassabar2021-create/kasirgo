@@ -319,6 +319,7 @@ class _StaffPerformanceScreenState
       final excel = xl.Excel.createExcel();
       final summary = excel['Ringkasan'];
       excel.setDefaultSheet('Ringkasan');
+      if (excel.tables.containsKey('Sheet1')) excel.delete('Sheet1');
 
       summary.appendRow([xl.TextCellValue('LAPORAN PERFORMA STAF — KASIRGO')]);
       summary.appendRow([

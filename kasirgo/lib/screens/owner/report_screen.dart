@@ -352,6 +352,7 @@ class _ReportScreenState extends ConsumerState<ReportScreen> with SingleTickerPr
 
       final summarySheet = excel['Ringkasan'];
       excel.setDefaultSheet('Ringkasan');
+      if (excel.tables.containsKey('Sheet1')) excel.delete('Sheet1');
 
       final totalOmzet = _totalProductRevenue;
       final titipanOngkir = _totalDeliveryPassThrough;
