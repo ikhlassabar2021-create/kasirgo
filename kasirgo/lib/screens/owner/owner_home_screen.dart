@@ -30,6 +30,7 @@ import 'business_doctor_screen.dart';
 import 'bundle_manager_screen.dart';
 import 'lapak_live_screen.dart';
 import '../../services/business_doctor_service.dart';
+import '../../services/delegation_service.dart';
 import '../modules/kitchen_display_screen.dart';
 import 'shift_screen.dart';
 import '../modules/supporter_screen.dart';
@@ -139,6 +140,24 @@ final homeSummaryProvider = FutureProvider<Map<String, dynamic>>((ref) async {
       'allProducts': [],
     };
   }
+});
+
+/// Jumlah hal yang perlu perhatian owner dari Dokter Bisnis:
+/// tugas staf terlambat + teguran hari ini (badge di beranda, 13.21B).
+final doctorAttentionProvider = FutureProvider<int>((ref) async {
+  final outletId = ref.watch(currentUserProvider)?.outletId;
+  if (outletId == null) return 0;
+
+  var count = 0;
+  try {
+    final summary = await DelegationService().summary(outletId);
+    count += (summary['terlambat'] as num?)?.toInt() ?? 0;
+  } catch (_) {}
+  try {
+    final reprimand = await BusinessDoctorService().getLatestReprimand(outletId);
+    if (reprimand != null) count += 1;
+  } catch (_) {}
+  return count;
 });
 
 class OwnerHomeScreen extends ConsumerStatefulWidget {
@@ -604,8 +623,9 @@ class _OwnerHomeScreenState extends ConsumerState<OwnerHomeScreen> {
     );
   }
 
-  void _pushGated(String featureKey, Widget screen, {String? title}) {
-    Navigator.push(
+  Future<void> _pushGated(String featureKey, Widget screen,
+      {String? title}) async {
+    await Navigator.push(
       context,
       MaterialPageRoute(
         builder: (_) => SupporterFeatureGate(
@@ -889,6 +909,7 @@ class _OwnerHomeScreenState extends ConsumerState<OwnerHomeScreen> {
 
   Widget _buildModularQuickActions(BuildContext context, String outletId) {
     final modules = ref.watch(activeModulesProvider(outletId));
+    final attention = ref.watch(doctorAttentionProvider).valueOrNull ?? 0;
 
     final quickActionItems = <Widget>[];
 
@@ -896,11 +917,16 @@ class _OwnerHomeScreenState extends ConsumerState<OwnerHomeScreen> {
       _ModuleCard(
         icon: Icons.medical_services_rounded,
         title: 'Dokter Bisnis AI',
-        subtitle: 'Diagnosa & resep',
+        subtitle: attention > 0
+            ? 'Perlu perhatian ($attention)'
+            : 'Diagnosa & resep',
         color: AppTheme.moduleAccentIndigo,
-        onTap: () => _pushGated(
-            'business_doctor', const BusinessDoctorScreen(),
-            title: 'Dokter Bisnis AI'),
+        badgeCount: attention,
+        onTap: () async {
+          await _pushGated('business_doctor', const BusinessDoctorScreen(),
+              title: 'Dokter Bisnis AI');
+          ref.invalidate(doctorAttentionProvider);
+        },
       ),
     );
 
@@ -2286,6 +2312,7 @@ class _ModuleCard extends StatelessWidget {
   final String subtitle;
   final Color color;
   final VoidCallback onTap;
+  final int badgeCount;
 
   const _ModuleCard({
     required this.icon,
@@ -2293,13 +2320,14 @@ class _ModuleCard extends StatelessWidget {
     required this.subtitle,
     required this.color,
     required this.onTap,
+    this.badgeCount = 0,
   });
 
   @override
   Widget build(BuildContext context) {
     // Design System v3: gaya ikon super-app GoPay - ikon dalam lingkaran
     // pastel lembut, label di bawahnya.
-    return InkWell(
+    final card = InkWell(
       onTap: onTap,
       borderRadius: BorderRadius.circular(AppTheme.radiusLarge),
       child: Container(
@@ -2346,6 +2374,39 @@ class _ModuleCard extends StatelessWidget {
             ),
           ],
         ),
+      ),
+    );
+
+    if (badgeCount <= 0) return card;
+
+    return MergeSemantics(
+      child: Stack(
+        clipBehavior: Clip.none,
+        children: [
+          card,
+          Positioned(
+            top: 4,
+            right: 6,
+            child: ExcludeSemantics(
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1),
+                decoration: BoxDecoration(
+                  color: AppTheme.errorColor,
+                  borderRadius: BorderRadius.circular(10),
+                  border: Border.all(color: AppTheme.surfaceColor, width: 1.5),
+                ),
+                child: Text(
+                  badgeCount > 9 ? '9+' : '$badgeCount',
+                  style: GoogleFonts.plusJakartaSans(
+                    color: AppTheme.surfaceColor,
+                    fontSize: 10,
+                    fontWeight: FontWeight.w800,
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }
