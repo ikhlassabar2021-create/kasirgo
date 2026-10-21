@@ -1298,3 +1298,21 @@ Commit `ff04bb3` (main) + deploy web gh-pages `050051c` (live md5
   `Laporan_Keuangan_*.xlsx`, cek `xl/workbook.xml` -> tidak ada `Sheet1`, 0 console error.
   Data uji `__SHEET_QA__` dibersihkan (`doctor_delegations` 0 baris).
 - Commit `6bc2eb4` (main) + deploy gh-pages `0e74b07` (md5 `ff456cab2da8df0e645746b6bcd25296`).
+
+### Badge Perhatian di Kartu Dokter Bisnis AI (13.21B lanjutan) - SELESAI
+- `owner_home_screen.dart`: `doctorAttentionProvider` (FutureProvider<int>) =
+  `DelegationService().summary(outlet)['terlambat']` + 1 bila
+  `BusinessDoctorService().getLatestReprimand(outlet) != null` (try/catch -> 0).
+- `_pushGated` jadi `Future<void>` async; kartu Dokter Bisnis AI memakai
+  `badgeCount: attention`, subtitle `Perlu perhatian (N)` bila > 0, dan
+  `ref.invalidate(doctorAttentionProvider)` setelah layar ditutup.
+- `_ModuleCard` +`badgeCount` (default 0): overlay `Positioned` badge merah
+  (`AppTheme.errorColor`, teks `9+` bila > 9) dibungkus
+  `MergeSemantics(Stack[card, ExcludeSemantics(badge)])` sehingga node semantics
+  kartu = satu teks "Dokter Bisnis AI\nPerlu perhatian (N)" tanpa label ganda.
+- Verifikasi E2E `e2e/doctor_badge_verify.mjs` (seed `__BADGE_QA__` tugas
+  terlambat + teguran): `BADGE_LABEL "Dokter Bisnis AI\nPerlu perhatian (2)"`,
+  `SUBTITLE Perlu perhatian (2)`, `HAS_CARD true`, `ERRORS 0`. Data uji
+  dibersihkan (`doctor_delegations` 0 baris, memori `__BADGE_QA__` 0).
+- `flutter analyze` 1 info pre-existing; build web sukses. Commit `eedc7bd` (main)
+  + deploy gh-pages `30afe69` (live md5 `34eb04812c623f94ff803792a02cc203`).
