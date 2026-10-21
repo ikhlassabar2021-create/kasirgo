@@ -160,6 +160,7 @@ class SupporterService {
     'ad_free',
     'business_doctor',
     'sidak_bos',
+    'dynamic_pricing',
     'lapak_live',
   };
 
@@ -181,6 +182,7 @@ class SupporterService {
     'ad_free': 'Bebas Iklan',
     'business_doctor': 'Dokter Bisnis AI',
     'sidak_bos': 'Sidak Stok & Kas',
+    'dynamic_pricing': 'Atur Harga & Diskon',
     'lapak_live': 'Lapak Live (Radar & Antrean)',
   };
 

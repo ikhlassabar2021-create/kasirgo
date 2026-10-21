@@ -778,7 +778,7 @@ class DoctorBlocks extends StatelessWidget {
     const labels = {
       'sidak_bos': 'Sidak Stok & Kas',
       'progress_tracker': 'Laporan & Progres',
-      'dynamic_pricing': 'Atur Harga Produk',
+      'dynamic_pricing': 'Atur Harga & Diskon',
       'bundling': 'Bundling Produk',
       'cross_sell': 'Produk Terkait',
       'wa_marketing': 'WA Marketing',

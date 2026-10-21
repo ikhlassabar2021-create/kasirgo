@@ -1394,3 +1394,37 @@ Commit `ff04bb3` (main) + deploy web gh-pages `050051c` (live md5
 - `flutter analyze` 8 file: 1 info pre-existing (`unnecessary_underscores`
   owner_home_screen:700); `flutter build web --release` sukses; deploy
   gh-pages `5227cd1` (live md5 `c11e43967de7f2c0030b824f416b4239` MATCH).
+
+### Dynamic Pricing AI: Atur Harga & Diskon (13.24 #4) - SELESAI
+- `lib/utils/dynamic_pricing.dart` (BARU): `DynamicPricing.build(products,
+  transactions, {minMarginPercent=15, daysThreshold=30})` -> `DynamicPricingPlan`
+  (`discounts`/`lowMargins`/`rankOf`/`productCount`/`transactionCount`).
+  Diskon kelas A 10-15%, B 10-25%, C 15-25%; harga tidak boleh di bawah
+  modal + margin 15% (floor `cost/(1-minMargin)`), dibulatkan 500, diskon
+  minimum 5%; margin tipis (<15%) -> saran kenaikan harga. Basis
+  `AIEngine.abcRanking` + `suggestFlashSale`/`checkMargin`.
+- `lib/services/dynamic_pricing_service.dart` (BARU): `loadPlan`,
+  `applyDiscount` (upsert `product_discounts` 7 hari, `is_flash_sale`),
+  `applyPrice` (update `products.base_price`), `logAction`
+  (`doctor_action_logs` action_type `dynamic_pricing`, status `done`,
+  outcome `diskon_dipasang`/`harga_naik`).
+- `lib/screens/owner/dynamic_pricing_screen.dart` (BARU): intro gradient,
+  tile ringkasan (Perlu diskon/Margin tipis), kartu diskon (harga coret ->
+  harga baru + chip -X%), kartu margin (modal/jual + tombol
+  "Naikkan ke Rp..."), badge kelas ABC, empty state "Harga Anda sudah sehat",
+  error state + "Coba lagi". Service opsional di constructor (testability).
+- Wiring: `business_doctor_screen.dart` `_actionScreen` `dynamic_pricing` ->
+  `SupporterFeatureGate` + `DynamicPricingScreen` (dulu `ProductListScreen`);
+  `owner_home_screen.dart` kartu "Atur Harga & Diskon" (Icons.price_change_rounded,
+  `AppTheme.moduleAccentViolet`) via `_pushGated`; `supporter_service.dart`
+  +`dynamic_pricing` di `premiumFeatures`/`featureLabels`; `doctor_blocks.dart`
+  label "Atur Harga & Diskon".
+- Test: `test/dynamic_pricing_test.dart` 9 test PASS (batas diskon A/B,
+  floor modal+margin, margin tipis, harga < modal, tanpa HPP, produk sehat,
+  produk jasa, ringkasan plan).
+- E2E `e2e/dynamic_pricing_verify.mjs` PASS: kartu beranda -> layar terbuka,
+  "Terapkan Diskon" -> baris `product_discounts` 13% + log `diskon_dipasang`;
+  "Naikkan ke Rp..." -> `base_price` 10.000 -> 11.000 + log `harga_naik`;
+  `ERRORS 0`. Data uji (`__DYN_QA__`/`__DYN_QA2__`) sudah dibersihkan.
+- `flutter analyze lib` 22 info (0 warning/error, semua pre-existing);
+  `flutter build web --release --base-href /kasirgo/` sukses.

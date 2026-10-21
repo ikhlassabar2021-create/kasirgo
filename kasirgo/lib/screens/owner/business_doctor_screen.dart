@@ -22,12 +22,12 @@ import 'doctor_promotion_log_screen.dart';
 import 'doctor_rapor_roi_screen.dart';
 import 'doctor_result_screen.dart';
 import 'doctor_vitals_screen.dart';
+import 'dynamic_pricing_screen.dart';
 import 'bundle_manager_screen.dart';
 import 'health_score_screen.dart';
 import 'multi_outlet_screen.dart';
 import 'online_catalog_screen.dart';
 import 'pos_screen.dart';
-import 'product_list_screen.dart';
 import 'qr_table_screen.dart';
 import 'recipe_screen.dart';
 import 'report_screen.dart';
@@ -1163,7 +1163,11 @@ class _BusinessDoctorScreenState extends ConsumerState<BusinessDoctorScreen> {
       case 'progress_tracker':
         return const ReportScreen();
       case 'dynamic_pricing':
-        return const ProductListScreen();
+        return const SupporterFeatureGate(
+          featureKey: 'dynamic_pricing',
+          title: 'Atur Harga & Diskon',
+          child: DynamicPricingScreen(),
+        );
       case 'bundling':
         return const SupporterFeatureGate(
           featureKey: 'wa_marketing',

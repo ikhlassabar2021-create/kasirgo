@@ -29,6 +29,7 @@ import 'health_score_screen.dart';
 import 'business_doctor_screen.dart';
 import 'bundle_manager_screen.dart';
 import 'sidak_bos_screen.dart';
+import 'dynamic_pricing_screen.dart';
 import 'lapak_live_screen.dart';
 import '../../services/business_doctor_service.dart';
 import '../../services/delegation_service.dart';
@@ -939,6 +940,18 @@ class _OwnerHomeScreenState extends ConsumerState<OwnerHomeScreen> {
         color: AppTheme.moduleAccentIndigo,
         onTap: () => _pushGated('sidak_bos', const SidakBosScreen(),
             title: 'Sidak Stok & Kas'),
+      ),
+    );
+
+    quickActionItems.add(
+      _ModuleCard(
+        icon: Icons.price_change_rounded,
+        title: 'Atur Harga & Diskon',
+        subtitle: 'Saran dari AI',
+        color: AppTheme.moduleAccentViolet,
+        onTap: () => _pushGated(
+            'dynamic_pricing', const DynamicPricingScreen(),
+            title: 'Atur Harga & Diskon'),
       ),
     );
 
