@@ -8,6 +8,7 @@ import '../../providers/module_provider.dart';
 import '../../providers/outlet_provider.dart';
 import '../../services/business_doctor_service.dart';
 import '../../services/speech_service.dart';
+import '../../services/supabase_service.dart';
 import '../../services/voice_service.dart';
 import '../../widgets/common/app_button.dart';
 import '../../widgets/common/business_doctor/doctor_blocks.dart';
@@ -32,7 +33,9 @@ import 'recipe_screen.dart';
 import 'report_screen.dart';
 import 'whatsapp_broadcast_screen.dart';
 import '../../utils/error_messages.dart';
+import '../../utils/doctor_result_pdf.dart';
 import '../../utils/formatters.dart';
+import '../../utils/receipt_generator.dart';
 import '../../utils/wa_helper.dart';
 
 import '../../widgets/common/bubble_glass.dart';
@@ -970,15 +973,18 @@ class _BusinessDoctorScreenState extends ConsumerState<BusinessDoctorScreen> {
     final days = int.tryParse(p['target_days']?.toString() ?? '');
     final scoreRaw = p['score'] ?? p['health_score'];
     final score = scoreRaw == null ? null : int.tryParse(scoreRaw.toString());
+    final title =
+        p['verdict']?.toString() ?? p['title']?.toString() ?? 'Vonis';
+    final body = p['verdict_body']?.toString() ?? '';
+    final hint = p['score_hint']?.toString() ?? '';
     Navigator.push(
       context,
       MaterialPageRoute(
         builder: (_) => DoctorResultScreen(
-          verdictTitle:
-              p['verdict']?.toString() ?? p['title']?.toString() ?? 'Vonis',
-          verdictBody: p['verdict_body']?.toString() ?? '',
+          verdictTitle: title,
+          verdictBody: body,
           score: score,
-          scoreHint: p['score_hint']?.toString() ?? '',
+          scoreHint: hint,
           targetDays: days,
           dueDate: due,
           steps: steps,
@@ -986,6 +992,15 @@ class _BusinessDoctorScreenState extends ConsumerState<BusinessDoctorScreen> {
               _onPrescriptionStep(p, Map<String, dynamic>.from(step), i),
           onToggleStep: (i, step) => _togglePrescriptionStep(p, i),
           onStart: () => Navigator.pop(context),
+          onShare: () => _shareResult(
+            verdictTitle: title,
+            verdictBody: body,
+            score: score,
+            scoreHint: hint,
+            targetDays: days,
+            dueDate: due,
+            steps: steps,
+          ),
           onAsk: () {
             Navigator.pop(context);
             _scrollDown();
@@ -993,6 +1008,141 @@ class _BusinessDoctorScreenState extends ConsumerState<BusinessDoctorScreen> {
         ),
       ),
     );
+  }
+
+  /// Simpan/Bagikan hasil diagnosa (BAGIAN 13.21A): PDF A4 atau teks WhatsApp.
+  Future<void> _shareResult({
+    required String verdictTitle,
+    required String verdictBody,
+    required int? score,
+    required String scoreHint,
+    required int? targetDays,
+    required DateTime? dueDate,
+    required List<Map<String, dynamic>> steps,
+  }) async {
+    final action = await showModalBottomSheet<String>(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: AppTheme.surfaceColor,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(
+          top: Radius.circular(AppTheme.radiusLarge),
+        ),
+      ),
+      builder: (ctx) => SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(20, 20, 20, 16),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  Expanded(
+                    child: Text(
+                      'Simpan / Bagikan Hasil',
+                      style: GoogleFonts.plusJakartaSans(
+                        fontSize: 16,
+                        fontWeight: FontWeight.w800,
+                        color: AppTheme.textPrimary,
+                      ),
+                    ),
+                  ),
+                  IconButton(
+                    tooltip: 'Tutup',
+                    onPressed: () => Navigator.pop(ctx),
+                    icon: const Icon(Icons.close_rounded),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 4),
+              Text(
+                'Hasil pemeriksaan bisa disimpan sebagai PDF atau dikirim '
+                'ke WhatsApp bos.',
+                style: GoogleFonts.plusJakartaSans(
+                  fontSize: 13,
+                  color: AppTheme.textSecondary,
+                ),
+              ),
+              const SizedBox(height: 16),
+              AppButton(
+                label: 'Simpan / Unduh PDF',
+                icon: Icons.picture_as_pdf_rounded,
+                height: AppTheme.touchTargetLarge,
+                onPressed: () => Navigator.pop(ctx, 'pdf'),
+              ),
+              const SizedBox(height: 10),
+              AppButton(
+                label: 'Kirim ke WhatsApp',
+                icon: Icons.chat_rounded,
+                variant: AppButtonVariant.outline,
+                height: AppTheme.touchTargetLarge,
+                onPressed: () => Navigator.pop(ctx, 'wa'),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+    if (action == null || !mounted) return;
+
+    var storeName = ref.read(currentUserProvider)?.name ?? '';
+    final outletId = ref.read(currentUserProvider)?.outletId;
+    if (storeName.isEmpty && outletId != null && outletId.isNotEmpty) {
+      try {
+        storeName =
+            (await SupabaseService().getOutlet(outletId))?.businessName ?? '';
+      } catch (_) {
+        storeName = '';
+      }
+    }
+    if (!mounted) return;
+
+    if (action == 'pdf') {
+      try {
+        final bytes = await DoctorResultPdf.build(
+          storeName: storeName,
+          verdictTitle: verdictTitle,
+          verdictBody: verdictBody,
+          score: score,
+          scoreHint: scoreHint,
+          targetDays: targetDays,
+          dueDate: dueDate,
+          steps: steps,
+        );
+        await ReceiptGenerator.share(
+          bytes,
+          'Hasil_Diagnosa_${Formatters.date(DateTime.now()).replaceAll('/', '-')}.pdf',
+        );
+        if (!mounted) return;
+        _snack('Hasil pemeriksaan tersimpan sebagai PDF.');
+      } catch (e) {
+        if (!mounted) return;
+        _snack(friendlyError(e,
+            fallback: 'Gagal membuat PDF. Silakan coba lagi.'));
+      }
+      return;
+    }
+
+    var phone = _bossWa ?? '';
+    if (phone.isEmpty) {
+      _snack('Atur nomor WhatsApp bos dulu ya.');
+      await _editBossWa();
+      phone = _bossWa ?? '';
+      if (phone.isEmpty) return;
+    }
+    final text = DoctorResultPdf.buildText(
+      storeName: storeName,
+      verdictTitle: verdictTitle,
+      verdictBody: verdictBody,
+      score: score,
+      targetDays: targetDays,
+      dueDate: dueDate,
+      steps: steps,
+    );
+    final ok = await WaHelper.sendWhatsAppMessage(phone: phone, message: text);
+    if (!mounted) return;
+    if (!ok) _snack('WhatsApp tidak bisa dibuka di perangkat ini.');
   }
 
   Widget? _actionScreen(String actionKey) {

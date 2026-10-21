@@ -187,6 +187,9 @@ class BusinessDoctorService {
       'memory_id': row['id']?.toString(),
       'title': row['title'] ?? content['verdict'] ?? 'Resep',
       'verdict': content['verdict'] ?? row['title'] ?? '',
+      'verdict_body': content['verdict_body'] ?? '',
+      'score': content['score'],
+      'score_hint': content['score_hint'] ?? '',
       'target_days': content['target_days'] ?? 7,
       'started_at': content['started_at'],
       'due_at': row['due_at'] ?? content['due_at'],
@@ -204,11 +207,14 @@ class BusinessDoctorService {
     await _client.from('doctor_memory').update({
       'content': jsonEncode({
         'verdict': block['verdict'] ?? block['title'] ?? '',
+        'verdict_body': block['verdict_body'] ?? '',
+        'score': block['score'],
+        'score_hint': block['score_hint'] ?? '',
         'target_days': block['target_days'] ?? 7,
         'started_at': block['started_at'],
         'steps': block['items'] ?? const [],
       }),
-      if (status != null) 'status': status,
+      'status': ?status,
     }).eq('id', id);
   }
 

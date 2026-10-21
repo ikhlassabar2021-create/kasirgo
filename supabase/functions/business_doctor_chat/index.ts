@@ -886,7 +886,12 @@ async function execTool(admin: any, outletId: string, name: string, args: Json, 
           outlet_id: outletId, conversation_id: conversationId,
           kind: "prescription",
           title: verdict || "Resep perbaikan",
-          content: JSON.stringify({ verdict, target_days: targetDays, started_at: startedAt.toISOString(), steps }),
+          content: JSON.stringify({
+            verdict, target_days: targetDays, started_at: startedAt.toISOString(), steps,
+            verdict_body: String(args?.verdict_body ?? "").slice(0, 600),
+            score: Number.isFinite(Number(args?.score)) ? Number(args?.score) : null,
+            score_hint: String(args?.score_hint ?? "").slice(0, 300),
+          }),
           status: "open",
           due_at: dueAt,
         })
