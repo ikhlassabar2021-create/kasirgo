@@ -1316,3 +1316,45 @@ Commit `ff04bb3` (main) + deploy web gh-pages `050051c` (live md5
   dibersihkan (`doctor_delegations` 0 baris, memori `__BADGE_QA__` 0).
 - `flutter analyze` 1 info pre-existing; build web sukses. Commit `eedc7bd` (main)
   + deploy gh-pages `30afe69` (live md5 `34eb04812c623f94ff803792a02cc203`).
+
+### Layar Hasil Pemeriksaan + Simpan/Bagikan PDF & WA (13.21A) - SELESAI
+- `lib/utils/doctor_result_pdf.dart` (BARU): `DoctorResultPdf.scoreTone(int?)`
+  (rendah/sedang/tinggi), `build({storeName, verdictTitle, verdictBody, score,
+  scoreHint, targetDays, dueDate, steps})` -> PDF A4 `pw.MultiPage` (header
+  "HASIL PEMERIKSAAN USAHA", box skor 0-100, "A. Vonis Dokter", "B. Peta Resep"
+  tabel langkah, "C. Target & Waktu", disclaimer) + `buildText(...)` -> teks WA.
+  `score.clamp(0, 100)`; aman untuk `score == null` / `steps` kosong.
+- `lib/screens/owner/doctor_result_screen.dart` (sudah ada dari ST14-6 lanjutan)
+  dipakai sebagai layar hasil: header + tanggal + ikon dokter, gauge skor
+  beranimasi, kartu vonis, peta resep bernomor, target & timeline, footer
+  "Mulai Jalankan"/"Simpan / Bagikan"/"Tanya Dokter" (touch 56dp).
+- `business_doctor_screen.dart`: `_shareResult(...)` -> bottom sheet
+  "Simpan / Bagikan Hasil" berisi "Simpan / Unduh PDF" (`ReceiptGenerator.share`)
+  dan "Kirim ke WhatsApp" (`DoctorResultPdf.buildText` + `WaHelper`; bila
+  `boss_wa_number` kosong -> snack "Atur nomor WhatsApp bos dulu ya." +
+  dialog input nomor `_editBossWa`).
+- FIX nama toko di PDF: `storeName` diambil dari `currentUserProvider.name`
+  (diisi `outlets.name` oleh AuthService), fallback `getOutlet().businessName`.
+  Sebelumnya selalu "Usaha Saya" karena tabel `outlets` tidak punya kolom
+  `business_name`.
+- FIX plumbing data resep: `supabase/functions/business_doctor_chat/index.ts`
+  `save_prescription` kini menyimpan `verdict_body`, `score`, `score_hint` di
+  `doctor_memory.content` (sebelumnya hanya verdict/target_days/started_at/steps);
+  `business_doctor_service.dart` `_toBlock` + `savePrescription` ikut membaca/
+  menulis 3 field itu (`'status': ?status`).
+- Test: `test/doctor_result_pdf_test.dart` (4 test) PASS - wajib
+  `initializeDateFormatting('id_ID')` di `setUpAll`.
+- E2E `e2e/doctor_result_share_verify.mjs` (seed resep `__SHARE_QA__` skor 42):
+  `DOCTOR_OPEN/HAS_HEADER/HAS_VERDICT/HAS_BODY/HAS_SCORE42/HAS_RECIPE/
+  HAS_STEP2/HAS_SHARE_BTN true`, `PDF_FILENAME Hasil_Diagnosa_21 Okt 2026.pdf`,
+  `PDF_STORE/PDF_SCORE/PDF_VERDICT true` (ekstraksi stream PDF in-Node),
+  `PDF_SNACK true`, `WA_ASK_PHONE/WA_SAVE_PHONE true`, popup
+  `api.whatsapp.com/send?phone=6281234567890&text=...`, `ERRORS 0`.
+  Catatan: tombol di bottom sheet harus diklik via JS semantics
+  (`clickSemantic`) - mouse click pada tombol paling bawah sheet tidak kena.
+- Data uji dibersihkan: `doctor_memory __SHARE_QA__` dihapus,
+  `doctor_outlet_profile.boss_wa_number` dikembalikan ke '', delegasi QA 0 baris.
+- `flutter analyze` 4 file bersih; `flutter build web --release` sukses.
+- FOLLOW-UP: EF `business_doctor_chat` BELUM di-deploy (tidak ada
+  `SUPABASE_ACCESS_TOKEN` di sandbox) -> resep baru dari AI belum menyimpan
+  verdict_body/score sampai EF dideploy ulang.
