@@ -1358,3 +1358,39 @@ Commit `ff04bb3` (main) + deploy web gh-pages `050051c` (live md5
 - FOLLOW-UP: EF `business_doctor_chat` BELUM di-deploy (tidak ada
   `SUPABASE_ACCESS_TOKEN` di sandbox) -> resep baru dari AI belum menyimpan
   verdict_body/score sampai EF dideploy ulang.
+
+### Sidak Bos: Audit Stok & Kas (13.24 #2) - SELESAI
+- Migrasi `docs/migrations/2026-11-28-kasirgo-sidak-bos.sql` (DITERAPKAN live):
+  tabel `sidak_sessions` (kas + nilai stok + findings JSONB) & `sidak_items`
+  (baris selisih fisik per produk), RLS owner via `is_outlet_owner` OR
+  `is_platform_admin`; RPC `sidak_cash_summary(outlet, from, to)` (agregat kas
+  tunai/non-tunai dari `transactions` paid) dan `sidak_log_action(session)`
+  (jejak `doctor_action_logs` action_type `sidak_bos`, outcome
+  bersih/ada_selisih) - keduanya SECURITY DEFINER.
+- `lib/services/sidak_service.dart` (BARU): model `SidakFinding`,
+  `SidakCountRow` (diff/diffValue), `SidakSession` (isClean); service
+  `loadCountRows` (produk non-layanan), `cashSummary`, `soldProductIds`
+  (stock_logs 7 hari), `autoFindings` (stok minus, tanpa HPP, harga < HPP,
+  harga nol, laku tanpa stok), `manualFindings` (kas/stok selisih, severity
+  tinggi bila >= Rp50.000), `saveSession` (insert sesi + item selisih saja),
+  `logAction`, `listSessions`, `sessionItems`.
+- `lib/utils/sidak_report_pdf.dart` (BARU): `verdictLabel` (BERSIH /
+  ADA SELISIH / PERLU DITINDAKLANJUTI), PDF A4 (kas laci, nilai stok,
+  rincian selisih, temuan, catatan) + `buildText` untuk WhatsApp.
+- `lib/screens/owner/sidak_stock_count_screen.dart` (BARU): hitung fisik per
+  produk + filter "hanya selisih" + total selisih nilai.
+- `lib/screens/owner/sidak_bos_screen.dart` (BARU): tab Sidak Baru/Riwayat,
+  kartu kas (periode 1/7/30 hari), kartu stok, temuan otomatis+manual,
+  simpan -> dialog hasil (PDF/WA), detail sesi di Riwayat.
+  Nomor WA bos dibaca dari `doctor_outlet_profile.boss_wa_number`
+  (`BusinessDoctorService.getProfile`), bukan config platform.
+- Wiring: `business_doctor_screen.dart` action resep `sidak_bos` ->
+  `SupporterFeatureGate('sidak_bos', SidakBosScreen)`; `doctor_blocks.dart`
+  label "Sidak Stok & Kas"; `supporter_service.dart` +`sidak_bos` di
+  `premiumFeatures`/`featureLabels`; `owner_home_screen.dart` kartu
+  "Sidak Stok & Kas" (Icons.fact_check_rounded) via `_pushGated`.
+- Test: `test/sidak_bos_test.dart` 13 test PASS (verdictLabel, PDF, buildText,
+  model fromJson, diff/diffValue, manualFindings).
+- `flutter analyze` 8 file: 1 info pre-existing (`unnecessary_underscores`
+  owner_home_screen:700); `flutter build web --release` sukses; deploy
+  gh-pages `5227cd1` (live md5 `c11e43967de7f2c0030b824f416b4239` MATCH).

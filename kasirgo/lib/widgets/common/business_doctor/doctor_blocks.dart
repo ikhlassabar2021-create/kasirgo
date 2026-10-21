@@ -776,7 +776,7 @@ class DoctorBlocks extends StatelessWidget {
 
   String _featureLabel(String key) {
     const labels = {
-      'sidak_bos': 'Laporan ke Bos',
+      'sidak_bos': 'Sidak Stok & Kas',
       'progress_tracker': 'Laporan & Progres',
       'dynamic_pricing': 'Atur Harga Produk',
       'bundling': 'Bundling Produk',

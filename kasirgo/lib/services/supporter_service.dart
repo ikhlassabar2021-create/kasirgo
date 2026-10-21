@@ -159,6 +159,7 @@ class SupporterService {
     'auto_bos_report',
     'ad_free',
     'business_doctor',
+    'sidak_bos',
     'lapak_live',
   };
 
@@ -179,6 +180,7 @@ class SupporterService {
     'auto_bos_report': 'Laporan Otomatis ke Bos',
     'ad_free': 'Bebas Iklan',
     'business_doctor': 'Dokter Bisnis AI',
+    'sidak_bos': 'Sidak Stok & Kas',
     'lapak_live': 'Lapak Live (Radar & Antrean)',
   };
 

@@ -28,6 +28,7 @@ import 'affiliate_owner_screen.dart';
 import 'health_score_screen.dart';
 import 'business_doctor_screen.dart';
 import 'bundle_manager_screen.dart';
+import 'sidak_bos_screen.dart';
 import 'lapak_live_screen.dart';
 import '../../services/business_doctor_service.dart';
 import '../../services/delegation_service.dart';
@@ -927,6 +928,17 @@ class _OwnerHomeScreenState extends ConsumerState<OwnerHomeScreen> {
               title: 'Dokter Bisnis AI');
           ref.invalidate(doctorAttentionProvider);
         },
+      ),
+    );
+
+    quickActionItems.add(
+      _ModuleCard(
+        icon: Icons.fact_check_rounded,
+        title: 'Sidak Stok & Kas',
+        subtitle: 'Audit internal',
+        color: AppTheme.moduleAccentIndigo,
+        onTap: () => _pushGated('sidak_bos', const SidakBosScreen(),
+            title: 'Sidak Stok & Kas'),
       ),
     );
 

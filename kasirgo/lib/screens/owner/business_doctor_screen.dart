@@ -31,6 +31,7 @@ import 'product_list_screen.dart';
 import 'qr_table_screen.dart';
 import 'recipe_screen.dart';
 import 'report_screen.dart';
+import 'sidak_bos_screen.dart';
 import 'whatsapp_broadcast_screen.dart';
 import '../../utils/error_messages.dart';
 import '../../utils/doctor_result_pdf.dart';
@@ -1154,6 +1155,11 @@ class _BusinessDoctorScreenState extends ConsumerState<BusinessDoctorScreen> {
           child: WhatsappBroadcastScreen(),
         );
       case 'sidak_bos':
+        return const SupporterFeatureGate(
+          featureKey: 'sidak_bos',
+          title: 'Sidak Stok & Kas',
+          child: SidakBosScreen(),
+        );
       case 'progress_tracker':
         return const ReportScreen();
       case 'dynamic_pricing':
