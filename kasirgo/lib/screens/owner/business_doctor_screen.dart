@@ -28,9 +28,9 @@ import 'health_score_screen.dart';
 import 'multi_outlet_screen.dart';
 import 'online_catalog_screen.dart';
 import 'pos_screen.dart';
+import 'progress_tracker_screen.dart';
 import 'qr_table_screen.dart';
 import 'recipe_screen.dart';
-import 'report_screen.dart';
 import 'sidak_bos_screen.dart';
 import 'whatsapp_broadcast_screen.dart';
 import '../../utils/error_messages.dart';
@@ -1161,7 +1161,11 @@ class _BusinessDoctorScreenState extends ConsumerState<BusinessDoctorScreen> {
           child: SidakBosScreen(),
         );
       case 'progress_tracker':
-        return const ReportScreen();
+        return const SupporterFeatureGate(
+          featureKey: 'progress_tracker',
+          title: 'Laporan & Progres',
+          child: ProgressTrackerScreen(),
+        );
       case 'dynamic_pricing':
         return const SupporterFeatureGate(
           featureKey: 'dynamic_pricing',

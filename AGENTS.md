@@ -1428,3 +1428,34 @@ Commit `ff04bb3` (main) + deploy web gh-pages `050051c` (live md5
   `ERRORS 0`. Data uji (`__DYN_QA__`/`__DYN_QA2__`) sudah dibersihkan.
 - `flutter analyze lib` 22 info (0 warning/error, semua pre-existing);
   `flutter build web --release --base-href /kasirgo/` sukses.
+
+### Progress Tracker: Laporan & Progres (13.24 #6) - SELESAI
+- `lib/utils/progress_tracker.dart` (BARU): `ProgressTrend` + `ProgressTrendLabel`
+  (label 'membaik'/'masih sama'/'menurun'), `DailySales`, `TrendInfo`,
+  `ProgressTrackerReport` (targetProgress/prescriptionProgress, verdict, trendText,
+  maxDaily), `ProgressTracker` statis (`dailySales` 30 hari, `trendInfo` 7 vs 7 hari,
+  `classify` ambang flat 5%, `monthToDate`, `prescriptionProgress`, `build`, `scoreOf`).
+  Skor 0-100 bobot ternormalisasi: tren 40 (up 100/flat 62/down 25), target 30,
+  resep 20, aksi 10. Hanya transaksi lunas (`isPaid`; `paymentStatus` kosong = lunas).
+- `lib/services/progress_tracker_service.dart` (BARU): `load(outletId)` =
+  transaksi 29 hari + `getTargets` + `getActivePrescription` + `doctor_action_logs`
+  (60 terakhir) -> `ProgressTracker.build`; `logProgress` insert
+  `doctor_action_logs` (`action_type:'progress_tracker'`, status `done`, outcome =
+  tren, `result` jsonb skor/tren/omzet/target/resep/aksi).
+- `lib/screens/owner/progress_tracker_screen.dart` (BARU): hero gradient skor +
+  vonis + tren + omzet 7 hari vs sebelumnya, kartu "Langkah Resep Dokter",
+  "Target Omzet", bar chart "Omzet 7 Hari Terakhir", "Aksi Perbaikan", tombol
+  "Catat Progres Hari Ini" -> "Progres hari ini sudah dicatat", empty & error state.
+- Wiring: `business_doctor_screen.dart` `_actionScreen` `progress_tracker` ->
+  `SupporterFeatureGate` + `ProgressTrackerScreen` (menggantikan `ReportScreen`);
+  `supporter_service.dart` +`progress_tracker` di `premiumFeatures`/`featureLabels`;
+  `owner_home_screen.dart` kartu "Laporan & Progres" (`Icons.insights_rounded`,
+  `AppTheme.moduleAccentIndigo`) via `_pushGated`; label `doctor_blocks.dart`.
+- Test: `test/progress_tracker_test.dart` PASS (isPaid, classify, dailySales,
+  trendInfo, monthToDate, prescriptionProgress, scoreOf, build/verdict, label).
+- E2E `e2e/progress_tracker_verify.mjs` PASS: kartu beranda -> layar terbuka
+  (hero/skor/tren/kartu resep-target-chart-aksi), "Catat Progres Hari Ini" ->
+  snackbar + tombol berubah, baris `doctor_action_logs` `progress_tracker`
+  (skor 25, tren down, omzet 7 hari 35.000) tersimpan; cleanup 204, `ERRORS 0`.
+- `flutter analyze lib` hanya info pre-existing; `flutter build web --release
+  --base-href /kasirgo/` sukses.

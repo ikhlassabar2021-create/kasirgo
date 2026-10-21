@@ -30,6 +30,7 @@ import 'business_doctor_screen.dart';
 import 'bundle_manager_screen.dart';
 import 'sidak_bos_screen.dart';
 import 'dynamic_pricing_screen.dart';
+import 'progress_tracker_screen.dart';
 import 'lapak_live_screen.dart';
 import '../../services/business_doctor_service.dart';
 import '../../services/delegation_service.dart';
@@ -952,6 +953,18 @@ class _OwnerHomeScreenState extends ConsumerState<OwnerHomeScreen> {
         onTap: () => _pushGated(
             'dynamic_pricing', const DynamicPricingScreen(),
             title: 'Atur Harga & Diskon'),
+      ),
+    );
+
+    quickActionItems.add(
+      _ModuleCard(
+        icon: Icons.insights_rounded,
+        title: 'Laporan & Progres',
+        subtitle: 'Tren usaha Anda',
+        color: AppTheme.moduleAccentIndigo,
+        onTap: () => _pushGated(
+            'progress_tracker', const ProgressTrackerScreen(),
+            title: 'Laporan & Progres'),
       ),
     );
 

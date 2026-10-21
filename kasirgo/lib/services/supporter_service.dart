@@ -161,6 +161,7 @@ class SupporterService {
     'business_doctor',
     'sidak_bos',
     'dynamic_pricing',
+    'progress_tracker',
     'lapak_live',
   };
 
@@ -183,6 +184,7 @@ class SupporterService {
     'business_doctor': 'Dokter Bisnis AI',
     'sidak_bos': 'Sidak Stok & Kas',
     'dynamic_pricing': 'Atur Harga & Diskon',
+    'progress_tracker': 'Laporan & Progres',
     'lapak_live': 'Lapak Live (Radar & Antrean)',
   };
 
