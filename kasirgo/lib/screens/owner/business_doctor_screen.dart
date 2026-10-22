@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
@@ -315,8 +316,11 @@ class _BusinessDoctorScreenState extends ConsumerState<BusinessDoctorScreen> {
 
     if (options.isEmpty) {
       _snack(
-        'Belum ada suara Indonesia di perangkat ini. Pasang paket suara '
-        'Indonesia di Pengaturan Android, lalu coba lagi.',
+        kIsWeb
+            ? 'Browser ini tidak menyediakan suara Indonesia. Pakai aplikasi '
+                'Android untuk memilih suara pria/wanita.'
+            : 'Belum ada suara Indonesia di perangkat ini. Pasang paket suara '
+                'Indonesia di Pengaturan Android, lalu coba lagi.',
       );
       return;
     }
