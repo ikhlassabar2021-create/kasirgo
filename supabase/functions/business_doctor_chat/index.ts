@@ -1423,17 +1423,6 @@ Deno.serve(async (req: Request) => {
         .maybeSingle();
       conversationId = conv?.id ?? null;
     }
-    if (conversationId && message) {
-      await admin.from("doctor_messages").insert({
-        conversation_id: conversationId, outlet_id: outletId, role: "user", content: message,
-      });
-    }
-
-    const { data: history } = await admin
-      .from("doctor_messages").select("role, content")
-      .eq("conversation_id", conversationId)
-      .order("created_at", { ascending: true }).limit(12);
-
     // Lampiran berkas (PDF/Excel/CSV/TXT) sudah diekstrak jadi teks di perangkat.
     // Tidak ada berkas yang diunggah/disimpan; hanya teks konteks yang dipakai.
     const attach = (body.attachment ?? null) as Json | null;
