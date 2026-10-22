@@ -1,6 +1,6 @@
 import { chromium } from 'playwright';
 
-const BASE = 'https://ikhlassabar2021-create.github.io/kasirgo/';
+const BASE = process.env.KASIRGO_BASE || 'https://ikhlassabar2021-create.github.io/kasirgo/';
 const QA_TITLE = '__QA_UI__ Pelanggan suka gula 1 kg';
 
 const b = await chromium.launch({ args: ['--no-sandbox'] });
@@ -60,6 +60,8 @@ await p.waitForTimeout(12000);
 
 await clickText('Dokter Bisnis AI');
 await p.waitForTimeout(7000);
+await clickText('Menu Dokter');
+await p.waitForTimeout(1500);
 await clickText('Riwayat Kasus');
 await p.waitForTimeout(6000);
 

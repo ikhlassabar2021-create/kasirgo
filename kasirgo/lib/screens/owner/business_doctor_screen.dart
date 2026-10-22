@@ -163,6 +163,10 @@ class _BusinessDoctorScreenState extends ConsumerState<BusinessDoctorScreen> {
   bool _bandelSpoken = false;
   String? _bossEscalation;
 
+  /// Panel fitur yang sedang dibuka dari menu. `null` = layar chat.
+  String? _pane;
+  String _paneTitle = '';
+
   /// Owner melihat pembahasan penuh + boleh menugaskan; Admin/Kasir/Koki
   /// memakai Dokter sebagai Asisten Operasional Lapangan (baca tugas owner).
   bool get _isOwner =>
@@ -2001,31 +2005,55 @@ class _BusinessDoctorScreenState extends ConsumerState<BusinessDoctorScreen> {
     ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(text)));
   }
 
+  /// Jumlah hal yang perlu perhatian owner (untuk badge menu).
+  int get _attentionCount {
+    var n = _pendingActions.length;
+    if (_reprimand != null) n++;
+    if (_escalationLevel > 0) n++;
+    return n;
+  }
+
   @override
   Widget build(BuildContext context) {
+    final inPane = _pane != null;
     return Scaffold(
       backgroundColor: AppTheme.backgroundColor,
       appBar: AppBar(
+        leading: inPane
+            ? IconButton(
+                tooltip: 'Kembali ke chat',
+                icon: const Icon(Icons.arrow_back_rounded),
+                onPressed: () => setState(() => _pane = null),
+              )
+            : null,
         title: Row(
           children: [
-            Text('Dokter Bisnis',
-                style: GoogleFonts.plusJakartaSans(fontWeight: FontWeight.w700)),
-            const SizedBox(width: 8),
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-              decoration: BoxDecoration(
-                gradient: AppTheme.aiBadgeGradient,
-                borderRadius: BorderRadius.circular(20),
-              ),
+            Flexible(
               child: Text(
-                'AI',
+                inPane ? _paneTitle : 'Dokter Bisnis',
+                overflow: TextOverflow.ellipsis,
                 style: GoogleFonts.plusJakartaSans(
-                  fontSize: 10,
-                  fontWeight: FontWeight.w800,
-                  color: Colors.white,
-                ),
+                    fontWeight: FontWeight.w700),
               ),
             ),
+            if (!inPane) ...[
+              const SizedBox(width: 8),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                decoration: BoxDecoration(
+                  gradient: AppTheme.aiBadgeGradient,
+                  borderRadius: BorderRadius.circular(20),
+                ),
+                child: Text(
+                  'AI',
+                  style: GoogleFonts.plusJakartaSans(
+                    fontSize: 10,
+                    fontWeight: FontWeight.w800,
+                    color: Colors.white,
+                  ),
+                ),
+              ),
+            ],
           ],
         ),
         backgroundColor: AppTheme.surfaceColor,
@@ -2033,31 +2061,482 @@ class _BusinessDoctorScreenState extends ConsumerState<BusinessDoctorScreen> {
         elevation: 0,
         scrolledUnderElevation: 0,
         actions: [
-          IconButton(
-            tooltip: 'Lapor ke Bos',
-            icon: const Icon(Icons.forward_to_inbox_rounded),
-            onPressed: _reportToBoss,
-          ),
-          IconButton(
-            tooltip: 'Riwayat Kasus',
-            icon: const Icon(Icons.history_rounded),
-            onPressed: () => Navigator.push(
-              context,
-              MaterialPageRoute(
-                builder: (_) => const DoctorCasesScreen(),
-              ),
+          if (inPane)
+            IconButton(
+              tooltip: 'Menu',
+              icon: const Icon(Icons.grid_view_rounded),
+              onPressed: _openDoctorMenu,
+            )
+          else
+            Stack(
+              alignment: Alignment.center,
+              children: [
+                IconButton(
+                  tooltip: 'Menu Dokter',
+                  icon: const Icon(Icons.grid_view_rounded),
+                  onPressed: _openDoctorMenu,
+                ),
+                if (_attentionCount > 0)
+                  Positioned(
+                    right: 6,
+                    top: 6,
+                    child: IgnorePointer(
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 5, vertical: 1),
+                        decoration: BoxDecoration(
+                          color: AppTheme.errorColor,
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                        child: Text(
+                          _attentionCount > 9 ? '9+' : '$_attentionCount',
+                          style: GoogleFonts.plusJakartaSans(
+                            fontSize: 9,
+                            fontWeight: FontWeight.w800,
+                            color: Colors.white,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+              ],
             ),
-          ),
         ],
       ),
       body: CentennialBackground(
         child: Center(
           child: ConstrainedBox(
             constraints: const BoxConstraints(maxWidth: AppTheme.formMaxWidth),
-            child: Column(
+            child: _pane == null
+                ? Column(
+                    children: [
+                      Expanded(child: _buildList()),
+                      _buildInput(),
+                    ],
+                  )
+                : _buildPaneBody(),
+          ),
+        ),
+      ),
+    );
+  }
+
+  /// Daftar menu fitur Dokter Bisnis. Chat tetap jadi layar utama.
+  void _openDoctorMenu() {
+    final entries = <_MenuEntry>[
+      if (_isOwner && _identity != null)
+        _MenuEntry(
+          icon: Icons.insights_rounded,
+          title: 'Ringkasan Bisnis',
+          subtitle: 'Skor kesehatan usaha & level',
+          color: AppTheme.primaryColor,
+          onTap: () => _openPane('overview', 'Ringkasan Bisnis'),
+        ),
+      if (_isOwner && _briefing != null)
+        _MenuEntry(
+          icon: Icons.wb_sunny_rounded,
+          title: 'Briefing Harian',
+          subtitle: 'Rangkuman pagi untuk hari ini',
+          color: AppTheme.warningColor,
+          onTap: () => _openPane('briefing', 'Briefing Harian'),
+        ),
+      if (_isOwner && _dailyDose != null)
+        _MenuEntry(
+          icon: Icons.medication_rounded,
+          title: 'Dosis Harian',
+          subtitle: 'Langkah kecil hari ini',
+          color: AppTheme.successColor,
+          onTap: () => _openPane('dose', 'Dosis Harian'),
+        ),
+      if (_isOwner && _weeklyReport != null)
+        _MenuEntry(
+          icon: Icons.insights_outlined,
+          title: 'Laporan Mingguan',
+          subtitle: 'Performa 7 hari terakhir',
+          color: AppTheme.moduleAccentIndigo,
+          onTap: () => _openPane('weekly', 'Laporan Mingguan'),
+        ),
+      _MenuEntry(
+        icon: Icons.assignment_rounded,
+        title: _isOwner ? 'Tugas & Delegasi' : 'Tugas Saya',
+        subtitle: _isOwner
+            ? 'Bagi tugas ke karyawan'
+            : 'Tugas yang diberikan owner',
+        color: AppTheme.secondaryColor,
+        onTap: () => _openPane('tasks', _isOwner ? 'Tugas & Delegasi' : 'Tugas Saya'),
+      ),
+      if (_shopFloor != null)
+        _MenuEntry(
+          icon: Icons.storefront_rounded,
+          title: 'Kondisi Toko',
+          subtitle: 'Antrean & stok menipis',
+          color: AppTheme.primaryColor,
+          onTap: () => _openPane('shopfloor', 'Kondisi Toko'),
+        ),
+      if (_bossEscalation != null)
+        _MenuEntry(
+          icon: Icons.campaign_rounded,
+          title: 'Laporan Merah ke Bos',
+          subtitle: 'Kasus yang perlu keputusan bos',
+          color: AppTheme.errorColor,
+          onTap: () => _openPane('redreport', 'Laporan Merah ke Bos'),
+        ),
+      if (_isOwner && _activePrescription != null)
+        _MenuEntry(
+          icon: Icons.receipt_long_rounded,
+          title: 'Resep Aktif',
+          subtitle: 'Peta resep & hasil diagnosa',
+          color: AppTheme.successColor,
+          onTap: () => _openPane('prescription', 'Resep Aktif'),
+        ),
+      if (_isOwner)
+        _MenuEntry(
+          icon: Icons.fact_check_rounded,
+          title: 'Cek Fisik Toko',
+          subtitle: 'Diagnosa awal kondisi usaha',
+          color: AppTheme.primaryColor,
+          onTap: _openIntake,
+        ),
+      if (_isOwner)
+        _MenuEntry(
+          icon: Icons.photo_camera_rounded,
+          title: 'Kamera Klinis',
+          subtitle: 'Foto etalase / rak untuk dinilai AI',
+          color: AppTheme.moduleAccentIndigo,
+          onTap: _openKameraKlinis,
+        ),
+      if (_isOwner)
+        _MenuEntry(
+          icon: Icons.trending_up_rounded,
+          title: 'Rapor ROI Promosi',
+          subtitle: 'Catat biaya & hasil promosi',
+          color: AppTheme.successColor,
+          onTap: () => _openPane('roi', 'Rapor ROI Promosi'),
+        ),
+      if (_isOwner && _phase != 'A')
+        _MenuEntry(
+          icon: Icons.rule_rounded,
+          title: 'Evaluasi Resep',
+          subtitle: 'Sudah berhasil atau belum?',
+          color: AppTheme.warningColor,
+          onTap: () => _openPane('evaluation', 'Evaluasi Resep'),
+        ),
+      if (_isOwner && (_reprimand != null || _escalationLevel > 0))
+        _MenuEntry(
+          icon: Icons.notifications_active_rounded,
+          title: 'Pengingat & Teguran',
+          subtitle: 'Perlu tindakan segera',
+          color: AppTheme.errorColor,
+          badge: _attentionCount,
+          onTap: () => _openPane('alerts', 'Pengingat & Teguran'),
+        ),
+      if (_isOwner && _pendingActions.isNotEmpty)
+        _MenuEntry(
+          icon: Icons.verified_rounded,
+          title: 'Persetujuan Aksi',
+          subtitle: 'Aksi usulan AI menunggu keputusan',
+          color: AppTheme.warningColor,
+          badge: _pendingActions.length,
+          onTap: () => _openPane('approvals', 'Persetujuan Aksi'),
+        ),
+      if (_isOwner)
+        _MenuEntry(
+          icon: Icons.record_voice_over_rounded,
+          title: 'Persona & Suara',
+          subtitle: 'Karakter suara Dokter',
+          color: AppTheme.primaryColor,
+          onTap: () => _openPane('voice', 'Persona & Suara'),
+        ),
+      _MenuEntry(
+        icon: Icons.history_rounded,
+        title: 'Riwayat Kasus',
+        subtitle: 'Konsultasi, catatan & pengetahuan',
+        color: AppTheme.textSecondary,
+        onTap: () => Navigator.push(
+          context,
+          MaterialPageRoute(builder: (_) => const DoctorCasesScreen()),
+        ),
+      ),
+      _MenuEntry(
+        icon: Icons.forward_to_inbox_rounded,
+        title: 'Lapor ke Bos',
+        subtitle: 'Kirim ringkasan ke WhatsApp bos',
+        color: AppTheme.secondaryColor,
+        onTap: _reportToBoss,
+      ),
+    ];
+
+    showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: AppTheme.surfaceColor,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(
+          top: Radius.circular(AppTheme.radiusLarge),
+        ),
+      ),
+      builder: (ctx) => SafeArea(
+        child: ConstrainedBox(
+          constraints: BoxConstraints(
+            maxHeight: MediaQuery.of(ctx).size.height * 0.82,
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Padding(
+                padding: const EdgeInsets.fromLTRB(20, 16, 12, 8),
+                child: Row(
+                  children: [
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            'Menu Dokter Bisnis',
+                            style: GoogleFonts.plusJakartaSans(
+                              fontSize: 16,
+                              fontWeight: FontWeight.w800,
+                              color: AppTheme.textPrimary,
+                            ),
+                          ),
+                          const SizedBox(height: 2),
+                          Text(
+                            'Semua fitur ada di sini. Layar utama khusus chat.',
+                            style: GoogleFonts.plusJakartaSans(
+                              fontSize: 12,
+                              color: AppTheme.textSecondary,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    IconButton(
+                      tooltip: 'Tutup',
+                      onPressed: () => Navigator.pop(ctx),
+                      icon: const Icon(Icons.close_rounded),
+                    ),
+                  ],
+                ),
+              ),
+              Divider(height: 1, color: AppTheme.borderColor),
+              Flexible(
+                child: ListView.separated(
+                  padding: const EdgeInsets.symmetric(vertical: 8),
+                  itemCount: entries.length,
+                  separatorBuilder: (_, _) => Divider(
+                    height: 1,
+                    indent: 68,
+                    color: AppTheme.borderColor.withValues(alpha: 0.6),
+                  ),
+                  itemBuilder: (_, i) {
+                    final e = entries[i];
+                    return ListTile(
+                      leading: Container(
+                        width: 40,
+                        height: 40,
+                        decoration: BoxDecoration(
+                          color: e.color.withValues(alpha: 0.12),
+                          borderRadius:
+                              BorderRadius.circular(AppTheme.radiusMedium),
+                        ),
+                        child: Icon(e.icon, color: e.color, size: 21),
+                      ),
+                      title: Text(
+                        e.title,
+                        style: GoogleFonts.plusJakartaSans(
+                          fontSize: 14,
+                          fontWeight: FontWeight.w700,
+                          color: AppTheme.textPrimary,
+                        ),
+                      ),
+                      subtitle: Text(
+                        e.subtitle,
+                        style: GoogleFonts.plusJakartaSans(
+                          fontSize: 12,
+                          color: AppTheme.textSecondary,
+                        ),
+                      ),
+                      trailing: e.badge > 0
+                          ? Container(
+                              padding: const EdgeInsets.symmetric(
+                                  horizontal: 7, vertical: 2),
+                              decoration: BoxDecoration(
+                                color: AppTheme.errorColor,
+                                borderRadius: BorderRadius.circular(10),
+                              ),
+                              child: Text(
+                                e.badge > 9 ? '9+' : '${e.badge}',
+                                style: GoogleFonts.plusJakartaSans(
+                                  fontSize: 10,
+                                  fontWeight: FontWeight.w800,
+                                  color: Colors.white,
+                                ),
+                              ),
+                            )
+                          : const Icon(Icons.chevron_right_rounded,
+                              color: AppTheme.textSecondary),
+                      onTap: () {
+                        Navigator.pop(ctx);
+                        e.onTap();
+                      },
+                    );
+                  },
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  void _openPane(String key, String title) {
+    setState(() {
+      _pane = key;
+      _paneTitle = title;
+    });
+  }
+
+  Widget _buildPaneBody() {
+    final children = <Widget>[];
+    void add(Widget w) {
+      children.add(w);
+      children.add(const SizedBox(height: 12));
+    }
+
+    switch (_pane) {
+      case 'overview':
+        if (_identity != null) add(_buildIdentityCard());
+        add(_buildGamificationRow());
+        break;
+      case 'briefing':
+        if (_briefing != null) add(_buildBriefingCard());
+        break;
+      case 'dose':
+        if (_dailyDose != null) add(_buildDailyDoseCard());
+        break;
+      case 'weekly':
+        if (_weeklyReport != null) add(_buildWeeklyReportCard());
+        break;
+      case 'tasks':
+        if (_isOwner) {
+          add(_buildDelegationCard());
+          add(SizedBox(
+            height: AppTheme.touchTargetMedium,
+            child: AppButton(
+              label: 'Tugaskan ke Karyawan',
+              icon: Icons.assignment_add,
+              onPressed: _openDelegationBoard,
+            ),
+          ));
+        } else {
+          add(_buildMyTasksCard());
+        }
+        break;
+      case 'shopfloor':
+        if (_shopFloor != null) add(_buildShopFloorCard());
+        break;
+      case 'redreport':
+        if (_bossEscalation != null) add(_buildBossEscalationCard());
+        break;
+      case 'prescription':
+        if (_activePrescription != null) {
+          add(DoctorBlocks(
+            blocks: [_activePrescription!],
+            onPrescription: _onPrescriptionStep,
+            onTogglePrescription: _togglePrescriptionStep,
+            onDelegate: _onDelegateStep,
+          ));
+          add(SizedBox(
+            height: AppTheme.touchTargetMedium,
+            child: AppButton(
+              label: 'Lihat Hasil Diagnosa',
+              icon: Icons.assignment_outlined,
+              variant: AppButtonVariant.outline,
+              onPressed: _openResult,
+            ),
+          ));
+        }
+        break;
+      case 'roi':
+        add(_buildRaporRoiCta());
+        if (_roiRevenue > 0) add(_buildRoiBanner());
+        break;
+      case 'evaluation':
+        add(_buildEvaluationCta());
+        break;
+      case 'alerts':
+        if (_escalationLevel > 0) add(_buildEscalationBanner());
+        if (_reprimand != null) add(_buildReprimandBanner());
+        break;
+      case 'approvals':
+        for (final a in _pendingActions) {
+          add(_buildPendingActionCard(a));
+        }
+        break;
+      case 'voice':
+        add(_buildPersonaBar());
+        add(_buildAudioCard());
+        break;
+    }
+
+    return ListView(
+      padding: const EdgeInsets.all(16),
+      children: [
+        ...children,
+        if (children.isEmpty)
+          Padding(
+            padding: const EdgeInsets.symmetric(vertical: 40),
+            child: Text(
+              'Belum ada data untuk ditampilkan.',
+              textAlign: TextAlign.center,
+              style: GoogleFonts.plusJakartaSans(
+                fontSize: 13,
+                color: AppTheme.textSecondary,
+              ),
+            ),
+          ),
+        const SizedBox(height: 8),
+      ],
+    );
+  }
+
+  /// Pengingat ringkas bahwa ada hal yang perlu ditindaklanjuti.
+  Widget _buildAttentionBanner() {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 12),
+      child: Material(
+        color: AppTheme.warningColor.withValues(alpha: 0.08),
+        borderRadius: BorderRadius.circular(AppTheme.radiusLarge),
+        child: InkWell(
+          borderRadius: BorderRadius.circular(AppTheme.radiusLarge),
+          onTap: _openDoctorMenu,
+          child: Container(
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(AppTheme.radiusLarge),
+              border: Border.all(
+                  color: AppTheme.warningColor.withValues(alpha: 0.35)),
+            ),
+            child: Row(
               children: [
-                Expanded(child: _buildList()),
-                _buildInput(),
+                const Icon(Icons.notifications_active_rounded,
+                    color: AppTheme.warningColor, size: 20),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: Text(
+                    '$_attentionCount hal perlu perhatian. Buka menu untuk '
+                    'melihat detailnya.',
+                    style: GoogleFonts.plusJakartaSans(
+                      fontSize: 12,
+                      fontWeight: FontWeight.w600,
+                      color: AppTheme.textPrimary,
+                    ),
+                  ),
+                ),
+                const Icon(Icons.chevron_right_rounded,
+                    color: AppTheme.textSecondary),
               ],
             ),
           ),
@@ -2066,115 +2545,13 @@ class _BusinessDoctorScreenState extends ConsumerState<BusinessDoctorScreen> {
     );
   }
 
-  /// Peta resep sudah tampil di dalam gelembung chat?
-  bool get _chatShowsRecipe => _messages.any((m) => m.blocks.any((b) {
-        if (b is! Map) return false;
-        if (b['type'] == 'prescription') return true;
-        if (b['type'] != 'checklist') return false;
-        return (b['title']?.toString().toLowerCase() ?? '').contains('resep');
-      }));
-
+  /// Layar utama Dokter Bisnis: hanya percakapan. Fitur lain via menu.
   Widget _buildList() {
     return ListView(
       controller: _scroll,
       padding: const EdgeInsets.all(16),
       children: [
-        if (_identity != null) ...[
-          _buildIdentityCard(),
-          const SizedBox(height: 12),
-        ],
-        if (_isOwner) ...[
-          _buildPersonaBar(),
-          const SizedBox(height: 12),
-          _buildAudioCard(),
-          const SizedBox(height: 12),
-        ],
-        if (_isOwner) ...[
-          _buildDelegationCard(),
-          const SizedBox(height: 8),
-          SizedBox(
-            height: AppTheme.touchTargetMedium,
-            child: AppButton(
-              label: 'Tugaskan ke Karyawan',
-              icon: Icons.assignment_add,
-              onPressed: _openDelegationBoard,
-            ),
-          ),
-        ] else
-          _buildMyTasksCard(),
-        const SizedBox(height: 12),
-        if (_shopFloor != null) ...[
-          _buildShopFloorCard(),
-          const SizedBox(height: 12),
-        ],
-        if (_bossEscalation != null) ...[
-          _buildBossEscalationCard(),
-          const SizedBox(height: 12),
-        ],
-        if (_isOwner && _briefing != null) ...[
-          _buildBriefingCard(),
-          const SizedBox(height: 12),
-        ],
-        if (_isOwner && _dailyDose != null) ...[
-          _buildDailyDoseCard(),
-          const SizedBox(height: 12),
-        ],
-        if (_isOwner && _weeklyReport != null) ...[
-          _buildWeeklyReportCard(),
-          const SizedBox(height: 12),
-        ],
-        if (_isOwner && _pendingActions.isNotEmpty) ...[
-          for (final a in _pendingActions) ...[
-            _buildPendingActionCard(a),
-            const SizedBox(height: 12),
-          ],
-        ],
-        if (_isOwner && _escalationLevel > 0) ...[
-          _buildEscalationBanner(),
-          const SizedBox(height: 12),
-        ],
-        if (_isOwner && _reprimand != null) ...[
-          _buildReprimandBanner(),
-          const SizedBox(height: 12),
-        ],
-        if (_isOwner && _activePrescription != null) ...[
-          // Bila chat sudah menampilkan peta resep, jangan ulangi kartu yang sama.
-          if (!_chatShowsRecipe) ...[
-            DoctorBlocks(
-              blocks: [_activePrescription!],
-              onPrescription: _onPrescriptionStep,
-              onTogglePrescription: _togglePrescriptionStep,
-              onDelegate: _onDelegateStep,
-            ),
-            const SizedBox(height: 8),
-          ],
-          SizedBox(
-            height: AppTheme.touchTargetMedium,
-            child: AppButton(
-              label: 'Lihat Hasil Diagnosa',
-              icon: Icons.assignment_outlined,
-              variant: AppButtonVariant.outline,
-              onPressed: _openResult,
-            ),
-          ),
-          const SizedBox(height: 12),
-        ],
-        if (_isOwner) ...[
-          _buildIntakeCta(),
-          const SizedBox(height: 12),
-          _buildKameraKlinisCta(),
-          const SizedBox(height: 12),
-          _buildRaporRoiCta(),
-          const SizedBox(height: 12),
-          if (_phase != 'A') ...[
-            _buildEvaluationCta(),
-            const SizedBox(height: 12),
-          ],
-          if (_roiRevenue > 0) ...[
-            _buildRoiBanner(),
-            const SizedBox(height: 12),
-          ],
-        ],
+        if (_isOwner && _attentionCount > 0) _buildAttentionBanner(),
         if (_messages.isEmpty && _isOwner) _buildWelcome(),
         if (_messages.isEmpty && !_isOwner) _buildStaffWelcome(),
         for (final msg in _messages) ...[
@@ -3601,110 +3978,6 @@ class _BusinessDoctorScreenState extends ConsumerState<BusinessDoctorScreen> {
     );
   }
 
-  Widget _buildIntakeCta() {
-    return Material(
-      color: AppTheme.primaryColor.withValues(alpha: 0.06),
-      borderRadius: BorderRadius.circular(AppTheme.radiusLarge),
-      child: InkWell(
-        borderRadius: BorderRadius.circular(AppTheme.radiusLarge),
-        onTap: _openIntake,
-        child: Container(
-          padding: const EdgeInsets.all(14),
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(AppTheme.radiusLarge),
-            border: Border.all(
-                color: AppTheme.primaryColor.withValues(alpha: 0.35)),
-          ),
-          child: Row(
-            children: [
-              Container(
-                width: 40,
-                height: 40,
-                decoration: BoxDecoration(
-                  gradient: AppTheme.primaryGradient,
-                  borderRadius: BorderRadius.circular(AppTheme.radiusMedium),
-                ),
-                child: const Icon(Icons.fact_check_rounded,
-                    color: Colors.white, size: 22),
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text('Cek Fisik Toko',
-                        style: GoogleFonts.plusJakartaSans(
-                            fontSize: 14, fontWeight: FontWeight.w700)),
-                    const SizedBox(height: 2),
-                    Text(
-                      'Diagnosa lebih akurat dengan 3 langkah singkat.',
-                      style: GoogleFonts.plusJakartaSans(
-                          fontSize: 12, color: AppTheme.textSecondary),
-                    ),
-                  ],
-                ),
-              ),
-              const Icon(Icons.chevron_right_rounded,
-                  color: AppTheme.primaryColor),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildKameraKlinisCta() {
-    return Material(
-      color: AppTheme.moduleAccentTeal.withValues(alpha: 0.06),
-      borderRadius: BorderRadius.circular(AppTheme.radiusLarge),
-      child: InkWell(
-        borderRadius: BorderRadius.circular(AppTheme.radiusLarge),
-        onTap: _openKameraKlinis,
-        child: Container(
-          padding: const EdgeInsets.all(14),
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(AppTheme.radiusLarge),
-            border: Border.all(
-                color: AppTheme.moduleAccentTeal.withValues(alpha: 0.35)),
-          ),
-          child: Row(
-            children: [
-              Container(
-                width: 40,
-                height: 40,
-                decoration: BoxDecoration(
-                  color: AppTheme.moduleAccentTeal,
-                  borderRadius: BorderRadius.circular(AppTheme.radiusMedium),
-                ),
-                child: const Icon(Icons.photo_camera_rounded,
-                    color: Colors.white, size: 22),
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text('Kamera Klinis',
-                        style: GoogleFonts.plusJakartaSans(
-                            fontSize: 14, fontWeight: FontWeight.w700)),
-                    const SizedBox(height: 2),
-                    Text(
-                      'Foto kondisi toko + nilai 1-5, dapatkan skor kesehatan.',
-                      style: GoogleFonts.plusJakartaSans(
-                          fontSize: 12, color: AppTheme.textSecondary),
-                    ),
-                  ],
-                ),
-              ),
-              const Icon(Icons.chevron_right_rounded,
-                  color: AppTheme.moduleAccentTeal),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-
   Widget _buildRoiBanner() {
     final net = _roiRevenue - _roiCost;
     return Container(
@@ -4461,4 +4734,23 @@ class _BusinessDoctorScreenState extends ConsumerState<BusinessDoctorScreen> {
       ),
     );
   }
+}
+
+/// Satu baris di menu fitur Dokter Bisnis.
+class _MenuEntry {
+  const _MenuEntry({
+    required this.icon,
+    required this.title,
+    required this.subtitle,
+    required this.color,
+    required this.onTap,
+    this.badge = 0,
+  });
+
+  final IconData icon;
+  final String title;
+  final String subtitle;
+  final Color color;
+  final VoidCallback onTap;
+  final int badge;
 }

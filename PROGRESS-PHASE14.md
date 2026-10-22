@@ -203,6 +203,46 @@ Sumber spec: `KASIRGO-WORKFLOW-LENGKAP.md` BAGIAN 13 + BAGIAN 14.2.
   (7) `flutter analyze lib` 21 info pra-ada (0 error/warning); build web release
   md5 `fc7192e2d1e90b60e7ed2a1193ce9724` = live; gh-pages `496ca32`.
 
+- ST14-25: Navigasi menu Dokter Bisnis (layar utama chat-only) (SELESAI).
+  Tujuan: permintaan owner "semua fitur di dalam Dokter Bisnis dibuat navigasi menu
+  saja, di tengah hanya fitur chat" - sebelumnya kartu-kartu fitur (identitas bisnis,
+  briefing, dosis, tugas, kondisi toko, resep, intake, kamera klinis, ROI, evaluasi,
+  persetujuan aksi, persona/suara, laporan mingguan) menumpuk di atas chat.
+  (1) `business_doctor_screen.dart`: state baru `_pane` + `_paneTitle`; AppBar
+  menampilkan tombol Back + judul pane saat berada di pane, dan IconButton bergrid
+  (tooltip "Menu Dokter") dengan badge merah berisi `_attentionCount` saat di chat.
+  Body memilih antara chat (`_buildList`) dan `_buildPaneBody()`.
+  (2) `_openDoctorMenu()` - bottom sheet "Menu Dokter Bisnis / Semua fitur ada di sini.
+  Layar utama khusus chat." berisi daftar `_MenuEntry` (ikon, judul, subjudul, warna,
+  onTap, badge opsional): Ringkasan Bisnis, Briefing Harian, Dosis Harian, Tugas &
+  Delegasi, Kondisi Toko, Resep Aktif, Cek Fisik Toko, Kamera Klinis, Rapor ROI
+  Promosi, Evaluasi Resep, Persetujuan Aksi, Persona & Suara, Riwayat Kasus,
+  Lapor ke Bos. Entri navigasi memanggil `_openPane(key, title)`; entri aksi langsung
+  memanggil `_openIntake`, `_openKameraKlinis`, `DoctorCasesScreen`, `_reportToBoss`.
+  (3) `_buildPaneBody()` merender tiap pane dari widget yang sudah ada
+  (overview/briefing/dose/weekly/tasks/shopfloor/redreport/prescription/roi/
+  evaluation/alerts/approvals/voice) - tidak ada logika fitur yang diubah.
+  (4) `_buildList` dipangkas menjadi chat-only: banner perhatian ringkas
+  (`_buildAttentionBanner`: "N hal perlu perhatian. Buka menu untuk melihat
+  detailnya.", tap -> menu) + welcome/staffWelcome + gelembung chat + indikator
+  loading + disclaimer. Kode mati dihapus: `_chatShowsRecipe`, `_buildIntakeCta`,
+  `_buildKameraKlinisCta` (`_buildRoiBanner` dipertahankan karena dipakai pane ROI).
+  (5) Verifikasi UI lokal + live (Playwright) `e2e/doctor_menu_verify.mjs`:
+  login owner -> Dokter Bisnis terbuka tanpa kartu identitas -> menu terbuka ->
+  14 entri terbaca (Ringkasan Bisnis, Tugas & Delegasi, Persona & Suara, Riwayat
+  Kasus, Lapor ke Bos terverifikasi) -> siklus pane Ringkasan Bisnis / Tugas &
+  Delegasi / Persona & Suara (menu tertutup, judul pane tampil, chat tersembunyi,
+  tombol "Kembali ke chat" bekerja) -> Riwayat Kasus terbuka -> kembali ke chat;
+  0 console error. `e2e/doctor_memory_knowledge_verify.mjs` &
+  `e2e/doctor_memory_delete_verify.mjs` disesuaikan (buka "Menu Dokter" sebelum
+  "Riwayat Kasus", helper assertion membaca `textContent` selain `aria-label`,
+  cek snackbar 1,8 dtk) dan LULUS: form pengetahuan tersimpan + snackbar, baris
+  terhapus (`ROW_GONE true`), 0 console error.
+  (6) Catatan teknis E2E: Flutter web tidak mengekspos tooltip IconButton sebagai
+  `aria-label`, jadi klik memakai `flt-semantics[role="button"]` yang cocok dengan
+  teks tombol; `has()` harus memeriksa `textContent` juga.
+  (7) `flutter analyze lib` 21 info pra-ada (0 error/warning); build web release
+  md5 `9017d5da7e97cebb9f1c421da14078b0` = live; gh-pages `8bf3d94`.
 
 ## CATATAN
 - Cron `pg_cron`/`pg_net` TIDAK terpasang di DB live -> observasi via EF `doctor_observe`

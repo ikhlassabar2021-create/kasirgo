@@ -1,6 +1,6 @@
 import { chromium } from 'playwright';
 
-const BASE = 'https://ikhlassabar2021-create.github.io/kasirgo/';
+const BASE = process.env.KASIRGO_BASE || 'https://ikhlassabar2021-create.github.io/kasirgo/';
 const QA_TITLE = '__QA_UI__ Pelanggan suka gula 1 kg';
 
 const b = await chromium.launch({ args: ['--no-sandbox'] });
@@ -30,7 +30,8 @@ const clickText = async (t) => {
 const has = async (t) =>
   p.evaluate((needle) => {
     const nodes = [...document.querySelectorAll('flt-semantics')];
-    return nodes.some((e) => (e.getAttribute('aria-label') || '').includes(needle));
+    return nodes.some((e) =>
+      ((e.getAttribute('aria-label') || '') + ' ' + (e.textContent || '')).includes(needle));
   }, t);
 
 const inputByLabel = async (label) => {
@@ -64,6 +65,8 @@ await clickText('Dokter Bisnis AI');
 await p.waitForTimeout(7000);
 console.log('DOCTOR_OPEN', await has('Dokter Bisnis'));
 
+await clickText('Menu Dokter');
+await p.waitForTimeout(1500);
 const opened = await clickText('Riwayat Kasus');
 await p.waitForTimeout(6000);
 console.log('CASES_OPEN', opened, await has('Riwayat Kasus'));
@@ -80,8 +83,10 @@ await p.keyboard.type('Pelanggan langganan gula pasir 1 kg tiap Sabtu pagi.', { 
 console.log('FIELDS', tOk, cOk);
 
 const saved = await clickText('Simpan Pengetahuan');
-await p.waitForTimeout(7000);
-console.log('SAVED', saved, await has('Pengetahuan disimpan'));
+await p.waitForTimeout(1800);
+const snack = await has('Pengetahuan disimpan');
+await p.waitForTimeout(5000);
+console.log('SAVED', saved, snack);
 console.log('SECTION_KNOWLEDGE', await has('Pengetahuan Saya'));
 console.log('ROW_TITLE', await has(QA_TITLE));
 
