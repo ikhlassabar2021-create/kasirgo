@@ -41,7 +41,12 @@ class _CashierPosScreenState extends ConsumerState<CashierPosScreen> {
   @override
   void initState() {
     super.initState();
-    WidgetsBinding.instance.addPostFrameCallback((_) => _initOrders());
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      VoiceService().announceShopFloorReminder(
+        outletId: ref.read(currentUserProvider)?.outletId,
+      );
+      _initOrders();
+    });
   }
 
   bool _isFoodBusiness() {

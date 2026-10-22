@@ -1,0 +1,27 @@
+import { chromium } from 'playwright';
+const BASE='https://ikhlassabar2021-create.github.io/kasirgo/';
+const b=await chromium.launch({args:['--no-sandbox']});
+const c=await b.newContext({viewport:{width:1280,height:1200},serviceWorkers:'block'});
+const p=await c.newPage();
+p.on('console',m=>{if(m.type()==='error')console.log('ERR',m.text().slice(0,250));});
+const txt=async()=>p.evaluate(()=>document.body.innerText||'');
+const clickText=async(t)=>{const els=p.locator('flt-semantics',{hasText:t});const n=await els.count();for(let i=n-1;i>=0;i--){const el=els.nth(i);const box=await el.boundingBox();if(!box||box.width===0)continue;await p.mouse.click(box.x+box.width/2,box.y+box.height/2);return true;}return false;};
+await p.goto(BASE+'?cb='+Date.now(),{waitUntil:'networkidle',timeout:120000});
+await p.waitForTimeout(6000);
+await p.locator('flt-semantics-placeholder').evaluate(el=>el.click());
+await p.waitForTimeout(2500);
+await clickText('Saya Penjual');
+await p.waitForTimeout(4000);
+const box=await p.locator('input[aria-label="Email Bisnis / Owner"]').boundingBox();
+await p.mouse.click(box.x+box.width/2,box.y+box.height/2);
+await p.waitForTimeout(500);
+await p.keyboard.type('ikhlassabar2021@gmail.com',{delay:25});
+await p.waitForTimeout(400);
+await p.keyboard.press('Tab');
+await p.waitForTimeout(600);
+await p.keyboard.type('sabar2021',{delay:40});
+await p.waitForTimeout(800);
+console.log('VALS',await p.evaluate(()=>[...document.querySelectorAll('input')].map(i=>[i.getAttribute('aria-label'),i.value.length])));
+console.log('LOGIN',await clickText('MASUK KE KASIRGO'));
+for(let i=0;i<5;i++){await p.waitForTimeout(4000);console.log('T'+(i+1),(await txt()).slice(0,160).replace(/\n/g,' | '));}
+await b.close();

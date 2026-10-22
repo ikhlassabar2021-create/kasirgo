@@ -1426,9 +1426,40 @@ Deno.serve(async (req: Request) => {
       .eq("conversation_id", conversationId)
       .order("created_at", { ascending: true }).limit(12);
 
+    // Lampiran berkas (PDF/Excel/CSV/TXT) sudah diekstrak jadi teks di perangkat.
+    // Tidak ada berkas yang diunggah/disimpan; hanya teks konteks yang dipakai.
+    const attach = (body.attachment ?? null) as Json | null;
+    const attachName = attach && typeof attach === "object"
+      ? String(attach.name ?? "berkas").slice(0, 120)
+      : "";
+    const storedMessage = attachName ? `${message}\n\n[Lampiran: ${attachName}]` : message;
+
+    if (conversationId && storedMessage) {
+      await admin.from("doctor_messages").insert({
+        conversation_id: conversationId, outlet_id: outletId, role: "user", content: storedMessage.slice(0, 8000),
+      });
+    }
+
+    const { data: history } = await admin
+      .from("doctor_messages").select("role, content")
+      .eq("conversation_id", conversationId)
+      .order("created_at", { ascending: true }).limit(12);
+
+    let attachContext = "";
+    if (attach && typeof attach === "object") {
+      const aKind = String(attach.kind ?? "").slice(0, 12);
+      const aText = String(attach.text ?? "").slice(0, 8000).trim();
+      if (aText) {
+        attachContext = `\n\n[DATA LAMPIRAN: ${attachName} (.${aKind})]\n` +
+          `Pemilik mengunggah berkas. Isi teks berkas (mungkin terpotong):\n"""\n${aText}\n"""\n` +
+          `Gunakan data ini sebagai sumber utama bila pertanyaan menyangkut isi berkas. ` +
+          `Sebut nama berkasnya saat merujuk data. Jangan mengarang angka yang tidak ada di berkas.`;
+      }
+    }
+
     const messages: Json[] = [
       { role: "system", content: buildSystem(globalCfg, snap, profile, openCases ?? [], history ?? [], actionLogs ?? [], internetActive) },
-      { role: "user", content: message || "Mulai diagnosa usaha saya." },
+      { role: "user", content: (message || "Mulai diagnosa usaha saya.") + attachContext },
     ];
 
     let parsed: Json | null = null;

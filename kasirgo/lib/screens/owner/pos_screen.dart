@@ -66,6 +66,11 @@ class _PosScreenState extends ConsumerState<PosScreen> {
     super.initState();
     _loadPricingAndDiscounts();
     _loadGrowthData();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      VoiceService().announceShopFloorReminder(
+        outletId: ref.read(currentUserProvider)?.outletId,
+      );
+    });
   }
 
   /// ST15-3: muat paket bundling aktif + hitung peluang cross-sell.

@@ -5,20 +5,31 @@ import 'package:flutter_tts/flutter_tts.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
+import '../utils/terbilang.dart';
+
 /// Config suara interaktif dari Control Plane
 /// (platform_configs 'business_doctor' -> field 'audio').
 class VoiceAudioConfig {
+  /// Master switch. Bila false, SEMUA suara dimatikan.
   final bool aktif;
-  final bool teguran;
+  final bool sapaanAwal;
+  final bool fullVoiceLoop;
+  final bool apelPagi;
+  final bool teguranResep;
   final bool soundboxPos;
+  final bool shopFloor;
 
   /// Bila false, master switch per outlet diabaikan (diatur admin global).
   final bool perOutlet;
 
   const VoiceAudioConfig({
     this.aktif = true,
-    this.teguran = true,
+    this.sapaanAwal = true,
+    this.fullVoiceLoop = true,
+    this.apelPagi = true,
+    this.teguranResep = true,
     this.soundboxPos = true,
+    this.shopFloor = true,
     this.perOutlet = true,
   });
 
@@ -34,16 +45,24 @@ class VoiceAudioConfig {
 
     return VoiceAudioConfig(
       aktif: b(m['aktif'], true),
-      teguran: b(m['teguran'], true),
+      sapaanAwal: b(m['sapaan_awal'], true),
+      fullVoiceLoop: b(m['full_voice_loop'], true),
+      apelPagi: b(m['apel_pagi'], true),
+      teguranResep: b(m['teguran_resep'] ?? m['teguran'], true),
       soundboxPos: b(m['soundbox_pos'], true),
+      shopFloor: b(m['shop_floor'], true),
       perOutlet: b(m['per_outlet'], true),
     );
   }
 
   Map<String, dynamic> toMap() => {
         'aktif': aktif,
-        'teguran': teguran,
+        'sapaan_awal': sapaanAwal,
+        'full_voice_loop': fullVoiceLoop,
+        'apel_pagi': apelPagi,
+        'teguran_resep': teguranResep,
         'soundbox_pos': soundboxPos,
+        'shop_floor': shopFloor,
         'per_outlet': perOutlet,
       };
 
@@ -62,8 +81,13 @@ class VoiceAudioConfig {
 
     return VoiceAudioConfig(
       aktif: b(prefs['aktif']) ?? aktif,
-      teguran: b(prefs['teguran']) ?? teguran,
+      sapaanAwal: b(prefs['sapaan_awal']) ?? sapaanAwal,
+      fullVoiceLoop: b(prefs['full_voice_loop']) ?? fullVoiceLoop,
+      apelPagi: b(prefs['apel_pagi']) ?? apelPagi,
+      teguranResep:
+          b(prefs['teguran_resep'] ?? prefs['teguran']) ?? teguranResep,
       soundboxPos: b(prefs['soundbox_pos']) ?? soundboxPos,
+      shopFloor: b(prefs['shop_floor']) ?? shopFloor,
       perOutlet: perOutlet,
     );
   }
@@ -241,7 +265,7 @@ class VoiceService {
     final sp = await SharedPreferences.getInstance();
     final key = 'kasirgo_voice_outlet_prefs_$outletId';
     await sp.setString(key, _encode(_outletPrefs));
-    await sp.setInt(key + '_ts', DateTime.now().millisecondsSinceEpoch);
+    await sp.setInt('${key}_ts', DateTime.now().millisecondsSinceEpoch);
   }
 
   /// Soundbox POS: bacakan nominal pembayaran yang diterima.
@@ -259,14 +283,14 @@ class VoiceService {
     await init();
     if (!available) return;
 
-    final buf = StringBuffer('Pembayaran diterima ');
+    final buf = StringBuffer('Konfirmasi diterima. Masuk, ');
+    buf.write(_terbilangRupiah(amount));
     if (method != null && method.trim().isNotEmpty) {
-      buf.write('${_methodLabel(method)} ');
+      buf.write(' ${_methodLabel(method)}');
     }
-    buf.write(_rupiah(amount));
     buf.write('. ');
     if (change > 0) {
-      buf.write('Kembalian ${_rupiah(change)}. ');
+      buf.write('Kembalian ${_terbilangRupiah(change)}. ');
     }
     if (customerName != null && customerName.trim().isNotEmpty) {
       buf.write('Terima kasih ${customerName.trim()}.');
@@ -276,12 +300,60 @@ class VoiceService {
     await speak(buf.toString());
   }
 
+  /// Sapaan awal + apel pagi saat aplikasi dibuka (maksimal 1x per hari).
+  Future<void> greetOnOpen({String? outletId, String? ownerName}) async {
+    if (outletId != null && outletId.isNotEmpty) {
+      await applyOutletPrefs(outletId);
+    }
+    if (!available || (!_config.sapaanAwal && !_config.apelPagi)) return;
+    await init();
+    if (!available) return;
+    final now = DateTime.now();
+    final buf = StringBuffer();
+    if (_config.sapaanAwal) {
+      final who = ownerName?.trim() ?? '';
+      buf.write(who.isEmpty
+          ? 'Selamat datang kembali, Bos.'
+          : 'Selamat datang kembali, $who.');
+    }
+    if (_config.apelPagi && now.hour < 11) {
+      if (buf.isNotEmpty) buf.write(' ');
+      buf.write('Apel pagi: cek stok, siapkan modal, lalu mulai jualan.');
+    }
+    if (buf.isEmpty) return;
+    final sp = await SharedPreferences.getInstance();
+    final key = 'kasirgo_voice_greet_${_outletId ?? 'global'}_'
+        '${now.year}${now.month}${now.day}';
+    if (sp.getBool(key) == true) return;
+    await sp.setBool(key, true);
+    await speak(buf.toString());
+  }
+
+  /// Pengingat shop floor saat kasir mulai berjualan (1x per hari).
+  Future<void> announceShopFloorReminder({String? outletId}) async {
+    if (outletId != null && outletId.isNotEmpty) {
+      await applyOutletPrefs(outletId);
+    }
+    if (!available || !_config.shopFloor) return;
+    await init();
+    if (!available) return;
+    final now = DateTime.now();
+    final sp = await SharedPreferences.getInstance();
+    final key = 'kasirgo_voice_shopfloor_${_outletId ?? 'global'}_'
+        '${now.year}${now.month}${now.day}';
+    if (sp.getBool(key) == true) return;
+    await sp.setBool(key, true);
+    await speak(
+      'Pengingat toko: rapikan display, cek harga, dan sapa setiap pelanggan.',
+    );
+  }
+
   /// Teguran Dokter Bisnis: bacakan agar terdengar langsung oleh owner.
   Future<void> announceReprimand(String text, {String? outletId}) async {
     if (outletId != null && outletId.isNotEmpty) {
       await applyOutletPrefs(outletId);
     }
-    if (!available || !_config.teguran) return;
+    if (!available || !_config.teguranResep) return;
     final clean = text.trim();
     if (clean.isEmpty) return;
     await init();
@@ -324,11 +396,10 @@ class VoiceService {
     }
   }
 
-  String _rupiah(double amount) {
-    // Angka polos tanpa pemisah ribuan agar mesin TTS membaca nominal
-    // dengan benar (mis. 12000 -> "dua belas ribu", bukan "dua belas titik").
-    return 'rupiah ${amount.round()}';
-  }
+  /// Nominal dalam kata agar TTS membacanya jelas:
+  /// 25000 -> "dua puluh lima ribu rupiah".
+  String _terbilangRupiah(double amount) =>
+      '${Terbilang.convert(amount)} rupiah';
 
   dynamic _decode(String s) => jsonDecode(s);
 

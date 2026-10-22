@@ -7,6 +7,7 @@ import '../../providers/auth_provider.dart';
 import '../../providers/module_provider.dart';
 import '../../providers/outlet_provider.dart';
 import '../../services/business_doctor_service.dart';
+import '../../services/doctor_file_service.dart';
 import '../../services/speech_service.dart';
 import '../../services/supabase_service.dart';
 import '../../services/voice_service.dart';
@@ -112,14 +113,21 @@ class _BusinessDoctorScreenState extends ConsumerState<BusinessDoctorScreen> {
   int _level = 1;
   static const _levelStep = 100;
   bool _audioAktif = true;
-  bool _audioSoundbox = true;
+  bool _audioSapaan = true;
+  bool _audioLoop = true;
+  bool _audioApel = true;
   bool _audioTeguran = true;
+  bool _audioSoundbox = true;
+  bool _audioShopFloor = true;
   bool _overduePrompted = false;
   bool _reprimandSpoken = false;
   String? _bossWa;
   final SpeechService _speech = SpeechService();
   bool _listening = false;
   String _speechStatus = '';
+  final DoctorFileService _files = DoctorFileService();
+  DoctorFileAttachment? _attachment;
+  bool _pickingFile = false;
 
   @override
   void initState() {
@@ -189,8 +197,13 @@ class _BusinessDoctorScreenState extends ConsumerState<BusinessDoctorScreen> {
           }
 
           _audioAktif = pick('aktif', _audioAktif);
+          _audioSapaan = pick('sapaan_awal', _audioSapaan);
+          _audioLoop = pick('full_voice_loop', _audioLoop);
+          _audioApel = pick('apel_pagi', _audioApel);
+          _audioTeguran =
+              pick('teguran_resep', pick('teguran', _audioTeguran));
           _audioSoundbox = pick('soundbox_pos', _audioSoundbox);
-          _audioTeguran = pick('teguran', _audioTeguran);
+          _audioShopFloor = pick('shop_floor', _audioShopFloor);
         }
       });
       VoiceService().applyOutletPrefs(outletId);
@@ -387,34 +400,50 @@ class _BusinessDoctorScreenState extends ConsumerState<BusinessDoctorScreen> {
     }
   }
 
-  /// Simpan master switch suara (dipakai soundbox POS + teguran).
+  /// Simpan master switch + sub-opsi suara (dipakai soundbox POS, sapaan,
+  /// apel pagi, teguran resep, dan shop floor).
   Future<void> _setAudioPrefs({
     bool? aktif,
+    bool? sapaan,
+    bool? loop,
+    bool? apel,
     bool? soundbox,
     bool? teguran,
+    bool? shopFloor,
   }) async {
     final outletId = ref.read(currentUserProvider)?.outletId;
     if (outletId == null || outletId.isEmpty) return;
     final nextAktif = aktif ?? _audioAktif;
+    final nextSapaan = sapaan ?? _audioSapaan;
+    final nextLoop = loop ?? _audioLoop;
+    final nextApel = apel ?? _audioApel;
     final nextSoundbox = soundbox ?? _audioSoundbox;
     final nextTeguran = teguran ?? _audioTeguran;
+    final nextShopFloor = shopFloor ?? _audioShopFloor;
     setState(() {
       _audioAktif = nextAktif;
+      _audioSapaan = nextSapaan;
+      _audioLoop = nextLoop;
+      _audioApel = nextApel;
       _audioSoundbox = nextSoundbox;
       _audioTeguran = nextTeguran;
+      _audioShopFloor = nextShopFloor;
     });
+    final prefs = <String, dynamic>{
+      'aktif': nextAktif,
+      'sapaan_awal': nextSapaan,
+      'full_voice_loop': nextLoop,
+      'apel_pagi': nextApel,
+      'teguran_resep': nextTeguran,
+      'soundbox_pos': nextSoundbox,
+      'shop_floor': nextShopFloor,
+    };
     try {
       await (widget.service ?? BusinessDoctorService()).setAudioPrefs(
         outletId: outletId,
-        aktif: nextAktif,
-        soundboxPos: nextSoundbox,
-        teguran: nextTeguran,
+        prefs: prefs,
       );
-      await VoiceService().setOutletPrefs(outletId, {
-        'aktif': nextAktif,
-        'soundbox_pos': nextSoundbox,
-        'teguran': nextTeguran,
-      });
+      await VoiceService().setOutletPrefs(outletId, prefs);
       if (nextAktif && nextTeguran) {
         await VoiceService().speak('Suara Dokter Bisnis aktif.');
       }
@@ -553,7 +582,7 @@ class _BusinessDoctorScreenState extends ConsumerState<BusinessDoctorScreen> {
 
   /// Ucapkan jawaban Dokter bila pemilik memakai input suara.
   Future<void> _speakReply(String reply) async {
-    if (!_audioAktif) return;
+    if (!_audioAktif || !_audioLoop) return;
     final clean = reply
         .replaceAll(RegExp(r'[*_`#>|]'), ' ')
         .replaceAll(RegExp(r'\s+'), ' ')
@@ -563,8 +592,28 @@ class _BusinessDoctorScreenState extends ConsumerState<BusinessDoctorScreen> {
     await VoiceService().speak(short);
   }
 
+  Future<void> _pickAttachment() async {
+    if (_pickingFile || _loading) return;
+    setState(() => _pickingFile = true);
+    try {
+      final picked = await _files.pick();
+      if (!mounted) return;
+      if (picked != null) setState(() => _attachment = picked);
+    } on DoctorFileException catch (e) {
+      if (mounted) _snack(e.message);
+    } catch (_) {
+      if (mounted) _snack('Gagal membaca berkas. Coba berkas lain ya.');
+    } finally {
+      if (mounted) setState(() => _pickingFile = false);
+    }
+  }
+
   Future<void> _send(String text, {bool spoken = false}) async {
-    final message = text.trim();
+    var message = text.trim();
+    final attachment = _attachment;
+    if (message.isEmpty && attachment != null) {
+      message = 'Tolong analisa data pada berkas ${attachment.name}.';
+    }
     if (message.isEmpty || _loading) return;
     if (_listening) {
       await _speech.stop();
@@ -581,8 +630,13 @@ class _BusinessDoctorScreenState extends ConsumerState<BusinessDoctorScreen> {
       return;
     }
     setState(() {
-      _messages.add(_Msg('user', message, const []));
+      _messages.add(_Msg(
+        'user',
+        attachment == null ? message : '$message\n\nLampiran: ${attachment.name}',
+        const [],
+      ));
       _loading = true;
+      _attachment = null;
     });
     _input.clear();
     _scrollDown();
@@ -591,6 +645,13 @@ class _BusinessDoctorScreenState extends ConsumerState<BusinessDoctorScreen> {
         outletId: outletId,
         message: message,
         conversationId: _conversationId,
+        attachment: attachment == null
+            ? null
+            : {
+                'name': attachment.name,
+                'kind': attachment.kind,
+                'text': attachment.text,
+              },
       );
       final convId = res['conversation_id']?.toString();
       if (convId != null && convId.isNotEmpty) _conversationId = convId;
@@ -1757,6 +1818,36 @@ class _BusinessDoctorScreenState extends ConsumerState<BusinessDoctorScreen> {
           ),
           const SizedBox(height: 4),
           _audioTile(
+            label: 'Sapaan Awal',
+            hint: 'Sapa owner saat aplikasi dibuka pagi hari.',
+            value: _audioSapaan && _audioAktif,
+            onChanged:
+                _audioAktif ? (v) => _setAudioPrefs(sapaan: v) : null,
+          ),
+          Divider(height: 1, color: AppTheme.borderColor),
+          _audioTile(
+            label: 'Full Voice Loop',
+            hint: 'Suara penuh untuk seluruh alur Dokter Bisnis.',
+            value: _audioLoop && _audioAktif,
+            onChanged: _audioAktif ? (v) => _setAudioPrefs(loop: v) : null,
+          ),
+          Divider(height: 1, color: AppTheme.borderColor),
+          _audioTile(
+            label: 'Apel Pagi',
+            hint: 'Briefing pagi dibacakan sebelum mulai jualan.',
+            value: _audioApel && _audioAktif,
+            onChanged: _audioAktif ? (v) => _setAudioPrefs(apel: v) : null,
+          ),
+          Divider(height: 1, color: AppTheme.borderColor),
+          _audioTile(
+            label: 'Teguran Resep',
+            hint: 'Bacakan teguran Dokter Bisnis agar langsung terdengar.',
+            value: _audioTeguran && _audioAktif,
+            onChanged:
+                _audioAktif ? (v) => _setAudioPrefs(teguran: v) : null,
+          ),
+          Divider(height: 1, color: AppTheme.borderColor),
+          _audioTile(
             label: 'Soundbox POS',
             hint: 'Bacakan nominal pembayaran saat transaksi sukses.',
             value: _audioSoundbox && _audioAktif,
@@ -1766,11 +1857,12 @@ class _BusinessDoctorScreenState extends ConsumerState<BusinessDoctorScreen> {
           ),
           Divider(height: 1, color: AppTheme.borderColor),
           _audioTile(
-            label: 'Teguran Suara',
-            hint: 'Bacakan teguran Dokter Bisnis agar langsung terdengar.',
-            value: _audioTeguran && _audioAktif,
-            onChanged:
-                _audioAktif ? (v) => _setAudioPrefs(teguran: v) : null,
+            label: 'Shop Floor',
+            hint: 'Pengingat suara saat aktivitas jualan di toko.',
+            value: _audioShopFloor && _audioAktif,
+            onChanged: _audioAktif
+                ? (v) => _setAudioPrefs(shopFloor: v)
+                : null,
           ),
         ],
       ),
@@ -2809,9 +2901,107 @@ class _BusinessDoctorScreenState extends ConsumerState<BusinessDoctorScreen> {
                   ],
                 ),
               ),
+            if (_attachment != null)
+              Padding(
+                padding: const EdgeInsets.only(bottom: 8),
+                child: Container(
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                  decoration: BoxDecoration(
+                    color: AppTheme.infoSoftColor,
+                    borderRadius: BorderRadius.circular(AppTheme.radiusMedium),
+                    border: Border.all(color: AppTheme.infoSoftBorderColor),
+                  ),
+                  child: Row(
+                    children: [
+                      const Icon(Icons.description_rounded,
+                          size: 16, color: AppTheme.primaryColor),
+                      const SizedBox(width: 6),
+                      Expanded(
+                        child: Text(
+                          _attachment!.name,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: GoogleFonts.plusJakartaSans(
+                            fontSize: 11,
+                            fontWeight: FontWeight.w600,
+                            color: AppTheme.textPrimary,
+                          ),
+                        ),
+                      ),
+                      if (_attachment!.truncated)
+                        Padding(
+                          padding: const EdgeInsets.only(right: 6),
+                          child: Text(
+                            'dipotong',
+                            style: GoogleFonts.plusJakartaSans(
+                              fontSize: 10,
+                              color: AppTheme.textSecondary,
+                            ),
+                          ),
+                        ),
+                      InkWell(
+                        onTap: () => setState(() => _attachment = null),
+                        borderRadius: BorderRadius.circular(12),
+                        child: const Padding(
+                          padding: EdgeInsets.all(2),
+                          child: Icon(Icons.close_rounded,
+                              size: 16, color: AppTheme.textSecondary),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
             Row(
               crossAxisAlignment: CrossAxisAlignment.end,
               children: [
+                SizedBox(
+                  width: AppTheme.touchTargetMedium,
+                  height: AppTheme.touchTargetMedium,
+                  child: Tooltip(
+                    message: 'Lampirkan berkas (PDF/Excel/CSV)',
+                    child: Container(
+                      decoration: BoxDecoration(
+                        color: _attachment != null
+                            ? AppTheme.infoSoftColor
+                            : AppTheme.surfaceMutedColor,
+                        borderRadius:
+                            BorderRadius.circular(AppTheme.radiusMedium),
+                        border: Border.all(
+                          color: _attachment != null
+                              ? AppTheme.primaryColor
+                              : AppTheme.borderColor,
+                        ),
+                      ),
+                      child: Material(
+                        color: Colors.transparent,
+                        child: InkWell(
+                          borderRadius:
+                              BorderRadius.circular(AppTheme.radiusMedium),
+                          onTap: (_loading || _pickingFile)
+                              ? null
+                              : _pickAttachment,
+                          child: _pickingFile
+                              ? const Padding(
+                                  padding: EdgeInsets.all(12),
+                                  child: CircularProgressIndicator(
+                                    strokeWidth: 2,
+                                  ),
+                                )
+                              : Icon(
+                                  Icons.attach_file_rounded,
+                                  color: _attachment != null
+                                      ? AppTheme.primaryColor
+                                      : AppTheme.textPrimary,
+                                  size: 22,
+                                ),
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 8),
                 Expanded(
                   child: TextField(
                     controller: _input,

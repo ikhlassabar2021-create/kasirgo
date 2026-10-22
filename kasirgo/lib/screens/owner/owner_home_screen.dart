@@ -11,6 +11,7 @@ import '../../providers/outlet_provider.dart';
 import '../../providers/module_provider.dart';
 import 'design_studio_screen.dart';
 import '../../services/supabase_service.dart';
+import '../../services/voice_service.dart';
 import '../../utils/formatters.dart';
 import '../../utils/ai_engine.dart';
 import '../../utils/qris_config.dart';
@@ -180,10 +181,16 @@ class _OwnerHomeScreenState extends ConsumerState<OwnerHomeScreen> {
   void initState() {
     super.initState();
     _currentIndex = widget.initialIndex;
-    WidgetsBinding.instance.addPostFrameCallback((_) {
+    WidgetsBinding.instance.addPostFrameCallback((_) async {
       if (ref.read(currentUserProvider) == null) {
-        ref.read(currentUserProvider.notifier).loadUser();
+        await ref.read(currentUserProvider.notifier).loadUser();
       }
+      if (!mounted) return;
+      final user = ref.read(currentUserProvider);
+      VoiceService().greetOnOpen(
+        outletId: user?.outletId,
+        ownerName: user?.name,
+      );
     });
   }
 

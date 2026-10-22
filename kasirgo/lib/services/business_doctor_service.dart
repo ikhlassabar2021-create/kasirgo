@@ -13,6 +13,7 @@ class BusinessDoctorService {
     required String outletId,
     required String message,
     String? conversationId,
+    Map<String, dynamic>? attachment,
   }) async {
     try {
       final res = await _client.functions.invoke(
@@ -21,6 +22,7 @@ class BusinessDoctorService {
           'outlet_id': outletId,
           'message': message,
           'conversation_id': ?conversationId,
+          'attachment': ?attachment,
         },
       ).timeout(const Duration(seconds: 75));
       if (res.data is Map) return (res.data as Map).cast<String, dynamic>();
@@ -349,17 +351,11 @@ class BusinessDoctorService {
   /// Simpan master switch suara Dokter Bisnis per outlet.
   Future<void> setAudioPrefs({
     required String outletId,
-    required bool aktif,
-    required bool soundboxPos,
-    required bool teguran,
+    required Map<String, dynamic> prefs,
   }) async {
     await _client.from('doctor_outlet_profile').upsert({
       'outlet_id': outletId,
-      'audio_prefs': {
-        'aktif': aktif,
-        'soundbox_pos': soundboxPos,
-        'teguran': teguran,
-      },
+      'audio_prefs': prefs,
       'updated_at': DateTime.now().toIso8601String(),
     }, onConflict: 'outlet_id');
   }

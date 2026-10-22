@@ -1,0 +1,15 @@
+import { chromium } from 'playwright';
+const BASE='https://ikhlassabar2021-create.github.io/kasirgo/';
+const b=await chromium.launch({args:['--no-sandbox']});
+const c=await b.newContext({viewport:{width:1280,height:1200},serviceWorkers:'block'});
+const p=await c.newPage();
+const clickText=async(t)=>{const els=p.locator('flt-semantics',{hasText:t});const n=await els.count();for(let i=n-1;i>=0;i--){const el=els.nth(i);const box=await el.boundingBox();if(!box||box.width===0)continue;await p.mouse.click(box.x+box.width/2,box.y+box.height/2);return true;}return false;};
+await p.goto(BASE+'?cb='+Date.now(),{waitUntil:'networkidle',timeout:120000});
+await p.waitForTimeout(6000);
+await p.locator('flt-semantics-placeholder').evaluate(el=>el.click());
+await p.waitForTimeout(2500);
+console.log('SELLER',await clickText('Saya Penjual'));
+await p.waitForTimeout(4000);
+const info=await p.evaluate(()=>[...document.querySelectorAll('input,textarea,flt-semantics')].map(e=>{const b=e.getBoundingClientRect();return {tag:e.tagName,label:e.getAttribute('aria-label'),ph:e.getAttribute('placeholder'),type:e.getAttribute('type'),role:e.getAttribute('role'),x:Math.round(b.x),y:Math.round(b.y),w:Math.round(b.width),h:Math.round(b.height)};}).filter(n=>n.w>0&&n.h>0&&(n.tag!=='FLT-SEMANTICS'||n.role==='textbox'||n.label)));
+console.log(JSON.stringify(info,null,1).slice(0,3000));
+await b.close();
