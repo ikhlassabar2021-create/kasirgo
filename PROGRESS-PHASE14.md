@@ -48,6 +48,25 @@ Sumber spec: `KASIRGO-WORKFLOW-LENGKAP.md` BAGIAN 13 + BAGIAN 14.2.
   Verifikasi live: staff flow (Kerjakan -> Selesai -> XP 8/level 1) PASS;
   owner escalation (seed tugas due -5 hari) -> kartu "Laporan Merah ke Bos Besar"
   + "Kirim Ulang ke Bos" tampil, 0 console error, data uji dibersihkan.
+- ST14-17: kualitas suara & akurasi input suara (SELESAI).
+  `voice_service.dart`: `VoicePersonaProfile` (rate/pitch/volume + `gender`) untuk
+  `bos_tegas` / `partner_santai` / `analis_taktis`; `VoiceOption` + `_loadVoiceOptions`
+  (cache suara Indonesia perangkat), `_bestVoiceFor` (skor locale id-ID/online +
+  cocok/tidak cocok gender), `listIndonesianVoices`, `selectVoice` (persist
+  `kasirgo_voice_device`), `_applyPersona` menukar suara perangkat sesuai gender
+  persona bila owner belum memilih manual -> tiap persona benar-benar beda karakter.
+  `speech_service.dart`: locale dipaksa `id-ID` (tidak pernah null), sesi kontinu
+  + auto-restart (`_maxRestarts=8`), `listenMode: dictation`, `autoPunctuation`,
+  `pauseFor: 6s`, `contextualPhrases` kosakata UMKM.
+  `business_doctor_screen.dart`: tombol "Pilih Suara Perangkat (Pria/Wanita)"
+  (bottom sheet + pratinjau "Coba suara ini" + "Pilih Otomatis"), caption
+  "Suara aktif: <nama>", meter level mikrofon (0..1 dinormalkan Android dB / iOS
+  negatif), guard `_speechSent`, dan `await _speech.stop()` sebelum TTS agar suara
+  Dokter tidak terekam, plus `_normalizeSpeech` (QRIS/omzet/KasirGo/WhatsApp).
+  Verifikasi live (Playwright 1280x1200, owner Toko Test): "Persona Dokter" tampil,
+  tombol pemilih suara membuka alur, pesan kosong menyesuaikan platform
+  (web: "Browser ini tidak menyediakan suara Indonesia"), mic -> "Mendengarkan..."
+  tanpa error, 0 console error. Deploy gh-pages + main (commit `4060dcb`).
 
 ## CATATAN
 - Cron `pg_cron`/`pg_net` TIDAK terpasang di DB live -> observasi via EF `doctor_observe`
