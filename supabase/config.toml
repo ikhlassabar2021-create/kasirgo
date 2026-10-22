@@ -41,3 +41,6 @@ verify_jwt = true
 
 [functions.onboard_merchant]
 verify_jwt = true
+
+[functions.tts_speak]
+verify_jwt = true

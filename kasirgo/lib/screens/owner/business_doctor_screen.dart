@@ -41,6 +41,7 @@ import 'recipe_screen.dart';
 import 'sidak_bos_screen.dart';
 import 'whatsapp_broadcast_screen.dart';
 import '../../utils/error_messages.dart';
+import '../../utils/speech_lexicon.dart';
 import '../../utils/doctor_result_pdf.dart';
 import '../../utils/doctor_vitals.dart';
 import '../../utils/formatters.dart';
@@ -137,6 +138,7 @@ class _BusinessDoctorScreenState extends ConsumerState<BusinessDoctorScreen> {
   String _speechStatus = '';
   bool _speechSent = false;
   double _soundLevel = 0;
+  SpeechLexicon? _lexicon;
   final DoctorFileService _files = DoctorFileService();
   DoctorFileAttachment? _attachment;
   bool _pickingFile = false;
@@ -175,6 +177,7 @@ class _BusinessDoctorScreenState extends ConsumerState<BusinessDoctorScreen> {
     _loadRoiBanner();
     _loadDelegationOverview();
     _loadShopFloor();
+    _prepareLexicon();
     VoiceService().restorePersona();
     if (_conversationId != null) _loadHistory();
     final initial = widget.initialMessage?.trim();
@@ -987,35 +990,34 @@ class _BusinessDoctorScreenState extends ConsumerState<BusinessDoctorScreen> {
     await _startListening();
   }
 
+  /// Siapkan kamus koreksi transkrip dari nama produk outlet.
+  ///
+  /// Dipanggil sekali saat layar dibuka (latar belakang) supaya kata seperti
+  /// "gula paser" bisa dikembalikan ke "Gula Pasir" bila produk itu memang
+  /// ada di katalog warung ini.
+  Future<void> _prepareLexicon() async {
+    if (_lexicon != null) return;
+    final outletId = ref.read(currentUserProvider)?.outletId;
+    var names = <String>[];
+    if (outletId != null && outletId.isNotEmpty) {
+      try {
+        final products = await SupabaseService().getProducts(outletId);
+        names = products
+            .where((p) => p.isActive)
+            .map((p) => p.name)
+            .toList(growable: false);
+      } catch (_) {}
+    }
+    _lexicon = SpeechLexicon(vocabulary: names);
+  }
+
   /// Rapikan hasil transkrip STT sebelum dikirim ke Dokter.
   ///
   /// Mesin STT Indonesia sering menulis istilah usaha dengan ejaan acak
-  /// ("qris", "rp", "omset nya"). Normalisasi ringan ini menaikkan akurasi
-  /// tanpa mengubah makna kalimat owner.
-  String _normalizeSpeech(String raw) {
-    var t = raw.replaceAll(RegExp(r'\s+'), ' ').trim();
-    if (t.isEmpty) return t;
-    const fixes = {
-      'qris': 'QRIS',
-      'qriss': 'QRIS',
-      'kasir go': 'KasirGo',
-      'kasirgo': 'KasirGo',
-      'omset nya': 'omzetnya',
-      'omset': 'omzet',
-      'rp.': 'Rp',
-      'whats app': 'WhatsApp',
-      'stok nya': 'stoknya',
-      'untung nya': 'untungnya',
-      'rugi nya': 'ruginya',
-    };
-    for (final entry in fixes.entries) {
-      t = t.replaceAll(RegExp(RegExp.escape(entry.key), caseSensitive: false),
-          entry.value);
-    }
-    t = t.replaceAllMapped(
-        RegExp(r'\s+([,.!?])'), (m) => m.group(1) ?? '');
-    return t.replaceAll(RegExp(r'\s+'), ' ').trim();
-  }
+  /// ("qris", "rp", "omset nya"). [SpeechLexicon] memperbaiki istilah usaha
+  /// dan nama produk outlet secara lokal tanpa mengubah makna kalimat owner.
+  String _normalizeSpeech(String raw) =>
+      (_lexicon ?? SpeechLexicon()).correct(raw);
 
   /// Mulai mendengar. [auto] true = lanjutan voice loop (tanpa sentuh tombol).
   Future<void> _startListening({bool auto = false}) async {
@@ -1028,6 +1030,7 @@ class _BusinessDoctorScreenState extends ConsumerState<BusinessDoctorScreen> {
     if (!mounted) return;
     _voiceLoopPaused = false;
     _speechSent = false;
+    if (_lexicon == null) _prepareLexicon();
     final ok = await _speech.start(
       reset: true,
       onSoundLevel: (level) {

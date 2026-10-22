@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:convert';
 
+import 'package:audioplayers/audioplayers.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_tts/flutter_tts.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -104,6 +105,10 @@ class VoicePersonaProfile {
   final double volume;
   final String sample;
 
+  /// Kecepatan putar audio cloud (1.0 = normal). Google TTS hanya punya satu
+  /// warna suara, jadi tempo inilah yang membedakan antar persona.
+  final double cloudRate;
+
   /// Preferensi jenis suara perangkat: 'male' / 'female' / null (bebas).
   final String? gender;
 
@@ -112,6 +117,7 @@ class VoicePersonaProfile {
     required this.pitch,
     required this.volume,
     required this.sample,
+    this.cloudRate = 1.0,
     this.gender,
   });
 }
@@ -172,6 +178,7 @@ class VoiceService {
       rate: 0.47,
       pitch: 0.80,
       volume: 1.0,
+      cloudRate: 0.93,
       gender: 'male',
       sample: 'Bos, saya lihat langsung datanya. Hari ini kita bereskan '
           'yang paling penting dulu.',
@@ -180,6 +187,7 @@ class VoiceService {
       rate: 0.54,
       pitch: 1.16,
       volume: 0.95,
+      cloudRate: 1.06,
       gender: 'female',
       sample: 'Santai aja, Bos. Saya temani pelan-pelan. Kita mulai dari '
           'yang paling gampang dulu, ya.',
@@ -188,6 +196,7 @@ class VoiceService {
       rate: 0.50,
       pitch: 0.94,
       volume: 0.92,
+      cloudRate: 0.98,
       gender: 'male',
       sample: 'Berdasarkan data tujuh hari terakhir, ada tiga hal yang perlu '
           'kita perhatikan. Mari kita bahas satu per satu.',
@@ -197,6 +206,13 @@ class VoiceService {
   static const _defaultPersona = 'bos_tegas';
 
   final FlutterTts _tts = FlutterTts();
+  final AudioPlayer _player = AudioPlayer();
+
+  /// Suara cloud (Edge Function `tts_speak` -> Google TTS). Jauh lebih luwes
+  /// daripada TTS bawaan HP/browser. Dimatikan sementara setelah 3 kegagalan
+  /// beruntun agar tidak memperlambat setiap kalimat.
+  bool _cloudOn = true;
+  int _cloudFail = 0;
   VoiceAudioConfig _global = VoiceAudioConfig.fallback;
   VoiceAudioConfig _config = VoiceAudioConfig.fallback;
   Map<String, dynamic> _outletPrefs = const {};
@@ -210,7 +226,12 @@ class VoiceService {
   List<VoiceOption> _voices = const [];
 
   VoiceAudioConfig get config => _config;
-  bool get available => _available && _config.aktif;
+
+  /// Suara tersedia bila TTS perangkat siap ATAU suara cloud masih aktif.
+  bool get available => (_available || _cloudOn) && _config.aktif;
+
+  /// True bila audio sedang diambil dari cloud (suara neural).
+  bool get cloudActive => _cloudOn;
   String? get outletId => _outletId;
   String get persona => _persona;
 
@@ -757,6 +778,7 @@ class VoiceService {
     if (clean.isEmpty) return;
     await init();
     if (!available) return;
+    if (await _speakCloud(clean, awaitCompletion: awaitCompletion)) return;
     try {
       await _tts.stop();
       await _applyPersona(_persona);
@@ -771,6 +793,69 @@ class VoiceService {
       if (identical(_speakDone, done)) _speakDone = null;
     } catch (e) {
       debugPrint('VoiceService.speak error: $e');
+    }
+  }
+
+  /// Suara manusia (neural) dari Edge Function `tts_speak`.
+  ///
+  /// Mengembalikan true bila audio cloud berhasil diputar. Bila gagal
+  /// (offline, kuota, EF error) pemanggil melanjutkan ke TTS perangkat.
+  Future<bool> _speakCloud(
+    String text, {
+    bool awaitCompletion = false,
+  }) async {
+    if (!_cloudOn) return false;
+    try {
+      final res = await _client.functions.invoke(
+        'tts_speak',
+        body: {'text': text, 'persona': _persona},
+      );
+      final data = res.data;
+      if (data is! Map) {
+        _noteCloudFail();
+        return false;
+      }
+      final b64 = data['audio'];
+      if (b64 is! String || b64.isEmpty) {
+        _noteCloudFail();
+        return false;
+      }
+      final bytes = base64Decode(b64);
+      if (bytes.length < 500) {
+        _noteCloudFail();
+        return false;
+      }
+      _cloudFail = 0;
+      await _player.stop();
+      final profile =
+          personaProfiles[_persona] ?? personaProfiles[_defaultPersona]!;
+      final rate = (data['playback_rate'] as num?)?.toDouble() ??
+          profile.cloudRate;
+      try {
+        await _player.setPlaybackRate(rate.clamp(0.5, 1.5));
+      } catch (_) {}
+      final done = _player.onPlayerComplete.first;
+      await _player.play(BytesSource(bytes));
+      if (!awaitCompletion) return true;
+      final budget = 8000 + text.length * 140;
+      await done.timeout(
+        Duration(milliseconds: budget),
+        onTimeout: () {},
+      );
+      return true;
+    } catch (e) {
+      _noteCloudFail();
+      debugPrint('VoiceService._speakCloud error: $e');
+      return false;
+    }
+  }
+
+  void _noteCloudFail() {
+    _cloudFail++;
+    if (_cloudFail >= 3 && _cloudOn) {
+      _cloudOn = false;
+      debugPrint('VoiceService: suara cloud nonaktif sementara, '
+          'memakai TTS perangkat.');
     }
   }
 
@@ -815,6 +900,9 @@ class VoiceService {
   Future<void> stop() async {
     final done = _speakDone;
     if (done != null && !done.isCompleted) done.complete();
+    try {
+      await _player.stop();
+    } catch (_) {}
     try {
       await _tts.stop();
     } catch (_) {}

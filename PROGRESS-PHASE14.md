@@ -67,6 +67,35 @@ Sumber spec: `KASIRGO-WORKFLOW-LENGKAP.md` BAGIAN 13 + BAGIAN 14.2.
   tombol pemilih suara membuka alur, pesan kosong menyesuaikan platform
   (web: "Browser ini tidak menyediakan suara Indonesia"), mic -> "Mendengarkan..."
   tanpa error, 0 console error. Deploy gh-pages + main (commit `4060dcb`).
+- ST14-18: suara manusiawi via cloud TTS gratis (Google Translate TTS) (SELESAI).
+  Akar masalah: suara kaku berasal dari TTS bawaan perangkat/browser (kualitas
+  mesin lama). Solusi: Edge Function `tts_speak` (Supabase) memanggil Google
+  Translate TTS (`translate_tts?...&tl=id&client=tw-ob`) - gratis, tanpa API key,
+  suara Indonesia natural. EF: JWT wajib, cache in-memory (maks 40 entri),
+  `MAX_CHARS=1200`, pemecahan teks <=180 karakter lalu mp3 digabung, balasan
+  `{ok,provider,voice,persona,playback_rate,mime,ms,audio(base64)}`.
+  `voice_service.dart`: `audioplayers` memutar mp3 dari `BytesSource`; `_speakCloud`
+  dipakai lebih dulu, TTS perangkat tetap jadi fallback offline; cloud otomatis
+  dimatikan setelah 3 kegagalan beruntun (`_noteCloudFail`), `available` tetap
+  benar, getter `cloudActive`. Persona dibedakan lewat tempo putar klien
+  (`playback_rate` 0.93 bos tegas / 1.06 partner santai / 0.98 analis taktis)
+  karena Google mengabaikan parameter `ttsspeed` (dibuktikan: byte audio identik
+  untuk 0.35-1.0). Catatan: Google Translate TTS hanya suara perempuan; karakter
+  pria didekati dengan tempo lebih lambat.
+- ST14-19: akurasi STT lokal dengan kamus usaha (SELESAI).
+  `lib/utils/speech_lexicon.dart` (BARU): `SpeechLexicon` memperbaiki transkrip
+  dalam 3 lapis - (1) kamus frasa tetap ~80 entri (kasir go, qris, kris, omset,
+  stok, kulakan, kasbon, piutang, whatsapp, tiktok, shopee, rp, persen, dst),
+  dicocokkan batas kata dan frasa panjang lebih dulu; (2) penggabungan akhiran
+  "-nya" yang dipisah STT ("omset nya" -> "omzetnya"); (3) koreksi jarak edit
+  (Levenshtein) terhadap nama produk outlet, mendukung frasa multi kata
+  ("gula paser" -> "Gula Pasir"), toleransi 1 huruf (4-6 huruf) / 2 huruf (7+),
+  satu salah dengar per kata pada frasa, wajib huruf awal sama, kata <4 huruf
+  dan kata umum (`_protected`) tidak dikoreksi. `business_doctor_screen.dart`:
+  `_prepareLexicon()` memuat nama produk aktif dari `SupabaseService().getProducts`
+  sekali saat layar dibuka (juga dipicu saat mulai merekam), `_normalizeSpeech`
+  kini memakai `SpeechLexicon.correct`. Semua lokal, gratis, tanpa jaringan.
+  Test `test/speech_lexicon_test.dart` 8 kasus PASS.
 
 ## CATATAN
 - Cron `pg_cron`/`pg_net` TIDAK terpasang di DB live -> observasi via EF `doctor_observe`
