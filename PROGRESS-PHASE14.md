@@ -1,6 +1,6 @@
 # PROGRESS PHASE 14 - Dokter Bisnis AI
 
-STATUS: ST14-1..ST14-12 SELESAI (termasuk penutup celah).
+STATUS: ST14-1..ST14-16 SELESAI (termasuk penutup celah + delegasi & eskalasi).
 Sumber spec: `KASIRGO-WORKFLOW-LENGKAP.md` BAGIAN 13 + BAGIAN 14.2.
 
 ## Ringkasan sub-task
@@ -33,6 +33,21 @@ Sumber spec: `KASIRGO-WORKFLOW-LENGKAP.md` BAGIAN 13 + BAGIAN 14.2.
 - ST14-12: per-outlet + hardening - override provider per outlet + unlimited_tokens/
   token_quota + RPC admin + rate limit harian (SELESAI; lihat PROGRESS-PHASE15.md
   bagian "Penutup celah").
+- ST14-13: audio soundbox POS + master switch suara per outlet (`voice_service.dart`,
+  `VoiceAudioConfig`: sapaan_awal/full_voice_loop/apel_pagi/teguran_resep/
+  soundbox_pos/shop_floor) (SELESAI).
+- ST14-14: full voice loop + multimodal (lampirkan berkas PDF/Excel/CSV + tempel
+  tautan web + tombol Bicara) di layar Dokter (SELESAI).
+- ST14-15: persona dokter (Bos Tegas / Partner Santai / Analis Taktis), Dosis Harian
+  (3 langkah kecil tanpa modal), gamifikasi (XP/level/streak/badge) + ROI (SELESAI).
+- ST14-16: delegasi tugas ke karyawan (`doctor_delegations`, papan delegasi owner,
+  kartu tugas staf `DelegationTasksCard`, XP staf) + eskalasi "Laporan Merah ke Bos
+  Besar" (tugas macet >3 hari atau kasus bandel level >=3 -> audio tegas +
+  `logBossReport(kind:'eskalasi')` + kirim ulang via WA `boss_wa_number`) +
+  pantauan lapangan (komentar suara antrean/stok) (SELESAI).
+  Verifikasi live: staff flow (Kerjakan -> Selesai -> XP 8/level 1) PASS;
+  owner escalation (seed tugas due -5 hari) -> kartu "Laporan Merah ke Bos Besar"
+  + "Kirim Ulang ke Bos" tampil, 0 console error, data uji dibersihkan.
 
 ## CATATAN
 - Cron `pg_cron`/`pg_net` TIDAK terpasang di DB live -> observasi via EF `doctor_observe`
