@@ -38,6 +38,15 @@ android {
         }
     }
 
+    packaging {
+        jniLibs {
+            // Kompres .so di dalam APK (legacy packaging) supaya ukuran unduh
+            // APK jauh lebih kecil (~58 MB -> ~31 MB per ABI). Android akan
+            // mengekstrak lib saat instalasi; semua fitur tetap utuh.
+            useLegacyPackaging = true
+        }
+    }
+
     defaultConfig {
         applicationId = "com.kasirgo.kasirgo"
         minSdk = flutter.minSdkVersion
