@@ -128,6 +128,10 @@ class _BusinessDoctorScreenState extends ConsumerState<BusinessDoctorScreen> {
   final DoctorFileService _files = DoctorFileService();
   DoctorFileAttachment? _attachment;
   bool _pickingFile = false;
+  bool _greeted = false;
+  bool _speaking = false;
+  bool _voiceLoopPaused = false;
+  String? _pendingLink;
 
   @override
   void initState() {
@@ -207,7 +211,33 @@ class _BusinessDoctorScreenState extends ConsumerState<BusinessDoctorScreen> {
         }
       });
       VoiceService().applyOutletPrefs(outletId);
-    } catch (_) {}
+      _greetDoctor();
+    } catch (_) {
+      _greetDoctor();
+    }
+  }
+
+  /// Sapaan suara saat layar Dokter Bisnis dibuka (maks 1x per hari).
+  Future<void> _greetDoctor() async {
+    if (_greeted) return;
+    _greeted = true;
+    if (!_audioAktif || !_audioSapaan) return;
+    final user = ref.read(currentUserProvider);
+    final outletId = user?.outletId;
+    if (outletId == null || outletId.isEmpty) return;
+    setState(() => _speaking = true);
+    try {
+      await VoiceService().greetDoctorOpen(
+        outletId: outletId,
+        persona: _tone,
+        ownerName: user?.name,
+      );
+    } catch (_) {
+    } finally {
+      if (mounted) setState(() => _speaking = false);
+    }
+    if (!mounted) return;
+    if (_audioLoop) await _resumeVoiceLoop();
   }
 
   Future<void> _setTone(String tone) async {
@@ -531,7 +561,9 @@ class _BusinessDoctorScreenState extends ConsumerState<BusinessDoctorScreen> {
 
   @override
   void dispose() {
+    _voiceLoopPaused = true;
     _speech.cancel();
+    VoiceService().stop();
     _input.dispose();
     _scroll.dispose();
     super.dispose();
@@ -539,7 +571,14 @@ class _BusinessDoctorScreenState extends ConsumerState<BusinessDoctorScreen> {
 
   Future<void> _toggleMic() async {
     if (_loading) return;
+    if (_speaking) {
+      _voiceLoopPaused = true;
+      await VoiceService().stop();
+      if (mounted) setState(() => _speaking = false);
+      return;
+    }
     if (_listening) {
+      _voiceLoopPaused = true;
       await _speech.stop();
       if (!mounted) return;
       setState(() {
@@ -548,6 +587,19 @@ class _BusinessDoctorScreenState extends ConsumerState<BusinessDoctorScreen> {
       });
       return;
     }
+    await _startListening();
+  }
+
+  /// Mulai mendengar. [auto] true = lanjutan voice loop (tanpa sentuh tombol).
+  Future<void> _startListening({bool auto = false}) async {
+    if (_loading || _speaking || _listening) return;
+    if (!_speech.available && !await _speech.init()) {
+      if (auto) return;
+      _snack(_speech.error ?? 'Mikrofon tidak tersedia di perangkat ini.');
+      return;
+    }
+    if (!mounted) return;
+    _voiceLoopPaused = false;
     final ok = await _speech.start(onResult: (text, finalResult) {
       if (!mounted) return;
       final clean = text.trim();
@@ -571,25 +623,46 @@ class _BusinessDoctorScreenState extends ConsumerState<BusinessDoctorScreen> {
         _listening = false;
         _speechStatus = '';
       });
-      _snack(_speech.error ?? 'Mikrofon tidak tersedia di perangkat ini.');
+      if (!auto) {
+        _snack(_speech.error ?? 'Mikrofon tidak tersedia di perangkat ini.');
+      }
       return;
     }
     setState(() {
       _listening = true;
-      _speechStatus = 'Mendengarkan... bicara sekarang';
+      _speechStatus = auto
+          ? 'Mendengarkan... silakan lanjut bicara'
+          : 'Mendengarkan... bicara sekarang';
     });
   }
 
   /// Ucapkan jawaban Dokter bila pemilik memakai input suara.
-  Future<void> _speakReply(String reply) async {
-    if (!_audioAktif || !_audioLoop) return;
+  /// Mengembalikan true bila suara benar-benar diputar.
+  Future<bool> _speakReply(String reply) async {
+    if (!_audioAktif || !_audioLoop) return false;
     final clean = reply
         .replaceAll(RegExp(r'[*_`#>|]'), ' ')
         .replaceAll(RegExp(r'\s+'), ' ')
         .trim();
-    if (clean.isEmpty) return;
+    if (clean.isEmpty) return false;
     final short = clean.length > 700 ? '${clean.substring(0, 700)}...' : clean;
-    await VoiceService().speak(short);
+    if (!VoiceService().available) return false;
+    setState(() => _speaking = true);
+    try {
+      await VoiceService().speak(short, awaitCompletion: true);
+      return true;
+    } finally {
+      if (mounted) setState(() => _speaking = false);
+    }
+  }
+
+  /// Setelah TTS selesai: buka mikrofon lagi (hands-free) bila loop aktif.
+  Future<void> _resumeVoiceLoop() async {
+    if (!_audioAktif || !_audioLoop || _voiceLoopPaused) return;
+    if (!_speech.available || _listening || _loading) return;
+    await Future<void>.delayed(const Duration(milliseconds: 350));
+    if (!mounted || _voiceLoopPaused || _loading || _listening) return;
+    await _startListening(auto: true);
   }
 
   Future<void> _pickAttachment() async {
@@ -606,6 +679,67 @@ class _BusinessDoctorScreenState extends ConsumerState<BusinessDoctorScreen> {
     } finally {
       if (mounted) setState(() => _pickingFile = false);
     }
+  }
+
+  /// Tempel tautan web: AI membaca halaman lalu meringkasnya.
+  Future<void> _pasteLink() async {
+    if (_loading) return;
+    final ctrl = TextEditingController(text: _pendingLink ?? '');
+    final url = await showDialog<String>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: Text(
+          'Tempel Tautan Web',
+          style: GoogleFonts.plusJakartaSans(fontWeight: FontWeight.w800),
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'Dokter akan membuka halaman ini lalu meringkas poin pentingnya '
+              'untuk usaha Anda.',
+              style: GoogleFonts.plusJakartaSans(
+                fontSize: 12,
+                color: AppTheme.textSecondary,
+              ),
+            ),
+            const SizedBox(height: 10),
+            TextField(
+              controller: ctrl,
+              keyboardType: TextInputType.url,
+              autofocus: true,
+              decoration: const InputDecoration(
+                hintText: 'https://contoh.com/artikel',
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('Batal'),
+          ),
+          BubbleButton(
+            onPressed: () => Navigator.pop(ctx, ctrl.text.trim()),
+            child: const Text('Baca'),
+          ),
+        ],
+      ),
+    );
+    ctrl.dispose();
+    if (url == null || url.isEmpty) return;
+    final ok = RegExp(r'^https?://\S+\.\S+', caseSensitive: false).hasMatch(url);
+    if (!ok) {
+      _snack('Tautan harus diawali http:// atau https://');
+      return;
+    }
+    setState(() => _pendingLink = url);
+    await _send(
+      'Tolong buka tautan ini lalu ringkas poin pentingnya untuk usaha saya: '
+      '$url',
+    );
+    if (mounted) setState(() => _pendingLink = null);
   }
 
   Future<void> _send(String text, {bool spoken = false}) async {
@@ -697,7 +831,8 @@ class _BusinessDoctorScreenState extends ConsumerState<BusinessDoctorScreen> {
         _loadProfile();
       }
       if (spoken && reply.trim().isNotEmpty) {
-        _speakReply(reply);
+        final played = await _speakReply(reply);
+        if (played) await _resumeVoiceLoop();
       }
     } catch (e) {
       if (!mounted) return;
@@ -2870,31 +3005,41 @@ class _BusinessDoctorScreenState extends ConsumerState<BusinessDoctorScreen> {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            if (_listening || _speechStatus.isNotEmpty)
+            if (_listening || _speaking || _speechStatus.isNotEmpty)
               Padding(
                 padding: const EdgeInsets.only(bottom: 8),
                 child: Row(
                   children: [
                     Icon(
-                      _listening ? Icons.graphic_eq_rounded : Icons.mic_none_rounded,
+                      _speaking
+                          ? Icons.volume_up_rounded
+                          : _listening
+                              ? Icons.graphic_eq_rounded
+                              : Icons.mic_none_rounded,
                       size: 16,
-                      color: _listening
-                          ? AppTheme.errorColor
-                          : AppTheme.textSecondary,
+                      color: _speaking
+                          ? AppTheme.primaryColor
+                          : _listening
+                              ? AppTheme.errorColor
+                              : AppTheme.textSecondary,
                     ),
                     const SizedBox(width: 6),
                     Expanded(
                       child: Text(
-                        _speechStatus.isEmpty
-                            ? 'Mendengarkan...'
-                            : _speechStatus,
+                        _speaking
+                            ? 'Dokter sedang berbicara... mikrofon aktif setelah selesai'
+                            : _speechStatus.isEmpty
+                                ? 'Mendengarkan...'
+                                : _speechStatus,
                         maxLines: 2,
                         overflow: TextOverflow.ellipsis,
                         style: GoogleFonts.plusJakartaSans(
                           fontSize: 11,
-                          color: _listening
-                              ? AppTheme.errorColor
-                              : AppTheme.textSecondary,
+                          color: _speaking
+                              ? AppTheme.primaryColor
+                              : _listening
+                                  ? AppTheme.errorColor
+                                  : AppTheme.textSecondary,
                         ),
                       ),
                     ),
@@ -3002,6 +3147,43 @@ class _BusinessDoctorScreenState extends ConsumerState<BusinessDoctorScreen> {
                   ),
                 ),
                 const SizedBox(width: 8),
+                SizedBox(
+                  width: AppTheme.touchTargetMedium,
+                  height: AppTheme.touchTargetMedium,
+                  child: Tooltip(
+                    message: 'Tempel tautan web',
+                    child: Container(
+                      decoration: BoxDecoration(
+                        color: _pendingLink != null
+                            ? AppTheme.infoSoftColor
+                            : AppTheme.surfaceMutedColor,
+                        borderRadius:
+                            BorderRadius.circular(AppTheme.radiusMedium),
+                        border: Border.all(
+                          color: _pendingLink != null
+                              ? AppTheme.primaryColor
+                              : AppTheme.borderColor,
+                        ),
+                      ),
+                      child: Material(
+                        color: Colors.transparent,
+                        child: InkWell(
+                          borderRadius:
+                              BorderRadius.circular(AppTheme.radiusMedium),
+                          onTap: _loading ? null : _pasteLink,
+                          child: Icon(
+                            Icons.link_rounded,
+                            color: _pendingLink != null
+                                ? AppTheme.primaryColor
+                                : AppTheme.textPrimary,
+                            size: 22,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 8),
                 Expanded(
                   child: TextField(
                     controller: _input,
@@ -3012,7 +3194,9 @@ class _BusinessDoctorScreenState extends ConsumerState<BusinessDoctorScreen> {
                     decoration: InputDecoration(
                       hintText: _listening
                           ? 'Sedang mendengarkan suara Anda...'
-                          : 'Tulis atau ucapkan pertanyaan bisnis Anda...',
+                          : _speaking
+                              ? 'Dokter sedang berbicara...'
+                              : 'Tulis atau ucapkan pertanyaan bisnis Anda...',
                     ),
                   ),
                 ),

@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 
 import 'package:flutter/foundation.dart';
@@ -117,6 +118,7 @@ class VoiceService {
   String? _outletId;
   bool _ready = false;
   bool _available = true;
+  Completer<void>? _speakDone;
 
   VoiceAudioConfig get config => _config;
   bool get available => _available && _config.aktif;
@@ -137,6 +139,18 @@ class VoiceService {
       await _tts.setVolume(1.0);
       await _tts.setPitch(1.0);
       await _tts.awaitSpeakCompletion(false);
+      _tts.setCompletionHandler(() {
+        final done = _speakDone;
+        if (done != null && !done.isCompleted) done.complete();
+      });
+      _tts.setCancelHandler(() {
+        final done = _speakDone;
+        if (done != null && !done.isCompleted) done.complete();
+      });
+      _tts.setErrorHandler((_) {
+        final done = _speakDone;
+        if (done != null && !done.isCompleted) done.complete();
+      });
       _ready = true;
     } catch (e) {
       _available = false;
@@ -361,8 +375,49 @@ class VoiceService {
     await speak(clean);
   }
 
+  /// Sapaan saat membuka layar Dokter Bisnis (maks 1x per hari per persona).
+  Future<void> greetDoctorOpen({
+    String? outletId,
+    String? persona,
+    String? ownerName,
+  }) async {
+    if (outletId != null && outletId.isNotEmpty) {
+      await applyOutletPrefs(outletId);
+    }
+    if (!available || !_config.sapaanAwal) return;
+    await init();
+    if (!available) return;
+    final now = DateTime.now();
+    final hour = now.hour;
+    final part = hour < 11
+        ? 'pagi'
+        : hour < 15
+            ? 'siang'
+            : hour < 19
+                ? 'sore'
+                : 'malam';
+    final who = (ownerName?.trim().isNotEmpty ?? false)
+        ? ownerName!.trim()
+        : 'Bos';
+    final tone = (persona ?? 'bos_tegas').trim();
+    final tail = tone == 'partner_santai'
+        ? 'Saya siap temani, mau mulai dari mana?'
+        : tone == 'analis_taktis'
+            ? 'Saya sudah siapkan datanya. Mulai dari mana?'
+            : 'Ada yang bisa saya kerjakan hari ini?';
+    final text = 'Selamat $part, $who. $tail';
+    final sp = await SharedPreferences.getInstance();
+    final key = 'kasirgo_voice_doctor_greet_${_outletId ?? 'global'}_'
+        '${tone}_${now.year}${now.month}${now.day}';
+    if (sp.getBool(key) == true) return;
+    await sp.setBool(key, true);
+    await speak(text);
+  }
+
   /// Ucapkan teks bebas (dipakai briefing/ucapan lain).
-  Future<void> speak(String text) async {
+  /// [awaitCompletion] true -> Future selesai setelah TTS selesai bicara
+  /// (dipakai voice loop agar mikrofon baru aktif setelah suara habis).
+  Future<void> speak(String text, {bool awaitCompletion = false}) async {
     if (!available) return;
     final clean = text.trim();
     if (clean.isEmpty) return;
@@ -370,13 +425,23 @@ class VoiceService {
     if (!available) return;
     try {
       await _tts.stop();
+      if (!awaitCompletion) {
+        await _tts.speak(clean);
+        return;
+      }
+      final done = Completer<void>();
+      _speakDone = done;
       await _tts.speak(clean);
+      await done.future.timeout(const Duration(seconds: 60), onTimeout: () {});
+      if (identical(_speakDone, done)) _speakDone = null;
     } catch (e) {
       debugPrint('VoiceService.speak error: $e');
     }
   }
 
   Future<void> stop() async {
+    final done = _speakDone;
+    if (done != null && !done.isCompleted) done.complete();
     try {
       await _tts.stop();
     } catch (_) {}
