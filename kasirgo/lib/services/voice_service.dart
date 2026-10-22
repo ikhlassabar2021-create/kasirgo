@@ -362,6 +362,38 @@ class VoiceService {
     );
   }
 
+  /// Komentar proaktif Dokter Bisnis soal kondisi toko (maks 1x per hari).
+  Future<void> announceShopFloorComment(String text, {String? outletId}) async {
+    if (outletId != null && outletId.isNotEmpty) {
+      await applyOutletPrefs(outletId);
+    }
+    if (!available || !_config.shopFloor) return;
+    final clean = text.trim();
+    if (clean.isEmpty) return;
+    await init();
+    if (!available) return;
+    final now = DateTime.now();
+    final sp = await SharedPreferences.getInstance();
+    final key = 'kasirgo_voice_shopfloor_comment_${_outletId ?? 'global'}_'
+        '${now.year}${now.month}${now.day}';
+    if (sp.getBool(key) == true) return;
+    await sp.setBool(key, true);
+    await speak(clean);
+  }
+
+  /// Teguran keras bergaya bos saat kasus macet melewati batas kritis.
+  Future<void> announceBossEscalation(String text, {String? outletId}) async {
+    if (outletId != null && outletId.isNotEmpty) {
+      await applyOutletPrefs(outletId);
+    }
+    if (!available || !_config.teguranResep) return;
+    final clean = text.trim();
+    if (clean.isEmpty) return;
+    await init();
+    if (!available) return;
+    await speak(clean);
+  }
+
   /// Teguran Dokter Bisnis: bacakan agar terdengar langsung oleh owner.
   Future<void> announceReprimand(String text, {String? outletId}) async {
     if (outletId != null && outletId.isNotEmpty) {

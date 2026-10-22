@@ -10,7 +10,9 @@ import '../../providers/auth_provider.dart';
 import '../../providers/module_provider.dart';
 import '../../providers/outlet_provider.dart';
 import '../../services/business_doctor_service.dart';
+import '../../services/delegation_service.dart';
 import '../../services/doctor_file_service.dart';
+import '../../services/order_service.dart';
 import '../../services/speech_service.dart';
 import '../../services/supabase_service.dart';
 import '../../services/voice_service.dart';
@@ -139,6 +141,20 @@ class _BusinessDoctorScreenState extends ConsumerState<BusinessDoctorScreen> {
   bool _speaking = false;
   bool _voiceLoopPaused = false;
   String? _pendingLink;
+  List<DoctorDelegation> _teamTasks = const [];
+  List<DoctorDelegation> _myTasks = const [];
+  Map<String, dynamic>? _shopFloor;
+  bool _shopFloorSpoken = false;
+  bool _escalationSpoken = false;
+  bool _escalationReported = false;
+  bool _bandelSpoken = false;
+  String? _bossEscalation;
+
+  /// Owner melihat pembahasan penuh + boleh menugaskan; Admin/Kasir/Koki
+  /// memakai Dokter sebagai Asisten Operasional Lapangan (baca tugas owner).
+  bool get _isOwner =>
+      (ref.read(currentUserProvider)?.role ?? 'owner').toLowerCase() ==
+      'owner';
 
   @override
   void initState() {
@@ -154,6 +170,8 @@ class _BusinessDoctorScreenState extends ConsumerState<BusinessDoctorScreen> {
     _loadDailyDose();
     _loadBriefing();
     _loadRoiBanner();
+    _loadDelegationOverview();
+    _loadShopFloor();
     if (_conversationId != null) _loadHistory();
     final initial = widget.initialMessage?.trim();
     if (initial != null && initial.isNotEmpty) {
@@ -417,6 +435,176 @@ class _BusinessDoctorScreenState extends ConsumerState<BusinessDoctorScreen> {
       });
     } catch (_) {}
   }
+
+  /// Muat tugas tim (owner) atau tugas milik staf, lalu jalankan
+  /// pengingat suara + eskalasi ke Bos Besar bila macet > 3 hari.
+  Future<void> _loadDelegationOverview() async {
+    final outletId = ref.read(currentUserProvider)?.outletId;
+    if (outletId == null || outletId.isEmpty) return;
+    final service = DelegationService();
+    try {
+      final team = await service.listForOutlet(outletId);
+      final mine = _isOwner ? <DoctorDelegation>[] : await service.listMine();
+      if (!mounted) return;
+      setState(() {
+        _teamTasks = team;
+        _myTasks = mine;
+      });
+      _maybeSpeakDueTasks();
+      _maybeEscalateToBoss();
+    } catch (_) {}
+  }
+
+  /// Teguran gaya bos saat kasus masuk tahap "Kasus Bandel".
+  void _maybeSpeakBandel() {
+    if (_bandelSpoken || !_audioAktif || !_audioTeguran) return;
+    _bandelSpoken = true;
+    VoiceService().announceBossEscalation(
+      'Ini peringatan terakhir. Usaha ini sudah masuk kategori kasus bandel. '
+      'Resep sebelumnya tidak dijalankan, omzet tidak membaik. Saya laporkan '
+      'ke Bos Besar malam ini bila tidak ada perubahan.',
+      outletId: ref.read(currentUserProvider)?.outletId,
+    );
+  }
+
+  /// Bacakan pengingat tugas yang jatuh tempo hari ini (sekali per sesi).
+  void _maybeSpeakDueTasks() {
+    if (_escalationSpoken) return;
+    if (!_audioAktif || !_audioTeguran) return;
+    final now = DateTime.now();
+    final due = [..._myTasks, ..._teamTasks]
+        .where((d) => !d.isClosed && d.dueAt != null)
+        .where((d) => _sameDay(d.dueAt!, now))
+        .toList();
+    if (due.isEmpty) return;
+    _escalationSpoken = true;
+    final names = due.take(3).map((d) => d.title).join(', ');
+    VoiceService().announceShopFloorComment(
+      'Pengingat tugas hari ini: $names. Selesaikan sebelum toko tutup ya.',
+      outletId: ref.read(currentUserProvider)?.outletId,
+    );
+  }
+
+  /// Tugas/resep yang macet melewati batas kritis (> 3 hari): teguran gaya
+  /// bos + laporan merah otomatis ke WhatsApp Bos Besar.
+  Future<void> _maybeEscalateToBoss() async {
+    if (_escalationReported) return;
+    final now = DateTime.now();
+    final stuck = [..._myTasks, ..._teamTasks]
+        .where((d) => !d.isClosed && d.dueAt != null)
+        .where((d) => now.difference(d.dueAt!).inDays >= 3)
+        .toList();
+    final prescDue = DateTime.tryParse(
+        _activePrescription?['due_at']?.toString() ?? '');
+    final prescStuck =
+        prescDue != null && now.difference(prescDue).inDays >= 3;
+    if (stuck.isEmpty && !prescStuck) return;
+
+    _escalationReported = true;
+    final names = stuck.take(3).map((d) => d.title).join(', ');
+    final late = stuck.isEmpty
+        ? 'Resep "${_activePrescription?['title'] ?? 'perbaikan'}"'
+        : 'Tugas "$names"';
+    final message = _buildBossEscalationMessage(late, stuck.length, prescStuck);
+    if (!mounted) return;
+    setState(() => _bossEscalation = message);
+
+    if (_audioAktif && _audioTeguran) {
+      VoiceService().announceBossEscalation(
+        'Bos, ini teguran keras. $late sudah lewat tiga hari dan belum '
+        'dikerjakan. Saya kirim laporan merah ke Bos Besar sekarang. '
+        'Selesaikan hari ini, jangan sampai omzet makin turun.',
+        outletId: ref.read(currentUserProvider)?.outletId,
+      );
+    }
+
+    final outletId = ref.read(currentUserProvider)?.outletId;
+    final wa = (_bossWa ?? '').replaceAll(RegExp(r'[^0-9]'), '');
+    if (outletId == null || wa.isEmpty) return;
+    try {
+      final sent = await WaHelper.sendWhatsAppMessage(
+          phone: wa, message: message);
+      if (!mounted) return;
+      if (sent) {
+        await (widget.service ?? BusinessDoctorService()).logBossReport(
+          outletId: outletId,
+          kind: 'eskalasi',
+          summary: 'Eskalasi tugas macet > 3 hari: $late',
+        );
+        _snack('Laporan merah sudah dikirim ke Bos Besar.');
+      }
+    } catch (_) {}
+  }
+
+  String _buildBossEscalationMessage(
+      String late, int count, bool prescStuck) {
+    final outlet =
+        ref.read(currentUserProvider)?.name ?? 'Usaha Anda';
+    final buffer = StringBuffer()
+      ..writeln('*LAPORAN MERAH - PERFORMA TERLAMBAT*')
+      ..writeln(outlet)
+      ..writeln(Formatters.date(DateTime.now()))
+      ..writeln()
+      ..writeln('Tugas macet lebih dari 3 hari: $late.');
+    if (count > 0) buffer.writeln('Jumlah tugas terlambat: $count.');
+    if (prescStuck) {
+      buffer.writeln(
+          'Resep dokter bisnis sudah melewati masa target dan belum tuntas.');
+    }
+    buffer
+      ..writeln()
+      ..writeln('Mohon tindak lanjut dan pendampingan hari ini.')
+      ..writeln('-- dikirim via Dokter Bisnis AI KasirGo');
+    return buffer.toString();
+  }
+
+  /// Pantau kondisi lapangan: antrean pesanan menumpuk atau stok menipis.
+  Future<void> _loadShopFloor() async {
+    final outletId = ref.read(currentUserProvider)?.outletId;
+    if (outletId == null || outletId.isEmpty) return;
+    try {
+      final products = await SupabaseService().getProducts(outletId);
+      final orders = OrderService();
+      final baru = await orders.listOrders(outletId, status: 'baru');
+      final bayar = await orders.pendingPaymentOrders(outletId);
+      final queue = baru.length + bayar.length;
+      final low = products
+          .where((p) => p.isActive && !p.isService && p.stock <= 3)
+          .toList()
+        ..sort((a, b) => a.stock.compareTo(b.stock));
+      if (!mounted) return;
+      setState(() => _shopFloor = {
+            'queue': queue,
+            'low_stock': low.length,
+            'low_names': low.take(3).map((p) => p.name).toList(),
+          });
+      _maybeSpeakShopFloor(queue, low);
+    } catch (_) {}
+  }
+
+  void _maybeSpeakShopFloor(int queue, List<Product> low) {
+    if (_shopFloorSpoken || !_audioAktif || !_audioShopFloor) return;
+    final String? text;
+    if (queue >= 3) {
+      text = 'Ada $queue pesanan menunggu. Cek antrean kasir dan dapur '
+          'sekarang, jangan biarkan pelanggan menunggu lama.';
+    } else if (low.length >= 3) {
+      final names = low.take(3).map((p) => p.name).join(', ');
+      text = 'Stok ${low.length} produk tinggal sedikit, termasuk $names. '
+          'Segera catat belanja agar besok tidak kosong.';
+    } else {
+      text = null;
+    }
+    if (text == null) return;
+    _shopFloorSpoken = true;
+    VoiceService().announceShopFloorComment(
+      text,
+      outletId: ref.read(currentUserProvider)?.outletId,
+    );
+  }
+
+  static bool _sameDay(DateTime a, DateTime b) =>
+      a.year == b.year && a.month == b.month && a.day == b.day;
 
   Future<void> _loadPendingActions() async {
     final outletId = ref.read(currentUserProvider)?.outletId;
@@ -865,6 +1053,9 @@ class _BusinessDoctorScreenState extends ConsumerState<BusinessDoctorScreen> {
         _loading = false;
       });
       if (pendingBlock != null) _loadPendingActions();
+      if (caseStatus == 'kasus_bandel' || escLevel >= 3) {
+        _maybeSpeakBandel();
+      }
       final hasDose =
           blocks.whereType<Map>().any((b) => b['type'] == 'dose');
       if (hasDose) {
@@ -1582,39 +1773,61 @@ class _BusinessDoctorScreenState extends ConsumerState<BusinessDoctorScreen> {
           _buildIdentityCard(),
           const SizedBox(height: 12),
         ],
-        _buildPersonaBar(),
+        if (_isOwner) ...[
+          _buildPersonaBar(),
+          const SizedBox(height: 12),
+          _buildAudioCard(),
+          const SizedBox(height: 12),
+        ],
+        if (_isOwner) ...[
+          _buildDelegationCard(),
+          const SizedBox(height: 8),
+          SizedBox(
+            height: AppTheme.touchTargetMedium,
+            child: AppButton(
+              label: 'Tugaskan ke Karyawan',
+              icon: Icons.assignment_add,
+              onPressed: _openDelegationBoard,
+            ),
+          ),
+        ] else
+          _buildMyTasksCard(),
         const SizedBox(height: 12),
-        _buildAudioCard(),
-        const SizedBox(height: 12),
-        _buildDelegationCard(),
-        const SizedBox(height: 12),
-        if (_briefing != null) ...[
+        if (_shopFloor != null) ...[
+          _buildShopFloorCard(),
+          const SizedBox(height: 12),
+        ],
+        if (_bossEscalation != null) ...[
+          _buildBossEscalationCard(),
+          const SizedBox(height: 12),
+        ],
+        if (_isOwner && _briefing != null) ...[
           _buildBriefingCard(),
           const SizedBox(height: 12),
         ],
-        if (_dailyDose != null) ...[
+        if (_isOwner && _dailyDose != null) ...[
           _buildDailyDoseCard(),
           const SizedBox(height: 12),
         ],
-        if (_weeklyReport != null) ...[
+        if (_isOwner && _weeklyReport != null) ...[
           _buildWeeklyReportCard(),
           const SizedBox(height: 12),
         ],
-        if (_pendingActions.isNotEmpty) ...[
+        if (_isOwner && _pendingActions.isNotEmpty) ...[
           for (final a in _pendingActions) ...[
             _buildPendingActionCard(a),
             const SizedBox(height: 12),
           ],
         ],
-        if (_escalationLevel > 0) ...[
+        if (_isOwner && _escalationLevel > 0) ...[
           _buildEscalationBanner(),
           const SizedBox(height: 12),
         ],
-        if (_reprimand != null) ...[
+        if (_isOwner && _reprimand != null) ...[
           _buildReprimandBanner(),
           const SizedBox(height: 12),
         ],
-        if (_activePrescription != null) ...[
+        if (_isOwner && _activePrescription != null) ...[
           // Bila chat sudah menampilkan peta resep, jangan ulangi kartu yang sama.
           if (!_chatShowsRecipe) ...[
             DoctorBlocks(
@@ -1636,21 +1849,24 @@ class _BusinessDoctorScreenState extends ConsumerState<BusinessDoctorScreen> {
           ),
           const SizedBox(height: 12),
         ],
-        _buildIntakeCta(),
-        const SizedBox(height: 12),
-        _buildKameraKlinisCta(),
-        const SizedBox(height: 12),
-        _buildRaporRoiCta(),
-        const SizedBox(height: 12),
-        if (_phase != 'A') ...[
-          _buildEvaluationCta(),
+        if (_isOwner) ...[
+          _buildIntakeCta(),
           const SizedBox(height: 12),
-        ],
-        if (_roiRevenue > 0) ...[
-          _buildRoiBanner(),
+          _buildKameraKlinisCta(),
           const SizedBox(height: 12),
+          _buildRaporRoiCta(),
+          const SizedBox(height: 12),
+          if (_phase != 'A') ...[
+            _buildEvaluationCta(),
+            const SizedBox(height: 12),
+          ],
+          if (_roiRevenue > 0) ...[
+            _buildRoiBanner(),
+            const SizedBox(height: 12),
+          ],
         ],
-        if (_messages.isEmpty) _buildWelcome(),
+        if (_messages.isEmpty && _isOwner) _buildWelcome(),
+        if (_messages.isEmpty && !_isOwner) _buildStaffWelcome(),
         for (final msg in _messages) ...[
           const SizedBox(height: 12),
           _buildBubble(msg),
@@ -2071,16 +2287,29 @@ class _BusinessDoctorScreenState extends ConsumerState<BusinessDoctorScreen> {
     );
   }
 
+  Future<void> _openDelegationBoard() async {
+    await Navigator.push(
+      context,
+      MaterialPageRoute(builder: (_) => const DelegationBoardScreen()),
+    );
+    await _loadDelegationOverview();
+  }
+
+  int get _openTeamTasks =>
+      _teamTasks.where((d) => !d.isClosed).length;
+
+  int get _lateTeamTasks =>
+      _teamTasks.where((d) => !d.isClosed && d.isOverdue).length;
+
   Widget _buildDelegationCard() {
+    final open = _openTeamTasks;
+    final late = _lateTeamTasks;
     return Material(
       color: AppTheme.surfaceColor,
       borderRadius: BorderRadius.circular(AppTheme.radiusLarge),
       child: InkWell(
         borderRadius: BorderRadius.circular(AppTheme.radiusLarge),
-        onTap: () => Navigator.push(
-          context,
-          MaterialPageRoute(builder: (_) => const DelegationBoardScreen()),
-        ),
+        onTap: _openDelegationBoard,
         child: Container(
           width: double.infinity,
           padding: const EdgeInsets.all(12),
@@ -2113,7 +2342,89 @@ class _BusinessDoctorScreenState extends ConsumerState<BusinessDoctorScreen> {
                       ),
                     ),
                     Text(
-                      'Bagi langkah resep ke Admin, Kasir, atau Koki.',
+                      open == 0
+                          ? 'Bagi langkah resep ke Admin, Kasir, atau Koki.'
+                          : '$open tugas aktif'
+                              '${late > 0 ? ' - $late terlambat' : ''}.',
+                      style: GoogleFonts.plusJakartaSans(
+                        fontSize: 11,
+                        color: late > 0
+                            ? AppTheme.errorColor
+                            : AppTheme.textSecondary,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              if (late > 0)
+                Container(
+                  margin: const EdgeInsets.only(right: 6),
+                  padding: const EdgeInsets.symmetric(
+                      horizontal: 8, vertical: 3),
+                  decoration: BoxDecoration(
+                    color: AppTheme.errorColor.withValues(alpha: 0.12),
+                    borderRadius: BorderRadius.circular(20),
+                  ),
+                  child: Text(
+                    '$late',
+                    style: GoogleFonts.plusJakartaSans(
+                      fontSize: 11,
+                      fontWeight: FontWeight.w800,
+                      color: AppTheme.errorColor,
+                    ),
+                  ),
+                ),
+              const Icon(Icons.chevron_right_rounded,
+                  color: AppTheme.textSecondary),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  /// Tampilan staf: Asisten Operasional Lapangan yang membaca tugas owner.
+  Widget _buildMyTasksCard() {
+    final tasks = _myTasks.where((d) => !d.isClosed).toList();
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: AppTheme.surfaceColor,
+        borderRadius: BorderRadius.circular(AppTheme.radiusLarge),
+        border: Border.all(color: AppTheme.borderColor),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: AppTheme.secondaryColor.withValues(alpha: 0.12),
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: const Icon(Icons.badge_rounded,
+                    color: AppTheme.secondaryColor, size: 20),
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Asisten Operasional Lapangan',
+                      style: GoogleFonts.plusJakartaSans(
+                        fontSize: 13,
+                        fontWeight: FontWeight.w800,
+                        color: AppTheme.textPrimary,
+                      ),
+                    ),
+                    Text(
+                      tasks.isEmpty
+                          ? 'Belum ada tugas dari owner. Tanya saya bila bingung.'
+                          : '${tasks.length} tugas dari owner menunggu.',
                       style: GoogleFonts.plusJakartaSans(
                         fontSize: 11,
                         color: AppTheme.textSecondary,
@@ -2122,13 +2433,207 @@ class _BusinessDoctorScreenState extends ConsumerState<BusinessDoctorScreen> {
                   ],
                 ),
               ),
-              const Icon(Icons.chevron_right_rounded,
-                  color: AppTheme.textSecondary),
             ],
           ),
-        ),
+          if (tasks.isNotEmpty) ...[
+            const SizedBox(height: 8),
+            for (final t in tasks.take(3)) ...[
+              Row(
+                children: [
+                  Icon(
+                    t.isOverdue
+                        ? Icons.error_rounded
+                        : Icons.radio_button_unchecked_rounded,
+                    size: 14,
+                    color: t.isOverdue
+                        ? AppTheme.errorColor
+                        : AppTheme.textSecondary,
+                  ),
+                  const SizedBox(width: 6),
+                  Expanded(
+                    child: Text(
+                      t.title,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: GoogleFonts.plusJakartaSans(
+                        fontSize: 12,
+                        fontWeight: FontWeight.w600,
+                        color: AppTheme.textPrimary,
+                      ),
+                    ),
+                  ),
+                  if (t.dueAt != null)
+                    Text(
+                      Formatters.shortDate(t.dueAt!),
+                      style: GoogleFonts.plusJakartaSans(
+                        fontSize: 10,
+                        color: t.isOverdue
+                            ? AppTheme.errorColor
+                            : AppTheme.textSecondary,
+                      ),
+                    ),
+                ],
+              ),
+              const SizedBox(height: 4),
+            ],
+            const SizedBox(height: 4),
+            SizedBox(
+              height: AppTheme.touchTargetMedium,
+              child: AppButton(
+                label: 'Lihat Semua Tugas',
+                icon: Icons.assignment_turned_in_rounded,
+                variant: AppButtonVariant.outline,
+                onPressed: _openDelegationBoard,
+              ),
+            ),
+          ],
+        ],
       ),
     );
+  }
+
+  /// Kondisi lapangan yang dipantau Dokter: antrean & stok menipis.
+  Widget _buildShopFloorCard() {
+    final queue = (_shopFloor?['queue'] as int?) ?? 0;
+    final low = (_shopFloor?['low_stock'] as int?) ?? 0;
+    final names = ((_shopFloor?['low_names'] as List?) ?? const [])
+        .map((e) => e.toString())
+        .join(', ');
+    if (queue == 0 && low == 0) return const SizedBox.shrink();
+    final busy = queue >= 3;
+    final color = busy ? AppTheme.warningColor : AppTheme.primaryColor;
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.08),
+        borderRadius: BorderRadius.circular(AppTheme.radiusLarge),
+        border: Border.all(color: color.withValues(alpha: 0.3)),
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Icon(Icons.storefront_rounded, color: color, size: 20),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Pantauan Lapangan',
+                  style: GoogleFonts.plusJakartaSans(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w800,
+                    color: AppTheme.textPrimary,
+                  ),
+                ),
+                const SizedBox(height: 2),
+                if (queue > 0)
+                  Text(
+                    busy
+                        ? 'Antrean $queue pesanan - bantu percepat kasir & dapur.'
+                        : '$queue pesanan baru masuk.',
+                    style: GoogleFonts.plusJakartaSans(
+                      fontSize: 11,
+                      color: AppTheme.textSecondary,
+                      height: 1.35,
+                    ),
+                  ),
+                if (low > 0)
+                  Text(
+                    'Stok menipis: $low produk'
+                    '${names.isEmpty ? '.' : ' ($names).'}',
+                    style: GoogleFonts.plusJakartaSans(
+                      fontSize: 11,
+                      color: AppTheme.textSecondary,
+                      height: 1.35,
+                    ),
+                  ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildBossEscalationCard() {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: AppTheme.errorColor.withValues(alpha: 0.08),
+        borderRadius: BorderRadius.circular(AppTheme.radiusLarge),
+        border: Border.all(color: AppTheme.errorColor.withValues(alpha: 0.35)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              const Icon(Icons.campaign_rounded,
+                  color: AppTheme.errorColor, size: 20),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Text(
+                  'Laporan Merah ke Bos Besar',
+                  style: GoogleFonts.plusJakartaSans(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w800,
+                    color: AppTheme.errorColor,
+                  ),
+                ),
+              ),
+              IconButton(
+                tooltip: 'Tutup',
+                onPressed: () => setState(() => _bossEscalation = null),
+                icon: const Icon(Icons.close_rounded, size: 18),
+              ),
+            ],
+          ),
+          Text(
+            'Tugas melewati batas kritis. Laporan performa sudah disiapkan '
+            'untuk dikirim ke Bos Besar.',
+            style: GoogleFonts.plusJakartaSans(
+              fontSize: 11,
+              color: AppTheme.textSecondary,
+              height: 1.35,
+            ),
+          ),
+          const SizedBox(height: 8),
+          SizedBox(
+            height: AppTheme.touchTargetMedium,
+            child: AppButton(
+              label: 'Kirim Ulang ke Bos',
+              icon: Icons.send_rounded,
+              onPressed: _resendBossEscalation,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Future<void> _resendBossEscalation() async {
+    final outletId = ref.read(currentUserProvider)?.outletId;
+    final message = _bossEscalation;
+    if (outletId == null || message == null) return;
+    var wa = (_bossWa ?? '').replaceAll(RegExp(r'[^0-9]'), '');
+    if (wa.isEmpty) {
+      await _editBossWa();
+      wa = (_bossWa ?? '').replaceAll(RegExp(r'[^0-9]'), '');
+      if (wa.isEmpty) return;
+    }
+    final sent = await WaHelper.sendWhatsAppMessage(phone: wa, message: message);
+    if (!mounted) return;
+    if (sent) {
+      await (widget.service ?? BusinessDoctorService()).logBossReport(
+        outletId: outletId,
+        kind: 'eskalasi',
+        summary: 'Kirim ulang laporan merah ke Bos Besar.',
+      );
+      if (mounted) _snack('Laporan merah sudah dikirim ke Bos Besar.');
+    }
   }
 
   Widget _audioTile({
@@ -2578,6 +3083,95 @@ class _BusinessDoctorScreenState extends ConsumerState<BusinessDoctorScreen> {
           ),
         ],
       ),
+    );
+  }
+
+  /// Tampilan pembuka untuk Admin/Kasir/Koki: pendamping operasional lapangan,
+  /// bukan konsultan strategi milik owner.
+  Widget _buildStaffWelcome() {
+    final quick = <({IconData icon, String label, String prompt})>[
+      (
+        icon: Icons.checklist_rounded,
+        label: 'Tugas Saya Hari Ini',
+        prompt:
+            'Tampilkan tugas saya hari ini beserta langkah praktis mengerjakannya.',
+      ),
+      (
+        icon: Icons.bolt_rounded,
+        label: 'Layani Antrean Cepat',
+        prompt: 'Beri saya langkah praktis melayani antrean pembeli dengan cepat.',
+      ),
+      (
+        icon: Icons.inventory_2_rounded,
+        label: 'Stok Perlu Diisi',
+        prompt: 'Produk mana yang stoknya perlu segera diisi? Beri langkah singkat.',
+      ),
+      (
+        icon: Icons.trending_up_rounded,
+        label: 'Tawarkan Tambahan',
+        prompt:
+            'Beri contoh kalimat singkat menawarkan produk tambahan ke pembeli.',
+      ),
+    ];
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Container(
+          width: double.infinity,
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            color: AppTheme.surfaceColor,
+            borderRadius: BorderRadius.circular(AppTheme.radiusLarge),
+            border: Border.all(color: AppTheme.borderColor),
+            boxShadow: AppTheme.shadowSoft,
+          ),
+          child: Row(
+            children: [
+              Container(
+                width: 48,
+                height: 48,
+                decoration: const BoxDecoration(
+                  gradient: AppTheme.aiBadgeGradient,
+                  shape: BoxShape.circle,
+                ),
+                child: const Icon(Icons.support_agent_rounded,
+                    color: Colors.white),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text('Asisten Operasional Lapangan',
+                        style: GoogleFonts.plusJakartaSans(
+                            fontSize: 15, fontWeight: FontWeight.w700)),
+                    const SizedBox(height: 2),
+                    Text(
+                      'Saya bantu Anda menjalankan tugas dari owner dan '
+                      'melayani pembeli hari ini.',
+                      style: GoogleFonts.plusJakartaSans(
+                          fontSize: 12, color: AppTheme.textSecondary),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
+        const SizedBox(height: 16),
+        GridView.count(
+          crossAxisCount: 2,
+          shrinkWrap: true,
+          physics: const NeverScrollableScrollPhysics(),
+          mainAxisSpacing: 10,
+          crossAxisSpacing: 10,
+          childAspectRatio: 1.6,
+          children: [
+            for (final a in quick)
+              _buildBigAction(a.icon, a.label, () => _send(a.prompt)),
+          ],
+        ),
+      ],
     );
   }
 
