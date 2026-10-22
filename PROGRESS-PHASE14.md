@@ -132,6 +132,31 @@ Sumber spec: `KASIRGO-WORKFLOW-LENGKAP.md` BAGIAN 13 + BAGIAN 14.2.
   laporan kosong"; kalimat yang sudah benar tidak diubah. Test
   `test/stt_fix_transcript_test.dart` 5 kasus PASS (sukses, spasi, ok=false,
   teks kosong, respons tanpa `text`).
+- ST14-22: mode voice note (tanya suara -> jawab suara) + dedupe transkrip (SELESAI).
+  Keluhan owner: di HP hasil STT masih dobel kata / tidak akurat dan jawaban AI
+  selalu berupa teks. Perbaikan:
+  (1) Utilitas bersama BARU `lib/utils/speech_text_utils.dart`
+  (`mergeTranscriptSegments`, `collapseRepeats`, `cleanTranscript`) dipakai
+  `speech_service.dart` dan layar Dokter, sehingga aturan pembersihan transkrip
+  tidak lagi terduplikasi di dua tempat dan bisa diuji unit.
+  (2) `business_doctor_screen.dart`: `_Msg.voiceNote` + state `_voiceNoteMode`,
+  `_showTranscript`, `_expandedVoiceNotes` (Set<_Msg>); preferensi perangkat
+  disimpan di SharedPreferences (`kasirgo_doctor_voice_note`,
+  `kasirgo_doctor_voice_transcript`). Saat mode aktif: hasil STT TIDAK ditampilkan
+  sebagai teks (kecuali "Tampilkan Teks Suara" dinyalakan), balasan AI langsung
+  dibacakan lewat `_speakReply(force: true)`, gelembung pesan owner tampil
+  "Pesan suara - ketuk untuk lihat teks" dan gelembung jawaban tampil
+  "Jawaban suara - ketuk untuk lihat teks" (ketuk = buka transkrip). Tombol
+  mikrofon diberi warna primer + tooltip "Bicara (jawaban dibacakan)"; baris
+  input memakai hint mode voice note. Dua toggle baru di kartu Audio: "Mode
+  Voice Note" dan "Tampilkan Teks Suara" (nonaktif bila audio utama mati).
+  (3) Test BARU `test/speech_text_utils_test.dart` 10 kasus (sambung transkrip
+  tanpa dobel, tumpang tindih 1-2 kata, input kosong, hapus pengulangan 1-2 kata,
+  huruf besar/tanda baca, rapikan spasi) PASS. Regresi `speech_lexicon_test`
+  (8) + `stt_fix_transcript_test` (5) juga PASS (23 total).
+  (4) `flutter analyze lib` tetap 22 info pra-ada (0 error/warning); build web
+  release sukses dan di-deploy ke gh-pages.
+
 
 ## CATATAN
 - Cron `pg_cron`/`pg_net` TIDAK terpasang di DB live -> observasi via EF `doctor_observe`

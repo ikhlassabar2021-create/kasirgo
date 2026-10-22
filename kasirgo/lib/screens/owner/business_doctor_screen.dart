@@ -2,6 +2,7 @@ import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 import '../../config/app_theme.dart';
 import '../../models/customer.dart';
@@ -42,6 +43,7 @@ import 'sidak_bos_screen.dart';
 import 'whatsapp_broadcast_screen.dart';
 import '../../utils/error_messages.dart';
 import '../../utils/speech_lexicon.dart';
+import '../../utils/speech_text_utils.dart';
 import '../../utils/doctor_result_pdf.dart';
 import '../../utils/doctor_vitals.dart';
 import '../../utils/formatters.dart';
@@ -71,7 +73,10 @@ class _Msg {
   final String text;
   final List blocks;
 
-  _Msg(this.role, this.text, this.blocks);
+  /// Pesan pemilik yang dikirim lewat suara (mode voice note).
+  final bool voiceNote;
+
+  _Msg(this.role, this.text, this.blocks, {this.voiceNote = false});
 }
 
 class _BusinessDoctorScreenState extends ConsumerState<BusinessDoctorScreen> {
@@ -130,6 +135,9 @@ class _BusinessDoctorScreenState extends ConsumerState<BusinessDoctorScreen> {
   bool _audioTeguran = true;
   bool _audioSoundbox = true;
   bool _audioShopFloor = true;
+  bool _voiceNoteMode = false;
+  bool _showTranscript = false;
+  final Set<_Msg> _expandedVoiceNotes = <_Msg>{};
   bool _overduePrompted = false;
   bool _reprimandSpoken = false;
   String? _bossWa;
@@ -178,6 +186,7 @@ class _BusinessDoctorScreenState extends ConsumerState<BusinessDoctorScreen> {
     _loadDelegationOverview();
     _loadShopFloor();
     _prepareLexicon();
+    _loadVoiceNoteMode();
     VoiceService().restorePersona();
     if (_conversationId != null) _loadHistory();
     final initial = widget.initialMessage?.trim();
@@ -830,6 +839,39 @@ class _BusinessDoctorScreenState extends ConsumerState<BusinessDoctorScreen> {
     }
   }
 
+  /// Muat preferensi mode voice note (per perangkat, bukan per outlet).
+  Future<void> _loadVoiceNoteMode() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final on = prefs.getBool('kasirgo_doctor_voice_note') ?? false;
+      final show = prefs.getBool('kasirgo_doctor_voice_transcript') ?? false;
+      if (!mounted) return;
+      setState(() {
+        _voiceNoteMode = on;
+        _showTranscript = show;
+      });
+    } catch (_) {}
+  }
+
+  Future<void> _setVoiceNoteMode(bool on) async {
+    setState(() => _voiceNoteMode = on);
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setBool('kasirgo_doctor_voice_note', on);
+    } catch (_) {}
+    if (on && !_audioAktif) {
+      _snack('Aktifkan dulu "Suara Interaktif" agar jawaban bisa dibacakan.');
+    }
+  }
+
+  Future<void> _setShowTranscript(bool on) async {
+    setState(() => _showTranscript = on);
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setBool('kasirgo_doctor_voice_transcript', on);
+    } catch (_) {}
+  }
+
   /// Simpan master switch + sub-opsi suara (dipakai soundbox POS, sapaan,
   /// apel pagi, teguran resep, dan shop floor).
   Future<void> _setAudioPrefs({
@@ -1017,7 +1059,10 @@ class _BusinessDoctorScreenState extends ConsumerState<BusinessDoctorScreen> {
   /// ("qris", "rp", "omset nya"). [SpeechLexicon] memperbaiki istilah usaha
   /// dan nama produk outlet secara lokal tanpa mengubah makna kalimat owner.
   String _normalizeSpeech(String raw) =>
-      (_lexicon ?? SpeechLexicon()).correct(raw);
+      (_lexicon ?? SpeechLexicon()).correct(_dedupeSpeech(raw));
+
+  /// Buang kata/frasa yang terulang langsung akibat sesi STT restart.
+  String _dedupeSpeech(String raw) => collapseRepeats(raw.trim());
 
   /// Perbaikan transkrip lapis kedua: kirim ke Edge Function `stt_fix`.
   ///
@@ -1071,14 +1116,16 @@ class _BusinessDoctorScreenState extends ConsumerState<BusinessDoctorScreen> {
       onResult: (text, finalResult) async {
         if (!mounted) return;
         final clean = _normalizeSpeech(text);
+        final showText = !_voiceNoteMode || _showTranscript;
         setState(() {
-          if (clean.isNotEmpty) {
+          if (showText && clean.isNotEmpty) {
             _input.text = clean;
             _input.selection =
                 TextSelection.collapsed(offset: _input.text.length);
           }
-          _speechStatus =
-              clean.isEmpty ? 'Mendengarkan...' : 'Mendengar: $clean';
+          _speechStatus = clean.isEmpty
+              ? 'Mendengarkan...'
+              : (showText ? 'Mendengar: $clean' : 'Mendengarkan...');
           if (finalResult) _listening = false;
         });
         if (finalResult && clean.isNotEmpty && !_speechSent) {
@@ -1096,11 +1143,13 @@ class _BusinessDoctorScreenState extends ConsumerState<BusinessDoctorScreen> {
             _speechStatus = '';
             // Tampilkan versi yang sudah dirapikan supaya owner bisa melihat
             // apa yang benar-benar dikirim (dan bisa mengulang bila meleset).
-            _input.text = finalText;
-            _input.selection =
-                TextSelection.collapsed(offset: _input.text.length);
+            if (showText) {
+              _input.text = finalText;
+              _input.selection =
+                  TextSelection.collapsed(offset: _input.text.length);
+            }
           });
-          _send(finalText, spoken: true);
+          _send(finalText, spoken: true, voiceNote: _voiceNoteMode);
         }
       },
     );
@@ -1126,8 +1175,9 @@ class _BusinessDoctorScreenState extends ConsumerState<BusinessDoctorScreen> {
 
   /// Ucapkan jawaban Dokter bila pemilik memakai input suara.
   /// Mengembalikan true bila suara benar-benar diputar.
-  Future<bool> _speakReply(String reply) async {
-    if (!_audioAktif || !_audioLoop) return false;
+  Future<bool> _speakReply(String reply, {bool force = false}) async {
+    if (!force && (!_audioAktif || !_audioLoop)) return false;
+    if (force && !_audioAktif) return false;
     final clean = reply
         .replaceAll(RegExp(r'[*_`#>|]'), ' ')
         .replaceAll(RegExp(r'\s+'), ' ')
@@ -1230,7 +1280,7 @@ class _BusinessDoctorScreenState extends ConsumerState<BusinessDoctorScreen> {
     if (mounted) setState(() => _pendingLink = null);
   }
 
-  Future<void> _send(String text, {bool spoken = false}) async {
+  Future<void> _send(String text, {bool spoken = false, bool voiceNote = false}) async {
     var message = text.trim();
     final attachment = _attachment;
     if (message.isEmpty && attachment != null) {
@@ -1256,6 +1306,7 @@ class _BusinessDoctorScreenState extends ConsumerState<BusinessDoctorScreen> {
         'user',
         attachment == null ? message : '$message\n\nLampiran: ${attachment.name}',
         const [],
+        voiceNote: voiceNote,
       ));
       _loading = true;
       _attachment = null;
@@ -1321,8 +1372,8 @@ class _BusinessDoctorScreenState extends ConsumerState<BusinessDoctorScreen> {
         _loadDailyDose();
         _loadProfile();
       }
-      if (spoken && reply.trim().isNotEmpty) {
-        final played = await _speakReply(reply);
+      if ((spoken || _voiceNoteMode) && reply.trim().isNotEmpty) {
+        final played = await _speakReply(reply, force: _voiceNoteMode);
         if (played) await _resumeVoiceLoop();
       }
     } catch (e) {
@@ -2533,6 +2584,20 @@ class _BusinessDoctorScreenState extends ConsumerState<BusinessDoctorScreen> {
             ),
           ),
           const SizedBox(height: 4),
+          _audioTile(
+            label: 'Mode Voice Note',
+            hint: 'Tanya lewat suara, Dokter langsung menjawab dengan suara.',
+            value: _voiceNoteMode && _audioAktif,
+            onChanged: _audioAktif ? _setVoiceNoteMode : null,
+          ),
+          Divider(height: 1, color: AppTheme.borderColor),
+          _audioTile(
+            label: 'Tampilkan Teks Suara',
+            hint: 'Tetap tampilkan teks hasil suara (bila ingin membaca).',
+            value: _showTranscript && _audioAktif,
+            onChanged: _audioAktif ? _setShowTranscript : null,
+          ),
+          Divider(height: 1, color: AppTheme.borderColor),
           _audioTile(
             label: 'Sapaan Awal',
             hint: 'Sapa owner saat aplikasi dibuka pagi hari.',
@@ -3900,6 +3965,8 @@ class _BusinessDoctorScreenState extends ConsumerState<BusinessDoctorScreen> {
             .toList();
     final isUser = msg.role == 'user';
     if (isUser) {
+      final asVoiceNote = msg.voiceNote && !_showTranscript;
+      final expanded = _expandedVoiceNotes.contains(msg);
       return Align(
         alignment: Alignment.centerRight,
         child: Container(
@@ -3911,14 +3978,47 @@ class _BusinessDoctorScreenState extends ConsumerState<BusinessDoctorScreen> {
             gradient: AppTheme.primaryGradient,
             borderRadius: BorderRadius.circular(AppTheme.radiusLarge),
           ),
-          child: Text(
-            msg.text,
-            style: GoogleFonts.plusJakartaSans(
-              fontSize: 14,
-              height: 1.4,
-              color: Colors.white,
-            ),
-          ),
+          child: asVoiceNote
+              ? InkWell(
+                  onTap: () => setState(() {
+                    if (expanded) {
+                      _expandedVoiceNotes.remove(msg);
+                    } else {
+                      _expandedVoiceNotes.add(msg);
+                    }
+                  }),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Icon(Icons.graphic_eq_rounded,
+                          size: 18, color: Colors.white),
+                      const SizedBox(width: 8),
+                      Flexible(
+                        child: Text(
+                          expanded
+                              ? msg.text
+                              : 'Pesan suara - ketuk untuk lihat teks',
+                          style: GoogleFonts.plusJakartaSans(
+                            fontSize: 14,
+                            height: 1.4,
+                            color: Colors.white,
+                            fontStyle:
+                                expanded ? FontStyle.normal : FontStyle.italic,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                )
+              : Text(
+                  msg.text,
+                  style: GoogleFonts.plusJakartaSans(
+                    fontSize: 14,
+                    height: 1.4,
+                    color: Colors.white,
+                  ),
+                ),
         ),
       );
     }
@@ -3945,14 +4045,48 @@ class _BusinessDoctorScreenState extends ConsumerState<BusinessDoctorScreen> {
               border: Border.all(color: AppTheme.borderColor),
             ),
             child: blocks.isEmpty
-                ? Text(
-                    msg.text.isEmpty ? 'Maaf, tidak ada jawaban.' : msg.text,
-                    style: GoogleFonts.plusJakartaSans(
-                      fontSize: 14,
-                      height: 1.45,
-                      color: AppTheme.textPrimary,
-                    ),
-                  )
+                ? (_voiceNoteMode && !_showTranscript
+                    ? InkWell(
+                        onTap: () => setState(() {
+                          if (_expandedVoiceNotes.contains(msg)) {
+                            _expandedVoiceNotes.remove(msg);
+                          } else {
+                            _expandedVoiceNotes.add(msg);
+                          }
+                        }),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            const Icon(Icons.volume_up_rounded,
+                                size: 18, color: AppTheme.primaryColor),
+                            const SizedBox(width: 8),
+                            Flexible(
+                              child: Text(
+                                _expandedVoiceNotes.contains(msg)
+                                    ? msg.text
+                                    : 'Jawaban suara - ketuk untuk lihat teks',
+                                style: GoogleFonts.plusJakartaSans(
+                                  fontSize: 14,
+                                  height: 1.45,
+                                  color: AppTheme.textPrimary,
+                                  fontStyle: _expandedVoiceNotes.contains(msg)
+                                      ? FontStyle.normal
+                                      : FontStyle.italic,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      )
+                    : Text(
+                        msg.text.isEmpty ? 'Maaf, tidak ada jawaban.' : msg.text,
+                        style: GoogleFonts.plusJakartaSans(
+                          fontSize: 14,
+                          height: 1.45,
+                          color: AppTheme.textPrimary,
+                        ),
+                      ))
                 : DoctorBlocks(
                     blocks: blocks,
                     onChoice: _send,
@@ -4244,7 +4378,9 @@ class _BusinessDoctorScreenState extends ConsumerState<BusinessDoctorScreen> {
                           ? 'Sedang mendengarkan suara Anda...'
                           : _speaking
                               ? 'Dokter sedang berbicara...'
-                              : 'Tulis atau ucapkan pertanyaan bisnis Anda...',
+                              : _voiceNoteMode
+                                  ? 'Mode voice note: ketuk mikrofon lalu bicara...'
+                                  : 'Tulis atau ucapkan pertanyaan bisnis Anda...',
                     ),
                   ),
                 ),
@@ -4253,18 +4389,26 @@ class _BusinessDoctorScreenState extends ConsumerState<BusinessDoctorScreen> {
                   width: AppTheme.touchTargetMedium,
                   height: AppTheme.touchTargetMedium,
                   child: Tooltip(
-                    message: _listening ? 'Berhenti merekam' : 'Bicara',
+                    message: _listening
+                        ? 'Berhenti merekam'
+                        : _voiceNoteMode
+                            ? 'Bicara (jawaban dibacakan)'
+                            : 'Bicara',
                     child: Container(
                       decoration: BoxDecoration(
                         color: _listening
                             ? AppTheme.errorSoftColor
-                            : AppTheme.surfaceMutedColor,
+                            : _voiceNoteMode
+                                ? AppTheme.infoSoftColor
+                                : AppTheme.surfaceMutedColor,
                         borderRadius:
                             BorderRadius.circular(AppTheme.radiusMedium),
                         border: Border.all(
                           color: _listening
                               ? AppTheme.errorColor
-                              : AppTheme.borderColor,
+                              : _voiceNoteMode
+                                  ? AppTheme.primaryColor
+                                  : AppTheme.borderColor,
                         ),
                       ),
                       child: Material(
@@ -4279,7 +4423,9 @@ class _BusinessDoctorScreenState extends ConsumerState<BusinessDoctorScreen> {
                                 : Icons.mic_rounded,
                             color: _listening
                                 ? AppTheme.errorColor
-                                : AppTheme.textPrimary,
+                                : _voiceNoteMode
+                                    ? AppTheme.primaryColor
+                                    : AppTheme.textPrimary,
                             size: 22,
                           ),
                         ),

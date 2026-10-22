@@ -5,6 +5,8 @@ import 'package:speech_to_text/speech_recognition_error.dart';
 import 'package:speech_to_text/speech_recognition_result.dart';
 import 'package:speech_to_text/speech_to_text.dart';
 
+import '../utils/speech_text_utils.dart';
+
 /// Hasil transkrip suara.
 /// [finalResult] true bila pengguna sudah berhenti bicara.
 typedef SpeechTranscript = void Function(String text, bool finalResult);
@@ -200,7 +202,7 @@ class SpeechService {
 
   void _handleResult(SpeechRecognitionResult r) {
     final words = _clean(r.recognizedWords);
-    final text = _clean('$_segmentBase $words');
+    final text = _clean(_merge(_segmentBase, words));
     if (r.finalResult) {
       _segmentBase = text;
       _restarts = 0;
@@ -258,8 +260,11 @@ class SpeechService {
     _lastFinalText = '';
   }
 
-  String _clean(String raw) =>
-      raw.replaceAll(RegExp(r'\s+'), ' ').trim();
+  /// Sambung potongan baru ke transkrip lama (buang tumpang tindih).
+  String _merge(String base, String words) =>
+      mergeTranscriptSegments(base, words);
+
+  String _clean(String raw) => cleanTranscript(raw);
 
   String _friendlyError(String raw) {
     final e = raw.toLowerCase();
