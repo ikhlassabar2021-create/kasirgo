@@ -159162,7 +159162,7 @@ case 3:s=2
 break
 case 6:if(n.c==null){s=1
 break}n.p(new A.bgN(n))
-if(J.cF(m)){n.c.N(t.q).f.a9(A.bb(null,null,null,null,null,B.G,null,A.d("Belum ada suara Indonesia di perangkat ini. Pasang paket suara Indonesia di Pengaturan Android, lalu coba lagi.",null,null,null,null,null,null,null,null),null,B.Z,null,null,null,null,null,null,null,null,null,null))
+if(J.cF(m)){n.c.N(t.q).f.a9(A.bb(null,null,null,null,null,B.G,null,A.d("Browser ini tidak menyediakan suara Indonesia. Pakai aplikasi Android untuk memilih suara pria/wanita.",null,null,null,null,null,null,null,null),null,B.Z,null,null,null,null,null,null,null,null,null,null))
 s=1
 break}m=$.i2()
 k=m.y
