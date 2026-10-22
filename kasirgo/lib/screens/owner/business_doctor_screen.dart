@@ -1019,6 +1019,32 @@ class _BusinessDoctorScreenState extends ConsumerState<BusinessDoctorScreen> {
   String _normalizeSpeech(String raw) =>
       (_lexicon ?? SpeechLexicon()).correct(raw);
 
+  /// Perbaikan transkrip lapis kedua: kirim ke Edge Function `stt_fix`.
+  ///
+  /// Mesin STT perangkat sering salah pada kalimat panjang dan istilah khas
+  /// warung yang tidak ada di kamus lokal. Edge Function memakai model bahasa
+  /// untuk membakukan ejaan/tanda baca tanpa mengubah maksud owner. Bila
+  /// jaringan gagal, teks hasil koreksi lokal tetap dipakai.
+  Future<String> _fixSpeechCloud(String text) async {
+    final outletId = ref.read(currentUserProvider)?.outletId ?? '';
+    if (outletId.isEmpty || text.trim().length < 4) return text;
+    try {
+      final fixed = await (widget.service ?? BusinessDoctorService())
+          .fixTranscript(
+        outletId: outletId,
+        text: text,
+        vocabulary: _lexicon?.vocabulary ?? const [],
+      );
+      final out = fixed.trim();
+      if (out.isEmpty) return text;
+      // Jangan biarkan model mengubah makna: batasi panjang hasil.
+      if (out.length > text.length * 2.2 + 20) return text;
+      return out;
+    } catch (_) {
+      return text;
+    }
+  }
+
   /// Mulai mendengar. [auto] true = lanjutan voice loop (tanpa sentuh tombol).
   Future<void> _startListening({bool auto = false}) async {
     if (_loading || _speaking || _listening) return;
@@ -1062,7 +1088,19 @@ class _BusinessDoctorScreenState extends ConsumerState<BusinessDoctorScreen> {
           // Dokter yang dibacakan TTS tidak ikut terekam mikrofon.
           await _speech.stop();
           if (!mounted) return;
-          _send(clean, spoken: true);
+          setState(() => _speechStatus = 'Merapikan kalimat...');
+          final fixed = await _fixSpeechCloud(clean);
+          if (!mounted) return;
+          final finalText = fixed.isEmpty ? clean : fixed;
+          setState(() {
+            _speechStatus = '';
+            // Tampilkan versi yang sudah dirapikan supaya owner bisa melihat
+            // apa yang benar-benar dikirim (dan bisa mengulang bila meleset).
+            _input.text = finalText;
+            _input.selection =
+                TextSelection.collapsed(offset: _input.text.length);
+          });
+          _send(finalText, spoken: true);
         }
       },
     );

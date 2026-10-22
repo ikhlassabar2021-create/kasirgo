@@ -437,6 +437,35 @@ class BusinessDoctorService {
         .eq('dose_date', today);
   }
 
+  /// Perbaiki hasil transkrip suara (STT) via Edge Function `stt_fix`.
+  ///
+  /// Mengembalikan teks yang sudah dibakukan; bila gagal/timeout, kembalikan
+  /// [text] apa adanya supaya input suara tetap bisa dikirim.
+  Future<String> fixTranscript({
+    required String outletId,
+    required String text,
+    List<String> vocabulary = const [],
+  }) async {
+    final clean = text.trim();
+    if (clean.length < 4) return clean;
+    try {
+      final res = await _client.functions.invoke(
+        'stt_fix',
+        body: {
+          'outlet_id': outletId,
+          'text': clean,
+          'vocabulary': vocabulary.take(40).toList(),
+        },
+      ).timeout(const Duration(seconds: 10));
+      final data = res.data is Map ? (res.data as Map) : const {};
+      final fixed = data['text']?.toString().trim() ?? '';
+      if (data['ok'] == true && fixed.isNotEmpty) return fixed;
+      return clean;
+    } catch (_) {
+      return clean;
+    }
+  }
+
   /// Briefing "Apel Pagi" hari ini via Edge Function doctor_briefing.
   Future<Map<String, dynamic>?> getBriefing(String outletId) async {
     try {

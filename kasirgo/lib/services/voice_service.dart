@@ -123,6 +123,16 @@ class VoicePersonaProfile {
 }
 
 /// Satu suara TTS yang tersedia di perangkat/browser.
+/// Satu potongan audio dari Edge Function `tts_speak`.
+///
+/// [pauseMs] adalah jeda yang dipasang klien setelah potongan ini selesai,
+/// meniru jeda napas antar kalimat pada pembicara manusia.
+class _SpeechSegment {
+  final Uint8List bytes;
+  final int pauseMs;
+  const _SpeechSegment(this.bytes, this.pauseMs);
+}
+
 class VoiceOption {
   final String name;
   final String locale;
@@ -220,6 +230,10 @@ class VoiceService {
   bool _ready = false;
   bool _available = true;
   Completer<void>? _speakDone;
+
+  /// Nomor generasi pemutaran. Dinaikkan setiap `stop()`/pemutaran baru agar
+  /// loop segmen lama berhenti sendiri tanpa memotong suara yang baru.
+  int _speakGen = 0;
   String _persona = _defaultPersona;
   String? _voiceName;
   String? _voiceLocale;
@@ -798,6 +812,10 @@ class VoiceService {
 
   /// Suara manusia (neural) dari Edge Function `tts_speak`.
   ///
+  /// Server mengirim audio per kalimat (`segments`) beserta jeda antar
+  /// kalimat. Jeda itulah yang membuat suara terdengar bernapas seperti
+  /// manusia, bukan satu blok datar.
+  ///
   /// Mengembalikan true bila audio cloud berhasil diputar. Bila gagal
   /// (offline, kuota, EF error) pemanggil melanjutkan ke TTS perangkat.
   Future<bool> _speakCloud(
@@ -815,39 +833,105 @@ class VoiceService {
         _noteCloudFail();
         return false;
       }
-      final b64 = data['audio'];
-      if (b64 is! String || b64.isEmpty) {
-        _noteCloudFail();
-        return false;
-      }
-      final bytes = base64Decode(b64);
-      if (bytes.length < 500) {
+
+      final segments = _parseSegments(data);
+      if (segments.isEmpty) {
         _noteCloudFail();
         return false;
       }
       _cloudFail = 0;
-      await _player.stop();
+
       final profile =
           personaProfiles[_persona] ?? personaProfiles[_defaultPersona]!;
       final rate = (data['playback_rate'] as num?)?.toDouble() ??
           profile.cloudRate;
+
+      await _player.stop();
       try {
         await _player.setPlaybackRate(rate.clamp(0.5, 1.5));
       } catch (_) {}
-      final done = _player.onPlayerComplete.first;
-      await _player.play(BytesSource(bytes));
-      if (!awaitCompletion) return true;
-      final budget = 8000 + text.length * 140;
-      await done.timeout(
+
+      final gen = ++_speakGen;
+      final total = segments.fold<int>(0, (a, s) => a + s.bytes.length);
+      final budget = 8000 + total ~/ 12;
+
+      if (!awaitCompletion) {
+        unawaited(_playSegments(segments, gen));
+        return true;
+      }
+
+      final done = Completer<void>();
+      _speakDone = done;
+      unawaited(_playSegments(segments, gen).then((_) {
+        if (!done.isCompleted) done.complete();
+      }));
+      await done.future.timeout(
         Duration(milliseconds: budget),
         onTimeout: () {},
       );
+      if (identical(_speakDone, done)) _speakDone = null;
       return true;
     } catch (e) {
       _noteCloudFail();
       debugPrint('VoiceService._speakCloud error: $e');
       return false;
     }
+  }
+
+  /// Mainkan potongan audio berurutan dengan jeda alami antar kalimat.
+  Future<void> _playSegments(List<_SpeechSegment> segments, int gen) async {
+    for (var i = 0; i < segments.length; i++) {
+      if (gen != _speakGen) return;
+      final seg = segments[i];
+      try {
+        final done = _player.onPlayerComplete.first;
+        await _player.play(BytesSource(seg.bytes));
+        await done.timeout(
+          Duration(milliseconds: 6000 + seg.bytes.length ~/ 12),
+          onTimeout: () {},
+        );
+      } catch (_) {
+        return;
+      }
+      if (gen != _speakGen) return;
+      if (i < segments.length - 1 && seg.pauseMs > 0) {
+        await Future<void>.delayed(Duration(milliseconds: seg.pauseMs));
+      }
+    }
+  }
+
+  /// Ambil daftar potongan audio dari respons EF. Bila server versi lama
+  /// hanya mengirim `audio` tunggal, bungkus sebagai satu segmen.
+  List<_SpeechSegment> _parseSegments(Map data) {
+    final out = <_SpeechSegment>[];
+    final raw = data['segments'];
+    if (raw is List) {
+      for (final item in raw) {
+        if (item is! Map) continue;
+        final b64 = item['audio'];
+        if (b64 is! String || b64.isEmpty) continue;
+        final bytes = base64Decode(b64);
+        if (bytes.length < 200) continue;
+        final pause = (item['pause_ms'] as num?)?.toInt() ?? 0;
+        // Tempo tiap persona juga memengaruhi panjang jeda: "Bos Tegas"
+        // lebih pelan dan berwibawa, "Partner Santai" lebih mengalir.
+        final scale = switch (_persona) {
+          'bos_tegas' => 1.18,
+          'analis_taktis' => 1.08,
+          _ => 0.95,
+        };
+        out.add(
+          _SpeechSegment(bytes, (pause * scale).round().clamp(0, 900)),
+        );
+      }
+    }
+    if (out.isNotEmpty) return out;
+
+    final b64 = data['audio'];
+    if (b64 is! String || b64.isEmpty) return const [];
+    final bytes = base64Decode(b64);
+    if (bytes.length < 500) return const [];
+    return [_SpeechSegment(bytes, 0)];
   }
 
   void _noteCloudFail() {
@@ -884,6 +968,22 @@ class VoiceService {
         .replaceAll(RegExp(r'\bdgn\b', caseSensitive: false), 'dengan')
         .replaceAll(RegExp(r'\butk\b', caseSensitive: false), 'untuk')
         .replaceAll(RegExp(r'\bkrn\b', caseSensitive: false), 'karena');
+    // Buang sisa markup markdown agar tidak dibacakan sebagai simbol.
+    s = s
+        .replaceAll(RegExp(r'[*_`#>]+'), ' ')
+        .replaceAll(RegExp(r'\[(.*?)\]\((.*?)\)'), r'$1')
+        .replaceAll(RegExp(r'https?://\S+'), ' ');
+    // Singkatan nominal yang biasa diketik pemilik warung.
+    s = s
+        .replaceAllMapped(
+            RegExp(r'(\d)\s*(rb|ribu)\b', caseSensitive: false),
+            (m) => '${m.group(1)} ribu')
+        .replaceAllMapped(
+            RegExp(r'(\d)\s*(jt|juta)\b', caseSensitive: false),
+            (m) => '${m.group(1)} juta')
+        .replaceAll('±', ' sekitar ')
+        .replaceAll('->', ' menjadi ')
+        .replaceAll('=>', ' menjadi ');
     s = s.replaceAllMapped(
         RegExp(r'\s*([,;:])\s*'), (m) => '${m.group(1)} ');
     s = s.replaceAll(RegExp(r'[ \t]+'), ' ');
@@ -898,6 +998,7 @@ class VoiceService {
   }
 
   Future<void> stop() async {
+    _speakGen++;
     final done = _speakDone;
     if (done != null && !done.isCompleted) done.complete();
     try {

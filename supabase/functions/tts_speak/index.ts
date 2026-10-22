@@ -55,8 +55,13 @@ const PERSONA_VOICES: Record<string, PersonaVoice> = {
 
 const MAX_CHARS = 1200;
 
+type CachedSpeech = {
+  audio: Uint8Array;
+  segments: { audio: Uint8Array; pause_ms: number }[];
+};
+
 /// Cache audio dalam memori instance (kalimat sapaan/teguran sering diulang).
-const CACHE = new Map<string, Uint8Array>();
+const CACHE = new Map<string, CachedSpeech>();
 
 function pickVoice(persona: string): PersonaVoice {
   return PERSONA_VOICES[persona] ?? PERSONA_VOICES.bos_tegas;
@@ -192,53 +197,100 @@ async function edgeTts(text: string, v: PersonaVoice): Promise<Uint8Array | null
   });
 }
 
-/// Google Translate TTS (gratis, tanpa key). Maks ~190 karakter/req.
-async function googleTts(text: string): Promise<Uint8Array | null> {
-  const parts: string[] = [];
-  let rest = text.trim();
-  while (rest.length > 0) {
-    if (rest.length <= 180) {
-      parts.push(rest);
-      break;
-    }
-    let cut = rest.lastIndexOf(". ", 180);
-    if (cut < 60) cut = rest.lastIndexOf(", ", 180);
-    if (cut < 60) cut = rest.lastIndexOf(" ", 180);
-    if (cut < 40) cut = 180;
-    parts.push(rest.slice(0, cut + 1).trim());
-    rest = rest.slice(cut + 1).trim();
-  }
-  const bufs: Uint8Array[] = [];
-  for (const part of parts) {
-    if (!part) continue;
-    const q = encodeURIComponent(part);
-    const url =
-      `https://translate.google.com/translate_tts?ie=UTF-8&q=${q}&tl=id&client=tw-ob`;
-    try {
-      const res = await fetch(url, {
-        headers: {
-          "User-Agent":
-            "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0 Safari/537.36",
-          Referer: "https://translate.google.com/",
-        },
-      });
-      if (!res.ok) return null;
-      const bytes = new Uint8Array(await res.arrayBuffer());
-      if (bytes.length < 500) return null;
-      bufs.push(bytes);
-    } catch (_) {
-      return null;
+/// Pecah teks menjadi kalimat pendek agar TTS tidak terdengar datar.
+///
+/// Google Translate TTS membacakan satu request dengan intonasi rata dan
+/// tanpa jeda. Dengan memecah per kalimat/klausa lalu memberi jeda kecil di
+/// klien, hasilnya terdengar seperti orang bernapas antar kalimat.
+type SpeechSegment = { text: string; pause_ms: number };
+
+function splitForSpeech(text: string): SpeechSegment[] {
+  const out: SpeechSegment[] = [];
+  const push = (t: string, pause: number) => {
+    const clean = t.trim();
+    if (clean) out.push({ text: clean, pause_ms: pause });
+  };
+
+  // 1) Pecah pada akhir kalimat.
+  const sentences: string[] = [];
+  let buf = "";
+  for (let i = 0; i < text.length; i++) {
+    const ch = text[i];
+    buf += ch;
+    if (ch === "." || ch === "!" || ch === "?" || ch === "\u2026") {
+      const next = text[i + 1];
+      if (next === undefined || next === " ") {
+        sentences.push(buf);
+        buf = "";
+      }
     }
   }
-  if (bufs.length === 0) return null;
-  const total = bufs.reduce((s, b) => s + b.length, 0);
+  if (buf.trim()) sentences.push(buf);
+
+  // 2) Kalimat kepanjangan dipecah pada koma/titik koma (maks 180 char).
+  for (const rawSentence of sentences) {
+    let rest = rawSentence.trim();
+    const tailPause = /[.!?\u2026]$/.test(rest) ? 170 : 120;
+    while (rest.length > 180) {
+      let cut = rest.lastIndexOf(", ", 170);
+      if (cut < 70) cut = rest.lastIndexOf("; ", 170);
+      if (cut < 70) cut = rest.lastIndexOf("\u2014 ", 170);
+      if (cut < 70) cut = rest.lastIndexOf(" ", 170);
+      if (cut < 40) cut = 170;
+      push(rest.slice(0, cut + 1), 110);
+      rest = rest.slice(cut + 1).trim();
+    }
+    push(rest, tailPause);
+  }
+
+  // Jeda diberi variasi kecil supaya tidak terasa seperti metronom.
+  return out.map((seg, i) => ({
+    text: seg.text,
+    pause_ms: Math.max(60, seg.pause_ms + ((i * 37) % 41) - 20),
+  }));
+}
+
+async function googleTtsChunk(part: string): Promise<Uint8Array | null> {
+  const q = encodeURIComponent(part);
+  const url =
+    `https://translate.google.com/translate_tts?ie=UTF-8&q=${q}&tl=id&client=tw-ob`;
+  try {
+    const res = await fetch(url, {
+      headers: {
+        "User-Agent":
+          "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0 Safari/537.36",
+        Referer: "https://translate.google.com/",
+      },
+    });
+    if (!res.ok) return null;
+    const bytes = new Uint8Array(await res.arrayBuffer());
+    if (bytes.length < 500) return null;
+    return bytes;
+  } catch (_) {
+    return null;
+  }
+}
+
+/// Google Translate TTS (gratis, tanpa key). Maks ~190 karakter/request.
+async function googleTts(
+  text: string,
+): Promise<{ audio: Uint8Array; segments: { audio: Uint8Array; pause_ms: number }[] } | null> {
+  const plan = splitForSpeech(text);
+  if (plan.length === 0) return null;
+  const segments: { audio: Uint8Array; pause_ms: number }[] = [];
+  for (const seg of plan) {
+    const bytes = await googleTtsChunk(seg.text);
+    if (!bytes) return null;
+    segments.push({ audio: bytes, pause_ms: seg.pause_ms });
+  }
+  const total = segments.reduce((s, b) => s + b.audio.length, 0);
   const out = new Uint8Array(total);
   let at = 0;
-  for (const b of bufs) {
-    out.set(b, at);
-    at += b.length;
+  for (const b of segments) {
+    out.set(b.audio, at);
+    at += b.audio.length;
   }
-  return out;
+  return { audio: out, segments };
 }
 
 Deno.serve(async (req) => {
@@ -276,7 +328,6 @@ Deno.serve(async (req) => {
   const v = pickVoice(persona);
   const engine = String(body.engine ?? "google");
 
-  let audio: Uint8Array | null = null;
   let provider = "google";
   let voice = "id-ID-google";
 
@@ -292,23 +343,28 @@ Deno.serve(async (req) => {
       playback_rate: v.playback_rate,
       mime: "audio/mpeg",
       ms: Date.now() - started,
-      audio: base64(cached),
+      segments: cached.segments.map((s) => ({
+        audio: base64(s.audio),
+        pause_ms: s.pause_ms,
+      })),
+      audio: base64(cached.audio),
     });
   }
 
-  audio = await googleTts(text);
+  let result = await googleTts(text);
 
   // Edge neural (pria/wanita) hanya bila diminta eksplisit; jaringan keluar
   // Supabase saat ini memblokir WebSocket-nya, jadi bukan jalur default.
-  if (!audio && engine === "edge") {
-    audio = await edgeTts(text, v);
+  if (!result && engine === "edge") {
+    const audio = await edgeTts(text, v);
     if (audio) {
       provider = "edge";
       voice = v.voice;
+      result = { audio, segments: [{ audio, pause_ms: 0 }] };
     }
   }
 
-  if (!audio) {
+  if (!result) {
     return json({ error: "Gagal membuat suara. Coba lagi." }, 502);
   }
 
@@ -316,7 +372,7 @@ Deno.serve(async (req) => {
     const first = CACHE.keys().next();
     if (!first.done) CACHE.delete(first.value);
   }
-  CACHE.set(cacheKey, audio);
+  CACHE.set(cacheKey, result);
 
   return json({
     ok: true,
@@ -326,6 +382,10 @@ Deno.serve(async (req) => {
     playback_rate: v.playback_rate,
     mime: "audio/mpeg",
     ms: Date.now() - started,
-    audio: base64(audio),
+    segments: result.segments.map((s) => ({
+      audio: base64(s.audio),
+      pause_ms: s.pause_ms,
+    })),
+    audio: base64(result.audio),
   });
 });

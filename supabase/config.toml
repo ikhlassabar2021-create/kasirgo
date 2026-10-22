@@ -44,3 +44,6 @@ verify_jwt = true
 
 [functions.tts_speak]
 verify_jwt = true
+
+[functions.stt_fix]
+verify_jwt = true
