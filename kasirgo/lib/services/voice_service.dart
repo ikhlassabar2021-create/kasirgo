@@ -94,6 +94,58 @@ class VoiceAudioConfig {
   }
 }
 
+/// Profil intonasi per persona Dokter Bisnis.
+///
+/// Persona TIDAK boleh sekadar mengganti teks: warna suara (tinggi nada,
+/// tempo, volume) harus berbeda agar owner langsung mendengar bedanya.
+class VoicePersonaProfile {
+  final double rate;
+  final double pitch;
+  final double volume;
+  final String sample;
+
+  /// Preferensi jenis suara perangkat: 'male' / 'female' / null (bebas).
+  final String? gender;
+
+  const VoicePersonaProfile({
+    required this.rate,
+    required this.pitch,
+    required this.volume,
+    required this.sample,
+    this.gender,
+  });
+}
+
+/// Satu suara TTS yang tersedia di perangkat/browser.
+class VoiceOption {
+  final String name;
+  final String locale;
+  final bool network;
+
+  const VoiceOption({
+    required this.name,
+    required this.locale,
+    this.network = false,
+  });
+
+  /// Label ramah untuk owner gaptek, mis. "Suara Wanita (id-ID, online)".
+  String get label {
+    final n = name.toLowerCase();
+    String gender = '';
+    if (n.contains('female') || n.contains('wanita')) {
+      gender = 'Wanita';
+    } else if (n.contains('male') || n.contains('pria')) {
+      gender = 'Pria';
+    }
+    final parts = <String>[
+      if (gender.isNotEmpty) gender else 'Suara Indonesia',
+      locale.isEmpty ? 'id-ID' : locale,
+      if (network) 'online',
+    ];
+    return parts.join(' - ');
+  }
+}
+
 /// Layanan suara interaktif KasirGo 3.0.
 ///
 /// - Soundbox POS: bacakan nominal pembayaran saat transaksi sukses.
@@ -110,6 +162,39 @@ class VoiceService {
   static const _cacheKey = 'kasirgo_voice_audio_cfg';
   static const _cacheTsKey = 'kasirgo_voice_audio_cfg_ts';
   static const _cacheTtlSeconds = 3600;
+  static const _personaKey = 'kasirgo_voice_persona';
+  static const _voiceKey = 'kasirgo_voice_device';
+
+  /// Rate/pitch/volume dijaga di rentang aman Android & Web Speech API
+  /// (pitch 0.5-2.0, rate 0.1-10).
+  static const Map<String, VoicePersonaProfile> personaProfiles = {
+    'bos_tegas': VoicePersonaProfile(
+      rate: 0.47,
+      pitch: 0.80,
+      volume: 1.0,
+      gender: 'male',
+      sample: 'Bos, saya lihat langsung datanya. Hari ini kita bereskan '
+          'yang paling penting dulu.',
+    ),
+    'partner_santai': VoicePersonaProfile(
+      rate: 0.54,
+      pitch: 1.16,
+      volume: 0.95,
+      gender: 'female',
+      sample: 'Santai aja, Bos. Saya temani pelan-pelan. Kita mulai dari '
+          'yang paling gampang dulu, ya.',
+    ),
+    'analis_taktis': VoicePersonaProfile(
+      rate: 0.50,
+      pitch: 0.94,
+      volume: 0.92,
+      gender: 'male',
+      sample: 'Berdasarkan data tujuh hari terakhir, ada tiga hal yang perlu '
+          'kita perhatikan. Mari kita bahas satu per satu.',
+    ),
+  };
+
+  static const _defaultPersona = 'bos_tegas';
 
   final FlutterTts _tts = FlutterTts();
   VoiceAudioConfig _global = VoiceAudioConfig.fallback;
@@ -119,10 +204,23 @@ class VoiceService {
   bool _ready = false;
   bool _available = true;
   Completer<void>? _speakDone;
+  String _persona = _defaultPersona;
+  String? _voiceName;
+  String? _voiceLocale;
+  List<VoiceOption> _voices = const [];
 
   VoiceAudioConfig get config => _config;
   bool get available => _available && _config.aktif;
   String? get outletId => _outletId;
+  String get persona => _persona;
+
+  /// Nama voice TTS yang sedang dipakai (null = voice default perangkat).
+  String? get voiceName => _voiceName;
+
+  /// Locale voice TTS yang sedang dipakai (mis. `id-ID`).
+  String? get voiceLocale => _voiceLocale;
+  String get personaSample =>
+      (personaProfiles[_persona] ?? personaProfiles[_defaultPersona]!).sample;
 
   SupabaseClient get _client => Supabase.instance.client;
 
@@ -134,10 +232,7 @@ class VoiceService {
     }
     if (_ready) return;
     try {
-      await _tts.setLanguage('id-ID');
-      await _tts.setSpeechRate(0.5);
-      await _tts.setVolume(1.0);
-      await _tts.setPitch(1.0);
+      await _selectVoice();
       await _tts.awaitSpeakCompletion(false);
       _tts.setCompletionHandler(() {
         final done = _speakDone;
@@ -151,11 +246,217 @@ class VoiceService {
         final done = _speakDone;
         if (done != null && !done.isCompleted) done.complete();
       });
+      await _applyPersona(_persona);
       _ready = true;
     } catch (e) {
       _available = false;
       debugPrint('VoiceService.init TTS error: $e');
     }
+  }
+
+  /// Kumpulkan semua voice Indonesia di perangkat (di-cache).
+  Future<List<VoiceOption>> _loadVoiceOptions({bool force = false}) async {
+    if (!force && _voices.isNotEmpty) return _voices;
+    try {
+      final voices = await _tts.getVoices;
+      if (voices is! List) return _voices;
+      final out = <VoiceOption>[];
+      for (final raw in voices) {
+        if (raw is! Map) continue;
+        final name = (raw['name'] ?? '').toString();
+        final locale = (raw['locale'] ?? raw['language'] ?? '').toString();
+        if (name.isEmpty) continue;
+        final hay = '${name.toLowerCase()} ${locale.toLowerCase()}';
+        final isId =
+            locale.toLowerCase().replaceAll('_', '-').startsWith('id') ||
+                hay.contains('indonesia');
+        if (!isId) continue;
+        out.add(VoiceOption(
+          name: name,
+          locale: locale.isEmpty ? 'id-ID' : locale,
+          network: hay.contains('network'),
+        ));
+      }
+      _voices = out;
+    } catch (e) {
+      debugPrint('VoiceService._loadVoiceOptions error: $e');
+    }
+    return _voices;
+  }
+
+  /// Pilih suara Indonesia terbaik yang tersedia di perangkat/browser.
+  ///
+  /// Android umumnya punya beberapa voice `id-ID` (mis. "id-id-x-idd-network"
+  /// yang jauh lebih natural daripada voice offline default). Web Speech API
+  /// memakai `voiceURI`/`name`, jadi pencocokan dilakukan pada nama + locale.
+  Future<void> _selectVoice() async {
+    await _tts.setLanguage('id-ID');
+    try {
+      final options = await _loadVoiceOptions(force: true);
+      if (options.isEmpty) return;
+
+      // 1. Suara pilihan owner (tersimpan di prefs) selalu menang.
+      String? saved;
+      try {
+        final prefs = await SharedPreferences.getInstance();
+        saved = prefs.getString(_voiceKey);
+      } catch (_) {}
+      if (saved != null && saved.isNotEmpty) {
+        for (final o in options) {
+          if (o.name == saved) {
+            await _applyVoiceOption(o);
+            return;
+          }
+        }
+      }
+
+      // 2. Belum ada pilihan: ikuti gender persona aktif, lalu natural.
+      final best = _bestVoiceFor(
+        options,
+        gender: (personaProfiles[_persona] ?? personaProfiles[_defaultPersona]!)
+            .gender,
+      );
+      if (best != null) await _applyVoiceOption(best);
+    } catch (e) {
+      debugPrint('VoiceService._selectVoice error: $e');
+    }
+  }
+
+  /// Pilih voice terbaik: prioritas gender persona, lalu online/id-ID.
+  VoiceOption? _bestVoiceFor(
+    List<VoiceOption> options, {
+    String? gender,
+  }) {
+    if (options.isEmpty) return null;
+    VoiceOption? best;
+    var bestScore = -1;
+    for (final o in options) {
+      final hay = '${o.name.toLowerCase()} ${o.locale.toLowerCase()}';
+      var score = 0;
+      if (o.locale.toLowerCase().replaceAll('_', '-').startsWith('id')) {
+        score += 4;
+      }
+      if (hay.contains('id-id')) score += 3;
+      if (o.network) score += 2;
+      final isFemale = hay.contains('female') || hay.contains('wanita');
+      final isMale = hay.contains('male') || hay.contains('pria');
+      if (gender == 'female' && isFemale) score += 8;
+      if (gender == 'male' && isMale) score += 8;
+      if (gender == 'female' && isMale) score -= 6;
+      if (gender == 'male' && isFemale) score -= 6;
+      if (isFemale || isMale) score += 1;
+      if (score > bestScore) {
+        bestScore = score;
+        best = o;
+      }
+    }
+    return best;
+  }
+
+  Future<void> _applyVoiceOption(VoiceOption o) async {
+    try {
+      await _tts.setVoice({'name': o.name, 'locale': o.locale});
+      _voiceName = o.name;
+      _voiceLocale = o.locale;
+      if (o.locale.isNotEmpty) await _tts.setLanguage(o.locale);
+    } catch (e) {
+      debugPrint('VoiceService._applyVoiceOption error: $e');
+    }
+  }
+
+  /// Daftar suara Indonesia yang tersedia di perangkat/browser.
+  ///
+  /// Dipakai layar Dokter Bisnis agar owner bisa memilih sendiri warna suara
+  /// (pria/wanita, offline/online) — akar keluhan "suaranya kaku semua".
+  Future<List<VoiceOption>> listIndonesianVoices() async {
+    try {
+      await init();
+      final out = List<VoiceOption>.from(await _loadVoiceOptions(force: true));
+      out.sort((a, b) {
+        if (a.network != b.network) return a.network ? -1 : 1;
+        return a.label.compareTo(b.label);
+      });
+      return out;
+    } catch (e) {
+      debugPrint('VoiceService.listIndonesianVoices error: $e');
+      return const [];
+    }
+  }
+
+  /// Pilih suara perangkat secara manual (null = otomatis pilih terbaik).
+  Future<void> selectVoice(VoiceOption? option) async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      if (option == null) {
+        await prefs.remove(_voiceKey);
+        _voiceName = null;
+        _voiceLocale = null;
+        await _selectVoice();
+        return;
+      }
+      await prefs.setString(_voiceKey, option.name);
+      await _applyVoiceOption(option);
+    } catch (e) {
+      debugPrint('VoiceService.selectVoice error: $e');
+    }
+  }
+
+  /// Terapkan persona aktif ke parameter TTS (rate/pitch/volume).
+  Future<void> _applyPersona(String persona) async {
+    final p = personaProfiles[persona] ?? personaProfiles[_defaultPersona]!;
+    try {
+      await _tts.setSpeechRate(p.rate);
+      await _tts.setPitch(p.pitch);
+      await _tts.setVolume(p.volume);
+
+      // Bila owner BELUM memilih suara perangkat, ganti voice sesuai gender
+      // persona (Bos Tegas = pria, Partner Santai = wanita) supaya tiap
+      // persona terdengar benar-benar berbeda, bukan cuma tempo/nada.
+      String? saved;
+      try {
+        final prefs = await SharedPreferences.getInstance();
+        saved = prefs.getString(_voiceKey);
+      } catch (_) {}
+      if (saved == null || saved.isEmpty) {
+        final options = await _loadVoiceOptions();
+        final best = _bestVoiceFor(options, gender: p.gender);
+        if (best != null && best.name != _voiceName) {
+          await _applyVoiceOption(best);
+        }
+      }
+    } catch (e) {
+      debugPrint('VoiceService._applyPersona error: $e');
+    }
+  }
+
+  /// Ganti persona suara (bos_tegas / partner_santai / analis_taktis).
+  ///
+  /// Dipanggil saat owner memilih persona di layar Dokter Bisnis agar warna
+  /// suara ikut berubah, bukan hanya teks balasan AI.
+  Future<void> setPersona(String persona, {bool persist = true}) async {
+    final next = personaProfiles.containsKey(persona)
+        ? persona
+        : _defaultPersona;
+    _persona = next;
+    await _applyPersona(next);
+    if (persist) {
+      try {
+        final prefs = await SharedPreferences.getInstance();
+        await prefs.setString(_personaKey, next);
+      } catch (_) {}
+    }
+  }
+
+  /// Muat persona tersimpan (dipanggil sekali saat init layar Dokter Bisnis).
+  Future<void> restorePersona() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final saved = prefs.getString(_personaKey);
+      if (saved != null && personaProfiles.containsKey(saved)) {
+        _persona = saved;
+      }
+    } catch (_) {}
+    await _applyPersona(_persona);
   }
 
   Future<VoiceAudioConfig> loadConfig({bool forceRefresh = false}) async {
@@ -431,7 +732,8 @@ class VoiceService {
     final who = (ownerName?.trim().isNotEmpty ?? false)
         ? ownerName!.trim()
         : 'Bos';
-    final tone = (persona ?? 'bos_tegas').trim();
+    final tone = (persona ?? _persona).trim();
+    await setPersona(tone, persist: false);
     final tail = tone == 'partner_santai'
         ? 'Saya siap temani, mau mulai dari mana?'
         : tone == 'analis_taktis'
@@ -451,12 +753,13 @@ class VoiceService {
   /// (dipakai voice loop agar mikrofon baru aktif setelah suara habis).
   Future<void> speak(String text, {bool awaitCompletion = false}) async {
     if (!available) return;
-    final clean = text.trim();
+    final clean = _naturalize(text);
     if (clean.isEmpty) return;
     await init();
     if (!available) return;
     try {
       await _tts.stop();
+      await _applyPersona(_persona);
       if (!awaitCompletion) {
         await _tts.speak(clean);
         return;
@@ -469,6 +772,44 @@ class VoiceService {
     } catch (e) {
       debugPrint('VoiceService.speak error: $e');
     }
+  }
+
+  /// Bacakan contoh kalimat persona aktif (dipakai tombol "Dengar Contoh").
+  Future<void> previewPersona(String persona, {bool awaitCompletion = true}) async {
+    await setPersona(persona, persist: false);
+    await speak(personaSample, awaitCompletion: awaitCompletion);
+  }
+
+  /// Rapikan teks agar TTS terdengar lebih luwes, bukan datar/kaku:
+  /// singkatan diurai, simbol dibaca, dan kalimat panjang dipecah pada
+  /// kata sambung supaya ada jeda alami.
+  String _naturalize(String text) {
+    var s = text.trim();
+    if (s.isEmpty) return s;
+    s = s.replaceAll(RegExp(r'\s+'), ' ');
+    s = s
+        .replaceAll('&', ' dan ')
+        .replaceAll('%', ' persen ')
+        .replaceAll(RegExp(r'\bRp\.?\s*'), 'rupiah ')
+        .replaceAll(RegExp(r'\bvs\.?\b', caseSensitive: false), 'dibanding')
+        .replaceAll(RegExp(r'\bsdh\b', caseSensitive: false), 'sudah')
+        .replaceAll(RegExp(r'\bblm\b', caseSensitive: false), 'belum')
+        .replaceAll(RegExp(r'\btdk\b', caseSensitive: false), 'tidak')
+        .replaceAll(RegExp(r'\byg\b', caseSensitive: false), 'yang')
+        .replaceAll(RegExp(r'\bdgn\b', caseSensitive: false), 'dengan')
+        .replaceAll(RegExp(r'\butk\b', caseSensitive: false), 'untuk')
+        .replaceAll(RegExp(r'\bkrn\b', caseSensitive: false), 'karena');
+    s = s.replaceAllMapped(
+        RegExp(r'\s*([,;:])\s*'), (m) => '${m.group(1)} ');
+    s = s.replaceAll(RegExp(r'[ \t]+'), ' ');
+    s = s.replaceAllMapped(RegExp(r'\s+([.!?])'), (m) => m.group(1) ?? '');
+    for (final c in const ['tapi', 'tetapi', 'karena', 'supaya', 'jadi']) {
+      s = s.replaceAllMapped(
+        RegExp('([^,.!?])\\s+$c\\b', caseSensitive: false),
+        (m) => '${m.group(1)}, $c',
+      );
+    }
+    return s.trim();
   }
 
   Future<void> stop() async {

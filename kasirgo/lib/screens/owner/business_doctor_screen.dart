@@ -134,6 +134,8 @@ class _BusinessDoctorScreenState extends ConsumerState<BusinessDoctorScreen> {
   final SpeechService _speech = SpeechService();
   bool _listening = false;
   String _speechStatus = '';
+  bool _speechSent = false;
+  double _soundLevel = 0;
   final DoctorFileService _files = DoctorFileService();
   DoctorFileAttachment? _attachment;
   bool _pickingFile = false;
@@ -172,6 +174,7 @@ class _BusinessDoctorScreenState extends ConsumerState<BusinessDoctorScreen> {
     _loadRoiBanner();
     _loadDelegationOverview();
     _loadShopFloor();
+    VoiceService().restorePersona();
     if (_conversationId != null) _loadHistory();
     final initial = widget.initialMessage?.trim();
     if (initial != null && initial.isNotEmpty) {
@@ -237,6 +240,7 @@ class _BusinessDoctorScreenState extends ConsumerState<BusinessDoctorScreen> {
         }
       });
       VoiceService().applyOutletPrefs(outletId);
+      await VoiceService().setPersona(_tone, persist: false);
       _greetDoctor();
     } catch (_) {
       _greetDoctor();
@@ -270,12 +274,172 @@ class _BusinessDoctorScreenState extends ConsumerState<BusinessDoctorScreen> {
     final outletId = ref.read(currentUserProvider)?.outletId;
     if (outletId == null || outletId.isEmpty) return;
     setState(() => _tone = tone);
+    // Suara langsung ikut berubah (bukan hanya teks balasan AI).
+    await VoiceService().setPersona(tone);
+    if (mounted && _audioAktif) _previewVoice(tone);
     try {
       await (widget.service ?? BusinessDoctorService())
           .setPreferredTone(outletId: outletId, tone: tone);
     } catch (e) {
       _snack(friendlyError(e));
     }
+  }
+
+  /// Dengarkan contoh suara persona yang dipilih.
+  Future<void> _previewVoice(String tone) async {
+    if (_speaking) return;
+    setState(() => _speaking = true);
+    _voiceLoopPaused = true;
+    try {
+      await VoiceService().previewPersona(tone);
+    } catch (_) {
+    } finally {
+      // Kembalikan suara ke persona yang benar-benar dipilih owner.
+      await VoiceService().setPersona(_tone, persist: false);
+      if (mounted) setState(() => _speaking = false);
+    }
+  }
+
+  /// Pilih suara perangkat (pria/wanita, offline/online) agar tidak kaku.
+  Future<void> _pickDeviceVoice() async {
+    if (_speaking) return;
+    setState(() => _speaking = true);
+    List<VoiceOption> options;
+    try {
+      options = await VoiceService().listIndonesianVoices();
+    } catch (_) {
+      options = const [];
+    }
+    if (!mounted) return;
+    setState(() => _speaking = false);
+
+    if (options.isEmpty) {
+      _snack(
+        'Belum ada suara Indonesia di perangkat ini. Pasang paket suara '
+        'Indonesia di Pengaturan Android, lalu coba lagi.',
+      );
+      return;
+    }
+
+    final current = VoiceService().voiceName;
+    final picked = await showModalBottomSheet<Object?>(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: AppTheme.surfaceColor,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(
+          top: Radius.circular(AppTheme.radiusLarge),
+        ),
+      ),
+      builder: (ctx) => SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(16, 12, 16, 16),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Center(
+                child: Container(
+                  width: 40,
+                  height: 4,
+                  decoration: BoxDecoration(
+                    color: AppTheme.borderColor,
+                    borderRadius: BorderRadius.circular(2),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 14),
+              Text(
+                'Pilih Suara Dokter',
+                style: GoogleFonts.plusJakartaSans(
+                  fontSize: 16,
+                  fontWeight: FontWeight.w800,
+                  color: AppTheme.textPrimary,
+                ),
+              ),
+              const SizedBox(height: 4),
+              Text(
+                'Suara pria/wanita berbeda dari perangkat Anda. Coba satu-satu '
+                'lalu pilih yang paling enak didengar.',
+                style: GoogleFonts.plusJakartaSans(
+                  fontSize: 12,
+                  color: AppTheme.textSecondary,
+                ),
+              ),
+              const SizedBox(height: 12),
+              Flexible(
+                child: ListView.separated(
+                  shrinkWrap: true,
+                  itemCount: options.length,
+                  separatorBuilder: (_, _) =>
+                      Divider(height: 1, color: AppTheme.borderColor),
+                  itemBuilder: (_, i) {
+                    final o = options[i];
+                    final selected = o.name == current;
+                    return ListTile(
+                      contentPadding: EdgeInsets.zero,
+                      leading: Icon(
+                        selected
+                            ? Icons.check_circle_rounded
+                            : Icons.record_voice_over_outlined,
+                        color: selected
+                            ? AppTheme.primaryColor
+                            : AppTheme.textSecondary,
+                      ),
+                      title: Text(
+                        o.label,
+                        style: GoogleFonts.plusJakartaSans(
+                          fontSize: 13,
+                          fontWeight: FontWeight.w700,
+                          color: AppTheme.textPrimary,
+                        ),
+                      ),
+                      subtitle: Text(
+                        o.name,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: GoogleFonts.plusJakartaSans(
+                          fontSize: 11,
+                          color: AppTheme.textSecondary,
+                        ),
+                      ),
+                      trailing: IconButton(
+                        tooltip: 'Coba suara ini',
+                        icon: const Icon(Icons.play_circle_outline_rounded),
+                        color: AppTheme.primaryColor,
+                        onPressed: () async {
+                          await VoiceService().selectVoice(o);
+                          await _previewVoice(_tone);
+                        },
+                      ),
+                      onTap: () => Navigator.pop(ctx, o),
+                    );
+                  },
+                ),
+              ),
+              const SizedBox(height: 8),
+              SizedBox(
+                width: double.infinity,
+                child: OutlinedButton.icon(
+                  onPressed: () => Navigator.pop(ctx, 'auto'),
+                  icon: const Icon(Icons.auto_awesome_rounded, size: 18),
+                  label: const Text('Pilih Otomatis (Terbaik)'),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+
+    if (!mounted || picked == null) return;
+    if (picked == 'auto') {
+      await VoiceService().selectVoice(null);
+    } else if (picked is VoiceOption) {
+      await VoiceService().selectVoice(picked);
+    }
+    if (mounted) setState(() {});
+    _snack('Suara Dokter diperbarui.');
   }
 
   Future<void> _editBossWa() async {
@@ -819,6 +983,36 @@ class _BusinessDoctorScreenState extends ConsumerState<BusinessDoctorScreen> {
     await _startListening();
   }
 
+  /// Rapikan hasil transkrip STT sebelum dikirim ke Dokter.
+  ///
+  /// Mesin STT Indonesia sering menulis istilah usaha dengan ejaan acak
+  /// ("qris", "rp", "omset nya"). Normalisasi ringan ini menaikkan akurasi
+  /// tanpa mengubah makna kalimat owner.
+  String _normalizeSpeech(String raw) {
+    var t = raw.replaceAll(RegExp(r'\s+'), ' ').trim();
+    if (t.isEmpty) return t;
+    const fixes = {
+      'qris': 'QRIS',
+      'qriss': 'QRIS',
+      'kasir go': 'KasirGo',
+      'kasirgo': 'KasirGo',
+      'omset nya': 'omzetnya',
+      'omset': 'omzet',
+      'rp.': 'Rp',
+      'whats app': 'WhatsApp',
+      'stok nya': 'stoknya',
+      'untung nya': 'untungnya',
+      'rugi nya': 'ruginya',
+    };
+    for (final entry in fixes.entries) {
+      t = t.replaceAll(RegExp(RegExp.escape(entry.key), caseSensitive: false),
+          entry.value);
+    }
+    t = t.replaceAllMapped(
+        RegExp(r'\s+([,.!?])'), (m) => m.group(1) ?? '');
+    return t.replaceAll(RegExp(r'\s+'), ' ').trim();
+  }
+
   /// Mulai mendengar. [auto] true = lanjutan voice loop (tanpa sentuh tombol).
   Future<void> _startListening({bool auto = false}) async {
     if (_loading || _speaking || _listening) return;
@@ -829,23 +1023,42 @@ class _BusinessDoctorScreenState extends ConsumerState<BusinessDoctorScreen> {
     }
     if (!mounted) return;
     _voiceLoopPaused = false;
-    final ok = await _speech.start(onResult: (text, finalResult) {
-      if (!mounted) return;
-      final clean = text.trim();
-      setState(() {
-        if (clean.isNotEmpty) {
-          _input.text = clean;
-          _input.selection =
-              TextSelection.collapsed(offset: _input.text.length);
+    _speechSent = false;
+    final ok = await _speech.start(
+      reset: true,
+      onSoundLevel: (level) {
+        if (!mounted || !_listening) return;
+        // Android mengirim dB 0..10, iOS/Web bisa negatif (-60..0).
+        final norm = level <= 0
+            ? ((level + 60) / 60).clamp(0.0, 1.0)
+            : (level / 10).clamp(0.0, 1.0);
+        if ((norm - _soundLevel).abs() < 0.05) return;
+        setState(() => _soundLevel = norm);
+      },
+      onResult: (text, finalResult) async {
+        if (!mounted) return;
+        final clean = _normalizeSpeech(text);
+        setState(() {
+          if (clean.isNotEmpty) {
+            _input.text = clean;
+            _input.selection =
+                TextSelection.collapsed(offset: _input.text.length);
+          }
+          _speechStatus =
+              clean.isEmpty ? 'Mendengarkan...' : 'Mendengar: $clean';
+          if (finalResult) _listening = false;
+        });
+        if (finalResult && clean.isNotEmpty && !_speechSent) {
+          _speechSent = true;
+          _speechStatus = '';
+          // Tutup sesi dulu (tunggu benar-benar berhenti) supaya suara
+          // Dokter yang dibacakan TTS tidak ikut terekam mikrofon.
+          await _speech.stop();
+          if (!mounted) return;
+          _send(clean, spoken: true);
         }
-        _speechStatus = clean.isEmpty ? 'Mendengarkan...' : 'Mendengar: $clean';
-        if (finalResult) _listening = false;
-      });
-      if (finalResult && clean.isNotEmpty) {
-        _speechStatus = '';
-        _send(clean, spoken: true);
-      }
-    });
+      },
+    );
     if (!mounted) return;
     if (!ok) {
       setState(() {
@@ -859,6 +1072,7 @@ class _BusinessDoctorScreenState extends ConsumerState<BusinessDoctorScreen> {
     }
     setState(() {
       _listening = true;
+      _soundLevel = 0;
       _speechStatus = auto
           ? 'Mendengarkan... silakan lanjut bicara'
           : 'Mendengarkan... bicara sekarang';
@@ -2120,6 +2334,25 @@ class _BusinessDoctorScreenState extends ConsumerState<BusinessDoctorScreen> {
               ],
             ],
           ),
+          const SizedBox(height: 10),
+          SizedBox(
+            width: double.infinity,
+            child: OutlinedButton.icon(
+              onPressed: _speaking ? null : _pickDeviceVoice,
+              icon: const Icon(Icons.graphic_eq_rounded, size: 18),
+              label: const Text('Pilih Suara Perangkat (Pria/Wanita)'),
+            ),
+          ),
+          if ((VoiceService().voiceName ?? '').isNotEmpty) ...[
+            const SizedBox(height: 6),
+            Text(
+              'Suara aktif: ${VoiceService().voiceName}',
+              style: GoogleFonts.plusJakartaSans(
+                fontSize: 11,
+                color: AppTheme.textSecondary,
+              ),
+            ),
+          ],
         ],
       ),
     );
@@ -2184,6 +2417,26 @@ class _BusinessDoctorScreenState extends ConsumerState<BusinessDoctorScreen> {
               if (selected)
                 const Icon(Icons.check_circle_rounded,
                     size: 18, color: AppTheme.primaryColor),
+              const SizedBox(width: 4),
+              Tooltip(
+                message: 'Dengar contoh suara',
+                child: Semantics(
+                  button: true,
+                  label: 'Dengar contoh suara $label',
+                  child: InkWell(
+                    borderRadius: BorderRadius.circular(20),
+                    onTap: _speaking ? null : () => _previewVoice(key),
+                    child: Padding(
+                      padding: const EdgeInsets.all(8),
+                      child: Icon(
+                        Icons.play_circle_outline_rounded,
+                        size: 22,
+                        color: AppTheme.primaryColor,
+                      ),
+                    ),
+                  ),
+                ),
+              ),
             ],
           ),
         ),
@@ -3761,6 +4014,38 @@ class _BusinessDoctorScreenState extends ConsumerState<BusinessDoctorScreen> {
                         ),
                       ),
                     ),
+                    if (_listening)
+                      Container(
+                        width: 56,
+                        height: 8,
+                        margin: const EdgeInsets.only(left: 8),
+                        decoration: BoxDecoration(
+                          color: AppTheme.surfaceMutedColor,
+                          borderRadius: BorderRadius.circular(4),
+                        ),
+                        child: FractionallySizedBox(
+                          alignment: Alignment.centerLeft,
+                          widthFactor: _soundLevel <= 0.04
+                              ? 0.04
+                              : _soundLevel,
+                          child: Container(
+                            decoration: BoxDecoration(
+                              gradient: LinearGradient(
+                                colors: _soundLevel > 0.75
+                                    ? [
+                                        AppTheme.warningColor,
+                                        AppTheme.errorColor,
+                                      ]
+                                    : [
+                                        AppTheme.primaryColor,
+                                        AppTheme.accentColor,
+                                      ],
+                              ),
+                              borderRadius: BorderRadius.circular(4),
+                            ),
+                          ),
+                        ),
+                      ),
                   ],
                 ),
               ),
