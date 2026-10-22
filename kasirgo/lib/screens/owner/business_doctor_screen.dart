@@ -3,6 +3,9 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 
 import '../../config/app_theme.dart';
+import '../../models/customer.dart';
+import '../../models/product.dart';
+import '../../models/transaction.dart';
 import '../../providers/auth_provider.dart';
 import '../../providers/module_provider.dart';
 import '../../providers/outlet_provider.dart';
@@ -36,6 +39,7 @@ import 'sidak_bos_screen.dart';
 import 'whatsapp_broadcast_screen.dart';
 import '../../utils/error_messages.dart';
 import '../../utils/doctor_result_pdf.dart';
+import '../../utils/doctor_vitals.dart';
 import '../../utils/formatters.dart';
 import '../../utils/receipt_generator.dart';
 import '../../utils/wa_helper.dart';
@@ -107,6 +111,9 @@ class _BusinessDoctorScreenState extends ConsumerState<BusinessDoctorScreen> {
   Map<String, dynamic>? _identity;
   Map<String, dynamic>? _briefing;
   Map<String, dynamic>? _dailyDose;
+  double _roiRevenue = 0;
+  double _roiCost = 0;
+  int _roiCount = 0;
   String _tone = 'bos_tegas';
   int _dailyStreak = 0;
   int _xp = 0;
@@ -146,6 +153,7 @@ class _BusinessDoctorScreenState extends ConsumerState<BusinessDoctorScreen> {
     _loadProfile();
     _loadDailyDose();
     _loadBriefing();
+    _loadRoiBanner();
     if (_conversationId != null) _loadHistory();
     final initial = widget.initialMessage?.trim();
     if (initial != null && initial.isNotEmpty) {
@@ -374,6 +382,39 @@ class _BusinessDoctorScreenState extends ConsumerState<BusinessDoctorScreen> {
           .getBriefing(outletId);
       if (!mounted || b == null) return;
       setState(() => _briefing = b);
+    } catch (_) {}
+  }
+
+  /// Banner transparan: total tambahan omzet dari resep yang dijalankan bulan ini.
+  Future<void> _loadRoiBanner() async {
+    final outletId = ref.read(currentUserProvider)?.outletId;
+    if (outletId == null || outletId.isEmpty) return;
+    try {
+      final logs = await (widget.service ?? BusinessDoctorService())
+          .getActionLogs(outletId);
+      final now = DateTime.now();
+      double revenue = 0;
+      double cost = 0;
+      var count = 0;
+      for (final m in logs) {
+        final rawDate = m['action_date']?.toString();
+        final date = rawDate == null ? null : DateTime.tryParse(rawDate);
+        if (date == null) continue;
+        if (date.year != now.year || date.month != now.month) continue;
+        final r = m['result'];
+        if (r is Map && r['extra_revenue'] is num) {
+          revenue += (r['extra_revenue'] as num).toDouble();
+        }
+        final c = m['cost'];
+        if (c is num) cost += c.toDouble();
+        count++;
+      }
+      if (!mounted) return;
+      setState(() {
+        _roiRevenue = revenue;
+        _roiCost = cost;
+        _roiCount = count;
+      });
     } catch (_) {}
   }
 
@@ -1154,6 +1195,27 @@ class _BusinessDoctorScreenState extends ConsumerState<BusinessDoctorScreen> {
     }
   }
 
+  /// Hitung 3 tanda vital dari data lokal (produk, transaksi, pelanggan).
+  Future<DoctorVitals?> _loadVitals() async {
+    final outletId = ref.read(currentUserProvider)?.outletId;
+    if (outletId == null) return null;
+    try {
+      final service = SupabaseService();
+      final results = await Future.wait([
+        service.getProducts(outletId),
+        service.getTransactions(outletId, limit: 200),
+        service.getCustomers(outletId),
+      ]);
+      return DoctorVitals.build(
+        products: results[0] as List<Product>,
+        transactions: results[1] as List<Transaction>,
+        customers: results[2] as List<Customer>,
+      );
+    } catch (_) {
+      return null;
+    }
+  }
+
   void _openResult() {
     final p = _activePrescription;
     if (p == null) return;
@@ -1185,6 +1247,7 @@ class _BusinessDoctorScreenState extends ConsumerState<BusinessDoctorScreen> {
           targetDays: days,
           dueDate: due,
           steps: steps,
+          vitalsFuture: _loadVitals(),
           onRunStep: (i, step) =>
               _onPrescriptionStep(p, Map<String, dynamic>.from(step), i),
           onToggleStep: (i, step) => _togglePrescriptionStep(p, i),
@@ -1581,6 +1644,10 @@ class _BusinessDoctorScreenState extends ConsumerState<BusinessDoctorScreen> {
         const SizedBox(height: 12),
         if (_phase != 'A') ...[
           _buildEvaluationCta(),
+          const SizedBox(height: 12),
+        ],
+        if (_roiRevenue > 0) ...[
+          _buildRoiBanner(),
           const SizedBox(height: 12),
         ],
         if (_messages.isEmpty) _buildWelcome(),
@@ -2677,6 +2744,63 @@ class _BusinessDoctorScreenState extends ConsumerState<BusinessDoctorScreen> {
             ],
           ),
         ),
+      ),
+    );
+  }
+
+  Widget _buildRoiBanner() {
+    final net = _roiRevenue - _roiCost;
+    return Container(
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: AppTheme.successColor.withValues(alpha: 0.08),
+        borderRadius: BorderRadius.circular(AppTheme.radiusLarge),
+        border: Border.all(color: AppTheme.successColor.withValues(alpha: 0.3)),
+      ),
+      child: Row(
+        children: [
+          Container(
+            width: 38,
+            height: 38,
+            decoration: BoxDecoration(
+              color: AppTheme.successColor.withValues(alpha: 0.15),
+              borderRadius: BorderRadius.circular(AppTheme.radiusMedium),
+            ),
+            child: const Icon(Icons.trending_up_rounded,
+                color: AppTheme.successColor, size: 22),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Bulan ini resep Dokter Bisnis menghasilkan tambahan omzet '
+                  '${Formatters.currency(_roiRevenue)}',
+                  style: GoogleFonts.plusJakartaSans(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w700,
+                    height: 1.35,
+                    color: AppTheme.textPrimary,
+                  ),
+                ),
+                const SizedBox(height: 3),
+                Text(
+                  _roiCost > 0
+                      ? 'Dari $_roiCount catatan promosi - modal '
+                          '${Formatters.currency(_roiCost)} - untung bersih '
+                          '${Formatters.currency(net)}'
+                      : 'Dari $_roiCount catatan promosi tanpa biaya tambahan.',
+                  style: GoogleFonts.plusJakartaSans(
+                    fontSize: 11,
+                    height: 1.35,
+                    color: AppTheme.textSecondary,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
       ),
     );
   }

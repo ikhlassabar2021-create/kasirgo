@@ -1,6 +1,9 @@
+import 'dart:typed_data';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:image_picker/image_picker.dart';
 
 import '../../config/app_theme.dart';
 import '../../providers/auth_provider.dart';
@@ -123,11 +126,26 @@ const _steps = <_Step>[
   ),
 ];
 
+class _PhotoRef {
+  final String kind;
+  final String label;
+  final String name;
+  final Uint8List bytes;
+  const _PhotoRef({
+    required this.kind,
+    required this.label,
+    required this.name,
+    required this.bytes,
+  });
+}
+
 class _DoctorIntakeScreenState extends ConsumerState<DoctorIntakeScreen> {
   final _answers = <String, String>{};
   final _notes = TextEditingController();
+  final _photos = <_PhotoRef>[];
   int _step = 0;
   bool _saving = false;
+  bool _pickingPhoto = false;
 
   @override
   void dispose() {
@@ -148,6 +166,78 @@ class _DoctorIntakeScreenState extends ConsumerState<DoctorIntakeScreen> {
     await _submit();
   }
 
+  Future<void> _addPhoto(String kind, String label) async {
+    if (_pickingPhoto) return;
+    final source = await showModalBottomSheet<ImageSource>(
+      context: context,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (ctx) => SafeArea(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const SizedBox(height: 12),
+            ListTile(
+              leading: const Icon(Icons.photo_camera_rounded,
+                  color: AppTheme.primaryColor),
+              title: const Text('Ambil Foto Sekarang'),
+              onTap: () => Navigator.pop(ctx, ImageSource.camera),
+            ),
+            ListTile(
+              leading: const Icon(Icons.photo_library_rounded,
+                  color: AppTheme.primaryColor),
+              title: const Text('Pilih dari Galeri'),
+              onTap: () => Navigator.pop(ctx, ImageSource.gallery),
+            ),
+            const SizedBox(height: 8),
+          ],
+        ),
+      ),
+    );
+    if (source == null) return;
+    setState(() => _pickingPhoto = true);
+    try {
+      final image = await ImagePicker().pickImage(
+        source: source,
+        maxWidth: 1600,
+        maxHeight: 1600,
+        imageQuality: 80,
+      );
+      if (image == null) return;
+      final bytes = await image.readAsBytes();
+      if (!mounted) return;
+      setState(() {
+        _photos.add(_PhotoRef(
+          kind: kind,
+          label: label,
+          name: image.name,
+          bytes: bytes,
+        ));
+      });
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(friendlyError(e, fallback: 'Gagal mengambil foto.')),
+        ),
+      );
+    } finally {
+      if (mounted) setState(() => _pickingPhoto = false);
+    }
+  }
+
+  List<Map<String, dynamic>> get _visualRefs => [
+        for (final p in _photos)
+          {
+            'kind': p.kind,
+            'label': p.label,
+            'file_name': p.name,
+            'captured_at': DateTime.now().toIso8601String(),
+            'storage': 'local_only',
+          },
+      ];
+
   Future<void> _submit() async {
     final outletId = ref.read(currentUserProvider)?.outletId;
     if (outletId == null || outletId.isEmpty) return;
@@ -165,6 +255,7 @@ class _DoctorIntakeScreenState extends ConsumerState<DoctorIntakeScreen> {
         physical: physical,
         visualNotes: _notes.text.trim().isEmpty ? null : _notes.text.trim(),
         behavior: behavior,
+        visualRefs: _visualRefs,
       );
       if (!mounted) return;
       Navigator.pop(context, _summary());
@@ -273,7 +364,11 @@ class _DoctorIntakeScreenState extends ConsumerState<DoctorIntakeScreen> {
                         _buildGroup(g),
                         const SizedBox(height: 20),
                       ],
-                      if (_step == 1) _buildNotes(),
+                      if (_step == 1) ...[
+                        _buildPhotoSection(),
+                        const SizedBox(height: 20),
+                        _buildNotes(),
+                      ],
                     ],
                   ),
                 ),
@@ -346,6 +441,115 @@ class _DoctorIntakeScreenState extends ConsumerState<DoctorIntakeScreen> {
           ),
         ),
       ),
+    );
+  }
+
+  Widget _buildPhotoSection() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text('Foto klinis (opsional)',
+            style: GoogleFonts.plusJakartaSans(
+                fontSize: 14, fontWeight: FontWeight.w700)),
+        const SizedBox(height: 4),
+        Text(
+          'Foto etalase & nota belanja harian membantu dokter menilai '
+          'tampilan dan harga kulakan. Foto tetap di HP Anda.',
+          style: GoogleFonts.plusJakartaSans(
+              fontSize: 12, color: AppTheme.textSecondary, height: 1.4),
+        ),
+        const SizedBox(height: 10),
+        Wrap(
+          spacing: 10,
+          runSpacing: 10,
+          children: [
+            _photoButton(
+              icon: Icons.storefront_rounded,
+              label: 'Foto Etalase',
+              kind: 'etalase',
+            ),
+            _photoButton(
+              icon: Icons.receipt_long_rounded,
+              label: 'Foto Nota Belanja',
+              kind: 'nota_belanja',
+            ),
+          ],
+        ),
+        if (_photos.isNotEmpty) ...[
+          const SizedBox(height: 12),
+          Wrap(
+            spacing: 10,
+            runSpacing: 10,
+            children: [
+              for (var i = 0; i < _photos.length; i++)
+                _photoThumb(_photos[i], i),
+            ],
+          ),
+        ],
+      ],
+    );
+  }
+
+  Widget _photoButton({
+    required IconData icon,
+    required String label,
+    required String kind,
+  }) {
+    return OutlinedButton.icon(
+      onPressed:
+          _pickingPhoto ? null : () => _addPhoto(kind, label),
+      icon: Icon(icon, size: 18),
+      label: Text(label),
+      style: OutlinedButton.styleFrom(
+        foregroundColor: AppTheme.primaryColor,
+        side: BorderSide(color: AppTheme.primaryColor.withValues(alpha: 0.4)),
+        minimumSize: const Size(0, AppTheme.touchTargetMedium),
+        padding: const EdgeInsets.symmetric(horizontal: 14),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(AppTheme.radiusMedium),
+        ),
+      ),
+    );
+  }
+
+  Widget _photoThumb(_PhotoRef photo, int index) {
+    return Stack(
+      clipBehavior: Clip.none,
+      children: [
+        ClipRRect(
+          borderRadius: BorderRadius.circular(AppTheme.radiusMedium),
+          child: Image.memory(
+            photo.bytes,
+            width: 84,
+            height: 84,
+            fit: BoxFit.cover,
+            errorBuilder: (_, _, _) => Container(
+              width: 84,
+              height: 84,
+              color: AppTheme.surfaceMutedColor,
+              child: const Icon(Icons.broken_image_outlined,
+                  color: AppTheme.textSecondary),
+            ),
+          ),
+        ),
+        Positioned(
+          top: -6,
+          right: -6,
+          child: InkWell(
+            onTap: () => setState(() => _photos.removeAt(index)),
+            customBorder: const CircleBorder(),
+            child: Container(
+              padding: const EdgeInsets.all(3),
+              decoration: const BoxDecoration(
+                color: AppTheme.errorColor,
+                shape: BoxShape.circle,
+              ),
+              child: const Icon(Icons.close_rounded,
+                  size: 14, color: Colors.white),
+            ),
+          ),
+        ),
+      ],
     );
   }
 

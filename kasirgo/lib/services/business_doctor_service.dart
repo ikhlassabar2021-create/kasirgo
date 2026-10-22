@@ -47,12 +47,15 @@ class BusinessDoctorService {
     required Map<String, dynamic> physical,
     String? visualNotes,
     required Map<String, dynamic> behavior,
+    List<Map<String, dynamic>>? visualRefs,
   }) async {
     final res = await _client.from('doctor_intake').insert({
       'outlet_id': outletId,
       'physical': physical,
       'visual_notes': visualNotes,
       'behavior': behavior,
+      if (visualRefs != null && visualRefs.isNotEmpty)
+        'visual_refs': visualRefs,
       'completed': true,
     }).select('id').maybeSingle();
     return res?['id']?.toString();
