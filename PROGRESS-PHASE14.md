@@ -156,6 +156,18 @@ Sumber spec: `KASIRGO-WORKFLOW-LENGKAP.md` BAGIAN 13 + BAGIAN 14.2.
   (8) + `stt_fix_transcript_test` (5) juga PASS (23 total).
   (4) `flutter analyze lib` tetap 22 info pra-ada (0 error/warning); build web
   release sukses dan di-deploy ke gh-pages.
+- ST14-23: verifikasi E2E mode voice note di web live (SELESAI).
+  Skrip baru `e2e/doctor_voice_note_verify.mjs` (Playwright, service worker
+  diblokir + cache-bust) login owner -> Dokter Bisnis AI -> kartu "Suara
+  Interaktif". Hasil: preferensi awal kosong; toggle "Mode Voice Note"
+  (switch ke-2 di kartu) -> `flutter.kasirgo_doctor_voice_note=true`; toggle
+  "Tampilkan Teks Suara" -> `..._voice_transcript=true`; kedua toggle
+  dikembalikan ke `false` -> state tersimpan benar; hint baris input berubah
+  menjadi "Mode voice note: ketuk mikrofon lalu bicara..." saat mode aktif dan
+  hilang saat mode mati; 0 console error. Catatan teknis: label toggle berada
+  di luar node `role="switch"`, jadi klik dilakukan lewat bounding box switch,
+  bukan teks label. Deploy gh-pages `14b2015`, md5 `main.dart.js` live
+  `99309546483e1672546fb6f96d085a82` = build lokal.
 
 
 ## CATATAN
