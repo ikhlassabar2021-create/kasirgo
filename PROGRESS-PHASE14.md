@@ -170,6 +170,40 @@ Sumber spec: `KASIRGO-WORKFLOW-LENGKAP.md` BAGIAN 13 + BAGIAN 14.2.
   `99309546483e1672546fb6f96d085a82` = build lokal.
 
 
+- ST14-24: Memori jangka panjang Dokter Bisnis + Pengetahuan manual + hapus riwayat (SELESAI).
+  Tujuan: Dokter Bisnis mengingat percakapan sebelumnya (lintas sesi), belajar dari
+  ringkasan, bisa diberi pengetahuan manual dari dalam fitur, dan riwayat bisa dihapus.
+  (1) Migrasi `docs/migrations/2026-11-29-kasirgo-doctor-memory-knowledge.sql`
+  (DITERAPKAN live): `doctor_memory_kind_check` ditambah `knowledge` & `chat_summary`;
+  kolom `origin TEXT DEFAULT 'doctor'`; unique partial index
+  `uq_doctor_memory_chat_summary` pada `(conversation_id)` WHERE kind='chat_summary'
+  (menjamin 1 ringkasan per percakapan); index `idx_doctor_memory_kind_created`.
+  (2) EF `business_doctor_chat` (REDEPLOYED): `buildSystem(..., knowledge=[], summaries=[])`
+  menyuntik blok "PENGETAHUAN YANG DICATAT OWNER" + "RINGKASAN PERCAKAPAN SEBELUMNYA";
+  kontrak balasan +`"summary"`; saat request memuat `knowledgeRows` (kind='knowledge',
+  limit 15) + `summaryRows` (kind='chat_summary', limit 6, mengecualikan percakapan
+  aktif) + `actionLogs`; ringkasan percakapan di-upsert (1 baris per conversation).
+  (3) `business_doctor_service.dart`: `listMemories` +`origin`, limit 80; BARU
+  `addKnowledge(outletId, {title, content})` -> kind='knowledge', origin='manual',
+  status='open'.
+  (4) UI `doctor_cases_screen.dart`: pemisahan `_filteredKnowledge` (kind=='knowledge')
+  vs `_filteredNotes`; section baru "Pengetahuan Saya" sebelum "Catatan Memori";
+  AppBar IconButton "Tambah Pengetahuan" + tombol di empty state; `_openKnowledgeForm()`
+  (bottom sheet Form: Judul maks 120, Isi 3-6 baris maks 1000, validator judul wajib
+  + isi minimal 3 karakter, simpan -> snack "Pengetahuan disimpan. Dokter Bisnis akan
+  mengingatnya." -> reload). `_kindLabel` ditambah knowledge/chat_summary/reprimand/
+  market/scaling/weekly_report.
+  (5) Verifikasi backend E2E: baris pengetahuan manual disuntik -> balasan chat mengutip
+  isinya; `chat_summary` otomatis terbentuk (origin 'chat'); percakapan kedua mengingat
+  ringkasan dari percakapan pertama (lintas percakapan). Data QA dibersihkan.
+  (6) Verifikasi UI live (Playwright): `e2e/doctor_memory_knowledge_verify.mjs` -
+  form terbuka, 2 field terisi, simpan sukses, baris muncul, 0 console error;
+  `e2e/doctor_memory_delete_verify.mjs` - menu baris -> "Hapus" -> konfirmasi ->
+  baris hilang (`ROW_GONE true`), 0 console error. Sisa data QA di DB dihapus.
+  (7) `flutter analyze lib` 21 info pra-ada (0 error/warning); build web release
+  md5 `fc7192e2d1e90b60e7ed2a1193ce9724` = live; gh-pages `496ca32`.
+
+
 ## CATATAN
 - Cron `pg_cron`/`pg_net` TIDAK terpasang di DB live -> observasi via EF `doctor_observe`
   (tombol admin / Supabase Dashboard Scheduled Functions).

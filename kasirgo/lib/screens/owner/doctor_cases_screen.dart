@@ -61,6 +61,16 @@ class _DoctorCasesScreenState extends ConsumerState<DoctorCasesScreen> {
   List<Map<String, dynamic>> get _filteredMemories =>
       _memories.where((m) => _inPeriod(m['created_at'])).toList();
 
+  /// Pengetahuan yang dicatat owner sendiri (kind='knowledge').
+  List<Map<String, dynamic>> get _filteredKnowledge => _filteredMemories
+      .where((m) => m['kind']?.toString() == 'knowledge')
+      .toList();
+
+  /// Catatan memori hasil AI (tanpa pengetahuan manual).
+  List<Map<String, dynamic>> get _filteredNotes => _filteredMemories
+      .where((m) => m['kind']?.toString() != 'knowledge')
+      .toList();
+
   @override
   void initState() {
     super.initState();
@@ -110,6 +120,11 @@ class _DoctorCasesScreenState extends ConsumerState<DoctorCasesScreen> {
         elevation: 0,
         scrolledUnderElevation: 0,
         actions: [
+          IconButton(
+            tooltip: 'Tambah Pengetahuan',
+            icon: const Icon(Icons.lightbulb_outline_rounded),
+            onPressed: _openKnowledgeForm,
+          ),
           IconButton(
             tooltip: 'Hapus semua di periode ini',
             icon: const Icon(Icons.delete_sweep_rounded),
@@ -168,6 +183,12 @@ class _DoctorCasesScreenState extends ConsumerState<DoctorCasesScreen> {
                   textAlign: TextAlign.center,
                   style: GoogleFonts.plusJakartaSans(color: AppTheme.textSecondary),
                 ),
+                const SizedBox(height: 12),
+                OutlinedButton.icon(
+                  onPressed: _openKnowledgeForm,
+                  icon: const Icon(Icons.lightbulb_outline_rounded, size: 18),
+                  label: const Text('Tambah Pengetahuan'),
+                ),
               ],
             ),
           ),
@@ -175,13 +196,14 @@ class _DoctorCasesScreenState extends ConsumerState<DoctorCasesScreen> {
       );
     }
     final cases = _filteredCases;
-    final memories = _filteredMemories;
+    final knowledge = _filteredKnowledge;
+    final memories = _filteredNotes;
     return ListView(
       padding: const EdgeInsets.all(16),
       children: [
         _periodSelector(),
         const SizedBox(height: 12),
-        if (cases.isEmpty && memories.isEmpty)
+        if (cases.isEmpty && memories.isEmpty && knowledge.isEmpty)
           _buildCard(
             child: Padding(
               padding: const EdgeInsets.symmetric(vertical: 8),
@@ -196,6 +218,14 @@ class _DoctorCasesScreenState extends ConsumerState<DoctorCasesScreen> {
           _sectionTitle('Kasus Konsultasi'),
           for (final c in cases) ...[
             _buildCase(c),
+            const SizedBox(height: 10),
+          ],
+        ],
+        if (knowledge.isNotEmpty) ...[
+          const SizedBox(height: 8),
+          _sectionTitle('Pengetahuan Saya'),
+          for (final m in knowledge) ...[
+            _buildMemory(m),
             const SizedBox(height: 10),
           ],
         ],
@@ -409,6 +439,149 @@ class _DoctorCasesScreenState extends ConsumerState<DoctorCasesScreen> {
     );
   }
 
+  /// Form tambah pengetahuan manual agar Dokter Bisnis makin pintar.
+  Future<void> _openKnowledgeForm() async {
+    final titleCtrl = TextEditingController();
+    final contentCtrl = TextEditingController();
+    final formKey = GlobalKey<FormState>();
+    final saved = await showModalBottomSheet<bool>(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (ctx) {
+        return Padding(
+          padding: EdgeInsets.only(
+            bottom: MediaQuery.of(ctx).viewInsets.bottom,
+          ),
+          child: Container(
+            decoration: const BoxDecoration(
+              color: AppTheme.surfaceColor,
+              borderRadius: BorderRadius.vertical(
+                top: Radius.circular(AppTheme.radiusLarge),
+              ),
+            ),
+            padding: const EdgeInsets.fromLTRB(18, 12, 18, 18),
+            child: Form(
+              key: formKey,
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Center(
+                    child: Container(
+                      width: 40,
+                      height: 4,
+                      margin: const EdgeInsets.only(bottom: 12),
+                      decoration: BoxDecoration(
+                        color: AppTheme.borderColor,
+                        borderRadius: BorderRadius.circular(2),
+                      ),
+                    ),
+                  ),
+                  Row(
+                    children: [
+                      const Icon(Icons.lightbulb_outline_rounded,
+                          color: AppTheme.primaryColor),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: Text(
+                          'Tambah Pengetahuan',
+                          style: GoogleFonts.plusJakartaSans(
+                              fontSize: 16,
+                              fontWeight: FontWeight.w800,
+                              color: AppTheme.textPrimary),
+                        ),
+                      ),
+                      IconButton(
+                        tooltip: 'Tutup',
+                        onPressed: () => Navigator.pop(ctx, false),
+                        icon: const Icon(Icons.close_rounded, size: 20),
+                      ),
+                    ],
+                  ),
+                  Text(
+                    'Catatan ini akan diingat Dokter Bisnis AI saat konsultasi berikutnya.',
+                    style: GoogleFonts.plusJakartaSans(
+                        fontSize: 12, color: AppTheme.textSecondary),
+                  ),
+                  const SizedBox(height: 14),
+                  TextFormField(
+                    controller: titleCtrl,
+                    textInputAction: TextInputAction.next,
+                    maxLength: 120,
+                    decoration: const InputDecoration(
+                      labelText: 'Judul',
+                      hintText: 'Mis. Pelanggan suka beli gula 1 kg',
+                      counterText: '',
+                    ),
+                    validator: (v) =>
+                        (v ?? '').trim().isEmpty ? 'Judul wajib diisi.' : null,
+                  ),
+                  const SizedBox(height: 12),
+                  TextFormField(
+                    controller: contentCtrl,
+                    minLines: 3,
+                    maxLines: 6,
+                    maxLength: 1000,
+                    decoration: const InputDecoration(
+                      labelText: 'Isi pengetahuan',
+                      hintText:
+                          'Tulis fakta, kebiasaan pelanggan, jam ramai, atau catatan penting lainnya.',
+                    ),
+                    validator: (v) => (v ?? '').trim().length < 3
+                        ? 'Isi minimal 3 karakter.'
+                        : null,
+                  ),
+                  const SizedBox(height: 8),
+                  SizedBox(
+                    width: double.infinity,
+                    height: AppTheme.touchTargetLarge,
+                    child: FilledButton.icon(
+                      onPressed: () {
+                        if (formKey.currentState?.validate() != true) return;
+                        Navigator.pop(ctx, true);
+                      },
+                      icon: const Icon(Icons.check_rounded, size: 18),
+                      label: const Text('Simpan Pengetahuan'),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        );
+      },
+    );
+    if (saved != true) {
+      titleCtrl.dispose();
+      contentCtrl.dispose();
+      return;
+    }
+    final outletId = ref.read(currentUserProvider)?.outletId;
+    if (outletId == null || outletId.isEmpty) {
+      _snack('Outlet tidak ditemukan.');
+      titleCtrl.dispose();
+      contentCtrl.dispose();
+      return;
+    }
+    try {
+      await _service.addKnowledge(
+        outletId,
+        title: titleCtrl.text,
+        content: contentCtrl.text,
+      );
+      if (!mounted) return;
+      _snack('Pengetahuan disimpan. Dokter Bisnis akan mengingatnya.');
+      _load();
+    } catch (e) {
+      if (!mounted) return;
+      _snack(friendlyError(e, fallback: 'Gagal menyimpan. Silakan coba lagi.'));
+    } finally {
+      titleCtrl.dispose();
+      contentCtrl.dispose();
+    }
+  }
+
   Future<void> _confirmDeleteCase(Map<String, dynamic> c) async {
     final ok = await _confirmDialog(
       title: 'Hapus Kasus?',
@@ -587,6 +760,18 @@ class _DoctorCasesScreenState extends ConsumerState<DoctorCasesScreen> {
         return 'Pelajaran';
       case 'result':
         return 'Hasil';
+      case 'knowledge':
+        return 'Pengetahuan';
+      case 'chat_summary':
+        return 'Ringkasan Chat';
+      case 'reprimand':
+        return 'Teguran';
+      case 'market':
+        return 'Info Pasar';
+      case 'scaling':
+        return 'Ekspansi';
+      case 'weekly_report':
+        return 'Laporan Mingguan';
       default:
         return 'Catatan';
     }

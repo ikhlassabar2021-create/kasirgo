@@ -998,7 +998,7 @@ async function execTool(admin: any, outletId: string, name: string, args: Json, 
   }
 }
 
-function buildSystem(cfg: Json, snap: Json, profile: Json | null, openCases: Json[], history: Json[], actionLogs: Json[], internetActive: boolean) {
+function buildSystem(cfg: Json, snap: Json, profile: Json | null, openCases: Json[], history: Json[], actionLogs: Json[], internetActive: boolean, knowledge: Json[] = [], summaries: Json[] = []) {
   const roleMap = cfg.role_outlet ?? {};
   const roleText = roleMap?.[snap.outlet_type] ?? "Fokus pada perbaikan omzet dan arus kas UMKM.";
   const guard = Array.isArray(cfg.guardrails) ? cfg.guardrails.join("\n- ") : "";
@@ -1011,6 +1011,12 @@ function buildSystem(cfg: Json, snap: Json, profile: Json | null, openCases: Jso
   const roiText = actionLogs.length
     ? actionLogs.map((a) => `- ${a.action_date ?? "?"} ${a.action_type ?? "aksi"}${a.channel ? ` (${a.channel})` : ""}: biaya Rp${a.cost ?? 0}, hasil ${a.outcome ?? "belum diukur"} ${a.result ? JSON.stringify(a.result).slice(0, 200) : ""}`).join("\n")
     : "(belum ada aksi promosi dicatat)";
+  const knowledgeText = knowledge.length
+    ? knowledge.map((k) => `- ${k.title}: ${String(k.content ?? "").slice(0, 400)}`).join("\n")
+    : "(belum ada pengetahuan tambahan dari owner)";
+  const summaryText = summaries.length
+    ? summaries.map((m) => `- ${m.created_at ? String(m.created_at).slice(0, 10) : "?"} ${m.title}: ${String(m.content ?? "").slice(0, 300)}`).join("\n")
+    : "(belum ada percakapan sebelumnya)";
   const netLine = internetActive
     ? "- Anda BISA memakai tool fetch_url untuk membaca halaman web bila perlu info pasar/referensi. Jangan mengarang sumber."
     : "- Internet tidak aktif; jangan mengarang data dari luar.";
@@ -1051,6 +1057,10 @@ GUARDRAIL AKSI OTOMATIS: Untuk SEMUA aksi yang mengubah data/harga/promo (flash 
 BENCHMARK HYPERLOCAL: Bila owner bertanya pembanding wilayah, panggil benchmark_hyperlocal. Bila hasil need_verification=true (data tipis), WAJIB tulis "perlu verifikasi" dan jangan jadikan dasar utama.
 MEMORI JANGKA PANJANG:
 ${profile?.memory_digest ?? "(belum ada)"}
+PENGETAHUAN YANG DICATAT OWNER (anggap fakta benar tentang usaha ini, pakai sebagai konteks utama):
+${knowledgeText}
+RINGKASAN PERCAKAPAN SEBELUMNYA (ingat & lanjutkan, jangan mengulang pertanyaan yang sudah dijawab):
+${summaryText}
 KASUS TERBUKA:
 ${openText}
 RIWAYAT AKSI PROMOSI (biaya & hasil):
@@ -1072,7 +1082,7 @@ TAUTAN WEB:
 
 ATURAN OUTPUT:
 - Balas HANYA JSON valid tanpa markdown fence, bentuk:
-  {"reply":"teks singkat ramah gaptek","blocks":[...],"phase":"A|B|C","memory":{"kind":"diagnosis|prescription|lesson","title":"...","content":"..."}}
+  {"reply":"teks singkat ramah gaptek","blocks":[...],"phase":"A|B|C","summary":"ringkasan 1-2 kalimat isi percakapan ini untuk diingat lain hari","memory":{"kind":"diagnosis|prescription|lesson","title":"...","content":"..."}}
 - blocks berisi item {type} salah satu:
   {"type":"text","text":"..."},
   {"type":"card","tone":"info|warning|success|danger","title":"...","body":"..."},
@@ -1407,6 +1417,14 @@ Deno.serve(async (req: Request) => {
     const { data: openCases } = await admin
       .from("doctor_memory").select("kind, title, content, status")
       .eq("outlet_id", outletId).eq("status", "open").limit(10);
+    const { data: knowledgeRows } = await admin
+      .from("doctor_memory").select("title, content, created_at")
+      .eq("outlet_id", outletId).eq("kind", "knowledge")
+      .order("created_at", { ascending: false }).limit(15);
+    const { data: summaryRows } = await admin
+      .from("doctor_memory").select("title, content, created_at, conversation_id")
+      .eq("outlet_id", outletId).eq("kind", "chat_summary")
+      .order("created_at", { ascending: false }).limit(6);
     const { data: actionLogs } = await admin
       .from("doctor_action_logs")
       .select("action_type, channel, cost, description, action_date, result, outcome")
@@ -1455,7 +1473,11 @@ Deno.serve(async (req: Request) => {
     }
 
     const messages: Json[] = [
-      { role: "system", content: buildSystem(globalCfg, snap, profile, openCases ?? [], history ?? [], actionLogs ?? [], internetActive) },
+      { role: "system", content: buildSystem(
+        globalCfg, snap, profile, openCases ?? [], history ?? [], actionLogs ?? [], internetActive,
+        (knowledgeRows ?? []).filter((k: Json) => k?.title),
+        (summaryRows ?? []).filter((m: Json) => m?.title && m?.conversation_id !== conversationId),
+      ) },
       { role: "user", content: (message || "Mulai diagnosa usaha saya.") + attachContext },
     ];
 
@@ -1628,6 +1650,27 @@ Deno.serve(async (req: Request) => {
         kind: String(mem.kind ?? "diagnosis"), title: String(mem.title).slice(0, 200),
         content: String(mem.content ?? replyText).slice(0, 2000), status: "open",
       });
+    }
+    // Ringkasan percakapan: disimpan per conversation agar diingat di sesi lain.
+    const summaryText = String(parsed?.summary ?? "").trim() ||
+      [String(parsed?.memory?.title ?? "").trim(), replyText.slice(0, 240)].filter(Boolean).join(" - ");
+    if (conversationId && summaryText) {
+      const summaryTitle = String(parsed?.memory?.title ?? "").trim() ||
+        (storedMessage ? storedMessage.slice(0, 120) : "Ringkasan konsultasi");
+      const { data: existingSummary } = await admin
+        .from("doctor_memory").select("id")
+        .eq("conversation_id", conversationId).eq("kind", "chat_summary")
+        .maybeSingle();
+      const summaryRow = {
+        outlet_id: outletId, conversation_id: conversationId, kind: "chat_summary",
+        title: summaryTitle.slice(0, 200), content: summaryText.slice(0, 2000),
+        status: "open", origin: "chat", updated_at: new Date().toISOString(),
+      };
+      if (existingSummary?.id) {
+        await admin.from("doctor_memory").update(summaryRow).eq("id", existingSummary.id);
+      } else {
+        await admin.from("doctor_memory").insert(summaryRow);
+      }
     }
     const digestLine = `${new Date().toISOString().slice(0, 10)}: ${String(parsed?.memory?.title ?? replyText).slice(0, 160)}`;
     const newDigest = [profile?.memory_digest, digestLine].filter(Boolean).join("\n").slice(-4000);

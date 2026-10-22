@@ -120,11 +120,27 @@ class BusinessDoctorService {
   Future<List<Map<String, dynamic>>> listMemories(String outletId) async {
     final res = await _client
         .from('doctor_memory')
-        .select('id, kind, title, content, status, lesson, created_at')
+        .select('id, kind, title, content, status, lesson, origin, created_at')
         .eq('outlet_id', outletId)
         .order('created_at', ascending: false)
-        .limit(50);
+        .limit(80);
     return (res as List).cast<Map<String, dynamic>>();
+  }
+
+  /// Tambah pengetahuan manual dari owner (kind='knowledge').
+  Future<void> addKnowledge(
+    String outletId, {
+    required String title,
+    required String content,
+  }) async {
+    await _client.from('doctor_memory').insert({
+      'outlet_id': outletId,
+      'kind': 'knowledge',
+      'title': title.trim(),
+      'content': content.trim(),
+      'status': 'open',
+      'origin': 'manual',
+    });
   }
 
   /// Hapus satu kasus konsultasi (pesan ikut terhapus via ON DELETE CASCADE).
