@@ -458,12 +458,18 @@ class BusinessDoctorService {
         },
       ).timeout(const Duration(seconds: 10));
       final data = res.data is Map ? (res.data as Map) : const {};
-      final fixed = data['text']?.toString().trim() ?? '';
-      if (data['ok'] == true && fixed.isNotEmpty) return fixed;
-      return clean;
+      return resolveFixedTranscript(data, clean);
     } catch (_) {
       return clean;
     }
+  }
+
+  /// Pilih teks hasil perbaikan bila server menyatakan sukses; selain itu
+  /// kembalikan transkrip asli agar suara pengguna tidak pernah hilang.
+  static String resolveFixedTranscript(Map data, String original) {
+    final fixed = data['text']?.toString().trim() ?? '';
+    if (data['ok'] == true && fixed.isNotEmpty) return fixed;
+    return original;
   }
 
   /// Briefing "Apel Pagi" hari ini via Edge Function doctor_briefing.

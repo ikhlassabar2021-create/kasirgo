@@ -97,6 +97,42 @@ Sumber spec: `KASIRGO-WORKFLOW-LENGKAP.md` BAGIAN 13 + BAGIAN 14.2.
   kini memakai `SpeechLexicon.correct`. Semua lokal, gratis, tanpa jaringan.
   Test `test/speech_lexicon_test.dart` 8 kasus PASS.
 
+- ST14-20: jeda napas antar kalimat + pembersihan teks TTS (SELESAI).
+  `supabase/functions/tts_speak/index.ts`: teks dipecah per kalimat
+  (`splitForSpeech`: titik/seru/tanya/elipsis; kalimat >180 karakter dipecah di
+  koma -> titik koma -> em dash -> spasi) sehingga tiap potongan tetap di bawah
+  batas Google (~190 karakter). Balasan EF kini menyertakan
+  `segments:[{audio(base64), pause_ms}]` (jeda 170 ms di ujung kalimat, 120/110 ms
+  di tengah klausa, plus jitter 60-100 ms agar tidak terasa metronom) di samping
+  `audio` gabungan (kontrak lama tetap jalan). `voice_service.dart`:
+  `_SpeechSegment` + `_parseSegments` + `_playSegments` memutar tiap segmen
+  berurutan via `BytesSource` lalu menunggu jeda; jeda diskalakan per persona
+  (bos tegas 1.18x, analis taktis 1.08x, partner santai 0.95x, maks 900 ms);
+  `_speakGen` mencegah loop segmen lama lanjut setelah `stop()`. `_naturalize`
+  diperluas: buang markdown (`* _ ` # >`), tautan `[teks](url)` -> teks, buang
+  URL, "25rb"/"1,5jt" -> "25 ribu"/"1,5 juta", `±` -> "sekitar", `->` -> "menjadi",
+  rapikan spasi sebelum tanda baca. Hasil ukur E2E live: 2 segmen, durasi audio
+  9,53 s + jeda 0,34 s, pemutaran nyata 10,20 s (rasio 1,01 = semua kalimat
+  terputar penuh), tombol berhenti memotong suara dalam 308 ms, 0 console error.
+- ST14-21: perbaikan transkrip STT via LLM + tampilkan teks terkoreksi (SELESAI).
+  Edge Function BARU `stt_fix` (JWT wajib, `MAX_INPUT=800`, timeout LLM 12 s,
+  temperature 0.1, max_tokens 400): meminta model membakukan transkrip Indonesia
+  (ejaan, tanda baca, istilah usaha, nama produk dari `vocabulary` <=40) tanpa
+  mengubah maksud; provider diambil dari `outlet_ai_configs` lalu
+  `platform_configs.business_doctor.provider_default`; guard `empty_result` dan
+  `unsafe_result` (panjang hasil <2 karakter atau >2,2x input) -> kembalikan teks
+  asli. `business_doctor_service.dart`: `fixTranscript()` (timeout klien 10 s,
+  fallback teks asli saat gagal) + helper `resolveFixedTranscript` (dipisah agar
+  bisa diuji). `business_doctor_screen.dart`: hasil `_fixSpeechCloud` ditulis ke
+  kolom input (kursor di akhir) sebelum dikirim, jadi owner melihat teks yang
+  benar-benar dipakai dan bisa mengoreksi ulang. Uji live dengan JWT owner:
+  "omset nya turun gak sih bos minggu ini gimana ya" -> "Omzetnya turun gak sih,
+  bos? Minggu ini gimana ya?"; "stok gula paser tinggal berapa" -> "Stok Gula
+  Pasir tinggal berapa"; "kasir go kenapa laporan kosong" -> "KasirGo kenapa
+  laporan kosong"; kalimat yang sudah benar tidak diubah. Test
+  `test/stt_fix_transcript_test.dart` 5 kasus PASS (sukses, spasi, ok=false,
+  teks kosong, respons tanpa `text`).
+
 ## CATATAN
 - Cron `pg_cron`/`pg_net` TIDAK terpasang di DB live -> observasi via EF `doctor_observe`
   (tombol admin / Supabase Dashboard Scheduled Functions).
