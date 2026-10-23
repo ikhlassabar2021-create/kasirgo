@@ -9,8 +9,21 @@
    `flutter build apk --release --split-per-abi --obfuscate --split-debug-info=build/debug-info`
 3. Unduh artifact `apk-release` (3 APK: arm64-v8a, armeabi-v7a, x86_64 +
    `checksums.txt` SHA-256 + simbol debug) dan `aab-release` (Play Store).
-4. Distribusikan APK `arm64-v8a` ke mayoritas HP. Ukuran realistis ~58 MB
-   (fitur lengkap: ML Kit OCR/face/barcode). Target <10 MB tidak mungkin.
+4. Distribusikan APK `arm64-v8a` ke mayoritas HP. Ukuran unduhan ~29 MB
+   (fitur lengkap: ML Kit OCR/face/barcode).
+
+### Ukuran APK (< 50 MB)
+`android/app/build.gradle.kts` memakai `packaging { jniLibs { useLegacyPackaging = true } }`
+sehingga `lib*.so` disimpan TERKOMPRES di dalam APK. Hasil (v1.0.3):
+
+| ABI | Sebelum | Sesudah |
+|---|---|---|
+| arm64-v8a | 58,4 MB | 29,9 MB |
+| armeabi-v7a | 47,4 MB | 27,9 MB |
+| x86_64 | 60,1 MB | 30,9 MB |
+
+Android mengekstrak library saat instalasi (butuh ~60 MB ruang kosong saat
+install, setelah itu kembali). Tidak ada fitur yang dipangkas.
 
 ### Via mesin lokal
 ```bash
@@ -66,6 +79,19 @@ flutter build apk --release --split-per-abi
 
 CATATAN: bila `key.properties` tidak ada, build otomatis memakai debug key
 (hanya untuk uji lokal). APK debug-signed TIDAK boleh didistribusikan.
+
+## Rilis 1.0.3 (23 Okt 2026) - APK < 50 MB
+
+- Versi `1.0.3+4`; APK dikompres (`useLegacyPackaging`) -> arm64 29,9 MB,
+  armeabi-v7a 27,9 MB, x86_64 30,9 MB. Ditandatangani keystore rilis (v1+v2+v3).
+- Unduhan publik (GitHub Pages, tanpa login):
+  - https://ikhlassabar2021-create.github.io/kasirgo/apk/kasirgo-1.0.3-arm64-v8a.apk
+  - https://ikhlassabar2021-create.github.io/kasirgo/apk/kasirgo-1.0.3-armeabi-v7a.apk
+- Build: `workflow_dispatch` (`debug_sign_fallback=true`) -> artifact `apk-release`
+  -> `zipalign -p -f 4` + `apksigner sign` lokal dengan `kasirgo-upload.p12`.
+- CATATAN: token GitHub App di sandbox tidak punya izin `contents:write` untuk
+  membuat Release/upload aset (401/403), sehingga APK dipublikasikan lewat
+  branch `gh-pages` folder `apk/`.
 
 ## Rilis 1.0.2 (18 Okt 2026) - release-signed
 
