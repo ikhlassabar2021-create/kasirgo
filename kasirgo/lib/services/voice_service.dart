@@ -216,7 +216,7 @@ class VoiceService {
   static const _defaultPersona = 'bos_tegas';
 
   final FlutterTts _tts = FlutterTts();
-  final AudioPlayer _player = AudioPlayer();
+  AudioPlayer _player = AudioPlayer();
 
   /// Suara cloud (Edge Function `tts_speak` -> Google TTS). Jauh lebih luwes
   /// daripada TTS bawaan HP/browser. Dimatikan sementara setelah 3 kegagalan
@@ -258,6 +258,20 @@ class VoiceService {
       (personaProfiles[_persona] ?? personaProfiles[_defaultPersona]!).sample;
 
   SupabaseClient get _client => Supabase.instance.client;
+
+  /// Pemutar baru untuk setiap pemutaran.
+  ///
+  /// `audioplayers` di Android kadang menolak diam-diam saat pemutar yang
+  /// sama dipakai untuk audio kedua (mis. setelah mikrofon dipakai). Dengan
+  /// membuat pemutar baru tiap kali, jawaban kedua tetap terdengar.
+  AudioPlayer _resetPlayer() {
+    final old = _player;
+    final next = AudioPlayer();
+    _player = next;
+    if (identical(old, next)) return next;
+    unawaited(old.dispose().catchError((_) {}));
+    return next;
+  }
 
   /// Siapkan mesin TTS + muat config (cache 1 jam, fallback default).
   Future<void> init({bool forceRefresh = false, String? outletId}) async {
@@ -786,28 +800,54 @@ class VoiceService {
   /// Ucapkan teks bebas (dipakai briefing/ucapan lain).
   /// [awaitCompletion] true -> Future selesai setelah TTS selesai bicara
   /// (dipakai voice loop agar mikrofon baru aktif setelah suara habis).
-  Future<void> speak(String text, {bool awaitCompletion = false}) async {
-    if (!available) return;
+  /// Mengembalikan true bila suara benar-benar diputar/dibacakan.
+  Future<bool> speak(String text, {bool awaitCompletion = false}) async {
+    if (!available) return false;
     final clean = _naturalize(text);
-    if (clean.isEmpty) return;
+    if (clean.isEmpty) return false;
     await init();
-    if (!available) return;
-    if (await _speakCloud(clean, awaitCompletion: awaitCompletion)) return;
+    if (!available) return false;
+    if (await _speakCloud(clean, awaitCompletion: awaitCompletion)) return true;
     try {
       await _tts.stop();
       await _applyPersona(_persona);
+      await _ensureIndonesianLanguage();
       if (!awaitCompletion) {
         await _tts.speak(clean);
-        return;
+        return true;
       }
       final done = Completer<void>();
       _speakDone = done;
       await _tts.speak(clean);
-      await done.future.timeout(const Duration(seconds: 60), onTimeout: () {});
+      var completed = true;
+      await done.future.timeout(
+        const Duration(seconds: 60),
+        onTimeout: () {
+          completed = false;
+        },
+      );
       if (identical(_speakDone, done)) _speakDone = null;
+      return completed;
     } catch (e) {
       debugPrint('VoiceService.speak error: $e');
+      return false;
     }
+  }
+
+  /// Pastikan mesin TTS perangkat memakai bahasa Indonesia.
+  ///
+  /// Sebagian HP hanya punya paket suara `id` (bukan `id-ID`). Tanpa
+  /// pemeriksaan ini `speak()` bisa diam saja pada jawaban berikutnya.
+  Future<void> _ensureIndonesianLanguage() async {
+    try {
+      final target = _voiceLocale ?? 'id-ID';
+      final ok = await _tts.isLanguageAvailable(target);
+      if (ok == true || ok == 1) return;
+      final fallbackOk = await _tts.isLanguageAvailable('id');
+      if (fallbackOk == true || fallbackOk == 1) {
+        await _tts.setLanguage('id');
+      }
+    } catch (_) {}
   }
 
   /// Suara manusia (neural) dari Edge Function `tts_speak`.
@@ -823,47 +863,41 @@ class VoiceService {
     bool awaitCompletion = false,
   }) async {
     if (!_cloudOn) return false;
-    try {
-      final res = await _client.functions.invoke(
-        'tts_speak',
-        body: {'text': text, 'persona': _persona},
-      );
-      final data = res.data;
-      if (data is! Map) {
-        _noteCloudFail();
-        return false;
-      }
+    final fetched = await _fetchCloudAudio(text);
+    if (fetched == null) {
+      _noteCloudFail();
+      return false;
+    }
+    _cloudFail = 0;
+    final data = fetched.$1;
+    final segments = fetched.$2;
 
-      final segments = _parseSegments(data);
-      if (segments.isEmpty) {
-        _noteCloudFail();
-        return false;
-      }
-      _cloudFail = 0;
+    final profile =
+        personaProfiles[_persona] ?? personaProfiles[_defaultPersona]!;
+    final rate = (data['playback_rate'] as num?)?.toDouble() ??
+        profile.cloudRate;
 
-      final profile =
-          personaProfiles[_persona] ?? personaProfiles[_defaultPersona]!;
-      final rate = (data['playback_rate'] as num?)?.toDouble() ??
-          profile.cloudRate;
+    final gen = ++_speakGen;
+    final total = segments.fold<int>(0, (a, s) => a + s.bytes.length);
+    final budget = 8000 + total ~/ 12;
 
-      await _player.stop();
+    for (var attempt = 0; attempt < 2; attempt++) {
+      if (gen != _speakGen) return true;
+      final player = _resetPlayer();
       try {
-        await _player.setPlaybackRate(rate.clamp(0.5, 1.5));
+        await player.setReleaseMode(ReleaseMode.stop);
+        await player.setPlaybackRate(rate.clamp(0.5, 1.5));
       } catch (_) {}
 
-      final gen = ++_speakGen;
-      final total = segments.fold<int>(0, (a, s) => a + s.bytes.length);
-      final budget = 8000 + total ~/ 12;
-
       if (!awaitCompletion) {
-        unawaited(_playSegments(segments, gen));
+        unawaited(_playSegments(segments, gen, player));
         return true;
       }
 
       var played = true;
       final done = Completer<void>();
       _speakDone = done;
-      unawaited(_playSegments(segments, gen).then((ok) {
+      unawaited(_playSegments(segments, gen, player).then((ok) {
         played = ok;
         if (!done.isCompleted) done.complete();
       }));
@@ -872,35 +906,84 @@ class VoiceService {
         onTimeout: () {},
       );
       if (identical(_speakDone, done)) _speakDone = null;
-      return played;
-    } catch (e) {
-      _noteCloudFail();
-      debugPrint('VoiceService._speakCloud error: $e');
-      return false;
+      if (played || gen != _speakGen) return played;
+      debugPrint('VoiceService: pemutaran cloud gagal, coba ulang sekali.');
     }
+    return false;
+  }
+
+  /// Ambil audio cloud dari Edge Function `tts_speak`.
+  ///
+  /// Endpoint suara neural bersifat best-effort, jadi satu kegagalan
+  /// (mis. koneksi WebSocket putus) dicoba ulang sekali sebelum klien
+  /// jatuh ke TTS perangkat. Tanpa ini jawaban kedua bisa diam saja.
+  Future<(Map, List<_SpeechSegment>)?> _fetchCloudAudio(String text) async {
+    for (var attempt = 0; attempt < 2; attempt++) {
+      try {
+        final res = await _client.functions.invoke(
+          'tts_speak',
+          body: {'text': text, 'persona': _persona},
+        );
+        final data = res.data;
+        if (data is Map) {
+          final segments = _parseSegments(data);
+          if (segments.isNotEmpty) return (data, segments);
+        }
+        debugPrint('VoiceService: respons tts_speak kosong.');
+      } catch (e) {
+        debugPrint('VoiceService._speakCloud error: $e');
+      }
+      if (attempt == 0) {
+        await Future<void>.delayed(const Duration(milliseconds: 500));
+      }
+    }
+    return null;
   }
 
   /// Mainkan potongan audio berurutan dengan jeda alami antar kalimat.
   /// Mengembalikan false bila audio gagal diputar sehingga pemanggil bisa
   /// jatuh ke TTS perangkat.
-  Future<bool> _playSegments(List<_SpeechSegment> segments, int gen) async {
+  Future<bool> _playSegments(
+    List<_SpeechSegment> segments,
+    int gen,
+    AudioPlayer player,
+  ) async {
     for (var i = 0; i < segments.length; i++) {
-      if (gen != _speakGen) return true;
+      if (gen != _speakGen || !identical(player, _player)) return true;
       final seg = segments[i];
+      final done = player.onPlayerComplete.first;
+      final started = Completer<bool>();
+      final sub = player.onPlayerStateChanged.listen((state) {
+        if ((state == PlayerState.playing ||
+                state == PlayerState.completed) &&
+            !started.isCompleted) {
+          started.complete(true);
+        }
+      });
       try {
-        final done = _player.onPlayerComplete.first;
-        await _player.play(BytesSource(seg.bytes));
-        await done.timeout(
-          Duration(milliseconds: 6000 + seg.bytes.length ~/ 12),
-          onTimeout: () {},
-        );
+        await player.play(BytesSource(seg.bytes));
       } catch (_) {
+        await sub.cancel();
         // play() ditolak saat audio lama dihentikan (AbortError). Bila
         // generasi sudah berganti, ini bukan kegagalan suara baru.
         if (gen != _speakGen) return true;
         return false;
       }
-      if (gen != _speakGen) return true;
+      final ok = await started.future.timeout(
+        const Duration(seconds: 3),
+        onTimeout: () => false,
+      );
+      await sub.cancel();
+      if (!ok) {
+        if (gen != _speakGen) return true;
+        debugPrint('VoiceService: audio cloud tidak mulai diputar.');
+        return false;
+      }
+      await done.timeout(
+        Duration(milliseconds: 6000 + seg.bytes.length ~/ 12),
+        onTimeout: () {},
+      ).catchError((_) {});
+      if (gen != _speakGen || !identical(player, _player)) return true;
       if (i < segments.length - 1 && seg.pauseMs > 0) {
         await Future<void>.delayed(Duration(milliseconds: seg.pauseMs));
       }

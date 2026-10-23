@@ -1190,8 +1190,7 @@ class _BusinessDoctorScreenState extends ConsumerState<BusinessDoctorScreen> {
     if (!VoiceService().available) return false;
     setState(() => _speaking = true);
     try {
-      await VoiceService().speak(short, awaitCompletion: true);
-      return true;
+      return await VoiceService().speak(short, awaitCompletion: true);
     } finally {
       if (mounted) setState(() => _speaking = false);
     }
