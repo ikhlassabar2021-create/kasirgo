@@ -244,6 +244,26 @@ Sumber spec: `KASIRGO-WORKFLOW-LENGKAP.md` BAGIAN 13 + BAGIAN 14.2.
   (7) `flutter analyze lib` 21 info pra-ada (0 error/warning); build web release
   md5 `9017d5da7e97cebb9f1c421da14078b0` = live; gh-pages `8bf3d94`.
 
+## ST14-26: Suara Balasan Dokter Selalu Aktif (23 Okt 2026) - SELESAI
+- Keluhan: jawaban Dokter Bisnis hanya dibacakan bila input berasal dari suara
+  (STT / catatan suara), tidak saat pengguna mengetik.
+- AKAR: gate di `_send` hanya `if ((spoken || _voiceNoteMode) && reply.isNotEmpty)`
+  sehingga balasan untuk input teks tidak pernah memanggil `_speakReply`.
+- FIX `business_doctor_screen.dart`: `_speakReply(reply)` kini hanya bergantung pada
+  `_audioAktif`; pemanggilan di akhir `_send` menjadi
+  `if (reply.trim().isNotEmpty && (_audioAktif || _voiceNoteMode))`, lalu loop suara
+  hanya dilanjutkan bila `played && (spoken || _voiceNoteMode)`.
+- FIX `voice_service.dart`: `_speakCloud` melaporkan hasil nyata `_playSegments`
+  (`Future<bool>`), `AbortError` dari generasi lama diabaikan (bukan kegagalan),
+  sehingga fallback TTS perangkat tetap jalan bila cloud gagal.
+- Verifikasi: probe Playwright lokal (build baru) -> input teks menghasilkan
+  fetch `tts_speak` (+21,7 dtk) + 10 `media-play` sesudah balasan; `ERRORS 0`.
+  `flutter test test/speech_text_utils_test.dart test/stt_fix_transcript_test.dart`
+  15/15 lulus; `flutter analyze` 2 file bersih; build web release sukses dan live
+  (md5 `df913eb2b42cf3d543b5ef03c1ba2f86` = build lokal, gh-pages `518ca44`).
+- Rilis APK `1.0.4+5`: GitHub Release `v1.0.4-apk-20261023` (3 APK + AAB +
+  `SHA256SUMS.txt`, signed) + mirror `/apk/` di GitHub Pages.
+
 ## CATATAN
 - Cron `pg_cron`/`pg_net` TIDAK terpasang di DB live -> observasi via EF `doctor_observe`
   (tombol admin / Supabase Dashboard Scheduled Functions).
