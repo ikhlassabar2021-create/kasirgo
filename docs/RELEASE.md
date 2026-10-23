@@ -80,6 +80,23 @@ flutter build apk --release --split-per-abi
 CATATAN: bila `key.properties` tidak ada, build otomatis memakai debug key
 (hanya untuk uji lokal). APK debug-signed TIDAK boleh didistribusikan.
 
+## Rilis 1.0.4 (23 Okt 2026) - fix suara balasan Dokter Bisnis
+
+- Versi `1.0.4+5`. Perubahan: jawaban Dokter Bisnis AI selalu dibacakan saat
+  Suara Interaktif aktif (sebelumnya hanya bila input berasal dari suara).
+- APK terkompresi (`useLegacyPackaging`) -> arm64 29 MB, armeabi-v7a 27 MB,
+  x86_64 30 MB. Ditandatangani keystore rilis (v1+v2+v3).
+- GitHub Release:
+  https://github.com/ikhlassabar2021-create/kasirgo/releases/tag/v1.0.4-apk-20261023
+  (3 APK + AAB + `SHA256SUMS.txt`)
+- Unduhan langsung (GitHub Pages, tanpa login):
+  - https://ikhlassabar2021-create.github.io/kasirgo/apk/kasirgo-1.0.4-arm64-v8a.apk
+  - https://ikhlassabar2021-create.github.io/kasirgo/apk/kasirgo-1.0.4-armeabi-v7a.apk
+  - https://ikhlassabar2021-create.github.io/kasirgo/apk/kasirgo-1.0.4-x86_64.apk
+- Build: `workflow_dispatch` (`debug_sign_fallback=true`) -> artifact `apk-release`
+  -> `zipalign -p -f 4` + `apksigner sign` lokal dengan `kasirgo-upload.p12`;
+  AAB ditandatangani `jarsigner` setelah `META-INF/*` lama dibuang.
+
 ## Rilis 1.0.3 (23 Okt 2026) - APK < 50 MB
 
 - Versi `1.0.3+4`; APK dikompres (`useLegacyPackaging`) -> arm64 29,9 MB,
