@@ -84,14 +84,16 @@ CATATAN: bila `key.properties` tidak ada, build otomatis memakai debug key
 
 - Versi `1.0.3+4`; APK dikompres (`useLegacyPackaging`) -> arm64 29,9 MB,
   armeabi-v7a 27,9 MB, x86_64 30,9 MB. Ditandatangani keystore rilis (v1+v2+v3).
-- Unduhan publik (GitHub Pages, tanpa login):
+- GitHub Release:
+  https://github.com/ikhlassabar2021-create/kasirgo/releases/tag/v1.0.3-apk-20261023
+  (3 APK + `SHA256SUMS.txt`, checksum terverifikasi ulang setelah unduh)
+- Unduhan langsung (GitHub Pages, tanpa login):
   - https://ikhlassabar2021-create.github.io/kasirgo/apk/kasirgo-1.0.3-arm64-v8a.apk
   - https://ikhlassabar2021-create.github.io/kasirgo/apk/kasirgo-1.0.3-armeabi-v7a.apk
 - Build: `workflow_dispatch` (`debug_sign_fallback=true`) -> artifact `apk-release`
   -> `zipalign -p -f 4` + `apksigner sign` lokal dengan `kasirgo-upload.p12`.
-- CATATAN: token GitHub App di sandbox tidak punya izin `contents:write` untuk
-  membuat Release/upload aset (401/403), sehingga APK dipublikasikan lewat
-  branch `gh-pages` folder `apk/`.
+- CATATAN API: pembuatan Release via REST harus memakai header
+  `Authorization: token <PAT>` (skema `Bearer` ditolak 401 untuk token helper git).
 
 ## Rilis 1.0.2 (18 Okt 2026) - release-signed
 
