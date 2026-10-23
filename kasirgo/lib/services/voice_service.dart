@@ -860,9 +860,11 @@ class VoiceService {
         return true;
       }
 
+      var played = true;
       final done = Completer<void>();
       _speakDone = done;
-      unawaited(_playSegments(segments, gen).then((_) {
+      unawaited(_playSegments(segments, gen).then((ok) {
+        played = ok;
         if (!done.isCompleted) done.complete();
       }));
       await done.future.timeout(
@@ -870,7 +872,7 @@ class VoiceService {
         onTimeout: () {},
       );
       if (identical(_speakDone, done)) _speakDone = null;
-      return true;
+      return played;
     } catch (e) {
       _noteCloudFail();
       debugPrint('VoiceService._speakCloud error: $e');
@@ -879,9 +881,11 @@ class VoiceService {
   }
 
   /// Mainkan potongan audio berurutan dengan jeda alami antar kalimat.
-  Future<void> _playSegments(List<_SpeechSegment> segments, int gen) async {
+  /// Mengembalikan false bila audio gagal diputar sehingga pemanggil bisa
+  /// jatuh ke TTS perangkat.
+  Future<bool> _playSegments(List<_SpeechSegment> segments, int gen) async {
     for (var i = 0; i < segments.length; i++) {
-      if (gen != _speakGen) return;
+      if (gen != _speakGen) return true;
       final seg = segments[i];
       try {
         final done = _player.onPlayerComplete.first;
@@ -891,13 +895,17 @@ class VoiceService {
           onTimeout: () {},
         );
       } catch (_) {
-        return;
+        // play() ditolak saat audio lama dihentikan (AbortError). Bila
+        // generasi sudah berganti, ini bukan kegagalan suara baru.
+        if (gen != _speakGen) return true;
+        return false;
       }
-      if (gen != _speakGen) return;
+      if (gen != _speakGen) return true;
       if (i < segments.length - 1 && seg.pauseMs > 0) {
         await Future<void>.delayed(Duration(milliseconds: seg.pauseMs));
       }
     }
+    return true;
   }
 
   /// Ambil daftar potongan audio dari respons EF. Bila server versi lama

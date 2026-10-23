@@ -1177,11 +1177,10 @@ class _BusinessDoctorScreenState extends ConsumerState<BusinessDoctorScreen> {
     });
   }
 
-  /// Ucapkan jawaban Dokter bila pemilik memakai input suara.
+  /// Ucapkan jawaban Dokter selama "Suara Interaktif" aktif.
   /// Mengembalikan true bila suara benar-benar diputar.
-  Future<bool> _speakReply(String reply, {bool force = false}) async {
-    if (!force && (!_audioAktif || !_audioLoop)) return false;
-    if (force && !_audioAktif) return false;
+  Future<bool> _speakReply(String reply) async {
+    if (!_audioAktif) return false;
     final clean = reply
         .replaceAll(RegExp(r'[*_`#>|]'), ' ')
         .replaceAll(RegExp(r'\s+'), ' ')
@@ -1376,9 +1375,9 @@ class _BusinessDoctorScreenState extends ConsumerState<BusinessDoctorScreen> {
         _loadDailyDose();
         _loadProfile();
       }
-      if ((spoken || _voiceNoteMode) && reply.trim().isNotEmpty) {
-        final played = await _speakReply(reply, force: _voiceNoteMode);
-        if (played) await _resumeVoiceLoop();
+      if (reply.trim().isNotEmpty && (_audioAktif || _voiceNoteMode)) {
+        final played = await _speakReply(reply);
+        if (played && (spoken || _voiceNoteMode)) await _resumeVoiceLoop();
       }
     } catch (e) {
       if (!mounted) return;
