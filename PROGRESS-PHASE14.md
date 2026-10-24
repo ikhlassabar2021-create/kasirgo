@@ -300,6 +300,44 @@ Sumber spec: `KASIRGO-WORKFLOW-LENGKAP.md` BAGIAN 13 + BAGIAN 14.2.
   dikirim saat `_loading` masih ditahan (belum dikirim) - kandidat perbaikan
   berikutnya (antrean pesan / indikator progres).
 
+## ST14-28: Antrean Pesan + Semua Balasan Dibacakan (24 Okt 2026) - SELESAI
+
+- LAPORAN: "hanya balasan pertama yang dibacakan" ternyata BUKAN lagi soal
+  pemutaran (ST14-27 sudah benar), melainkan isi balasan EF.
+- AKAR MASALAH: override AI per outlet `outlet_ai_configs` untuk Toko Test
+  menyimpan `model = deepseek-v4.1-flash` (nama usang, tidak ada di daftar 19
+  model gateway `tiprouter.my.id`) dan `max_tokens = 80000000`. Edge Function
+  memakai override itu -> provider menolak -> EF membalas kartu
+  "Otak penuh belum aktif" (`Provider AI gagal: model is not allowed for this
+  API key`) dengan `reply` KOSONG, sehingga `_speakReply` tidak pernah dipanggil.
+  `platform_configs.business_doctor` juga masih memakai nama model usang yang
+  sama (sudah diperbaiki lebih dulu).
+- PERBAIKAN DATA (tanpa ubah kode): `outlet_ai_configs.model ->
+  deepseek-v4.1-flash-1017`, `max_tokens -> 4000`.
+  Verifikasi EF: `fallback=false`, `reply` 867 karakter, blok
+  `card,text,gauge,checklist,dose,card,choices,action`.
+- FIX `business_doctor_screen.dart`:
+  - `_queuedMessages` + `_drainQueuedMessages()`: pesan yang dikirim saat
+    Dokter masih menjawab tidak lagi dibuang, tapi diantrekan dan dikirim
+    otomatis setelah jawaban sebelumnya selesai dibacakan.
+  - Tombol kirim & `onSubmitted` tidak lagi dinonaktifkan saat `_loading`;
+    mikrofon memberi pesan "Dokter masih menjawab..." alih-alih diam.
+  - `_loadingSeconds` + `_loadingTicker`: gelembung loading menampilkan
+    "... N dtk" setelah 5 detik (bukti proses hidup pada jawaban 40-60 dtk).
+  - `_speakableFromBlocks(blocks)`: balasan tanpa field `reply` tetap
+    dibacakan dari isi blok (text/card/gauge/checklist/prescription/
+    pending_action/dose). Dipakai di ekor `_send`:
+    `reply` kosong -> rangkuman blok -> `_speakReply`.
+- Verifikasi: probe `e2e/_queue_probe.mjs` -> M1 dikirim, M2 diketik saat
+  loading DIIANTREKAN (snack muncul), chat kedua terjadi pada detik ke-98
+  (setelah suara M1 selesai), dua balasan dibacakan
+  (`DOC speak done ok=true`, `VS cloud played=true`), `ERRORS 0`.
+  `flutter analyze` 2 file bersih.
+- Rilis `1.0.6+7` (versionCode 2007): build web release + deploy gh-pages
+  `cba4d2b` (md5 `007545e7a892fbebc116eca0585bf538`), CI APK
+  (`workflow_dispatch` `debug_sign_fallback=true`), Release
+  `v1.0.6-apk-20261024` + mirror `/apk/`.
+
 ## CATATAN
 - Cron `pg_cron`/`pg_net` TIDAK terpasang di DB live -> observasi via EF `doctor_observe`
   (tombol admin / Supabase Dashboard Scheduled Functions).

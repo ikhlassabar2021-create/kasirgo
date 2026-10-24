@@ -80,6 +80,38 @@ flutter build apk --release --split-per-abi
 CATATAN: bila `key.properties` tidak ada, build otomatis memakai debug key
 (hanya untuk uji lokal). APK debug-signed TIDAK boleh didistribusikan.
 
+## Rilis 1.0.6 (24 Okt 2026) - antrean pesan + semua balasan Dokter dibacakan
+
+- Versi `1.0.6+7` (versionCode 2007).
+- Perubahan `business_doctor_screen.dart`:
+  - Pesan yang dikirim saat Dokter masih menjawab kini DIANTREKAN
+    (`_queuedMessages`) dan dikirim otomatis setelah jawaban sebelumnya
+    selesai dibacakan. Dulu pesan seperti itu dibuang diam-diam.
+  - Tombol kirim dan tombol enter tetap aktif selama loading; mikrofon
+    memberi pesan jelas. Gelembung loading menampilkan hitungan detik
+    setelah 5 detik supaya owner tahu proses masih berjalan.
+  - Balasan yang hanya berisi blok (kartu/daftar/alat ukur) kini tetap
+    dibacakan lewat `_speakableFromBlocks` - sebelumnya dilewati karena
+    field `reply` kosong.
+- AKAR MASALAH "hanya balasan pertama yang dibacakan": override AI per outlet
+  (`outlet_ai_configs`) menyimpan nama model usang `deepseek-v4.1-flash`
+  yang tidak ada di daftar model gateway, sehingga Edge Function membalas
+  kartu "Otak penuh belum aktif" (`reply` kosong). Config DB diperbaiki:
+  `model -> deepseek-v4.1-flash-1017`, `max_tokens -> 4000`
+  (sebelumnya 80000000). Tidak ada perubahan kode untuk ini.
+- Bukti uji: `business_doctor_chat` -> `fallback=false`, `reply` 867
+  karakter. Probe Playwright (`e2e/_queue_probe.mjs`): M1 diproses, M2
+  diantrekan lalu dikirim otomatis (chat kedua pada detik ke-98), dua
+  balasan dibacakan (`DOC speak done ok=true`, `VS cloud played=true`),
+  `ERRORS 0`.
+- GitHub Release:
+  https://github.com/ikhlassabar2021-create/kasirgo/releases/tag/v1.0.6-apk-20261024
+  (3 APK + AAB + `SHA256SUMS.txt`)
+- Unduhan langsung (GitHub Pages, tanpa login):
+  - https://ikhlassabar2021-create.github.io/kasirgo/apk/kasirgo-1.0.6-arm64-v8a.apk
+  - https://ikhlassabar2021-create.github.io/kasirgo/apk/kasirgo-1.0.6-armeabi-v7a.apk
+  - https://ikhlassabar2021-create.github.io/kasirgo/apk/kasirgo-1.0.6-x86_64.apk
+
 ## Rilis 1.0.5 (24 Okt 2026) - jawaban kedua Dokter tetap dibacakan
 
 - Versi `1.0.5+6` (versionCode 2006). Perubahan ada di `voice_service.dart`:
