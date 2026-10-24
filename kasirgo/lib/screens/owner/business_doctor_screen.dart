@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -162,6 +164,13 @@ class _BusinessDoctorScreenState extends ConsumerState<BusinessDoctorScreen> {
   bool _escalationReported = false;
   bool _bandelSpoken = false;
   String? _bossEscalation;
+
+  /// Pesan yang dikirim saat Dokter masih menjawab. Dulu pesan seperti ini
+  /// dibuang diam-diam; sekarang diantrekan dan dikirim setelah balasan
+  /// sebelumnya selesai supaya urutan percakapan tetap benar.
+  final List<String> _queuedMessages = <String>[];
+  int _loadingSeconds = 0;
+  Timer? _loadingTicker;
 
   /// Panel fitur yang sedang dibuka dari menu. `null` = layar chat.
   String? _pane;
@@ -1007,6 +1016,7 @@ class _BusinessDoctorScreenState extends ConsumerState<BusinessDoctorScreen> {
 
   @override
   void dispose() {
+    _loadingTicker?.cancel();
     _voiceLoopPaused = true;
     _speech.cancel();
     VoiceService().stop();
@@ -1016,7 +1026,10 @@ class _BusinessDoctorScreenState extends ConsumerState<BusinessDoctorScreen> {
   }
 
   Future<void> _toggleMic() async {
-    if (_loading) return;
+    if (_loading) {
+      _snack('Dokter masih menjawab. Tunggu sebentar ya, Bos.');
+      return;
+    }
     if (_speaking) {
       _voiceLoopPaused = true;
       await VoiceService().stop();
@@ -1196,6 +1209,76 @@ class _BusinessDoctorScreenState extends ConsumerState<BusinessDoctorScreen> {
     }
   }
 
+  /// Susun kalimat yang bisa dibacakan dari blok balasan.
+  ///
+  /// Kadang Dokter menjawab hanya dengan kartu/daftar/alat ukur tanpa field
+  /// `reply`. Dulu jawaban seperti itu tidak dibacakan sama sekali; sekarang
+  /// isi blok diringkas agar tetap terdengar oleh owner.
+  String _speakableFromBlocks(List blocks) {
+    final parts = <String>[];
+    void add(String? val) {
+      final t = (val ?? '').trim();
+      if (t.isNotEmpty) parts.add(t);
+    }
+
+    for (final raw in blocks) {
+      if (raw is! Map) continue;
+      switch (raw['type']?.toString() ?? '') {
+        case 'text':
+          add(raw['text']?.toString());
+          break;
+        case 'card':
+          add(raw['title']?.toString());
+          add(raw['body']?.toString());
+          break;
+        case 'gauge':
+          final label = (raw['label'] ?? '').toString().trim();
+          final value = (raw['value'] ?? '').toString().trim();
+          if (label.isNotEmpty) add(value.isEmpty ? label : '$label $value');
+          add(raw['hint']?.toString());
+          break;
+        case 'checklist':
+          add(raw['title']?.toString());
+          final items = raw['items'];
+          if (items is List) {
+            var n = 0;
+            for (final item in items) {
+              final txt = item is Map
+                  ? (item['text'] ?? '').toString()
+                  : item.toString();
+              if (txt.trim().isEmpty) continue;
+              n++;
+              add('$n. ${txt.trim()}');
+            }
+          }
+          break;
+        case 'prescription':
+          add(raw['verdict']?.toString());
+          final steps = raw['steps'];
+          if (steps is List) {
+            var n = 0;
+            for (final step in steps) {
+              final txt = step is Map
+                  ? (step['text'] ?? step['title'] ?? '').toString()
+                  : step.toString();
+              if (txt.trim().isEmpty) continue;
+              n++;
+              add('Langkah $n. ${txt.trim()}');
+            }
+          }
+          break;
+        case 'pending_action':
+          add(raw['title']?.toString());
+          add(raw['body']?.toString());
+          break;
+        case 'dose':
+          add(raw['text']?.toString() ?? raw['body']?.toString());
+          break;
+      }
+    }
+    return parts.join('. ').trim();
+  }
+
   /// Setelah TTS selesai: buka mikrofon lagi (hands-free) bila loop aktif.
   Future<void> _resumeVoiceLoop() async {
     if (!_audioAktif || !_audioLoop || _voiceLoopPaused) return;
@@ -1288,7 +1371,19 @@ class _BusinessDoctorScreenState extends ConsumerState<BusinessDoctorScreen> {
     if (message.isEmpty && attachment != null) {
       message = 'Tolong analisa data pada berkas ${attachment.name}.';
     }
-    if (message.isEmpty || _loading) return;
+    if (message.isEmpty) return;
+    if (_loading) {
+      _queuedMessages.add(
+        attachment == null
+            ? message
+            : '$message\n\nLampiran: ${attachment.name}',
+      );
+      _attachment = null;
+      _input.clear();
+      _snack('Dokter masih menjawab. Pesan Anda diantrekan dan dikirim '
+          'otomatis setelah jawaban sebelumnya selesai.');
+      return;
+    }
     if (_listening) {
       await _speech.stop();
       if (mounted) {
@@ -1313,6 +1408,7 @@ class _BusinessDoctorScreenState extends ConsumerState<BusinessDoctorScreen> {
       _loading = true;
       _attachment = null;
     });
+    _startLoadingTicker();
     _input.clear();
     _scrollDown();
     try {
@@ -1364,6 +1460,7 @@ class _BusinessDoctorScreenState extends ConsumerState<BusinessDoctorScreen> {
         _messages.add(_Msg('assistant', reply, blocks));
         _loading = false;
       });
+      _stopLoadingTicker();
       if (pendingBlock != null) _loadPendingActions();
       if (caseStatus == 'kasus_bandel' || escLevel >= 3) {
         _maybeSpeakBandel();
@@ -1374,8 +1471,10 @@ class _BusinessDoctorScreenState extends ConsumerState<BusinessDoctorScreen> {
         _loadDailyDose();
         _loadProfile();
       }
-      if (reply.trim().isNotEmpty && (_audioAktif || _voiceNoteMode)) {
-        final played = await _speakReply(reply);
+      final speakText =
+          reply.trim().isNotEmpty ? reply : _speakableFromBlocks(blocks);
+      if (speakText.trim().isNotEmpty && (_audioAktif || _voiceNoteMode)) {
+        final played = await _speakReply(speakText);
         if (played && (spoken || _voiceNoteMode)) await _resumeVoiceLoop();
       }
     } catch (e) {
@@ -1388,8 +1487,34 @@ class _BusinessDoctorScreenState extends ConsumerState<BusinessDoctorScreen> {
         ));
         _loading = false;
       });
+      _stopLoadingTicker();
     }
     _scrollDown();
+    _drainQueuedMessages();
+  }
+
+  /// Kirim pesan berikutnya yang sempat diantrekan saat Dokter menjawab.
+  void _drainQueuedMessages() {
+    if (_queuedMessages.isEmpty || _loading) return;
+    final next = _queuedMessages.removeAt(0);
+    unawaited(_send(next));
+  }
+
+  void _startLoadingTicker() {
+    _loadingTicker?.cancel();
+    setState(() => _loadingSeconds = 0);
+    _loadingTicker = Timer.periodic(const Duration(seconds: 1), (t) {
+      if (!mounted || !_loading) {
+        t.cancel();
+        return;
+      }
+      setState(() => _loadingSeconds++);
+    });
+  }
+
+  void _stopLoadingTicker() {
+    _loadingTicker?.cancel();
+    _loadingTicker = null;
   }
 
   Future<void> _openIntake() async {
@@ -4404,7 +4529,10 @@ class _BusinessDoctorScreenState extends ConsumerState<BusinessDoctorScreen> {
                 child: CircularProgressIndicator(strokeWidth: 2),
               ),
               const SizedBox(width: 8),
-              Text('Dokter sedang menganalisa...',
+              Text(
+                  _loadingSeconds >= 5
+                      ? 'Dokter sedang menganalisa... $_loadingSeconds dtk'
+                      : 'Dokter sedang menganalisa...',
                   style: GoogleFonts.plusJakartaSans(
                       fontSize: 12, color: AppTheme.textSecondary)),
             ],
@@ -4643,7 +4771,7 @@ class _BusinessDoctorScreenState extends ConsumerState<BusinessDoctorScreen> {
                     minLines: 1,
                     maxLines: 4,
                     textInputAction: TextInputAction.send,
-                    onSubmitted: _loading ? null : _send,
+                    onSubmitted: _send,
                     decoration: InputDecoration(
                       hintText: _listening
                           ? 'Sedang mendengarkan suara Anda...'
@@ -4718,7 +4846,7 @@ class _BusinessDoctorScreenState extends ConsumerState<BusinessDoctorScreen> {
                       child: InkWell(
                         borderRadius:
                             BorderRadius.circular(AppTheme.radiusMedium),
-                        onTap: _loading ? null : () => _send(_input.text),
+                        onTap: () => _send(_input.text),
                         child: const Icon(Icons.send_rounded,
                             color: Colors.white, size: 20),
                       ),
