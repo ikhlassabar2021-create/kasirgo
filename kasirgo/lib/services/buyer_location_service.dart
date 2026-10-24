@@ -5,8 +5,8 @@ import '../utils/geo.dart';
 /// ST17-5 (Phase 17 - Ekosistem Hyper-Local): simpan lokasi Pembeli di perangkat.
 ///
 /// Lokasi bersifat lokal (UU PDP): hanya dipakai untuk memanggil `nearby_outlets`.
-/// Web dapat mendeteksi otomatis via Geolocation API; platform lain memakai
-/// input manual karena plugin GPS belum terpasang.
+/// Deteksi otomatis GPS di Android/iOS (plugin geolocator) dan Geolocation API
+/// di web; fallback input manual bila ditolak/tak tersedia.
 class BuyerLocationService {
   static const _latKey = 'buyer_location_lat';
   static const _lngKey = 'buyer_location_lng';
@@ -31,6 +31,7 @@ class BuyerLocationService {
     await prefs.remove(_lngKey);
   }
 
-  /// Deteksi otomatis (web browser). Null bila tak tersedia/ditolak.
-  Future<GeoPosition?> detect() => getBrowserPosition();
+  /// Deteksi otomatis (GPS perangkat; browser Geolocation API di web).
+  /// Null bila tak tersedia / ditolak -> UI memakai input manual.
+  Future<GeoPosition?> detect() => detectDevicePosition();
 }

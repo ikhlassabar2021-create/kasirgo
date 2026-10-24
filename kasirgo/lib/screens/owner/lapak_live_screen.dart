@@ -161,7 +161,7 @@ class _LapakLiveScreenState extends ConsumerState<LapakLiveScreen> {
     final outletId = _outletId;
     if (outletId.isEmpty) return;
 
-    final detected = await getBrowserPosition();
+    final detected = await detectDevicePosition(prompt: !silent);
     final pos = detected ??
         ((_lat != null && _lng != null)
             ? GeoPosition(lat: _lat!, lng: _lng!)

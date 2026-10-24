@@ -51,6 +51,10 @@ class _BuyerHomeTabState extends ConsumerState<BuyerHomeTab> {
   bool _loadingOutlets = false;
   List<NearbyOutlet> _outlets = const [];
 
+  /// Pilihan radius radar (server max radius = 10 km).
+  static const List<double> _radiusOptions = [3, 5, 10];
+  double _radiusKm = 10;
+
   NearbyOutlet? _selected;
   bool _loadingCatalog = false;
   List<Product> _catalog = const [];
@@ -228,13 +232,23 @@ class _BuyerHomeTabState extends ConsumerState<BuyerHomeTab> {
     final loc = _location;
     if (loc == null) return;
     setState(() => _loadingOutlets = true);
-    final list =
-        await _locationService.nearbyOutlets(lat: loc.lat, lng: loc.lng);
+    final list = await _locationService.nearbyOutlets(
+      lat: loc.lat,
+      lng: loc.lng,
+      radiusKm: _radiusKm,
+    );
     if (!mounted) return;
     setState(() {
       _outlets = list;
       _loadingOutlets = false;
     });
+  }
+
+  /// Ganti radius radar lalu muat ulang daftar toko.
+  void _changeRadius(double km) {
+    if (km == _radiusKm) return;
+    setState(() => _radiusKm = km);
+    _loadOutlets();
   }
 
   Future<void> _useCurrentLocation() async {
@@ -859,8 +873,8 @@ class _BuyerHomeTabState extends ConsumerState<BuyerHomeTab> {
         subtitle: _location == null
             ? 'Atur lokasi untuk melihat toko sekitar'
             : (filter == null
-                ? 'Dalam radius 1-3 km dari lokasimu'
-                : 'Kategori: $filter'),
+                ? 'Dalam radius ${_radiusKm.toStringAsFixed(0)} km dari lokasimu'
+                : 'Kategori: $filter · radius ${_radiusKm.toStringAsFixed(0)} km'),
         icon: Icons.storefront_rounded,
         trailing: _location == null
             ? null
@@ -870,7 +884,37 @@ class _BuyerHomeTabState extends ConsumerState<BuyerHomeTab> {
                 tooltip: 'Muat ulang',
               ),
       ),
-      const SizedBox(height: 12),
+      if (_location != null) ...[
+        const SizedBox(height: 10),
+        Row(
+          children: [
+            Icon(Icons.straighten_rounded,
+                size: 15, color: AppTheme.textSecondary),
+            const SizedBox(width: 6),
+            Text(
+              'Radius',
+              style: GoogleFonts.plusJakartaSans(
+                fontSize: 12,
+                fontWeight: FontWeight.w700,
+                color: AppTheme.textSecondary,
+              ),
+            ),
+            const SizedBox(width: 10),
+            Expanded(
+              child: Row(
+                children: [
+                  for (final r in _radiusOptions)
+                    Padding(
+                      padding: const EdgeInsets.only(right: 8),
+                      child: _radiusChip(r),
+                    ),
+                ],
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 12),
+      ],
       if (_location == null)
         _buildRadarEmpty()
       else if (_loadingOutlets)
@@ -910,6 +954,33 @@ class _BuyerHomeTabState extends ConsumerState<BuyerHomeTab> {
     ];
   }
 
+  /// Chip pilihan radius radar (3/5/10 km).
+  Widget _radiusChip(double km) {
+    final selected = km == _radiusKm;
+    return GestureDetector(
+      onTap: _loadingOutlets ? null : () => _changeRadius(km),
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 180),
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
+        decoration: BoxDecoration(
+          color: selected ? AppTheme.primaryColor : Colors.white,
+          border: Border.all(
+            color: selected ? AppTheme.primaryColor : AppTheme.borderColor,
+          ),
+          borderRadius: BorderRadius.circular(AppTheme.radiusMedium),
+        ),
+        child: Text(
+          '${km.toStringAsFixed(0)} km',
+          style: GoogleFonts.plusJakartaSans(
+            fontSize: 12,
+            fontWeight: FontWeight.w700,
+            color: selected ? Colors.white : AppTheme.textSecondary,
+          ),
+        ),
+      ),
+    );
+  }
+
   /// Item 3: kategori terpilih tidak punya toko dalam radius.
   Widget _buildNoCategoryOutlets(String? filter) {
     return AppCard(
@@ -929,7 +1000,7 @@ class _BuyerHomeTabState extends ConsumerState<BuyerHomeTab> {
           Text(
             filter == null
                 ? 'Coba pilih kategori lain.'
-                : 'Tidak ada toko "$filter" dalam radius 1-3 km. Coba kategori lain atau perluas area.',
+                : 'Tidak ada toko "$filter" dalam radius ${_radiusKm.toStringAsFixed(0)} km. Coba kategori lain atau perlebar radius.',
             textAlign: TextAlign.center,
             style: GoogleFonts.plusJakartaSans(
               fontSize: 12.5,
@@ -962,8 +1033,8 @@ class _BuyerHomeTabState extends ConsumerState<BuyerHomeTab> {
           const SizedBox(height: 4),
           Text(
             _locating
-                ? 'Mohon izinkan akses lokasi bila diminta browser.'
-                : 'Aktifkan lokasi untuk menemukan warung, gerobak, dan status buka/tutup dalam radius 1-3 km.',
+                ? 'Mohon izinkan akses lokasi bila diminta.'
+                : 'Aktifkan lokasi untuk menemukan warung, gerobak, dan status buka/tutup dalam radius 10 km.',
             textAlign: TextAlign.center,
             style: GoogleFonts.plusJakartaSans(fontSize: 12.5, color: AppTheme.textSecondary),
           ),
@@ -999,10 +1070,25 @@ class _BuyerHomeTabState extends ConsumerState<BuyerHomeTab> {
           ),
           const SizedBox(height: 4),
           Text(
-            'Coba perbarui lokasi atau perluas area pencarian.',
+            'Belum ada warung yang menayangkan lokasinya dalam radius '
+            '${_radiusKm.toStringAsFixed(0)} km. Coba perlebar radius atau '
+            'perbarui lokasi.',
             textAlign: TextAlign.center,
-            style: GoogleFonts.plusJakartaSans(fontSize: 12.5, color: AppTheme.textSecondary),
+            style: GoogleFonts.plusJakartaSans(
+              fontSize: 12.5,
+              color: AppTheme.textSecondary,
+            ),
           ),
+          const SizedBox(height: 4),
+           Text(
+             'Pemilik warung dapat menayangkan tokonya lewat fitur '
+             'Lapak Live di KasirGo.',
+             textAlign: TextAlign.center,
+             style: GoogleFonts.plusJakartaSans(
+               fontSize: 11.5,
+               color: AppTheme.textSecondary,
+             ),
+           ),
         ],
       ),
     );
