@@ -264,6 +264,42 @@ Sumber spec: `KASIRGO-WORKFLOW-LENGKAP.md` BAGIAN 13 + BAGIAN 14.2.
 - Rilis APK `1.0.4+5`: GitHub Release `v1.0.4-apk-20261023` (3 APK + AAB +
   `SHA256SUMS.txt`, signed) + mirror `/apk/` di GitHub Pages.
 
+## ST14-27: Jawaban Kedua Tetap Dibacakan (24 Okt 2026) - SELESAI
+- Keluhan: suara Dokter Bisnis hanya terdengar pada balasan PERTAMA; balasan
+  berikutnya tampil di layar tetapi tidak dibacakan.
+- Diagnosa: kode aplikasi memang memanggil TTS untuk setiap balasan (dibuktikan
+  lewat probe dua pesan: `tts_speak` + `media-play` muncul pada M1 dan M2),
+  jadi penyebabnya di sisi pemutaran: (a) endpoint suara neural Edge bersifat
+  best-effort, satu kegagalan langsung jatuh ke TTS perangkat; (b)
+  `audioplayers` Android kadang diam saat pemutar yang sama dipakai untuk audio
+  kedua (terutama setelah mikrofon/STT dipakai); (c) TTS perangkat tanpa paket
+  suara `id-ID` bisa tidak bersuara tanpa error.
+- FIX `voice_service.dart`:
+  - `speak()` -> `Future<bool>` (benar-benar diputar/dibacakan).
+  - `_fetchCloudAudio()`: percobaan ulang 1x (jeda 500 ms) sebelum
+    `_noteCloudFail` dan fallback TTS perangkat.
+  - `_resetPlayer()`: `AudioPlayer` baru untuk setiap pemutaran; pemutar lama
+    di-dispose (tidak bisa "nyangkut" diam pada pemutaran berikutnya).
+  - `_playSegments(segments, gen, player)`: pengawas `onPlayerStateChanged`;
+    bila status `playing` tidak tercapai dalam 3 dtk -> gagal -> `_speakCloud`
+    mengulang sekali lalu fallback TTS perangkat.
+  - `_ensureIndonesianLanguage()`: cek `isLanguageAvailable('id-ID')`, lalu
+    `id`, agar HP tanpa paket suara tidak senyap.
+- FIX `business_doctor_screen.dart`: `_speakReply` mengembalikan hasil nyata
+  (dulu selalu `true`), sehingga `_resumeVoiceLoop` tidak membuka mikrofon
+  setelah balasan yang gagal dibacakan.
+- Verifikasi: probe Playwright dua pesan berturut-turut (lokal, cloud TTS aktif)
+  -> M1 fetch `tts_speak` +56,7 dtk lalu 2 `media-play`; M2 fetch +44,2 dtk lalu
+  2 `media-play`; `ERRORS 0`. `flutter analyze` 2 file bersih; 15/15 test
+  speech lulus; build web release sukses, live md5
+  `e9806d33ef91b7059e3e7473c7eece78` = build lokal (gh-pages `6f77fdd`).
+- Rilis APK `1.0.5+6` (versionCode 2006): GitHub Release
+  `v1.0.5-apk-20261024` (3 APK + AAB + `SHA256SUMS.txt`, signed) + mirror
+  `/apk/` di GitHub Pages (gh-pages `e65d39e`).
+- CATATAN: balasan Dokter masih 40-60 dtk (tool loop EF). Pesan kedua yang
+  dikirim saat `_loading` masih ditahan (belum dikirim) - kandidat perbaikan
+  berikutnya (antrean pesan / indikator progres).
+
 ## CATATAN
 - Cron `pg_cron`/`pg_net` TIDAK terpasang di DB live -> observasi via EF `doctor_observe`
   (tombol admin / Supabase Dashboard Scheduled Functions).

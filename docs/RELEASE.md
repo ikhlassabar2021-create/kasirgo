@@ -80,6 +80,34 @@ flutter build apk --release --split-per-abi
 CATATAN: bila `key.properties` tidak ada, build otomatis memakai debug key
 (hanya untuk uji lokal). APK debug-signed TIDAK boleh didistribusikan.
 
+## Rilis 1.0.5 (24 Okt 2026) - jawaban kedua Dokter tetap dibacakan
+
+- Versi `1.0.5+6` (versionCode 2006). Perubahan ada di `voice_service.dart`:
+  - `speak()` kini mengembalikan status benar-benar diputar/dibacakan.
+  - Audio cloud (`tts_speak`) dicoba ulang sekali sebelum jatuh ke TTS
+    perangkat (endpoint suara neural bersifat best-effort).
+  - Pemutar `audioplayers` baru dibuat untuk setiap jawaban; di Android
+    pemutar lama kadang diam pada pemutaran kedua setelah mikrofon dipakai.
+  - Pengawas pemutaran: bila audio tidak mulai dalam 3 detik, klien pindah
+    ke TTS perangkat (tidak lagi diam tanpa suara).
+  - Cek ketersediaan bahasa `id-ID`/`id` sebelum berbicara.
+- Bukti uji: probe Playwright dua pesan berturut-turut di web live lokal
+  (`e2e/_two_reply_tts.mjs`) -> balasan M1 dan M2 sama-sama diputar
+  (fetch `tts_speak` + `media-play`), `ERRORS 0`.
+- GitHub Release:
+  https://github.com/ikhlassabar2021-create/kasirgo/releases/tag/v1.0.5-apk-20261024
+  (3 APK + AAB + `SHA256SUMS.txt`)
+- Unduhan langsung (GitHub Pages, tanpa login):
+  - https://ikhlassabar2021-create.github.io/kasirgo/apk/kasirgo-1.0.5-arm64-v8a.apk
+  - https://ikhlassabar2021-create.github.io/kasirgo/apk/kasirgo-1.0.5-armeabi-v7a.apk
+  - https://ikhlassabar2021-create.github.io/kasirgo/apk/kasirgo-1.0.5-x86_64.apk
+- Build: `workflow_dispatch` (`debug_sign_fallback=true`, run `40042155080`)
+  -> artifact `apk-release`/`aab-release` -> `zipalign -p -f 4` + `apksigner
+  sign` lokal; AAB `jarsigner` setelah `META-INF/*` lama dibuang.
+- CATATAN: balasan Dokter Bisnis masih butuh ~40-60 detik (tool loop EF).
+  Bila owner mengirim pertanyaan kedua saat masih memproses, pesan itu
+  ditahan (belum dikirim) - lihat `_send` (`_loading`).
+
 ## Rilis 1.0.4 (23 Okt 2026) - fix suara balasan Dokter Bisnis
 
 - Versi `1.0.4+5`. Perubahan: jawaban Dokter Bisnis AI selalu dibacakan saat
