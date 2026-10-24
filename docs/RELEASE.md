@@ -80,6 +80,45 @@ flutter build apk --release --split-per-abi
 CATATAN: bila `key.properties` tidak ada, build otomatis memakai debug key
 (hanya untuk uji lokal). APK debug-signed TIDAK boleh didistribusikan.
 
+## Rilis 1.0.7 (24 Okt 2026) - suara balasan Dokter dibacakan sampai habis
+
+- Versi `1.0.7+8` (versionCode 2008).
+- Keluhan: chat suara di APK - jawaban Dokter hanya tampil teks / suaranya
+  tidak dibacakan sampai selesai.
+- AKAR (terbukti dengan data EF nyata): `_speakCloud` memakai budget
+  `8000 + total ~/ 12` ms, padahal audio EF `tts_speak` = MP3 48 kbps
+  (6000 byte/det). Pada balasan 358.464 byte @ rate 0.93x durasi asli
+  ~59,7 dtk, budget lama hanya 37,9 dtk -> `speak(awaitCompletion:true)`
+  selesai SEBELUM audio habis -> voice loop membuka mikrofon 350 ms kemudian
+  -> recognizer merebut focus audio Android -> ExoPlayer ter-jeda -> suara
+  terpotong di tengah kalimat.
+- Perbaikan `voice_service.dart`:
+  - Budget rate-aware: `12000 + total*msPerByte(rate) + totalPause`
+    (kasus nyata -> 85,2 dtk, margin ~15 dtk).
+  - Timeout per segmen ikut rate (`6000 + bytes*msPerByte`).
+  - SEMUA `speak()` masuk antrean serial: pengumuman (sapaan, teguran,
+    shop floor, eskalasi) menunggu balasan selesai, tak lagi memutusnya.
+    `announcePayment` tetap `priority:true` (info kasir tidak boleh nunggu).
+  - `stop()` menaikkan epoch -> ucapan yang masih mengantre dibuang.
+  - Android: `setAudioContext(speech/assistant)` agar focus audio tidak
+    mem-jeda jawaban saat mikrofon terbuka.
+  - TTS perangkat fallback: timeout 60 s -> 120 s.
+- `business_doctor_screen.dart`: jeda buka mikrofon setelah suara 350 ms
+  -> 700 ms.
+- Verifikasi: `flutter analyze` bersih; test voice+doctor 19/19 lulus;
+  build web release bersih; Playwright (build release): app boot 0 error,
+  layar Dokter terbuka, TTS EF `tts_speak` 200 (pipeline audio jalan).
+  Catatan: pemotongan suara hanya terjadi di Android (fokus audio
+  mik) -> konfirmasi akhir lewat uji HP.
+- Web: https://ikhlassabar2021-create.github.io/kasirgo/
+  (gh-pages `a112283`)
+- GitHub Release:
+  https://github.com/ikhlassabar2021-create/kasirgo/releases/tag/v1.0.7-apk-20261024
+- Unduhan langsung (GitHub Pages, tanpa login):
+  - https://ikhlassabar2021-create.github.io/kasirgo/apk/kasirgo-1.0.7-arm64-v8a.apk
+  - https://ikhlassabar2021-create.github.io/kasirgo/apk/kasirgo-1.0.7-armeabi-v7a.apk
+  - https://ikhlassabar2021-create.github.io/kasirgo/apk/kasirgo-1.0.7-x86_64.apk
+
 ## Rilis 1.0.6 (24 Okt 2026) - antrean pesan + semua balasan Dokter dibacakan
 
 - Versi `1.0.6+7` (versionCode 2007).
