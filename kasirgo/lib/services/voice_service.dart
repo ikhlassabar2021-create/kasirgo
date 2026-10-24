@@ -234,6 +234,15 @@ class VoiceService {
   /// Nomor generasi pemutaran. Dinaikkan setiap `stop()`/pemutaran baru agar
   /// loop segmen lama berhenti sendiri tanpa memotong suara yang baru.
   int _speakGen = 0;
+
+  /// Generasi antrean ucapan. Dinaikkan di [stop] agar ucapan yang masih
+  /// mengantre setelah stop langsung dibuang, bukan dibacakan telat.
+  int _speakEpoch = 0;
+
+  /// Antrean serial semua ucapan: setiap pemanggilan [speak] menunggu giliran
+  /// sehingga pengumuman (pembayaran, teguran) tidak pernah memotong jawaban
+  /// Dokter yang sedang dibaca sampai habis.
+  Future<void> _speakChain = Future<void>.value();
   String _persona = _defaultPersona;
   String? _voiceName;
   String? _voiceLocale;
@@ -661,7 +670,7 @@ class VoiceService {
     } else {
       buf.write('Terima kasih.');
     }
-    await speak(buf.toString());
+    await speak(buf.toString(), priority: true);
   }
 
   /// Sapaan awal + apel pagi saat aplikasi dibuka (maksimal 1x per hari).
@@ -801,10 +810,37 @@ class VoiceService {
   /// [awaitCompletion] true -> Future selesai setelah TTS selesai bicara
   /// (dipakai voice loop agar mikrofon baru aktif setelah suara habis).
   /// Mengembalikan true bila suara benar-benar diputar/dibacakan.
-  Future<bool> speak(String text, {bool awaitCompletion = false}) async {
+  ///
+  /// Semua ucapan berjalan berurutan (satu antrean): pengumuman tidak akan
+  /// memotong jawaban yang sedang dibacakan, jadi suara selalu sampai habis.
+  ///
+  /// [priority] true (mis. konfirmasi pembayaran POS): memotong antrean dan
+  /// mengakhiri ucapan yang sedang berjalan karena informasi bisnisnya tidak
+  /// boleh menunggu.
+  Future<bool> speak(
+    String text, {
+    bool awaitCompletion = false,
+    bool priority = false,
+  }) async {
     if (!available) return false;
     final clean = _naturalize(text);
     if (clean.isEmpty) return false;
+    if (priority) await stop();
+    final epoch = _speakEpoch;
+    final job = _speakChain.then(
+      (_) => _doSpeak(clean, awaitCompletion: awaitCompletion, epoch: epoch),
+    );
+    _speakChain = job.then<void>((_) {}, onError: (Object _) {});
+    return await job;
+  }
+
+  /// Isi ucapan yang sebenarnya, dijalankan sesuai antrean [speak].
+  Future<bool> _doSpeak(
+    String clean, {
+    bool awaitCompletion = false,
+    required int epoch,
+  }) async {
+    if (epoch != _speakEpoch) return false;
     await init();
     if (!available) return false;
     if (await _speakCloud(clean, awaitCompletion: awaitCompletion)) return true;
@@ -821,7 +857,7 @@ class VoiceService {
       await _tts.speak(clean);
       var completed = true;
       await done.future.timeout(
-        const Duration(seconds: 60),
+        const Duration(seconds: 120),
         onTimeout: () {
           completed = false;
         },
@@ -879,7 +915,13 @@ class VoiceService {
 
     final gen = ++_speakGen;
     final total = segments.fold<int>(0, (a, s) => a + s.bytes.length);
-    final budget = 8000 + total ~/ 12;
+    final totalPause = segments.fold<int>(0, (a, s) => a + s.pauseMs);
+    // EF mengirim MP3 48 kbps = 6000 byte/detik, jadi di rate 1.0 durasi
+    // audionya `total / 6` ms. Budget lama (`8000 + total ~/ 12`) hanya
+    // setengah durasi asli: Future selesai sebelum audio habis, voice loop
+    // langsung membuka mikrofon, dan suara terpotong di tengah kalimat.
+    final msPerByte = 1000.0 / (6000.0 * rate);
+    final budget = (12000 + total * msPerByte + totalPause).ceil();
 
     for (var attempt = 0; attempt < 2; attempt++) {
       if (gen != _speakGen) return true;
@@ -887,17 +929,25 @@ class VoiceService {
       try {
         await player.setReleaseMode(ReleaseMode.stop);
         await player.setPlaybackRate(rate.clamp(0.5, 1.5));
+        // Tandai sebagai ucapan asisten agar focus audio Android (mis. saat
+        // mikrofon baru terbuka) tidak meredupkan/mem-jeda jawaban.
+        await player.setAudioContext(AudioContext(
+          android: const AudioContextAndroid(
+            contentType: AndroidContentType.speech,
+            usageType: AndroidUsageType.assistant,
+          ),
+        ));
       } catch (_) {}
 
       if (!awaitCompletion) {
-        unawaited(_playSegments(segments, gen, player));
+        unawaited(_playSegments(segments, gen, player, msPerByte));
         return true;
       }
 
       var played = true;
       final done = Completer<void>();
       _speakDone = done;
-      unawaited(_playSegments(segments, gen, player).then((ok) {
+      unawaited(_playSegments(segments, gen, player, msPerByte).then((ok) {
         played = ok;
         if (!done.isCompleted) done.complete();
       }));
@@ -941,12 +991,15 @@ class VoiceService {
   }
 
   /// Mainkan potongan audio berurutan dengan jeda alami antar kalimat.
-  /// Mengembalikan false bila audio gagal diputar sehingga pemanggil bisa
-  /// jatuh ke TTS perangkat.
+  /// [msPerByte] = lama audio per byte sesuai rate pemutaran, supaya batas
+  /// tiap segmen tidak lebih pendek dari durasi aslinya. Mengembalikan
+  /// false bila audio gagal diputar sehingga pemanggil bisa jatuh ke TTS
+  /// perangkat.
   Future<bool> _playSegments(
     List<_SpeechSegment> segments,
     int gen,
     AudioPlayer player,
+    double msPerByte,
   ) async {
     for (var i = 0; i < segments.length; i++) {
       if (gen != _speakGen || !identical(player, _player)) return true;
@@ -980,7 +1033,7 @@ class VoiceService {
         return false;
       }
       await done.timeout(
-        Duration(milliseconds: 6000 + seg.bytes.length ~/ 12),
+        Duration(milliseconds: (6000 + seg.bytes.length * msPerByte).ceil()),
         onTimeout: () {},
       ).catchError((_) {});
       if (gen != _speakGen || !identical(player, _player)) return true;
@@ -1089,6 +1142,7 @@ class VoiceService {
   }
 
   Future<void> stop() async {
+    _speakEpoch++;
     _speakGen++;
     final done = _speakDone;
     if (done != null && !done.isCompleted) done.complete();

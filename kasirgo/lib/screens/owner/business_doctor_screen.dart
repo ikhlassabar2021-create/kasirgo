@@ -1283,7 +1283,9 @@ class _BusinessDoctorScreenState extends ConsumerState<BusinessDoctorScreen> {
   Future<void> _resumeVoiceLoop() async {
     if (!_audioAktif || !_audioLoop || _voiceLoopPaused) return;
     if (!_speech.available || _listening || _loading) return;
-    await Future<void>.delayed(const Duration(milliseconds: 350));
+    // Jeda cukup panjang setelah suara habis: mikrofon yang terbuka terlalu
+    // cepat merebut focus audio Android dan mem-jeda suara yang belum tuntas.
+    await Future<void>.delayed(const Duration(milliseconds: 700));
     if (!mounted || _voiceLoopPaused || _loading || _listening) return;
     await _startListening(auto: true);
   }
