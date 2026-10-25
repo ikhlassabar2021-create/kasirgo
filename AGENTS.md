@@ -1459,3 +1459,25 @@ Commit `ff04bb3` (main) + deploy web gh-pages `050051c` (live md5
   (skor 25, tren down, omzet 7 hari 35.000) tersimpan; cleanup 204, `ERRORS 0`.
 - `flutter analyze lib` hanya info pre-existing; `flutter build web --release
   --base-href /kasirgo/` sukses.
+
+### Radar Pembeli Hyper-Local: GPS Lintas Platform + Radius (25 Okt 2026) - SELESAI
+- Akar masalah "hanya Toko Test muncul di radar": 8/10 outlet `latitude/longitude`
+  NULL karena deteksi lokasi Lapak Live dulu web-only (`dart:html`) -> di APK
+  tombol "Deteksi lokasi" tak pernah menyimpan koordinat.
+- `lib/utils/geo.dart`: `detectDevicePosition({prompt})` -> web pakai Geolocation
+  API (conditional import `geo_stub.dart`/`geo_web.dart`), native pakai
+  `geolocator` 12 (`getCurrentPosition(desiredAccuracy: best, timeLimit: 15s)`).
+  `prompt:false` untuk broadcast 60 dtk agar tidak memunculkan dialog izin OS.
+- `AndroidManifest.xml` + `ACCESS_COARSE_LOCATION`/`ACCESS_FINE_LOCATION`;
+  `lapak_live_screen.dart` & `buyer_location_service.dart` memakai helper baru.
+- Radar pembeli: chip radius 3/5/10 km (default 10 sesuai
+  `radius_default_km`), subtitle "Dalam radius X km dari lokasimu", empty state
+  mengarahkan owner menayangkan lewat Lapak Live.
+- Migrasi `docs/migrations/2026-10-24-kasirgo-18-tickets-radar.sql`
+  (`support_tickets` + radius) sudah diterapkan live.
+- E2E Playwright mode Pembeli (`qa.checkout@kasirgo.test`/`sabar2021`):
+  `Toko Terdekat` + `Lokasi aktif -6.3950, 106.8410` (auto-detect), chip
+  3/5/10 km, `Toko Test` + `Gerobak Test` (20 m) tampil; klik `3 km` ->
+  "Dalam radius 3 km dari lokasimu"; `ERRORS 0`.
+- Commit `ab24b4d`; deploy gh-pages `2c2e030` (md5 `f14a1fd5...` cocok).
+- CATATAN: fix GPS native hanya aktif di APK 1.0.8+9 ke atas (perlu rebuild APK).

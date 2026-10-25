@@ -171,7 +171,34 @@ Sumber spec: `KASIRGO-WORKFLOW-LENGKAP.md` BAGIAN 17 (SUB-TASK ~2943; ST17-1..ST
 - Deploy web release gh-pages `37b4817` (md5 `main.dart.js`
   `0d78ae79f501fb42ba7e6a631ebd0134` cocok build lokal).
 
+### Radar Pembeli: Deteksi Lokasi Lintas Platform + Radius - SELESAI
+- Akar masalah "hanya Toko Test muncul": 8 dari 10 outlet `latitude/longitude`
+  NULL karena tombol "Deteksi lokasi" di Lapak Live dulu hanya jalan di web
+  (`dart:html`) -> di APK lokasi owner tak pernah tersimpan.
+- `lib/utils/geo.dart`: `detectDevicePosition({prompt})` -> `kIsWeb` pakai
+  Geolocation API (conditional import `geo_stub.dart`/`geo_web.dart`), native
+  pakai `geolocator` (`getCurrentPosition(desiredAccuracy: best, timeLimit: 15s)`).
+  `prompt:false` dipakai broadcast 60 detik agar tak memicu dialog izin OS.
+- `AndroidManifest.xml`: `ACCESS_COARSE_LOCATION` + `ACCESS_FINE_LOCATION`.
+  `lapak_live_screen.dart` + `buyer_location_service.dart` memakai helper baru.
+- Radar pembeli: chip radius 3/5/10 km (default 10 sesuai config
+  `radius_default_km`), subtitle "Dalam radius X km dari lokasimu", empty state
+  mengarahkan owner menayangkan lewat Lapak Live.
+- Migrasi `docs/migrations/2026-10-24-kasirgo-18-tickets-radar.sql`
+  (`support_tickets` + radius 10 km) sudah diterapkan di DB live.
+- Verifikasi REST: RPC `nearby_outlets` radius 10 km dari Jakarta
+  (-6.395,106.841) mengembalikan Toko Test + Gerobak Test (~0.02 km).
+- E2E LIVE Playwright (`/tmp/opencode/radar_buyer_e2e.js`, mode Pembeli ->
+  login `qa.checkout@kasirgo.test`): `Toko Terdekat` tampil, `Lokasi aktif
+  -6.3950, 106.8410` terdeteksi otomatis (tanpa input manual), chip
+  `3/5/10 km` ada, `Toko Test` + `Gerobak Test` (20 m) tampil; klik chip
+  `3 km` -> subtitle "Dalam radius 3 km dari lokasimu"; `ERRORS 0`.
+- Commit `ab24b4d`; deploy web gh-pages `2c2e030` (md5
+  `f14a1fd55b011003c23e94be7eb68013` cocok build lokal).
+
 ## Catatan
-- `flutter_map`/`latlong2`/`geolocator` TIDAK dipasang (hemat token Phase 17); radar `CustomPaint`.
+- `flutter_map`/`latlong2` TIDAK dipasang (hemat token Phase 17); radar `CustomPaint`.
+- `geolocator` + `geolocator_web` DIPASANG (versi app 1.0.8+9) untuk deteksi
+  lokasi lintas platform; fix hanya efektif di APK 1.0.8+9 ke atas.
 - Supabase Storage TIDAK dipakai (q30 `[]`); bukti transfer LOKAL; thumbnail online opt-in R2.
 - Rate limit memakai trigger (bukan RPC) agar semua jalur INSERT `orders` tercakup.
