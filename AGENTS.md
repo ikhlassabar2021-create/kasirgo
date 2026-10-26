@@ -1480,4 +1480,9 @@ Commit `ff04bb3` (main) + deploy web gh-pages `050051c` (live md5
   3/5/10 km, `Toko Test` + `Gerobak Test` (20 m) tampil; klik `3 km` ->
   "Dalam radius 3 km dari lokasimu"; `ERRORS 0`.
 - Commit `ab24b4d`; deploy gh-pages `2c2e030` (md5 `f14a1fd5...` cocok).
-- CATATAN: fix GPS native hanya aktif di APK 1.0.8+9 ke atas (perlu rebuild APK).
+- APK 1.0.8 RILIS (26 Okt): commit workflow `ae8490d` (tag push tanpa secret
+  keystore tetap build debug-signed), tag `v1.0.8-apk-20261026` -> CI
+  `40263784331` sukses; artefak re-sign lokal (keystore SHA-1 `a617302d...)`;
+  GitHub Release `v1.0.8-apk-20261026` (id 423974683): 3 APK + AAB +
+  SHA256SUMS-1.0.8.txt, terverifikasi (sha256 match, versionCode 2009,
+  izin lokasi ada). CATATAN: fix GPS native aktif mulai APK ini.

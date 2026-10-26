@@ -193,8 +193,16 @@ Sumber spec: `KASIRGO-WORKFLOW-LENGKAP.md` BAGIAN 17 (SUB-TASK ~2943; ST17-1..ST
   -6.3950, 106.8410` terdeteksi otomatis (tanpa input manual), chip
   `3/5/10 km` ada, `Toko Test` + `Gerobak Test` (20 m) tampil; klik chip
   `3 km` -> subtitle "Dalam radius 3 km dari lokasimu"; `ERRORS 0`.
-- Commit `ab24b4d`; deploy web gh-pages `2c2e030` (md5
-  `f14a1fd55b011003c23e94be7eb68013` cocok build lokal).
+ - Commit `ab24b4d`; deploy web gh-pages `2c2e030` (md5
+   `f14a1fd55b011003c23e94be7eb68013` cocok build lokal).
+ - APK 1.0.8 RILIS: commit workflow `ae8490d` (tag push tanpa secret keystore
+   tetap build debug-signed), tag `v1.0.8-apk-20261026` -> CI run `40263784331`
+   SUKSES; artefak diunduh + zipalign + re-sign lokal dengan keystore rilis
+   (SHA-1 `a617302d91c6...414c28`, sama dengan 1.0.7) + AAB ditandatangani
+   jarsigner; GitHub Release **`v1.0.8-apk-20261026`** (id `423974683`)
+   berisi 3 APK + AAB + `SHA256SUMS-1.0.8.txt`. Verifikasi: re-download arm64
+   sha256 MATCH, `apksigner verify` cocok, `versionName 1.0.8` / `versionCode
+   2009`, permission `ACCESS_FINE/COARSE_LOCATION` ada di manifest.
 
 ## Catatan
 - `flutter_map`/`latlong2` TIDAK dipasang (hemat token Phase 17); radar `CustomPaint`.
