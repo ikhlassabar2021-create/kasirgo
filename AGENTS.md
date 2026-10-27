@@ -1486,3 +1486,41 @@ Commit `ff04bb3` (main) + deploy web gh-pages `050051c` (live md5
   GitHub Release `v1.0.8-apk-20261026` (id 423974683): 3 APK + AAB +
   SHA256SUMS-1.0.8.txt, terverifikasi (sha256 match, versionCode 2009,
   izin lokasi ada). CATATAN: fix GPS native aktif mulai APK ini.
+
+### Fix "Otak penuh belum aktif" saat chat Dokter Bisnis (27 Okt 2026) - SELESAI
+- GEJALA (user, APK): chat Dokter Bisnis langsung dibalas kartu
+  "Otak penuh belum aktif" (fallback lokal) -> AI sebenarnya tidak menjawab.
+- ROOT CAUSE 1 (Toko Test, akun bos): `outlet_ai_configs` outlet
+  `229c94d7-...` `is_active=true` dengan API key yang SUDAH TIDAK VALID ->
+  provider membalas 401 "Invalid API key" (respons fallback dalam <3 detik).
+- ROOT CAUSE 2 (outlet lain, provider global): model global `qwen-3.8-27b`
+  sangat lambat (30-60 dtk/kali panggil; pertanyaan kompleks 2 panggilan) ->
+  melewati `DOCTOR_LLM_TIMEOUT_MS=45000` -> "Provider AI timeout" -> fallback
+  (total ~90 dtk, user menunggu sia-sia).
+- FIX (CONFIG SAJA, tanpa ubah kode/deploy EF -- PAT Supabase tidak ada):
+  1. Override Toko Test dinonaktifkan (`admin_set_outlet_ai_config`
+     `is_active=false`, `unlimited_tokens=true` DIPERTAHANKAN) -> pakai
+     provider global; key lama (invalid) dibiarkan tersimpan tapi tak dipakai.
+  2. Provider global diganti `qwen-3.8-27b` -> `mercury-3` lewat RPC
+     `platform_config_save` (p_key `business_doctor`); `max_tokens` 4000,
+     `temperature` 0.7 tetap. Config versi 18+.
+- BUKTI UJI (EF `business_doctor_chat`, superadmin, 27 Okt):
+  sebelum: Toko Test fallback "Invalid API key" 3 dtk; Gerobak 90 dtk fallback
+  timeout. Sesudah (mercury-3): Toko Test 13-17 dtk, Warung Test 27 dtk,
+  Gerobak 10-16 dtk, semua `fallback=false` + blok card/gauge/checklist/
+  prescription muncul. Pertanyaan diagnosa penuh 13-23 dtk (deepseek 64 dtk).
+- BENCHMARK MODEL (prompt EF asli): `mercury-3` 10-27 dtk (OK);
+  `deepseek-v4.1-flash-1017` 19-64 dtk (blok paling lengkap + prescription,
+  tapi rawan kena timeout 45 dtk); `glm-5-3-flash`/`qwen-3.8-27b` 45+ dtk
+  (fallback); `gemini-3.8-flash`/`step-3.7-flash`/`mimo`/`longcat` balas
+  kosong di max_tokens kecil.
+- CATATAN APLIKASI: klien `business_doctor_service.chat` timeout 75 dtk dan
+  layar sudah menampilkan "Dokter sedang menganalisa... X dtk" (tak perlu
+  rebuild APK untuk fix ini).
+- SARAN LANJUTAN (butuh SUPABASE_ACCESS_TOKEN): ubah judul fallback EF jadi
+  "Dokter sedang lambat" + naikkan `DOCTOR_LLM_TIMEOUT_MS` (~70 dtk),
+  dan buat `max_tokens`/model per-skill; kalau mau model lebih pintar
+  (deepseek) aktifkan override per outlet dengan key Valid.
+- 20 percakapan uji (user superadmin, 27 Okt 09:11-09:33) masih ada di
+  `doctor_conversations` untuk Toko Test/Gerobak/Warung Test -- belum dihapus
+  (menunggu izin).
