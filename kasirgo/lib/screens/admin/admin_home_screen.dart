@@ -9,6 +9,7 @@ import '../../widgets/common/app_drawer.dart';
 import '../../widgets/common/delegation_tasks_card.dart';
 import '../../widgets/common/logout_button.dart';
 import '../../widgets/common/responsive.dart';
+import '../cashier/incoming_orders_screen.dart';
 import '../modules/kitchen_display_screen.dart';
 import '../owner/product_list_screen.dart';
 import '../owner/report_screen.dart';
@@ -36,13 +37,17 @@ class _AdminHomeScreenState extends ConsumerState<AdminHomeScreen> {
     final outletType = ref.watch(outletTypeProvider(user.outletId ?? ''));
     // Admin usaha makanan ikut memantau proses dapur via KDS.
     final isFood = ModuleConfig.isFoodBusiness(outletType);
+    // "Pesanan" selalu ada di posisi pertama: admin harus bisa melihat &
+    // mengonfirmasi pesanan masuk (dine-in/online) tanpa harus jadi owner.
     final navItems = isFood
         ? const [
+            AppNavItem(icon: Icons.receipt_long_rounded, label: 'Pesanan'),
             AppNavItem(icon: Icons.inventory_2_rounded, label: 'Produk'),
             AppNavItem(icon: Icons.restaurant_rounded, label: 'Dapur (KDS)'),
             AppNavItem(icon: Icons.bar_chart_rounded, label: 'Laporan'),
           ]
         : const [
+            AppNavItem(icon: Icons.receipt_long_rounded, label: 'Pesanan'),
             AppNavItem(icon: Icons.inventory_2_rounded, label: 'Produk'),
             AppNavItem(icon: Icons.bar_chart_rounded, label: 'Laporan'),
           ];
@@ -69,11 +74,13 @@ class _AdminHomeScreenState extends ConsumerState<AdminHomeScreen> {
                 index: _currentIndex,
                 children: isFood
                     ? const [
+                        IncomingOrdersScreen(embedded: true),
                         ProductListScreen(embedded: true),
                         KitchenDisplayScreen(embedded: true),
                         ReportScreen(embedded: true),
                       ]
                     : const [
+                        IncomingOrdersScreen(embedded: true),
                         ProductListScreen(embedded: true),
                         ReportScreen(embedded: true),
                       ],

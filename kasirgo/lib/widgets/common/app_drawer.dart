@@ -5,6 +5,7 @@ import '../../config/app_theme.dart';
 import '../../models/user.dart';
 import '../../providers/auth_provider.dart';
 import '../../screens/owner/settings_screen.dart';
+import '../../screens/owner/support_tickets_screen.dart';
 import '../../screens/owner/customer_list_screen.dart';
 import '../../screens/owner/employee_screen.dart';
 
@@ -153,7 +154,14 @@ class AppDrawer extends ConsumerWidget {
               _DrawerTile(
                 icon: Icons.help_outline,
                 title: 'Bantuan & Tutorial',
-                onTap: () => Navigator.pop(context),
+                onTap: () {
+                  Navigator.pop(context);
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                        builder: (_) => const SupportTicketsScreen()),
+                  );
+                },
               ),
             ] else ...[
               // Admin only sees limited options

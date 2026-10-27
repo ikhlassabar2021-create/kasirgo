@@ -7,7 +7,8 @@ import {
   CreditCard,
   SlidersHorizontal,
   X,
-  LogOut
+  LogOut,
+  LifeBuoy
 } from 'lucide-react';
 
 interface StarAdminSidebarProps {
@@ -20,9 +21,9 @@ interface StarAdminSidebarProps {
 // RBAC: nav per role (superadmin melihat semua).
 const ROLE_NAV: Record<string, string[]> = {
   superadmin: ['*'],
-  finance: ['/superadmin', '/outlets', '/control-plane'],
-  support: ['/superadmin', '/outlets', '/control-plane'],
-  ops: ['/superadmin', '/outlets', '/features', '/control-plane'],
+  finance: ['/superadmin', '/outlets', '/control-plane', '/support'],
+  support: ['/superadmin', '/outlets', '/control-plane', '/support'],
+  ops: ['/superadmin', '/outlets', '/features', '/control-plane', '/support'],
 };
 
 export function StarAdminSidebar({ isOpen, onClose, onLogout, role = 'superadmin' }: StarAdminSidebarProps) {
@@ -32,6 +33,7 @@ export function StarAdminSidebar({ isOpen, onClose, onLogout, role = 'superadmin
     { name: 'Outlet Terdaftar', href: '/outlets', icon: Store },
     { name: 'Fitur Utama', href: '/features', icon: SlidersHorizontal },
     { name: 'Affiliates', href: '/affiliates', icon: CreditCard },
+    { name: 'Tiket Support', href: '/support', icon: LifeBuoy },
     { name: 'Control Plane', href: '/control-plane', icon: Settings },
   ].filter((item) => allowed.includes('*') || allowed.includes(item.href));
 

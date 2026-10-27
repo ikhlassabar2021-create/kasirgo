@@ -7,6 +7,7 @@ import '../../config/app_theme.dart';
 import '../../models/shift.dart';
 import '../../models/tip.dart';
 import '../../providers/auth_provider.dart';
+import '../../providers/order_badge_provider.dart';
 import '../../providers/outlet_provider.dart';
 import '../../services/supabase_service.dart';
 import '../../utils/formatters.dart';
@@ -18,6 +19,7 @@ import '../../widgets/common/logout_button.dart';
 import '../../widgets/common/responsive.dart';
 
 import '../../widgets/common/bubble_glass.dart';
+import 'incoming_orders_screen.dart';
 
 final activeShiftProvider = FutureProvider.autoDispose<Shift?>((ref) async {
   final user = ref.watch(currentUserProvider);
@@ -267,6 +269,7 @@ class _CashierHomeScreenState extends ConsumerState<CashierHomeScreen> {
     final outletType = ref.watch(outletTypeProvider(user.outletId ?? ''));
     final activeShiftAsync = ref.watch(activeShiftProvider);
     final tipsAsync = ref.watch(shiftTipsProvider);
+    final pendingOrders = ref.watch(pendingOrderCountProvider).value ?? 0;
 
     return AppShell(
       navItems: const [
@@ -316,6 +319,21 @@ class _CashierHomeScreenState extends ConsumerState<CashierHomeScreen> {
                 crossAxisSpacing: 14,
                 childAspectRatio: 1.25,
                 children: [
+                  _QuickActionCard(
+                    icon: Icons.receipt_long_rounded,
+                    color: AppTheme.errorColor,
+                    title: 'Pesanan Masuk',
+                    subtitle: 'Dine-in & online (live)',
+                    badgeCount: pendingOrders,
+                    onTap: () async {
+                      await Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                            builder: (_) => const IncomingOrdersScreen()),
+                      );
+                      ref.invalidate(pendingOrderCountProvider);
+                    },
+                  ),
                   _QuickActionCard(
                     icon: Icons.point_of_sale_rounded,
                     color: AppTheme.primaryColor,
@@ -668,6 +686,7 @@ class _QuickActionCard extends StatelessWidget {
   final String title;
   final String subtitle;
   final VoidCallback onTap;
+  final int badgeCount;
 
   const _QuickActionCard({
     required this.icon,
@@ -675,6 +694,7 @@ class _QuickActionCard extends StatelessWidget {
     required this.title,
     required this.subtitle,
     required this.onTap,
+    this.badgeCount = 0,
   });
 
   @override
@@ -689,15 +709,43 @@ class _QuickActionCard extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Container(
-            width: 44,
-            height: 44,
-            decoration: BoxDecoration(
-              color: color.withValues(alpha: 0.12),
-              borderRadius: BorderRadius.circular(13),
-              border: Border.all(color: color.withValues(alpha: 0.3)),
-            ),
-            child: Icon(icon, color: color, size: 22),
+          Stack(
+            clipBehavior: Clip.none,
+            children: [
+              Container(
+                width: 44,
+                height: 44,
+                decoration: BoxDecoration(
+                  color: color.withValues(alpha: 0.12),
+                  borderRadius: BorderRadius.circular(13),
+                  border: Border.all(color: color.withValues(alpha: 0.3)),
+                ),
+                child: Icon(icon, color: color, size: 22),
+              ),
+              if (badgeCount > 0)
+                Positioned(
+                  top: -6,
+                  right: -6,
+                  child: Container(
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                    constraints: const BoxConstraints(minWidth: 20),
+                    decoration: BoxDecoration(
+                      color: AppTheme.errorColor,
+                      borderRadius: BorderRadius.circular(10),
+                      border: Border.all(color: AppTheme.surfaceColor, width: 1.5),
+                    ),
+                    child: Text(
+                      badgeCount > 9 ? '9+' : '$badgeCount',
+                      textAlign: TextAlign.center,
+                      style: GoogleFonts.plusJakartaSans(
+                          color: Colors.white,
+                          fontSize: 10,
+                          fontWeight: FontWeight.w800),
+                    ),
+                  ),
+                ),
+            ],
           ),
           const SizedBox(height: 12),
           Text(

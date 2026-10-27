@@ -7,6 +7,7 @@ import '../../config/app_theme.dart';
 import '../../config/constants.dart';
 import '../../models/product.dart';
 import '../../providers/auth_provider.dart';
+import '../../providers/order_badge_provider.dart';
 import '../../providers/outlet_provider.dart';
 import '../../providers/module_provider.dart';
 import 'design_studio_screen.dart';
@@ -39,6 +40,7 @@ import '../modules/kitchen_display_screen.dart';
 import 'shift_screen.dart';
 import '../modules/supporter_screen.dart';
 import 'pos_screen.dart';
+import '../cashier/incoming_orders_screen.dart';
 import 'product_list_screen.dart';
 import 'report_screen.dart';
 import 'customer_list_screen.dart';
@@ -768,7 +770,14 @@ class _OwnerHomeScreenState extends ConsumerState<OwnerHomeScreen> {
                 sales: todaySales,
                 txCount: todayCount,
                 onKasir: () => setState(() => _currentIndex = 2),
-                onOrders: () => setState(() => _currentIndex = 2),
+                onOrders: () async {
+                  await Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                        builder: (_) => const IncomingOrdersScreen()),
+                  );
+                  if (mounted) ref.invalidate(pendingOrderCountProvider);
+                },
                 onReport: () => setState(() => _currentIndex = 3),
               ),
               const SizedBox(height: 12),

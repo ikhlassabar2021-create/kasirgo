@@ -9,15 +9,16 @@ import { OutletDetailPage } from './pages/OutletDetail'
 import { FeaturesPage } from './pages/Features'
 import { ControlPlanePage } from './pages/ControlPlane'
 import { AffiliatesPage } from './pages/Affiliates'
+import { SupportTicketsPage } from './pages/SupportTickets'
 import { AffiliatePortalPage } from './pages/AffiliatePortal'
 import { checkAdminRole } from './lib/adminApi'
 
 // RBAC: halaman per role (superadmin = semua).
 const ROLE_ROUTES: Record<string, string[]> = {
   superadmin: ['*'],
-  finance: ['/superadmin', '/outlets', '/control-plane'],
-  support: ['/superadmin', '/outlets', '/control-plane'],
-  ops: ['/superadmin', '/outlets', '/features', '/control-plane'],
+  finance: ['/superadmin', '/outlets', '/control-plane', '/support'],
+  support: ['/superadmin', '/outlets', '/control-plane', '/support'],
+  ops: ['/superadmin', '/outlets', '/features', '/control-plane', '/support'],
 }
 
 const routeAllowed = (path: string, role: string): boolean => {
@@ -130,6 +131,7 @@ export default function App() {
           <Route path="features" element={guard(<FeaturesPage />)} />
           <Route path="affiliates" element={guard(<AffiliatesPage />)} />
           <Route path="control-plane" element={guard(<ControlPlanePage />)} />
+          <Route path="support" element={guard(<SupportTicketsPage />)} />
           {/* Tautan lama diarahkan ke halaman baru. */}
           <Route path="owner" element={<Navigate to="/superadmin" replace />} />
           <Route path="users" element={<Navigate to="/outlets" replace />} />

@@ -17,6 +17,7 @@ import '../../utils/formatters.dart';
 import '../../utils/qris_config.dart';
 import 'report_schedule_screen.dart';
 import 'guide_screen.dart';
+import 'support_tickets_screen.dart';
 import 'multi_outlet_screen.dart';
 import '../../utils/receipt_generator.dart';
 import '../../utils/error_messages.dart';
@@ -970,6 +971,12 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
             Navigator.push(
               context,
               MaterialPageRoute(builder: (_) => const GuideScreen()),
+            );
+          }),
+          _buildMenuRow(Icons.support_agent_rounded, 'Tiket Bantuan', () {
+            Navigator.push(
+              context,
+              MaterialPageRoute(builder: (_) => const SupportTicketsScreen()),
             );
           }),
           _buildMenuRow(Icons.cloud_upload_outlined, 'Tautkan Akun Google', () {

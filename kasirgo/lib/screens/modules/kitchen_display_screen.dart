@@ -67,6 +67,7 @@ class _KitchenDisplayScreenState extends ConsumerState<KitchenDisplayScreen> {
 
   sb.RealtimeChannel? _channel;
   Timer? _tickTimer;
+  int _waitingPayment = 0;
 
   @override
   void initState() {
@@ -138,8 +139,10 @@ class _KitchenDisplayScreenState extends ConsumerState<KitchenDisplayScreen> {
       final dineInFuture =
           SupabaseService().getDineInOrders(user!.outletId!, limit: 30);
       final onlineFuture = _loadOnlineOrders(user.outletId!);
+      final waitingFuture = _loadWaitingPayment(user.outletId!);
       final txs = await dineInFuture;
       final online = await onlineFuture;
+      final waiting = await waitingFuture;
       if (mounted) {
         // Hanya pesanan yang SUDAH dikonfirmasi bayar oleh kasir yang
         // diteruskan ke dapur (payment_status != 'unpaid').
@@ -167,12 +170,28 @@ class _KitchenDisplayScreenState extends ConsumerState<KitchenDisplayScreen> {
             ..clear()
             ..addAll(realOrders)
             ..addAll(online);
+          _waitingPayment = waiting;
         });
       }
     } catch (_) {
       // keep current list on error
     } finally {
       if (mounted) setState(() => _isLoading = false);
+    }
+  }
+
+  /// Pesanan yang belum dikonfirmasi bayar (belum boleh dimasak). Ditampilkan
+  /// sebagai pengingat jumlah agar dapur tahu ada antrean menuju kasir.
+  Future<int> _loadWaitingPayment(String outletId) async {
+    try {
+      final online = await OrderService().pendingPaymentOrders(outletId);
+      final dineIn = await SupabaseService().getDineInOrders(outletId, limit: 50);
+      final unpaid = dineIn
+          .where((t) => t.paymentStatus == 'unpaid' && t.orderStatus != 'selesai')
+          .length;
+      return online.where((o) => o.status != 'dibatalkan').length + unpaid;
+    } catch (_) {
+      return 0;
     }
   }
 
@@ -309,6 +328,34 @@ class _KitchenDisplayScreenState extends ConsumerState<KitchenDisplayScreen> {
                   ],
                 ),
               ),
+              if (_waitingPayment > 0)
+                Container(
+                  margin: const EdgeInsets.fromLTRB(16, 4, 16, 8),
+                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                  decoration: BoxDecoration(
+                    color: AppTheme.warningColor.withValues(alpha: 0.12),
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(
+                        color: AppTheme.warningColor.withValues(alpha: 0.5)),
+                  ),
+                  child: Row(
+                    children: [
+                      const Icon(Icons.hourglass_top_rounded,
+                          size: 18, color: AppTheme.warningColor),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: Text(
+                          '$_waitingPayment pesanan menunggu konfirmasi bayar kasir '
+                          '(belum masuk antrean masak).',
+                          style: GoogleFonts.plusJakartaSans(
+                              fontSize: 11.5,
+                              fontWeight: FontWeight.w600,
+                              color: AppTheme.warningColor),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
               Expanded(
                 child: _isLoading
                     ? const Center(child: CircularProgressIndicator(color: AppTheme.primaryColor))

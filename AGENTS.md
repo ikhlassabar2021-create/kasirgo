@@ -1524,3 +1524,55 @@ Commit `ff04bb3` (main) + deploy web gh-pages `050051c` (live md5
 - 20 percakapan uji (user superadmin, 27 Okt 09:11-09:33) masih ada di
   `doctor_conversations` untuk Toko Test/Gerobak/Warung Test -- belum dihapus
   (menunggu izin).
+
+## Sesi 2026-10-27 (2): Pesanan Masuk Kasir/Admin/Koki + Tiket Support + Panduan PDF (SELESAI)
+- **FIX TOMBOL TERHALANG NAVIGASI HP** (root cause: Android 15 edge-to-edge):
+  `app.dart` `MaterialApp.router` + `builder` membungkus app dengan
+  `ColoredBox(AppTheme.backgroundColor)` + `SafeArea(top:false,left:false,right:false)`.
+  Semua layar (termasuk `Buat Pesanan` di checkout) kini punya jarak aman bawah;
+  SafeArea turunan tidak menambah padding ganda (padding dikonsumsi SafeArea luar).
+- **PESANAN MASUK TIDAK TERLIHAT DI KASIR/ADMIN/KOKI**:
+  - `IncomingOrdersScreen` +parameter `embedded` (tanpa Scaffold/AppBar, header +
+    TabBar sendiri) untuk dipakai sebagai tab dashboard.
+  - `providers/order_badge_provider.dart` (BARU) `pendingOrderCountProvider` =
+    order online `belum_konfirmasi` + dine-in `unpaid`.
+  - Beranda Kasir: kartu "Pesanan Masuk" (badge merah, buka layar penuh, invalidate
+    badge setelah kembali) - sebelumnya hanya ikon kecil di POS.
+  - Admin: tab "Pesanan" PALING KIRI (semua tipe usaha; `IncomingOrdersScreen(embedded)`).
+  - Owner: tombol "Pesanan Masuk" di kartu omzet kini membuka layar pesanan
+    (bukan pindah ke tab POS).
+  - KDS/Koki: banner kuning "N pesanan menunggu konfirmasi bayar kasir" (pesanan
+    belum dibayar tetap TIDAK masuk antrean masak - aturan bisnis dipertahankan).
+  - Verifikasi REST: admin & kasir uji bisa SELECT `orders` + `transactions` outlet
+    (RLS `is_outlet_member` OK); order pending `028eaae1...` terdeteksi.
+- **TIKET SUPPORT OWNER** (`services/support_ticket_service.dart` +
+  `screens/owner/support_tickets_screen.dart`, BARU): daftar tiket + status
+  (Menunggu/Diproses/Selesai), buat tiket (bottom sheet), detail percakapan
+  (bubble Tim KasirGo vs owner/staf), balas, owner dapat Tutup/Buka tiket,
+  mode embedded-safe. Entry point: drawer "Bantuan & Tutorial", Pengaturan >
+  "Tiket Bantuan", dan ikon di layar Panduan.
+  Verifikasi REST live: owner buat tiket 201; superadmin balas 201 + status
+  proses/close 204 (closed_at terisi); staf bisa balas tapi TIDAK bisa ubah status;
+  owner bisa buka kembali (closed_at null); owner TIDAK bisa hapus (0 baris);
+  superadmin hapus 204 + balasan cascade. Data uji dibersihkan.
+- **HALAMAN SUPERADMIN TIKET SUPPORT** (`kasirgo-admin/src/pages/SupportTickets.tsx`):
+  filter status + cari judul/outlet, daftar tiket (realtime + polling 20 dtk),
+  panel detail (balasan, kirim sebagai superadmin, ubah status open/proses/close,
+  hapus), jejak `log_admin_action`. Route `/support` + sidebar "Tiket Support" +
+  title + RBAC (superadmin/finance/support/ops).
+- **PANDUAN PDF LENGKAP**: `docs/panduan-kasirgo.pdf` (19 halaman, generator
+  `docs/tools/make_user_guide.py`, reportlab) + deploy
+  `https://ikhlassabar2021-create.github.io/kasirgo/panduan/panduan-kasirgo.pdf`.
+  Isi: peran & hak akses, setup toko/KYC, produk & stok, POS, pesanan/QR meja/KDS,
+  katalog & WA, pelanggan, laporan, karyawan/shift/delegasi, Dokter Bisnis AI,
+  marketplace pembeli, bundling/referral/afiliasi, Program Pendukung, tiket bantuan,
+  tips/FAQ. `guide_items` row `35a3f2ae...` diperbarui (judul "Panduan Lengkap
+  KasirGo (PDF)", url PDF). `GuideScreen._open` kini membuka URL https lebih dulu
+  (fallback file cache lokal) agar PDF bisa dibuka di APK & web.
+- Verifikasi: `flutter analyze lib` 0 error/warning (21 info pre-existing);
+  `npx tsc -b` admin bersih; `flutter build web --release --base-href /kasirgo/`
+  sukses; admin `npm run build` sukses. Deploy gh-pages `d4b0185` (main.dart.js
+  md5 `f41e63ea9537660a01d8e8e52c74b517` MATCH live; PDF md5
+  `bd599cb1770f8045e51e8520e34f6937` MATCH).
+- CATATAN: APK baru perlu dibangun agar fix SafeArea + kartu Pesanan Masuk +
+  Tiket Bantuan tersedia di perangkat (web sudah live).

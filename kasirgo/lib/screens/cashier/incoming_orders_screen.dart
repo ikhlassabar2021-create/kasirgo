@@ -13,7 +13,10 @@ import 'online_orders_screen.dart';
 import '../../widgets/common/bubble_glass.dart';
 
 class IncomingOrdersScreen extends ConsumerStatefulWidget {
-  const IncomingOrdersScreen({super.key});
+  const IncomingOrdersScreen({super.key, this.embedded = false});
+
+  /// True bila dipakai sebagai tab di dashboard (tanpa Scaffold/AppBar sendiri).
+  final bool embedded;
 
   @override
   ConsumerState<IncomingOrdersScreen> createState() =>
@@ -178,6 +181,22 @@ class _IncomingOrdersScreenState extends ConsumerState<IncomingOrdersScreen>
 
   @override
   Widget build(BuildContext context) {
+    if (widget.embedded) {
+      return Column(
+        children: [
+          _embeddedHeader(),
+          Expanded(
+            child: TabBarView(
+              controller: _tab,
+              children: [
+                _dineInBody(),
+                const OnlineOrdersView(),
+              ],
+            ),
+          ),
+        ],
+      );
+    }
     return Scaffold(
       backgroundColor: AppTheme.backgroundColor,
       appBar: AppBar(
@@ -236,6 +255,66 @@ class _IncomingOrdersScreenState extends ConsumerState<IncomingOrdersScreen>
           const OnlineOrdersView(),
         ],
       ),
+    );
+  }
+
+  Widget _embeddedHeader() {
+    return Column(
+      children: [
+        Padding(
+          padding: const EdgeInsets.fromLTRB(16, 12, 8, 0),
+          child: Row(
+            children: [
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text('Pesanan Masuk',
+                        style: GoogleFonts.plusJakartaSans(
+                            fontSize: 16,
+                            fontWeight: FontWeight.w800,
+                            color: AppTheme.textPrimary)),
+                    Row(
+                      children: [
+                        Container(
+                          width: 7,
+                          height: 7,
+                          decoration: const BoxDecoration(
+                              color: AppTheme.successColor,
+                              shape: BoxShape.circle),
+                        ),
+                        const SizedBox(width: 6),
+                        Text('Live - pantau pesanan masuk',
+                            style: GoogleFonts.plusJakartaSans(
+                                fontSize: 11,
+                                color: AppTheme.textSecondary)),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+              IconButton(
+                tooltip: 'Muat ulang',
+                icon: const Icon(Icons.refresh_rounded,
+                    color: AppTheme.primaryColor),
+                onPressed: () => _load(),
+              ),
+            ],
+          ),
+        ),
+        TabBar(
+          controller: _tab,
+          labelColor: AppTheme.primaryColor,
+          unselectedLabelColor: AppTheme.textSecondary,
+          indicatorColor: AppTheme.primaryColor,
+          labelStyle: GoogleFonts.plusJakartaSans(
+              fontWeight: FontWeight.w700, fontSize: 13),
+          tabs: const [
+            Tab(text: 'Dine-in'),
+            Tab(text: 'Online'),
+          ],
+        ),
+      ],
     );
   }
 

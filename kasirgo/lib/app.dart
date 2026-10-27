@@ -256,6 +256,19 @@ class _KasirGoAppState extends ConsumerState<KasirGoApp> {
       debugShowCheckedModeBanner: false,
       theme: AppTheme.lightTheme,
       routerConfig: _router,
+      // Android 15+ memaksa edge-to-edge: tanpa inset bawah, tombol aksi di
+      // dasar layar (mis. "Buat Pesanan") tertutup navigation bar sistem.
+      // SafeArea global ini mencegahnya di SEMUA layar sekaligus; SafeArea
+      // turunan otomatis tidak menambah padding ganda.
+      builder: (context, child) => ColoredBox(
+        color: AppTheme.backgroundColor,
+        child: SafeArea(
+          top: false,
+          left: false,
+          right: false,
+          child: child ?? const SizedBox.shrink(),
+        ),
+      ),
     );
   }
 }

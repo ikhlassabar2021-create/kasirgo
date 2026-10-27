@@ -5,6 +5,7 @@ import 'package:url_launcher/url_launcher.dart';
 
 import '../../config/app_theme.dart';
 import '../../services/guide_service.dart';
+import 'support_tickets_screen.dart';
 import '../../widgets/common/centennial_background.dart';
 import '../../utils/error_messages.dart';
 
@@ -94,12 +95,22 @@ class _GuideScreenState extends ConsumerState<GuideScreen> {
     setState(() => _busyId = item.id);
     try {
       if (item.kind == GuideKind.pdf) {
-        final cached = await _guide.cachedPdfPath(item);
-        final path = cached ?? await _guide.downloadPdf(item);
-        final target = path ?? url;
-        final uri = Uri.parse(target.startsWith('http') ? target : 'file://$target');
-        final ok = await launchUrl(uri, mode: LaunchMode.externalApplication);
-        if (!ok) _snack('Tidak bisa membuka PDF.', AppTheme.errorColor);
+        // Buka URL lebih dulu (web & Android bisa langsung menampilkan PDF di
+        // browser). Salinan lokal hanya fallback saat offline.
+        var opened = false;
+        if (url.startsWith('http')) {
+          opened = await launchUrl(Uri.parse(url),
+              mode: LaunchMode.externalApplication);
+        }
+        if (!opened) {
+          final cached = await _guide.cachedPdfPath(item);
+          final path = cached ?? await _guide.downloadPdf(item);
+          if (path != null) {
+            opened = await launchUrl(Uri.file(path),
+                mode: LaunchMode.externalApplication);
+          }
+        }
+        if (!opened) _snack('Tidak bisa membuka PDF.', AppTheme.errorColor);
       } else {
         final ok = await launchUrl(Uri.parse(url), mode: LaunchMode.externalApplication);
         if (!ok) _snack('Tidak bisa membuka video.', AppTheme.errorColor);
@@ -130,6 +141,14 @@ class _GuideScreenState extends ConsumerState<GuideScreen> {
             style: GoogleFonts.plusJakartaSans(
                 fontSize: 18, fontWeight: FontWeight.w800, color: AppTheme.textPrimary)),
         actions: [
+          IconButton(
+            tooltip: 'Buat Tiket Bantuan',
+            onPressed: () => Navigator.push(
+              context,
+              MaterialPageRoute(builder: (_) => const SupportTicketsScreen()),
+            ),
+            icon: const Icon(Icons.support_agent_rounded),
+          ),
           IconButton(
             tooltip: 'Muat ulang',
             onPressed: _loading ? null : () => _load(force: true),

@@ -20,6 +20,7 @@ export const Layout: React.FC<LayoutProps> = ({ onLogout, role = 'superadmin' })
       case '/features': return 'Fitur Utama';
       case '/affiliates': return 'Afiliasi & Referral';
       case '/control-plane': return 'Control Plane';
+      case '/support': return 'Tiket Support';
       default:
         if (location.pathname.startsWith('/outlets/')) return 'Detail Outlet';
         return 'KasirGo Superadmin';
