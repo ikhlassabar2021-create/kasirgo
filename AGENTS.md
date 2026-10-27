@@ -1576,3 +1576,9 @@ Commit `ff04bb3` (main) + deploy web gh-pages `050051c` (live md5
   `bd599cb1770f8045e51e8520e34f6937` MATCH).
 - CATATAN: APK baru perlu dibangun agar fix SafeArea + kartu Pesanan Masuk +
   Tiket Bantuan tersedia di perangkat (web sudah live).
+- E2E LIVE (Playwright, 27 Okt): owner "Pesanan Masuk" -> layar tab Dine-in/Online;
+  Pengaturan > Tiket Bantuan -> buat tiket `__E2E_TICKET__` sukses; superadmin
+  `#/support` melihat tiket tsb; PDF panduan HTTP 200 (37.540 byte). Skrip regresi:
+  `e2e/verify_orders_support_guide.mjs`. Data tiket uji dihapus (204). Console
+  error app = 0, admin = 0. Catatan: deep link `#/owner/<sub>` tidak berlaku saat
+  reload (ModeGate selalu ke `/owner`) -> navigasi lewat UI/drawer.
