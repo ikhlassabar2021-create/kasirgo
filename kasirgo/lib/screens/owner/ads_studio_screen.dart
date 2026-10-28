@@ -127,6 +127,7 @@ class _AdsStudioScreenState extends ConsumerState<AdsStudioScreen> {
     final outletId = _outletId;
     if (outletId == null) return;
     await showModalBottomSheet(
+      useSafeArea: true,
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
@@ -446,6 +447,7 @@ class _AdsStudioScreenState extends ConsumerState<AdsStudioScreen> {
   Future<bool> _showManualChecklist(
       String channel, Map<String, dynamic> c) async {
     final res = await showModalBottomSheet<bool>(
+      useSafeArea: true,
       context: context,
       backgroundColor: AppTheme.surfaceColor,
       shape: const RoundedRectangleBorder(
@@ -1004,6 +1006,7 @@ class _NewCampaignSheetState extends State<_NewCampaignSheet> {
 
   Future<void> _openConnect() async {
     await showModalBottomSheet(
+      useSafeArea: true,
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,

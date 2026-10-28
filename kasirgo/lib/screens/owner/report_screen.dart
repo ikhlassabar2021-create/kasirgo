@@ -118,6 +118,7 @@ class _ReportScreenState extends ConsumerState<ReportScreen> with SingleTickerPr
   /// atau hapus transaksi). Perubahan disimpan via RPC SECURITY DEFINER.
   Future<void> _openTransactionDetail(Transaction tx) async {
     final changed = await showModalBottomSheet<bool>(
+      useSafeArea: true,
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
@@ -722,6 +723,7 @@ class _ReportScreenState extends ConsumerState<ReportScreen> with SingleTickerPr
         'Dicatat otomatis oleh KasirGo Super-App UMKM.';
 
     showModalBottomSheet(
+      useSafeArea: true,
       context: context,
       backgroundColor: AppTheme.surfaceColor,
       shape: const RoundedRectangleBorder(

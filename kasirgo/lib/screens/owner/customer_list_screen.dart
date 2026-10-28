@@ -376,6 +376,7 @@ class _CustomerListScreenState extends ConsumerState<CustomerListScreen> {
 
   void _showCustomerDetail(Customer customer) {    final outletId = ref.read(currentUserProvider)?.outletId ?? '';
     showModalBottomSheet(
+      useSafeArea: true,
       context: context,
       isScrollControlled: true,
       backgroundColor: AppTheme.backgroundColor,

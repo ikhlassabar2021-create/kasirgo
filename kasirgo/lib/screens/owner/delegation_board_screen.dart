@@ -182,6 +182,7 @@ class _DelegationBoardScreenState extends ConsumerState<DelegationBoardScreen> {
     final outletId = ref.read(currentUserProvider)?.outletId;
     if (outletId == null || outletId.isEmpty) return;
     final saved = await showModalBottomSheet<bool>(
+      useSafeArea: true,
       context: context,
       isScrollControlled: true,
       backgroundColor: AppTheme.surfaceColor,

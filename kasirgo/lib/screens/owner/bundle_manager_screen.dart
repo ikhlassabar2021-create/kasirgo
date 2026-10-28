@@ -75,6 +75,7 @@ class _BundleManagerScreenState extends ConsumerState<BundleManagerScreen> {
 
     if (!mounted) return;
     final saved = await showModalBottomSheet<bool>(
+      useSafeArea: true,
       context: context,
       isScrollControlled: true,
       backgroundColor: AppTheme.surfaceColor,

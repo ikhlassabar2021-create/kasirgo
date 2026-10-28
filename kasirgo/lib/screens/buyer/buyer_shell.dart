@@ -694,6 +694,7 @@ class BuyerProfileView extends ConsumerWidget {
         );
     if (!context.mounted) return;
     final saved = await showModalBottomSheet<bool>(
+      useSafeArea: true,
       context: context,
       isScrollControlled: true,
       backgroundColor: AppTheme.surfaceColor,

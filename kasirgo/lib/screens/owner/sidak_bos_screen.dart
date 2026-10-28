@@ -844,6 +844,7 @@ class _SidakBosScreenState extends ConsumerState<SidakBosScreen>
     } catch (_) {}
     if (!mounted) return;
     await showModalBottomSheet<void>(
+      useSafeArea: true,
       context: context,
       isScrollControlled: true,
       backgroundColor: AppTheme.surfaceColor,

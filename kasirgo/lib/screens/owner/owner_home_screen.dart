@@ -206,6 +206,7 @@ class _OwnerHomeScreenState extends ConsumerState<OwnerHomeScreen> {
 
   void _showNotificationsSheet(List<Map<String, dynamic>> notifications) {
     showModalBottomSheet(
+      useSafeArea: true,
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
@@ -1264,6 +1265,7 @@ class _OwnerHomeScreenState extends ConsumerState<OwnerHomeScreen> {
   /// Modal "Lainnya": sisa menu (Pelanggan, Karyawan, Pengaturan, Panduan).
   void _openMoreMenu() {
     showModalBottomSheet<void>(
+      useSafeArea: true,
       context: context,
       builder: (ctx) => SafeArea(
         child: Column(

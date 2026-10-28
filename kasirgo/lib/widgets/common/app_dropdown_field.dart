@@ -75,6 +75,7 @@ class AppDropdownField extends StatelessWidget {
 
   Future<void> _open(BuildContext context) async {
     final picked = await showModalBottomSheet<_CategoryPick>(
+      useSafeArea: true,
       context: context,
       backgroundColor: AppTheme.surfaceColor,
       isScrollControlled: true,

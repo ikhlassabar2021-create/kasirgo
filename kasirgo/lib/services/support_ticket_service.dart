@@ -85,8 +85,8 @@ class SupportTicketReply {
         authorUid: map['author_uid']?.toString(),
         authorRole: map['author_role']?.toString() ?? 'staf',
         body: map['body']?.toString() ?? '',
-        createdAt: DateTime.tryParse(map['created_at']?.toString() ?? '')
-                ?.toLocal() ??
+        createdAt:
+            DateTime.tryParse(map['created_at']?.toString() ?? '')?.toLocal() ??
             DateTime.now(),
       );
 
@@ -98,7 +98,7 @@ class SupportTicketReply {
 class SupportTicketService {
   final SupabaseClient _client;
   SupportTicketService({SupabaseClient? client})
-      : _client = client ?? Supabase.instance.client;
+    : _client = client ?? Supabase.instance.client;
 
   Future<List<SupportTicket>> listTickets(String outletId) async {
     try {
@@ -109,8 +109,9 @@ class SupportTicketService {
           .order('updated_at', ascending: false)
           .limit(100);
       return (res as List)
-          .map((e) =>
-              SupportTicket.fromMap(Map<String, dynamic>.from(e as Map)))
+          .map(
+            (e) => SupportTicket.fromMap(Map<String, dynamic>.from(e as Map)),
+          )
           .toList();
     } catch (e) {
       debugPrint('SupportTicketService.listTickets error: $e');
@@ -153,8 +154,10 @@ class SupportTicketService {
           .eq('ticket_id', ticketId)
           .order('created_at', ascending: true);
       return (res as List)
-          .map((e) =>
-              SupportTicketReply.fromMap(Map<String, dynamic>.from(e as Map)))
+          .map(
+            (e) =>
+                SupportTicketReply.fromMap(Map<String, dynamic>.from(e as Map)),
+          )
           .toList();
     } catch (e) {
       debugPrint('SupportTicketService.listReplies error: $e');
@@ -162,21 +165,27 @@ class SupportTicketService {
     }
   }
 
-  Future<bool> reply({
+  /// Kirim balasan; mengembalikan baris balasan (id dipakai untuk lampiran),
+  /// atau null saat gagal. Balasan owner membuka kembali tiket selesai.
+  Future<SupportTicketReply?> reply({
     required String ticketId,
     required String body,
     bool asOwner = false,
   }) async {
     final text = body.trim();
-    if (text.isEmpty) return false;
+    if (text.isEmpty) return null;
     try {
       final user = _client.auth.currentUser;
-      await _client.from('support_ticket_replies').insert({
-        'ticket_id': ticketId,
-        'author_uid': user?.id,
-        'author_role': asOwner ? 'owner' : 'staf',
-        'body': text,
-      });
+      final res = await _client
+          .from('support_ticket_replies')
+          .insert({
+            'ticket_id': ticketId,
+            'author_uid': user?.id,
+            'author_role': asOwner ? 'owner' : 'staf',
+            'body': text,
+          })
+          .select()
+          .single();
       // Balasan owner membuka kembali tiket yang sudah selesai.
       final current = await _client
           .from('support_tickets')
@@ -186,12 +195,13 @@ class SupportTicketService {
       if (current != null && current['status'] == 'close' && asOwner) {
         await _client
             .from('support_tickets')
-            .update({'status': 'open'}).eq('id', ticketId);
+            .update({'status': 'open'})
+            .eq('id', ticketId);
       }
-      return true;
+      return SupportTicketReply.fromMap(Map<String, dynamic>.from(res));
     } catch (e) {
       debugPrint('SupportTicketService.reply error: $e');
-      return false;
+      return null;
     }
   }
 
@@ -199,7 +209,8 @@ class SupportTicketService {
     try {
       await _client
           .from('support_tickets')
-          .update({'status': status}).eq('id', ticketId);
+          .update({'status': status})
+          .eq('id', ticketId);
       return true;
     } catch (e) {
       debugPrint('SupportTicketService.setStatus error: $e');
@@ -216,5 +227,207 @@ class SupportTicketService {
       debugPrint('SupportTicketService.deleteTicket error: $e');
       return false;
     }
+  }
+
+  // ---------------------------------------------------------------------
+  // Lampiran tiket (gambar/file) di bucket privat `support-attachments`.
+  // ---------------------------------------------------------------------
+
+  static const attachmentBucket = 'support-attachments';
+  static const maxAttachmentBytes = 10 * 1024 * 1024;
+
+  Future<List<SupportAttachment>> listAttachments(String ticketId) async {
+    try {
+      final res = await _client
+          .from('support_ticket_attachments')
+          .select()
+          .eq('ticket_id', ticketId)
+          .order('created_at', ascending: true);
+      return (res as List)
+          .map(
+            (e) =>
+                SupportAttachment.fromMap(Map<String, dynamic>.from(e as Map)),
+          )
+          .toList();
+    } catch (e) {
+      debugPrint('SupportTicketService.listAttachments error: $e');
+      return [];
+    }
+  }
+
+  Future<String?> createSignedUrl(
+    String storagePath, {
+    int expiresIn = 3600,
+  }) async {
+    try {
+      return await _client.storage
+          .from(attachmentBucket)
+          .createSignedUrl(storagePath, expiresIn);
+    } catch (e) {
+      debugPrint('SupportTicketService.createSignedUrl error: $e');
+      return null;
+    }
+  }
+
+  Future<SupportAttachment?> uploadAttachment({
+    required String outletId,
+    required String ticketId,
+    String? replyId,
+    required Uint8List bytes,
+    required String fileName,
+    String? mimeType,
+  }) async {
+    if (bytes.isEmpty) return null;
+    if (bytes.length > maxAttachmentBytes) return null;
+    final safeName = _safeFileName(fileName);
+    final mime = (mimeType == null || mimeType.isEmpty)
+        ? _mimeFromName(safeName)
+        : mimeType;
+    final path =
+        '$outletId/$ticketId/${DateTime.now().microsecondsSinceEpoch}_$safeName';
+    try {
+      await _client.storage
+          .from(attachmentBucket)
+          .uploadBinary(
+            path,
+            bytes,
+            fileOptions: FileOptions(contentType: mime, upsert: false),
+          );
+      final res = await _client
+          .from('support_ticket_attachments')
+          .insert({
+            'ticket_id': ticketId,
+            'reply_id': replyId,
+            'outlet_id': outletId,
+            'uploaded_by': _client.auth.currentUser?.id,
+            'file_name': fileName,
+            'mime_type': mime,
+            'size_bytes': bytes.length,
+            'storage_path': path,
+          })
+          .select()
+          .single();
+      return SupportAttachment.fromMap(Map<String, dynamic>.from(res));
+    } catch (e) {
+      debugPrint('SupportTicketService.uploadAttachment error: $e');
+      return null;
+    }
+  }
+
+  Future<bool> deleteAttachment(SupportAttachment attachment) async {
+    try {
+      await _client.storage.from(attachmentBucket).remove([
+        attachment.storagePath,
+      ]);
+    } catch (e) {
+      debugPrint('SupportTicketService.deleteAttachment storage error: $e');
+    }
+    try {
+      await _client
+          .from('support_ticket_attachments')
+          .delete()
+          .eq('id', attachment.id);
+      return true;
+    } catch (e) {
+      debugPrint('SupportTicketService.deleteAttachment error: $e');
+      return false;
+    }
+  }
+
+  static String _safeFileName(String name) {
+    final cleaned = name
+        .replaceAll(RegExp(r'[^A-Za-z0-9._-]+'), '_')
+        .replaceAll(RegExp(r'^_+|_+$'), '');
+    if (cleaned.isEmpty) return 'lampiran';
+    return cleaned.length > 90
+        ? cleaned.substring(cleaned.length - 90)
+        : cleaned;
+  }
+
+  static String _mimeFromName(String name) {
+    final ext = name.contains('.') ? name.split('.').last.toLowerCase() : '';
+    switch (ext) {
+      case 'jpg':
+      case 'jpeg':
+        return 'image/jpeg';
+      case 'png':
+        return 'image/png';
+      case 'webp':
+        return 'image/webp';
+      case 'gif':
+        return 'image/gif';
+      case 'heic':
+        return 'image/heic';
+      case 'pdf':
+        return 'application/pdf';
+      case 'doc':
+        return 'application/msword';
+      case 'docx':
+        return 'application/vnd.openxmlformats-officedocument.wordprocessingml.document';
+      case 'xls':
+        return 'application/vnd.ms-excel';
+      case 'xlsx':
+        return 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet';
+      case 'csv':
+        return 'text/csv';
+      case 'txt':
+        return 'text/plain';
+      default:
+        return 'application/octet-stream';
+    }
+  }
+}
+
+/// Lampiran tiket (gambar atau file) di bucket privat.
+class SupportAttachment {
+  final String id;
+  final String ticketId;
+  final String? replyId;
+  final String fileName;
+  final String? mimeType;
+  final int sizeBytes;
+  final String storagePath;
+  final DateTime createdAt;
+
+  const SupportAttachment({
+    required this.id,
+    required this.ticketId,
+    required this.replyId,
+    required this.fileName,
+    required this.mimeType,
+    required this.sizeBytes,
+    required this.storagePath,
+    required this.createdAt,
+  });
+
+  factory SupportAttachment.fromMap(Map<String, dynamic> map) =>
+      SupportAttachment(
+        id: map['id']?.toString() ?? '',
+        ticketId: map['ticket_id']?.toString() ?? '',
+        replyId: map['reply_id']?.toString(),
+        fileName: map['file_name']?.toString() ?? 'lampiran',
+        mimeType: map['mime_type']?.toString(),
+        sizeBytes: (map['size_bytes'] as num?)?.toInt() ?? 0,
+        storagePath: map['storage_path']?.toString() ?? '',
+        createdAt:
+            DateTime.tryParse(map['created_at']?.toString() ?? '')?.toLocal() ??
+            DateTime.now(),
+      );
+
+  bool get isImage => (mimeType ?? '').startsWith('image/');
+
+  String get extension {
+    final n = fileName;
+    return n.contains('.') ? n.split('.').last.toUpperCase() : 'FILE';
+  }
+
+  String get sizeLabel {
+    if (sizeBytes >= 1024 * 1024) {
+      return '${(sizeBytes / (1024 * 1024)).toStringAsFixed(1)} MB';
+    }
+    if (sizeBytes >= 1024) {
+      return '${(sizeBytes / 1024).round()} KB';
+    }
+    return '$sizeBytes B';
   }
 }

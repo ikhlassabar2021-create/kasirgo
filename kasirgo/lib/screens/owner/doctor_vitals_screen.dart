@@ -96,6 +96,7 @@ class _DoctorVitalsScreenState extends ConsumerState<DoctorVitalsScreen> {
       source = ImageSource.gallery;
     } else {
       source = await showModalBottomSheet<ImageSource>(
+      useSafeArea: true,
         context: context,
         shape: const RoundedRectangleBorder(
           borderRadius: BorderRadius.vertical(top: Radius.circular(20)),

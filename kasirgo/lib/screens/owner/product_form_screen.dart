@@ -213,6 +213,7 @@ class _ProductFormScreenState extends ConsumerState<ProductFormScreen> {
 
   void _showImageSourceDialog() {
     showModalBottomSheet(
+      useSafeArea: true,
       context: context,
       backgroundColor: AppTheme.surfaceColor,
       shape: const RoundedRectangleBorder(

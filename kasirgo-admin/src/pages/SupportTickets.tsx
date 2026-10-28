@@ -11,6 +11,7 @@ import {
   CheckCircle2,
   Clock3,
   MessageSquare,
+  FileText,
 } from 'lucide-react';
 
 type TicketRow = {
@@ -34,6 +35,83 @@ type ReplyRow = {
   body: string;
   created_at: string;
 };
+
+type AttachmentRow = {
+  id: string;
+  ticket_id: string;
+  reply_id: string | null;
+  file_name: string;
+  mime_type: string | null;
+  size_bytes: number | null;
+  storage_path: string;
+  created_at: string;
+};
+
+const formatBytes = (bytes: number | null | undefined) => {
+  if (!bytes || bytes <= 0) return '';
+  if (bytes >= 1024 * 1024) return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+  if (bytes >= 1024) return `${Math.round(bytes / 1024)} KB`;
+  return `${bytes} B`;
+};
+
+function AttachmentList({
+  items,
+  urls,
+  platform,
+}: {
+  items: AttachmentRow[];
+  urls: Record<string, string>;
+  platform: boolean;
+}) {
+  if (items.length === 0) return null;
+  return (
+    <div className="mt-2 flex flex-wrap gap-2">
+      {items.map((a) => {
+        const url = urls[a.id];
+        const isImage = (a.mime_type ?? '').startsWith('image/');
+        if (isImage && url) {
+          return (
+            <a
+              key={a.id}
+              href={url}
+              target="_blank"
+              rel="noreferrer"
+              className="block w-28 h-20 rounded-lg overflow-hidden border border-border/60 bg-bg"
+              title={a.file_name}
+            >
+              <img
+                src={url}
+                alt={a.file_name}
+                className="w-full h-full object-cover"
+                loading="lazy"
+              />
+            </a>
+          );
+        }
+        return (
+          <a
+            key={a.id}
+            href={url ?? undefined}
+            target="_blank"
+            rel="noreferrer"
+            className={`flex items-center gap-1.5 max-w-[190px] px-2 py-1.5 rounded-lg border text-[10px] ${
+              platform
+                ? 'border-white/30 bg-white/10 text-white'
+                : 'border-border bg-bg text-ink'
+            }`}
+            title={a.file_name}
+          >
+            <FileText className="w-3.5 h-3.5 shrink-0" />
+            <span className="truncate">{a.file_name}</span>
+            <span className={platform ? 'text-white/60' : 'text-muted'}>
+              {formatBytes(a.size_bytes)}
+            </span>
+          </a>
+        );
+      })}
+    </div>
+  );
+}
 
 const STATUS_META: Record<string, { label: string; cls: string; icon: typeof Clock3 }> = {
   open: { label: 'Menunggu', cls: 'bg-primary/10 text-primary border-primary/30', icon: Clock3 },
@@ -61,6 +139,8 @@ export function SupportTicketsPage() {
   const [search, setSearch] = useState('');
   const [selected, setSelected] = useState<TicketRow | null>(null);
   const [replies, setReplies] = useState<ReplyRow[]>([]);
+  const [attachments, setAttachments] = useState<AttachmentRow[]>([]);
+  const [signedUrls, setSignedUrls] = useState<Record<string, string>>({});
   const [detailLoading, setDetailLoading] = useState(false);
   const [body, setBody] = useState('');
   const [sending, setSending] = useState(false);
@@ -110,6 +190,8 @@ export function SupportTicketsPage() {
   const loadDetail = useCallback(async (ticket: TicketRow) => {
     setSelected(ticket);
     setReplies([]);
+    setAttachments([]);
+    setSignedUrls({});
     setDetailLoading(true);
     try {
       const { data, error: err } = await supabase
@@ -119,6 +201,22 @@ export function SupportTicketsPage() {
         .order('created_at', { ascending: true });
       if (err) throw err;
       setReplies((data ?? []) as ReplyRow[]);
+
+      const { data: attData } = await supabase
+        .from('support_ticket_attachments')
+        .select('*')
+        .eq('ticket_id', ticket.id)
+        .order('created_at', { ascending: true });
+      const atts = (attData ?? []) as AttachmentRow[];
+      setAttachments(atts);
+      const urlMap: Record<string, string> = {};
+      for (const a of atts) {
+        const { data: signed } = await supabase.storage
+          .from('support-attachments')
+          .createSignedUrl(a.storage_path, 3600);
+        if (signed?.signedUrl) urlMap[a.id] = signed.signedUrl;
+      }
+      setSignedUrls(urlMap);
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Gagal memuat balasan');
     } finally {
@@ -375,6 +473,11 @@ export function SupportTicketsPage() {
                 {selected.description && (
                   <p className="text-[11px] text-muted mt-2 leading-relaxed">{selected.description}</p>
                 )}
+                <AttachmentList
+                  items={attachments.filter((a) => !a.reply_id)}
+                  urls={signedUrls}
+                  platform={false}
+                />
                 <div className="flex flex-wrap gap-2 mt-3">
                   {(['open', 'proses', 'close'] as const).map((s) => (
                     <button
@@ -430,6 +533,11 @@ export function SupportTicketsPage() {
                               : 'Staf'}
                         </p>
                         <p className="whitespace-pre-wrap">{r.body}</p>
+                        <AttachmentList
+                          items={attachments.filter((a) => a.reply_id === r.id)}
+                          urls={signedUrls}
+                          platform={platform}
+                        />
                         <p
                           className={`text-[9px] mt-1 ${
                             platform ? 'text-white/70' : 'text-muted'

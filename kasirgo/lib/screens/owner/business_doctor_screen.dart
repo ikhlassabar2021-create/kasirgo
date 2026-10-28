@@ -352,6 +352,7 @@ class _BusinessDoctorScreenState extends ConsumerState<BusinessDoctorScreen> {
 
     final current = VoiceService().voiceName;
     final picked = await showModalBottomSheet<Object?>(
+      useSafeArea: true,
       context: context,
       isScrollControlled: true,
       backgroundColor: AppTheme.surfaceColor,
@@ -1911,6 +1912,7 @@ class _BusinessDoctorScreenState extends ConsumerState<BusinessDoctorScreen> {
     required List<Map<String, dynamic>> steps,
   }) async {
     final action = await showModalBottomSheet<String>(
+      useSafeArea: true,
       context: context,
       isScrollControlled: true,
       backgroundColor: AppTheme.surfaceColor,
@@ -2392,6 +2394,7 @@ class _BusinessDoctorScreenState extends ConsumerState<BusinessDoctorScreen> {
     ];
 
     showModalBottomSheet<void>(
+      useSafeArea: true,
       context: context,
       isScrollControlled: true,
       backgroundColor: AppTheme.surfaceColor,

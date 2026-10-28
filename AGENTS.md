@@ -1582,3 +1582,32 @@ Commit `ff04bb3` (main) + deploy web gh-pages `050051c` (live md5
   `e2e/verify_orders_support_guide.mjs`. Data tiket uji dihapus (204). Console
   error app = 0, admin = 0. Catatan: deep link `#/owner/<sub>` tidak berlaku saat
   reload (ModeGate selalu ke `/owner`) -> navigasi lewat UI/drawer.
+
+## Sesi 2026-10-28: Lampiran Tiket + Bantuan Bergambar + SafeArea Sheet (SELESAI)
+- MIGRASI `docs/migrations/2026-10-28-kasirgo-support-attachments.sql` (DITERAPKAN):
+  tabel `support_ticket_attachments` (ticket_id/reply_id/outlet_id/uploaded_by/
+  file_name/mime_type/size_bytes/storage_path unik, FK cascade) + RLS
+  `is_outlet_member`/`is_platform_admin`; bucket privat `support-attachments`
+  (10 MB) + policy storage (path `{outlet_id}/{ticket_id}/...`).
+- APP TIKET: `SupportTicketService.reply()` kini mengembalikan model (bukan bool)
+  agar balasan bisa punya lampiran; tambah `SupportAttachment`,
+  `listAttachments`/`uploadAttachment`/`createSignedUrl`/`deleteAttachment`
+  (maks 3 file x 10 MB). UI: tombol Lampiran di form tiket baru + composer
+  balasan, chip berkas, render gambar (signed URL, bisa zoom) / file (buka
+  browser), semua sheet pakai `useSafeArea`.
+- PUSAT BANTUAN: `HelpCenterScreen` (tab Panduan + Tiket Support) menggantikan
+  entri drawer "Bantuan & Tutorial" (sebelumnya tidak bisa diklik) dan baris
+  Pengaturan; Panduan bergambar via `widgets/guide/guide_mock.dart` (10 simulasi
+  layar digambar dengan widget, 6 topik x 3 langkah, tombol buka fitur).
+- SAFEAREA: 38 `showModalBottomSheet` di `lib/` diberi `useSafeArea: true`
+  (global SafeArea di `app.dart` sudah ada) -> tombol/ sheet tidak tertutup
+  navigasi HP.
+- ADMIN: `SupportTickets.tsx` memuat `support_ticket_attachments`, signed URL
+  1 jam, render gambar (klik buka) + chip file di tiket & setiap balasan.
+- VERIFIKASI E2E `e2e/verify_help_attachments.mjs`: pusat bantuan/tabs/topik/
+  mock/aksi OK, file picker web + chip + tiket detail OK, admin melihat gambar
+  `qa-attachment.png` OK, mobile 390x844 drawer->bantuan->sheet tanpa overflow,
+  console error 0. Data uji (tiket + objek storage) dibersihkan.
+- Deploy web+admin gh-pages `6a6fd13`; versi app dinaikkan `1.0.9+10`.
+- CATATAN: SMTP Mailtrap masih demo domain (hanya email owner bisa menerima);
+  konfirmasi pendaftar non-owner menunggu domain/SMTP final (Brevo/SMTP2GO).

@@ -445,6 +445,7 @@ class _DoctorCasesScreenState extends ConsumerState<DoctorCasesScreen> {
     final contentCtrl = TextEditingController();
     final formKey = GlobalKey<FormState>();
     final saved = await showModalBottomSheet<bool>(
+      useSafeArea: true,
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,

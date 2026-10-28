@@ -2,9 +2,12 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:supabase_flutter/supabase_flutter.dart' hide User;
+
 import 'dart:convert';
 import 'dart:typed_data';
+
 import 'package:image_picker/image_picker.dart';
+
 import '../../config/app_theme.dart';
 import '../../providers/auth_provider.dart';
 import '../../services/auth_service.dart';
@@ -16,8 +19,7 @@ import '../../screens/auth/onboarding_kyc_screen.dart';
 import '../../utils/formatters.dart';
 import '../../utils/qris_config.dart';
 import 'report_schedule_screen.dart';
-import 'guide_screen.dart';
-import 'support_tickets_screen.dart';
+import 'help_center_screen.dart';
 import 'multi_outlet_screen.dart';
 import '../../utils/receipt_generator.dart';
 import '../../utils/error_messages.dart';
@@ -97,7 +99,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
             .select('*')
             .eq('outlet_id', outletId.toString())
             .maybeSingle();
-        
+
         if (kycRes != null) {
           _kycData = kycRes;
           _kycStatus = kycRes['status'] as String?;
@@ -111,15 +113,15 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
             .select('*')
             .eq('outlet_id', outletId.toString())
             .maybeSingle();
-        
+
         if (quotaRes != null) {
           _staffQuotaMax = quotaRes['max_staff'] as int? ?? 5;
           _staffQuotaCurrent = quotaRes['current_staff_count'] as int? ?? 0;
           _staffQuotaExtra = quotaRes['extra_from_supporter'] == true;
         }
-
       }
-    } catch (_) {} finally {
+    } catch (_) {
+    } finally {
       if (mounted) setState(() => _isLoading = false);
     }
   }
@@ -138,8 +140,10 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
 
     setState(() => _isLoading = true);
     try {
-      final result = await SupporterService()
-          .checkout(outletId: outletId, amount: price);
+      final result = await SupporterService().checkout(
+        outletId: outletId,
+        amount: price,
+      );
       if (!mounted) return;
       if (!result.success) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -152,6 +156,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
       }
       if (result.hasDynamicQr) {
         await showModalBottomSheet<bool>(
+      useSafeArea: true,
           context: context,
           isScrollControlled: true,
           backgroundColor: AppTheme.surfaceColor,
@@ -165,7 +170,8 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(
               content: Text(
-                  'Terima kasih! Dukungan Anda sedang diverifikasi otomatis.'),
+                'Terima kasih! Dukungan Anda sedang diverifikasi otomatis.',
+              ),
               backgroundColor: AppTheme.successColor,
             ),
           );
@@ -177,7 +183,8 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
             content: Text(
-                'Terima kasih! Status Pendukung aktif. Fitur bonus terbuka.'),
+              'Terima kasih! Status Pendukung aktif. Fitur bonus terbuka.',
+            ),
             backgroundColor: AppTheme.successColor,
           ),
         );
@@ -186,7 +193,12 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text(friendlyError(e, fallback: 'Gagal memproses dukungan. Silakan coba lagi.')),
+            content: Text(
+              friendlyError(
+                e,
+                fallback: 'Gagal memproses dukungan. Silakan coba lagi.',
+              ),
+            ),
             backgroundColor: AppTheme.errorColor,
           ),
         );
@@ -208,15 +220,21 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
             const Icon(Icons.favorite, color: AppTheme.secondaryColor),
             const SizedBox(width: 8),
             const Expanded(
-              child: Text('Dukung KasirGo',
-                  style: TextStyle(
-                      color: AppTheme.textPrimary, fontWeight: FontWeight.bold)),
+              child: Text(
+                'Dukung KasirGo',
+                style: TextStyle(
+                  color: AppTheme.textPrimary,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
             ),
             IconButton(
               tooltip: 'Tutup',
               onPressed: () => Navigator.pop(ctx),
-              icon: const Icon(Icons.close_rounded,
-                  color: AppTheme.textSecondary),
+              icon: const Icon(
+                Icons.close_rounded,
+                color: AppTheme.textSecondary,
+              ),
             ),
           ],
         ),
@@ -241,28 +259,40 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      const Text('Program',
-                          style: TextStyle(
-                              color: AppTheme.textSecondary, fontSize: 13)),
-                      const Text('Pendukung KasirGo',
-                          style: TextStyle(
-                              color: AppTheme.accentColor,
-                              fontWeight: FontWeight.bold)),
+                      const Text(
+                        'Program',
+                        style: TextStyle(
+                          color: AppTheme.textSecondary,
+                          fontSize: 13,
+                        ),
+                      ),
+                      const Text(
+                        'Pendukung KasirGo',
+                        style: TextStyle(
+                          color: AppTheme.accentColor,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
                     ],
                   ),
                   const Divider(height: 16),
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      Text(isActive ? 'Nominal Perpanjang' : 'Nominal Kontribusi',
-                          style: const TextStyle(
-                              color: AppTheme.textSecondary, fontSize: 13)),
+                      Text(
+                        isActive ? 'Nominal Perpanjang' : 'Nominal Kontribusi',
+                        style: const TextStyle(
+                          color: AppTheme.textSecondary,
+                          fontSize: 13,
+                        ),
+                      ),
                       Text(
                         '${Formatters.currency(price)} / bulan',
                         style: const TextStyle(
-                            color: AppTheme.secondaryColor,
-                            fontWeight: FontWeight.bold,
-                            fontSize: 15),
+                          color: AppTheme.secondaryColor,
+                          fontWeight: FontWeight.bold,
+                          fontSize: 15,
+                        ),
                       ),
                     ],
                   ),
@@ -281,8 +311,9 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
             style: ElevatedButton.styleFrom(
               backgroundColor: AppTheme.primaryColor,
               foregroundColor: Colors.white,
-              shape:
-                  RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(8),
+              ),
             ),
             onPressed: () => Navigator.of(ctx).pop(true),
             child: Text(isActive ? 'Perpanjang Sekarang' : 'Dukung Sekarang'),
@@ -307,10 +338,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
       appBar: AppBar(
         title: const Text('Pengaturan & Program Pendukung'),
         actions: [
-          IconButton(
-            icon: const Icon(Icons.refresh),
-            onPressed: _loadData,
-          ),
+          IconButton(icon: const Icon(Icons.refresh), onPressed: _loadData),
         ],
       ),
       body: _isLoading
@@ -322,30 +350,32 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                   onRefresh: _loadData,
                   child: ListView(
                     padding: const EdgeInsets.all(16),
-                      children: [
-                        _buildForeverFreeBanner(),
-                        const SizedBox(height: 16),
-                        _buildSupporterProgramCard(),
-                        const SizedBox(height: 16),
-                        _buildReportScheduleEntry(),
-                        const SizedBox(height: 16),
-                        _buildMultiOutletEntry(),
-                        const SizedBox(height: 16),
-                        _buildReceiptEntry(),
-                        const SizedBox(height: 16),
-                        _buildKYCStatusCard(),
-                        const SizedBox(height: 16),
-                        _buildStaffQuotaCard(),
-                        const SizedBox(height: 16),
-                        _buildBusinessProfileCard(user),
-                        const SizedBox(height: 16),
-                        _buildAccountMenuCard(),
+                    children: [
+                      _buildForeverFreeBanner(),
+                      const SizedBox(height: 16),
+                      _buildSupporterProgramCard(),
+                      const SizedBox(height: 16),
+                      _buildReportScheduleEntry(),
+                      const SizedBox(height: 16),
+                      _buildMultiOutletEntry(),
+                      const SizedBox(height: 16),
+                      _buildReceiptEntry(),
+                      const SizedBox(height: 16),
+                      _buildKYCStatusCard(),
+                      const SizedBox(height: 16),
+                      _buildStaffQuotaCard(),
+                      const SizedBox(height: 16),
+                      _buildBusinessProfileCard(user),
+                      const SizedBox(height: 16),
+                      _buildAccountMenuCard(),
                       const SizedBox(height: 24),
                       SizedBox(
                         height: 48,
                         child: OutlinedButton(
                           onPressed: () async {
-                            await ref.read(currentUserProvider.notifier).signOut();
+                            await ref
+                                .read(currentUserProvider.notifier)
+                                .signOut();
                             if (context.mounted) {
                               context.go('/login');
                             }
@@ -353,9 +383,14 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                           style: OutlinedButton.styleFrom(
                             foregroundColor: AppTheme.errorColor,
                             side: const BorderSide(color: AppTheme.errorColor),
-                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(12),
+                            ),
                           ),
-                          child: const Text('Keluar dari Akun', style: TextStyle(fontWeight: FontWeight.bold)),
+                          child: const Text(
+                            'Keluar dari Akun',
+                            style: TextStyle(fontWeight: FontWeight.bold),
+                          ),
                         ),
                       ),
                       const SizedBox(height: 24),
@@ -385,7 +420,11 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
         children: [
           Row(
             children: [
-              const Icon(Icons.all_inclusive, color: AppTheme.accentColor, size: 28),
+              const Icon(
+                Icons.all_inclusive,
+                color: AppTheme.accentColor,
+                size: 28,
+              ),
               const SizedBox(width: 10),
               const Expanded(
                 child: Text(
@@ -398,7 +437,10 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                 ),
               ),
               Container(
-                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 10,
+                  vertical: 4,
+                ),
                 decoration: BoxDecoration(
                   color: AppTheme.successColor,
                   borderRadius: BorderRadius.circular(20),
@@ -417,7 +459,11 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
           const SizedBox(height: 10),
           const Text(
             'Seluruh fitur inti KasirGo: POS kasir, produk & transaksi tanpa batas, laporan, multi-tipe outlet, dan AI Co-Pilot dapat dinikmati 100% tanpa biaya langganan.',
-            style: TextStyle(color: AppTheme.textSecondary, fontSize: 13, height: 1.4),
+            style: TextStyle(
+              color: AppTheme.textSecondary,
+              fontSize: 13,
+              height: 1.4,
+            ),
           ),
           if (_entitlements?.hasAccess == true) ...[
             const SizedBox(height: 12),
@@ -430,18 +476,23 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
               ),
               child: Row(
                 children: [
-                  const Icon(Icons.favorite, color: AppTheme.secondaryColor, size: 18),
+                  const Icon(
+                    Icons.favorite,
+                    color: AppTheme.secondaryColor,
+                    size: 18,
+                  ),
                   const SizedBox(width: 8),
                   Expanded(
                     child: Text(
                       (_entitlements?.isSupporter == true)
                           ? 'Terima kasih! Anda Pendukung KasirGo'
-                              '${_supporterEndDate != null ? " s/d ${Formatters.date(_supporterEndDate!)}" : ""}'
+                                '${_supporterEndDate != null ? " s/d ${Formatters.date(_supporterEndDate!)}" : ""}'
                           : 'Masa trial Pendukung aktif - tersisa ${_entitlements?.trialDaysLeft ?? 0} hari',
                       style: const TextStyle(
-                          color: AppTheme.textPrimary,
-                          fontSize: 12,
-                          fontWeight: FontWeight.w600),
+                        color: AppTheme.textPrimary,
+                        fontSize: 12,
+                        fontWeight: FontWeight.w600,
+                      ),
                     ),
                   ),
                 ],
@@ -466,17 +517,21 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
         color: AppTheme.surfaceColor.withValues(alpha: 0.8),
         borderRadius: BorderRadius.circular(16),
         border: Border.all(
-            color: hasAccess
-                ? AppTheme.secondaryColor.withValues(alpha: 0.6)
-                : AppTheme.borderColor.withValues(alpha: 0.5)),
+          color: hasAccess
+              ? AppTheme.secondaryColor.withValues(alpha: 0.6)
+              : AppTheme.borderColor.withValues(alpha: 0.5),
+        ),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
             children: [
-              const Icon(Icons.volunteer_activism,
-                  color: AppTheme.secondaryColor, size: 22),
+              const Icon(
+                Icons.volunteer_activism,
+                color: AppTheme.secondaryColor,
+                size: 22,
+              ),
               const SizedBox(width: 8),
               const Expanded(
                 child: Text(
@@ -490,31 +545,41 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
               ),
               if (isSupporter)
                 Container(
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 10,
+                    vertical: 4,
+                  ),
                   decoration: BoxDecoration(
                     color: AppTheme.secondaryColor,
                     borderRadius: BorderRadius.circular(20),
                   ),
-                  child: const Text('PENDUKUNG',
-                      style: TextStyle(
-                          fontSize: 10,
-                          fontWeight: FontWeight.bold,
-                          color: Colors.white)),
+                  child: const Text(
+                    'PENDUKUNG',
+                    style: TextStyle(
+                      fontSize: 10,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.white,
+                    ),
+                  ),
                 )
               else if (hasAccess)
                 Container(
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 10,
+                    vertical: 4,
+                  ),
                   decoration: BoxDecoration(
                     color: AppTheme.warningColor.withValues(alpha: 0.2),
                     borderRadius: BorderRadius.circular(20),
                   ),
-                  child: Text('TRIAL ${ent?.trialDaysLeft ?? 0} HARI',
-                      style: const TextStyle(
-                          fontSize: 10,
-                          fontWeight: FontWeight.bold,
-                          color: AppTheme.warningColor)),
+                  child: Text(
+                    'TRIAL ${ent?.trialDaysLeft ?? 0} HARI',
+                    style: const TextStyle(
+                      fontSize: 10,
+                      fontWeight: FontWeight.bold,
+                      color: AppTheme.warningColor,
+                    ),
+                  ),
                 ),
             ],
           ),
@@ -524,12 +589,14 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
             'membuka fitur bonus & menghilangkan iklan sponsor di '
             'katalog pelanggan Anda.',
             style: TextStyle(
-                fontSize: 13, color: AppTheme.textSecondary, height: 1.4),
+              fontSize: 13,
+              color: AppTheme.textSecondary,
+              height: 1.4,
+            ),
           ),
           const SizedBox(height: 14),
           ...SupporterService.premiumFeatures.map(
-            (k) => _buildSupportBenefit(
-                SupporterService.featureLabels[k] ?? k),
+            (k) => _buildSupportBenefit(SupporterService.featureLabels[k] ?? k),
           ),
           const SizedBox(height: 16),
           Container(
@@ -542,15 +609,17 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
             child: Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                const Text('Satu harga untuk semua',
-                    style: TextStyle(
-                        color: AppTheme.textSecondary, fontSize: 13)),
+                const Text(
+                  'Satu harga untuk semua',
+                  style: TextStyle(color: AppTheme.textSecondary, fontSize: 13),
+                ),
                 Text(
                   '${Formatters.currency(price)} / bulan',
                   style: const TextStyle(
-                      color: AppTheme.secondaryColor,
-                      fontWeight: FontWeight.bold,
-                      fontSize: 15),
+                    color: AppTheme.secondaryColor,
+                    fontWeight: FontWeight.bold,
+                    fontSize: 15,
+                  ),
                 ),
               ],
             ),
@@ -565,13 +634,16 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
               label: Text(
                 isSupporter ? 'Perpanjang Dukungan' : 'Dukung KasirGo Sekarang',
                 style: const TextStyle(
-                    fontSize: 14, fontWeight: FontWeight.bold),
+                  fontSize: 14,
+                  fontWeight: FontWeight.bold,
+                ),
               ),
               style: ElevatedButton.styleFrom(
                 backgroundColor: AppTheme.primaryColor,
                 foregroundColor: Colors.white,
                 shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(10)),
+                  borderRadius: BorderRadius.circular(10),
+                ),
               ),
             ),
           ),
@@ -582,9 +654,13 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
               children: [
                 const Padding(
                   padding: EdgeInsets.only(left: 4),
-                  child: Text('Perpanjang otomatis tiap bulan',
-                      style: TextStyle(
-                          fontSize: 12, color: AppTheme.textSecondary)),
+                  child: Text(
+                    'Perpanjang otomatis tiap bulan',
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: AppTheme.textSecondary,
+                    ),
+                  ),
                 ),
                 Switch(
                   value: _autoRenew,
@@ -607,14 +683,22 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
         children: [
           const Padding(
             padding: EdgeInsets.only(top: 2),
-            child: Icon(Icons.check_circle,
-                color: AppTheme.successColor, size: 16),
+            child: Icon(
+              Icons.check_circle,
+              color: AppTheme.successColor,
+              size: 16,
+            ),
           ),
           const SizedBox(width: 8),
           Expanded(
-            child: Text(text,
-                style: const TextStyle(
-                    fontSize: 12.5, color: AppTheme.textPrimary, height: 1.35)),
+            child: Text(
+              text,
+              style: const TextStyle(
+                fontSize: 12.5,
+                color: AppTheme.textPrimary,
+                height: 1.35,
+              ),
+            ),
           ),
         ],
       ),
@@ -629,40 +713,43 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
         border: Border.all(color: AppTheme.borderColor.withValues(alpha: 0.5)),
       ),
       child: ListTile(
-        shape:
-            RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
         leading: Container(
           padding: const EdgeInsets.all(10),
           decoration: BoxDecoration(
             color: AppTheme.primaryColor.withValues(alpha: 0.1),
             borderRadius: BorderRadius.circular(12),
           ),
-          child: const Icon(Icons.assessment_outlined,
-              color: AppTheme.primaryColor, size: 22),
+          child: const Icon(
+            Icons.assessment_outlined,
+            color: AppTheme.primaryColor,
+            size: 22,
+          ),
         ),
         title: const Text(
           'Laporan Otomatis ke Bos',
           style: TextStyle(
-              fontSize: 15,
-              fontWeight: FontWeight.bold,
-              color: AppTheme.textPrimary),
+            fontSize: 15,
+            fontWeight: FontWeight.bold,
+            color: AppTheme.textPrimary,
+          ),
         ),
         subtitle: const Text(
           'Jadwal harian/mingguan/bulanan, kirim via WhatsApp/email',
           style: TextStyle(fontSize: 12, color: AppTheme.textSecondary),
         ),
-        trailing:
-            const Icon(Icons.chevron_right, color: AppTheme.textSecondary),
+        trailing: const Icon(
+          Icons.chevron_right,
+          color: AppTheme.textSecondary,
+        ),
         onTap: () async {
-          if (!await requireSupporterFeature(
-              context, ref, 'auto_bos_report')) {
+          if (!await requireSupporterFeature(context, ref, 'auto_bos_report')) {
             return;
           }
           if (!mounted) return;
           Navigator.push(
             context,
-            MaterialPageRoute(
-                builder: (_) => const ReportScheduleScreen()),
+            MaterialPageRoute(builder: (_) => const ReportScheduleScreen()),
           );
         },
       ),
@@ -685,21 +772,28 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
             color: AppTheme.warningColor.withValues(alpha: 0.1),
             borderRadius: BorderRadius.circular(12),
           ),
-          child: const Icon(Icons.receipt_rounded,
-              color: AppTheme.warningColor, size: 22),
+          child: const Icon(
+            Icons.receipt_rounded,
+            color: AppTheme.warningColor,
+            size: 22,
+          ),
         ),
         title: const Text(
           'Struk & Logo Toko',
           style: TextStyle(
-              fontSize: 15,
-              fontWeight: FontWeight.bold,
-              color: AppTheme.textPrimary),
+            fontSize: 15,
+            fontWeight: FontWeight.bold,
+            color: AppTheme.textPrimary,
+          ),
         ),
         subtitle: const Text(
           'Tagline struk + logo kustom di struk digital',
           style: TextStyle(fontSize: 12, color: AppTheme.textSecondary),
         ),
-        trailing: const Icon(Icons.chevron_right, color: AppTheme.textSecondary),
+        trailing: const Icon(
+          Icons.chevron_right,
+          color: AppTheme.textSecondary,
+        ),
         onTap: _showReceiptDialog,
       ),
     );
@@ -710,7 +804,9 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     final existingTagline = await ReceiptGenerator.loadTagline();
     if (!mounted) return;
 
-    final taglineController = TextEditingController(text: existingTagline ?? '');
+    final taglineController = TextEditingController(
+      text: existingTagline ?? '',
+    );
     String logoBase64 = existingLogo ?? '';
     bool isUploading = false;
 
@@ -746,14 +842,18 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
             title: Row(
               children: [
                 Expanded(
-                  child: Text('Struk & Logo',
-                      style: const TextStyle(fontWeight: FontWeight.bold)),
+                  child: Text(
+                    'Struk & Logo',
+                    style: const TextStyle(fontWeight: FontWeight.bold),
+                  ),
                 ),
                 IconButton(
                   tooltip: 'Tutup',
                   onPressed: () => Navigator.pop(dialogContext),
-                  icon: const Icon(Icons.close_rounded,
-                      color: AppTheme.textSecondary),
+                  icon: const Icon(
+                    Icons.close_rounded,
+                    color: AppTheme.textSecondary,
+                  ),
                 ),
               ],
             ),
@@ -767,7 +867,10 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                     const Text(
                       'Logo kustom tampil di struk digital (PDF) dan tersimpan '
                       'lokal di perangkat ini.',
-                      style: TextStyle(fontSize: 12, color: AppTheme.textSecondary),
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: AppTheme.textSecondary,
+                      ),
                     ),
                     const SizedBox(height: 14),
                     Center(
@@ -791,8 +894,10 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                                 borderRadius: BorderRadius.circular(12),
                                 border: Border.all(color: AppTheme.borderColor),
                               ),
-                              child: const Icon(Icons.image_outlined,
-                                  color: AppTheme.textSecondary),
+                              child: const Icon(
+                                Icons.image_outlined,
+                                color: AppTheme.textSecondary,
+                              ),
                             ),
                     ),
                     const SizedBox(height: 14),
@@ -804,7 +909,9 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                                 ? const SizedBox(
                                     width: 16,
                                     height: 16,
-                                    child: CircularProgressIndicator(strokeWidth: 2),
+                                    child: CircularProgressIndicator(
+                                      strokeWidth: 2,
+                                    ),
                                   )
                                 : const Icon(Icons.upload_rounded, size: 18),
                             label: const Text('Pilih Logo'),
@@ -812,7 +919,10 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                                 ? null
                                 : () async {
                                     if (!await requireSupporterFeature(
-                                        context, ref, 'custom_receipt')) {
+                                      context,
+                                      ref,
+                                      'custom_receipt',
+                                    )) {
                                       return;
                                     }
                                     await pickLogo(setDialogState);
@@ -824,8 +934,10 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                           TextButton(
                             onPressed: () =>
                                 setDialogState(() => logoBase64 = ''),
-                            child: const Text('Hapus Logo',
-                                style: TextStyle(color: AppTheme.errorColor)),
+                            child: const Text(
+                              'Hapus Logo',
+                              style: TextStyle(color: AppTheme.errorColor),
+                            ),
                           ),
                       ],
                     ),
@@ -841,7 +953,10 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                     const Text(
                       'Struk dibagikan dari POS setelah transaksi (tombol STRUK). '
                       'Logo tersimpan hanya di perangkat Anda.',
-                      style: TextStyle(fontSize: 11, color: AppTheme.textSecondary),
+                      style: TextStyle(
+                        fontSize: 11,
+                        color: AppTheme.textSecondary,
+                      ),
                     ),
                   ],
                 ),
@@ -856,7 +971,8 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                 onPressed: () async {
                   try {
                     await ReceiptGenerator.saveTagline(
-                        taglineController.text.trim());
+                      taglineController.text.trim(),
+                    );
                     if (logoBase64.isEmpty) {
                       await ReceiptGenerator.deleteLogo();
                     } else {
@@ -885,30 +1001,35 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
         border: Border.all(color: AppTheme.borderColor.withValues(alpha: 0.5)),
       ),
       child: ListTile(
-        shape:
-            RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
         leading: Container(
           padding: const EdgeInsets.all(10),
           decoration: BoxDecoration(
             color: AppTheme.accentColor.withValues(alpha: 0.1),
             borderRadius: BorderRadius.circular(12),
           ),
-          child: const Icon(Icons.store_rounded,
-              color: AppTheme.accentColor, size: 22),
+          child: const Icon(
+            Icons.store_rounded,
+            color: AppTheme.accentColor,
+            size: 22,
+          ),
         ),
         title: const Text(
           'Multi Outlet (Cabang)',
           style: TextStyle(
-              fontSize: 15,
-              fontWeight: FontWeight.bold,
-              color: AppTheme.textPrimary),
+            fontSize: 15,
+            fontWeight: FontWeight.bold,
+            color: AppTheme.textPrimary,
+          ),
         ),
         subtitle: const Text(
           'Kelola beberapa cabang toko, berpindah outlet aktif',
           style: TextStyle(fontSize: 12, color: AppTheme.textSecondary),
         ),
-        trailing:
-            const Icon(Icons.chevron_right, color: AppTheme.textSecondary),
+        trailing: const Icon(
+          Icons.chevron_right,
+          color: AppTheme.textSecondary,
+        ),
         onTap: () => Navigator.push(
           context,
           MaterialPageRoute(builder: (_) => const MultiOutletScreen()),
@@ -918,8 +1039,10 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
   }
 
   Widget _buildBusinessProfileCard(dynamic user) {
-    final businessName = _outletData?['name'] ?? user?.name ?? user?.email ?? '-';
-    final businessType = _outletData?['outlet_type'] ?? _outletData?['type'] ?? '-';
+    final businessName =
+        _outletData?['name'] ?? user?.name ?? user?.email ?? '-';
+    final businessType =
+        _outletData?['outlet_type'] ?? _outletData?['type'] ?? '-';
     final phone = _outletData?['phone'] ?? '-';
 
     return Container(
@@ -967,16 +1090,18 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
             style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
           ),
           const SizedBox(height: 12),
-          _buildMenuRow(Icons.menu_book_rounded, 'Panduan', () {
+          _buildMenuRow(Icons.help_outline_rounded, 'Bantuan & Tutorial', () {
             Navigator.push(
               context,
-              MaterialPageRoute(builder: (_) => const GuideScreen()),
+              MaterialPageRoute(builder: (_) => const HelpCenterScreen()),
             );
           }),
           _buildMenuRow(Icons.support_agent_rounded, 'Tiket Bantuan', () {
             Navigator.push(
               context,
-              MaterialPageRoute(builder: (_) => const SupportTicketsScreen()),
+              MaterialPageRoute(
+                builder: (_) => const HelpCenterScreen(initialTab: 1),
+              ),
             );
           }),
           _buildMenuRow(Icons.cloud_upload_outlined, 'Tautkan Akun Google', () {
@@ -986,12 +1111,20 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
             final currentUser = ref.read(currentUserProvider);
             _showEditProfileDialog(currentUser);
           }),
-          _buildMenuRow(Icons.qr_code_2_rounded, 'QRIS Toko (Upload Gambar QRIS)', () {
-            _showQrisConfigDialog();
-          }),
-          _buildMenuRow(Icons.delivery_dining_rounded, 'Pengiriman / Diantar', () {
-            _showDeliveryConfigDialog();
-          }),
+          _buildMenuRow(
+            Icons.qr_code_2_rounded,
+            'QRIS Toko (Upload Gambar QRIS)',
+            () {
+              _showQrisConfigDialog();
+            },
+          ),
+          _buildMenuRow(
+            Icons.delivery_dining_rounded,
+            'Pengiriman / Diantar',
+            () {
+              _showDeliveryConfigDialog();
+            },
+          ),
           _buildMenuRow(Icons.lock_outline, 'Ubah Password', () {
             _showChangePasswordDialog();
           }),
@@ -1000,7 +1133,8 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
               context: context,
               applicationName: 'KasirGo',
               applicationVersion: '3.0.0',
-              applicationLegalese: 'Aplikasi Kasir UMKM Indonesia - Gratis Selamanya',
+              applicationLegalese:
+                  'Aplikasi Kasir UMKM Indonesia - Gratis Selamanya',
             );
           }),
         ],
@@ -1016,14 +1150,18 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
         title: Row(
           children: [
             Expanded(
-              child: Text('Tautkan Akun Google',
-                  style: const TextStyle(fontWeight: FontWeight.bold)),
+              child: Text(
+                'Tautkan Akun Google',
+                style: const TextStyle(fontWeight: FontWeight.bold),
+              ),
             ),
             IconButton(
               tooltip: 'Tutup',
               onPressed: () => Navigator.pop(ctx),
-              icon: const Icon(Icons.close_rounded,
-                  color: AppTheme.textSecondary),
+              icon: const Icon(
+                Icons.close_rounded,
+                color: AppTheme.textSecondary,
+              ),
             ),
           ],
         ),
@@ -1046,13 +1184,23 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                     await AuthService().linkAccountWithGoogle();
                     if (mounted) {
                       ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(content: Text('Membuka autentikasi Akun Google...')),
+                        const SnackBar(
+                          content: Text('Membuka autentikasi Akun Google...'),
+                        ),
                       );
                     }
                   } catch (e) {
                     if (mounted) {
                       ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(content: Text(friendlyError(e, fallback: 'Gagal menautkan Google. Silakan coba lagi.'))),
+                        SnackBar(
+                          content: Text(
+                            friendlyError(
+                              e,
+                              fallback:
+                                  'Gagal menautkan Google. Silakan coba lagi.',
+                            ),
+                          ),
+                        ),
                       );
                     }
                   }
@@ -1063,8 +1211,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
             ),
           ],
         ),
-        actions: [
-        ],
+        actions: [],
       ),
     );
   }
@@ -1109,7 +1256,9 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     final nameController = TextEditingController(text: existing.merchantName);
     final nmidController = TextEditingController(text: existing.nmid);
     final walletController = TextEditingController(text: existing.bankOrWallet);
-    final qrisStringController = TextEditingController(text: existing.qrisString);
+    final qrisStringController = TextEditingController(
+      text: existing.qrisString,
+    );
 
     // Gambar QRIS statis (base64) — terisi otomatis bila sudah pernah diupload.
     String imageBase64 = existing.imageBase64;
@@ -1138,7 +1287,12 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
         setDialogState(() => isUploading = false);
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text(friendlyError(e, fallback: 'Gagal upload gambar. Silakan coba lagi.')),
+            content: Text(
+              friendlyError(
+                e,
+                fallback: 'Gagal upload gambar. Silakan coba lagi.',
+              ),
+            ),
             backgroundColor: AppTheme.errorColor,
           ),
         );
@@ -1164,14 +1318,18 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
             title: Row(
               children: [
                 Expanded(
-                  child: Text('QRIS & Pembayaran Toko',
-                      style: const TextStyle(fontWeight: FontWeight.bold)),
+                  child: Text(
+                    'QRIS & Pembayaran Toko',
+                    style: const TextStyle(fontWeight: FontWeight.bold),
+                  ),
                 ),
                 IconButton(
                   tooltip: 'Tutup',
                   onPressed: () => Navigator.pop(ctx),
-                  icon: const Icon(Icons.close_rounded,
-                      color: AppTheme.textSecondary),
+                  icon: const Icon(
+                    Icons.close_rounded,
+                    color: AppTheme.textSecondary,
+                  ),
                 ),
               ],
             ),
@@ -1184,7 +1342,11 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                   children: [
                     const Text(
                       'Upload foto QRIS statis milik toko Anda. Bank/E-Wallet dan No. Rekening akan ditampilkan ke pelanggan di meja, agar mereka bisa bayar (transfer/QRIS) tanpa antre di kasir.',
-                      style: TextStyle(fontSize: 13, color: AppTheme.textSecondary, height: 1.4),
+                      style: TextStyle(
+                        fontSize: 13,
+                        color: AppTheme.textSecondary,
+                        height: 1.4,
+                      ),
                     ),
                     const SizedBox(height: 16),
                     // Preview gambar QRIS (otomatis terisi bila sudah ada).
@@ -1209,11 +1371,18 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                               padding: EdgeInsets.symmetric(vertical: 24),
                               child: Column(
                                 children: [
-                                  Icon(Icons.qr_code_2, size: 56, color: AppTheme.textSecondary),
+                                  Icon(
+                                    Icons.qr_code_2,
+                                    size: 56,
+                                    color: AppTheme.textSecondary,
+                                  ),
                                   SizedBox(height: 8),
                                   Text(
                                     'Belum ada gambar QRIS',
-                                    style: TextStyle(color: AppTheme.textSecondary, fontSize: 12),
+                                    style: TextStyle(
+                                      color: AppTheme.textSecondary,
+                                      fontSize: 12,
+                                    ),
                                   ),
                                 ],
                               ),
@@ -1223,23 +1392,35 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                             children: [
                               Expanded(
                                 child: OutlinedButton.icon(
-                                  onPressed: isUploading ? null : () => pickQrisImage(setDialogState),
+                                  onPressed: isUploading
+                                      ? null
+                                      : () => pickQrisImage(setDialogState),
                                   icon: isUploading
                                       ? const SizedBox(
                                           width: 16,
                                           height: 16,
-                                          child: CircularProgressIndicator(strokeWidth: 2),
+                                          child: CircularProgressIndicator(
+                                            strokeWidth: 2,
+                                          ),
                                         )
                                       : const Icon(Icons.upload_file, size: 18),
-                                  label: Text(decodedImage() != null ? 'Ganti Gambar' : 'Upload Gambar QRIS'),
+                                  label: Text(
+                                    decodedImage() != null
+                                        ? 'Ganti Gambar'
+                                        : 'Upload Gambar QRIS',
+                                  ),
                                 ),
                               ),
                               if (decodedImage() != null) ...[
                                 const SizedBox(width: 8),
                                 IconButton(
                                   tooltip: 'Hapus gambar',
-                                  onPressed: () => setDialogState(() => imageBase64 = ''),
-                                  icon: const Icon(Icons.delete_outline, color: AppTheme.errorColor),
+                                  onPressed: () =>
+                                      setDialogState(() => imageBase64 = ''),
+                                  icon: const Icon(
+                                    Icons.delete_outline,
+                                    color: AppTheme.errorColor,
+                                  ),
                                 ),
                               ],
                             ],
@@ -1261,8 +1442,11 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                         child: Row(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            const Icon(Icons.info_outline,
-                                size: 18, color: AppTheme.warningColor),
+                            const Icon(
+                              Icons.info_outline,
+                              size: 18,
+                              color: AppTheme.warningColor,
+                            ),
                             const SizedBox(width: 8),
                             Expanded(
                               child: Text(
@@ -1285,7 +1469,10 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                       controller: nameController,
                       decoration: const InputDecoration(
                         labelText: 'Nama Merchant / Toko',
-                        prefixIcon: Icon(Icons.store, color: AppTheme.textSecondary),
+                        prefixIcon: Icon(
+                          Icons.store,
+                          color: AppTheme.textSecondary,
+                        ),
                         isDense: true,
                       ),
                     ),
@@ -1294,7 +1481,10 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                       controller: nmidController,
                       decoration: const InputDecoration(
                         labelText: 'NMID / ID Merchant QRIS (opsional)',
-                        prefixIcon: Icon(Icons.badge, color: AppTheme.textSecondary),
+                        prefixIcon: Icon(
+                          Icons.badge,
+                          color: AppTheme.textSecondary,
+                        ),
                         isDense: true,
                       ),
                     ),
@@ -1304,7 +1494,10 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                       decoration: const InputDecoration(
                         labelText: 'Bank / E-Wallet',
                         hintText: 'Contoh: BCA a.n. Siti, DANA, OVO',
-                        prefixIcon: Icon(Icons.account_balance_wallet_outlined, color: AppTheme.textSecondary),
+                        prefixIcon: Icon(
+                          Icons.account_balance_wallet_outlined,
+                          color: AppTheme.textSecondary,
+                        ),
                         isDense: true,
                       ),
                     ),
@@ -1314,7 +1507,10 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                       maxLines: 2,
                       decoration: const InputDecoration(
                         labelText: 'No. Rekening / Catatan QRIS',
-                        prefixIcon: Icon(Icons.notes, color: AppTheme.textSecondary),
+                        prefixIcon: Icon(
+                          Icons.notes,
+                          color: AppTheme.textSecondary,
+                        ),
                         isDense: true,
                       ),
                     ),
@@ -1355,7 +1551,9 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                             ? 'Info pembayaran disimpan. Pelanggan bisa bayar langsung di meja.'
                             : 'QRIS tersimpan lokal, tetapi gagal simpan info pembayaran ke server. Coba lagi.',
                       ),
-                      backgroundColor: saved ? AppTheme.successColor : AppTheme.warningColor,
+                      backgroundColor: saved
+                          ? AppTheme.successColor
+                          : AppTheme.warningColor,
                     ),
                   );
                 },
@@ -1408,14 +1606,18 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
             title: Row(
               children: [
                 Expanded(
-                  child: Text('Pengiriman / Diantar',
-                      style: const TextStyle(fontWeight: FontWeight.bold)),
+                  child: Text(
+                    'Pengiriman / Diantar',
+                    style: const TextStyle(fontWeight: FontWeight.bold),
+                  ),
                 ),
                 IconButton(
                   tooltip: 'Tutup',
                   onPressed: () => Navigator.pop(ctx),
-                  icon: const Icon(Icons.close_rounded,
-                      color: AppTheme.textSecondary),
+                  icon: const Icon(
+                    Icons.close_rounded,
+                    color: AppTheme.textSecondary,
+                  ),
                 ),
               ],
             ),
@@ -1459,7 +1661,8 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                           child: Text('Persen dari belanja (%)'),
                         ),
                       ],
-                      onChanged: (v) => setDialogState(() => mode = v ?? 'flat'),
+                      onChanged: (v) =>
+                          setDialogState(() => mode = v ?? 'flat'),
                     ),
                     const SizedBox(height: 12),
                     TextField(
@@ -1528,12 +1731,11 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                   ScaffoldMessenger.of(context).showSnackBar(
                     SnackBar(
                       content: Text(
-                        saved
-                            ? 'Pengaturan pengiriman disimpan.'
-                            : 'Gagal menyimpan pengaturan pengiriman. Coba lagi.',
+                        saved ? 'Pengaturan pengiriman disimpan.' : 'Gagal menyimpan pengaturan pengiriman. Coba lagi.',
                       ),
-                      backgroundColor:
-                          saved ? AppTheme.successColor : AppTheme.warningColor,
+                      backgroundColor: saved
+                          ? AppTheme.successColor
+                          : AppTheme.warningColor,
                     ),
                   );
                 },
@@ -1548,8 +1750,12 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
   }
 
   void _showEditProfileDialog(dynamic user) {
-    final nameController = TextEditingController(text: _outletData?['name'] ?? user?.name ?? '');
-    final phoneController = TextEditingController(text: _outletData?['phone'] ?? '');
+    final nameController = TextEditingController(
+      text: _outletData?['name'] ?? user?.name ?? '',
+    );
+    final phoneController = TextEditingController(
+      text: _outletData?['phone'] ?? '',
+    );
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
@@ -1557,14 +1763,18 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
         title: Row(
           children: [
             Expanded(
-              child: Text('Edit Profil Usaha',
-                  style: const TextStyle(fontWeight: FontWeight.bold)),
+              child: Text(
+                'Edit Profil Usaha',
+                style: const TextStyle(fontWeight: FontWeight.bold),
+              ),
             ),
             IconButton(
               tooltip: 'Tutup',
               onPressed: () => Navigator.pop(ctx),
-              icon: const Icon(Icons.close_rounded,
-                  color: AppTheme.textSecondary),
+              icon: const Icon(
+                Icons.close_rounded,
+                color: AppTheme.textSecondary,
+              ),
             ),
           ],
         ),
@@ -1611,7 +1821,9 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
               _loadData();
               if (mounted) {
                 ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text('Profil usaha berhasil diperbarui')),
+                  const SnackBar(
+                    content: Text('Profil usaha berhasil diperbarui'),
+                  ),
                 );
               }
             },
@@ -1633,14 +1845,18 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
         title: Row(
           children: [
             Expanded(
-              child: Text('Ubah Password',
-                  style: const TextStyle(fontWeight: FontWeight.bold)),
+              child: Text(
+                'Ubah Password',
+                style: const TextStyle(fontWeight: FontWeight.bold),
+              ),
             ),
             IconButton(
               tooltip: 'Tutup',
               onPressed: () => Navigator.pop(ctx),
-              icon: const Icon(Icons.close_rounded,
-                  color: AppTheme.textSecondary),
+              icon: const Icon(
+                Icons.close_rounded,
+                color: AppTheme.textSecondary,
+              ),
             ),
           ],
         ),
@@ -1681,7 +1897,9 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
               }
               if (newPass != confirmPass) {
                 ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text('Konfirmasi password tidak cocok')),
+                  const SnackBar(
+                    content: Text('Konfirmasi password tidak cocok'),
+                  ),
                 );
                 return;
               }
@@ -1699,7 +1917,15 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                 if (ctx.mounted) Navigator.pop(ctx);
                 if (mounted) {
                   ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(content: Text(friendlyError(e, fallback: 'Gagal mengubah password. Silakan coba lagi.'))),
+                    SnackBar(
+                      content: Text(
+                        friendlyError(
+                          e,
+                          fallback:
+                              'Gagal mengubah password. Silakan coba lagi.',
+                        ),
+                      ),
+                    ),
                   );
                 }
               }
@@ -1716,9 +1942,15 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
       children: [
         Icon(icon, color: AppTheme.primaryColor, size: 20),
         const SizedBox(width: 12),
-        Text(label, style: const TextStyle(color: AppTheme.textSecondary, fontSize: 13)),
+        Text(
+          label,
+          style: const TextStyle(color: AppTheme.textSecondary, fontSize: 13),
+        ),
         const Spacer(),
-        Text(value, style: const TextStyle(fontWeight: FontWeight.w500, fontSize: 13)),
+        Text(
+          value,
+          style: const TextStyle(fontWeight: FontWeight.w500, fontSize: 13),
+        ),
       ],
     );
   }
@@ -1771,10 +2003,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
         gradient: LinearGradient(
-          colors: [
-            statusColor.withValues(alpha: 0.3),
-            AppTheme.surfaceColor,
-          ],
+          colors: [statusColor.withValues(alpha: 0.3), AppTheme.surfaceColor],
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
         ),
@@ -1790,36 +2019,51 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
               const SizedBox(width: 10),
               Text(
                 statusText,
-                style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.white),
+                style: const TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.white,
+                ),
               ),
             ],
           ),
           const SizedBox(height: 12),
           Text(
-            _kycData?['reject_reason'] ?? 
-            (isPending ? 'Tim kami sedang meninjau dokumen KYC Anda.' : 
-             isRejected ? 'Mohon perbaiki dan kirim ulang data verifikasi.' :
-             isVerified ? 'Data usaha Anda sudah terverifikasi.' :
-             'Lengkapi verifikasi untuk mulai berjualan.'),
-            style: TextStyle(color: AppTheme.textSecondary, fontSize: 12, height: 1.4),
+            _kycData?['reject_reason'] ??
+                (isPending
+                    ? 'Tim kami sedang meninjau dokumen KYC Anda.'
+                    : isRejected
+                    ? 'Mohon perbaiki dan kirim ulang data verifikasi.'
+                    : isVerified
+                    ? 'Data usaha Anda sudah terverifikasi.'
+                    : 'Lengkapi verifikasi untuk mulai berjualan.'),
+            style: TextStyle(
+              color: AppTheme.textSecondary,
+              fontSize: 12,
+              height: 1.4,
+            ),
           ),
           const SizedBox(height: 12),
           BubbleButton.icon(
             onPressed: isVerified
                 ? null
                 : () => Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (_) => const OnboardingKycScreen(),
-                      ),
+                    context,
+                    MaterialPageRoute(
+                      builder: (_) => const OnboardingKycScreen(),
                     ),
+                  ),
             icon: const Icon(Icons.upload_file_rounded, size: 18),
-            label: Text(isVerified ? 'Sudah Terverifikasi' : 'Lengkapi / Perbarui'),
+            label: Text(
+              isVerified ? 'Sudah Terverifikasi' : 'Lengkapi / Perbarui',
+            ),
             style: ElevatedButton.styleFrom(
               backgroundColor: statusColor,
               foregroundColor: Colors.white,
               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(8),
+              ),
             ),
           ),
         ],
@@ -1849,11 +2093,19 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
         children: [
           const Row(
             children: [
-              Icon(Icons.people_outline, color: AppTheme.primaryColor, size: 22),
+              Icon(
+                Icons.people_outline,
+                color: AppTheme.primaryColor,
+                size: 22,
+              ),
               SizedBox(width: 8),
               Text(
                 'Kuota Staff',
-                style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: AppTheme.textPrimary),
+                style: TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.bold,
+                  color: AppTheme.textPrimary,
+                ),
               ),
             ],
           ),
@@ -1868,22 +2120,31 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                       isUnlimited
                           ? '$quotaCurrent staff aktif - Tanpa batas'
                           : '$quotaCurrent staff aktif dari $quotaMax maksimal',
-                      style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 15),
+                      style: const TextStyle(
+                        fontWeight: FontWeight.w700,
+                        fontSize: 15,
+                      ),
                     ),
                     const SizedBox(height: 4),
                     Text(
                       isUnlimited
                           ? 'Slot staf tak terbatas selama Program Pendukung / trial aktif'
                           : (quotaRemaining > 0
-                              ? '$quotaRemaining slot tersedia'
-                              : 'Quota penuh - Upgrade untuk tambah slot'),
-                      style: TextStyle(color: AppTheme.textSecondary, fontSize: 12),
+                                ? '$quotaRemaining slot tersedia'
+                                : 'Quota penuh - Upgrade untuk tambah slot'),
+                      style: TextStyle(
+                        color: AppTheme.textSecondary,
+                        fontSize: 12,
+                      ),
                     ),
                   ],
                 ),
               ),
               Container(
-                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 12,
+                  vertical: 6,
+                ),
                 decoration: BoxDecoration(
                   color: (isUnlimited || quotaRemaining > 0)
                       ? AppTheme.successColor.withValues(alpha: 0.2)
@@ -1928,7 +2189,9 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                 style: ElevatedButton.styleFrom(
                   backgroundColor: AppTheme.accentColor,
                   foregroundColor: Colors.white,
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(10),
+                  ),
                 ),
               ),
             ),
@@ -1942,6 +2205,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     final price =
         (_billingConfig['supporter_price'] as num?)?.toDouble() ?? 50000;
     showModalBottomSheet(
+      useSafeArea: true,
       context: context,
       backgroundColor: AppTheme.surfaceColor,
       shape: const RoundedRectangleBorder(
@@ -1959,16 +2223,19 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                   child: Text(
                     'Tambah Slot Staf',
                     style: TextStyle(
-                        fontSize: 20,
-                        fontWeight: FontWeight.bold,
-                        color: AppTheme.textPrimary),
+                      fontSize: 20,
+                      fontWeight: FontWeight.bold,
+                      color: AppTheme.textPrimary,
+                    ),
                   ),
                 ),
                 IconButton(
                   tooltip: 'Tutup',
                   onPressed: () => Navigator.pop(ctx),
-                  icon: const Icon(Icons.close_rounded,
-                      color: AppTheme.textSecondary),
+                  icon: const Icon(
+                    Icons.close_rounded,
+                    color: AppTheme.textSecondary,
+                  ),
                 ),
               ],
             ),
@@ -1982,26 +2249,34 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
             Container(
               padding: const EdgeInsets.all(16),
               decoration: BoxDecoration(
-                border:
-                    Border.all(color: AppTheme.borderColor.withValues(alpha: 0.5)),
+                border: Border.all(
+                  color: AppTheme.borderColor.withValues(alpha: 0.5),
+                ),
                 borderRadius: BorderRadius.circular(12),
               ),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const Text('Program Pendukung KasirGo',
-                      style: TextStyle(
-                          fontSize: 16, fontWeight: FontWeight.bold)),
+                  const Text(
+                    'Program Pendukung KasirGo',
+                    style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                  ),
                   const SizedBox(height: 4),
-                  Text('${Formatters.currency(price)}/bulan',
-                      style: const TextStyle(
-                          fontWeight: FontWeight.w700,
-                          color: AppTheme.primaryColor)),
+                  Text(
+                    '${Formatters.currency(price)}/bulan',
+                    style: const TextStyle(
+                      fontWeight: FontWeight.w700,
+                      color: AppTheme.primaryColor,
+                    ),
+                  ),
                   const SizedBox(height: 4),
                   const Text(
-                      'Slot staf tambahan + 13 fitur bonus lainnya.',
-                      style: TextStyle(
-                          color: AppTheme.textSecondary, fontSize: 12)),
+                    'Slot staf tambahan + 13 fitur bonus lainnya.',
+                    style: TextStyle(
+                      color: AppTheme.textSecondary,
+                      fontSize: 12,
+                    ),
+                  ),
                 ],
               ),
             ),
@@ -2018,7 +2293,8 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                   backgroundColor: AppTheme.primaryColor,
                   foregroundColor: Colors.white,
                   shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12)),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
                 ),
                 child: const Text('Dukung & Buka Slot'),
               ),
@@ -2028,5 +2304,4 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
       ),
     );
   }
-
 }

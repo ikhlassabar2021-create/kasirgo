@@ -120,6 +120,7 @@ class _StaffPerformanceScreenState
   Future<void> _openDetail(DoctorLeaderboardEntry entry) async {
     final tasks = _tasksOf(entry.userId);
     await showModalBottomSheet<void>(
+      useSafeArea: true,
       context: context,
       isScrollControlled: true,
       backgroundColor: AppTheme.surfaceColor,

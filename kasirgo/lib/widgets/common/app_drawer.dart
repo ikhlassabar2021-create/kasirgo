@@ -1,11 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+
 import '../../config/app_theme.dart';
 import '../../models/user.dart';
 import '../../providers/auth_provider.dart';
 import '../../screens/owner/settings_screen.dart';
-import '../../screens/owner/support_tickets_screen.dart';
+import '../../screens/owner/help_center_screen.dart';
 import '../../screens/owner/customer_list_screen.dart';
 import '../../screens/owner/employee_screen.dart';
 
@@ -17,7 +18,7 @@ class AppDrawer extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final isAdmin = user.role == 'admin';
-    
+
     return Drawer(
       backgroundColor: Colors.white,
       elevation: 4,
@@ -30,10 +31,7 @@ class AppDrawer extends ConsumerWidget {
               padding: const EdgeInsets.all(20),
               decoration: BoxDecoration(
                 gradient: const LinearGradient(
-                  colors: [
-                    AppTheme.primaryColor,
-                    AppTheme.secondaryColor,
-                  ],
+                  colors: [AppTheme.primaryColor, AppTheme.secondaryColor],
                   begin: Alignment.topLeft,
                   end: Alignment.bottomRight,
                 ),
@@ -105,18 +103,19 @@ class AppDrawer extends ConsumerWidget {
             const SizedBox(height: 8),
 
             // Navigation Items (Admin has limited access)
-            if (!isAdmin) _DrawerTile(
-              icon: Icons.person_outline,
-              title: 'Profil Akun',
-              onTap: () {
-                Navigator.pop(context);
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(builder: (_) => const SettingsScreen()),
-                );
-              },
-            ),
-            
+            if (!isAdmin)
+              _DrawerTile(
+                icon: Icons.person_outline,
+                title: 'Profil Akun',
+                onTap: () {
+                  Navigator.pop(context);
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(builder: (_) => const SettingsScreen()),
+                  );
+                },
+              ),
+
             if (!isAdmin) ...[
               _DrawerTile(
                 icon: Icons.settings_outlined,
@@ -136,7 +135,9 @@ class AppDrawer extends ConsumerWidget {
                   Navigator.pop(context);
                   Navigator.push(
                     context,
-                    MaterialPageRoute(builder: (_) => const CustomerListScreen()),
+                    MaterialPageRoute(
+                      builder: (_) => const CustomerListScreen(),
+                    ),
                   );
                 },
               ),
@@ -158,8 +159,7 @@ class AppDrawer extends ConsumerWidget {
                   Navigator.pop(context);
                   Navigator.push(
                     context,
-                    MaterialPageRoute(
-                        builder: (_) => const SupportTicketsScreen()),
+                    MaterialPageRoute(builder: (_) => const HelpCenterScreen()),
                   );
                 },
               ),
@@ -187,7 +187,9 @@ class AppDrawer extends ConsumerWidget {
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
               child: ListTile(
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
                 tileColor: AppTheme.errorColor.withValues(alpha: 0.08),
                 leading: const Icon(Icons.logout, color: AppTheme.errorColor),
                 title: const Text(

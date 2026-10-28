@@ -200,6 +200,7 @@ class _PpobScreenState extends ConsumerState<PpobScreen> {
     };
 
     await showModalBottomSheet<void>(
+      useSafeArea: true,
       context: context,
       isScrollControlled: true,
       shape: const RoundedRectangleBorder(

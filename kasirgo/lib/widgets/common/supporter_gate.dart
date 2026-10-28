@@ -27,6 +27,7 @@ Future<void> showSupporterLockedDialog(
   final trialEnabled = await SupporterService().isTrialEnabled();
   if (!context.mounted) return;
   await showModalBottomSheet<void>(
+      useSafeArea: true,
     context: context,
     backgroundColor: AppTheme.surfaceColor,
     shape: const RoundedRectangleBorder(

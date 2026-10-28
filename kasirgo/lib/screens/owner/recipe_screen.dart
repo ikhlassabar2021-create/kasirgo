@@ -67,6 +67,7 @@ class _RecipeScreenState extends ConsumerState<RecipeScreen> {
   Future<void> _openEditor(Product product) async {
     final existing = _recipes[product.id];
     final result = await showModalBottomSheet<bool>(
+      useSafeArea: true,
       context: context,
       isScrollControlled: true,
       shape: const RoundedRectangleBorder(

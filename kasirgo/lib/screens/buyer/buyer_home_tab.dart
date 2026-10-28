@@ -502,6 +502,7 @@ class _BuyerHomeTabState extends ConsumerState<BuyerHomeTab> {
 
   void _openCart() {
     showModalBottomSheet<void>(
+      useSafeArea: true,
       context: context,
       backgroundColor: AppTheme.surfaceColor,
       isScrollControlled: true,

@@ -85,6 +85,7 @@ class _SupporterScreenState extends ConsumerState<SupporterScreen> {
   Future<void> _showPaymentSheet(SupporterCheckoutResult result) async {
     if (result.hasDynamicQr) {
       final paid = await showModalBottomSheet<bool>(
+      useSafeArea: true,
         context: context,
         isScrollControlled: true,
         shape: const RoundedRectangleBorder(
@@ -105,6 +106,7 @@ class _SupporterScreenState extends ConsumerState<SupporterScreen> {
     final payload = (_billing['qris_static_payload'] ?? '').toString();
     final transfer = _billing['manual_transfer'];
     await showModalBottomSheet<void>(
+      useSafeArea: true,
       context: context,
       isScrollControlled: true,
       shape: const RoundedRectangleBorder(

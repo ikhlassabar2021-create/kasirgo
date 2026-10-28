@@ -399,6 +399,7 @@ class _PromotionScreenState extends ConsumerState<PromotionScreen> {
     final outletId = _outletId;
     if (outletId == null) return;
     await showModalBottomSheet(
+      useSafeArea: true,
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
@@ -717,6 +718,7 @@ class _NewPostSheetState extends State<_NewPostSheet> {
 
   Future<void> _openConnect() async {
     await showModalBottomSheet(
+      useSafeArea: true,
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,

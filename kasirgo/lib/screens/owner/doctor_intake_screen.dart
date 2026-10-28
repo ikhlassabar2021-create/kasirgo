@@ -169,6 +169,7 @@ class _DoctorIntakeScreenState extends ConsumerState<DoctorIntakeScreen> {
   Future<void> _addPhoto(String kind, String label) async {
     if (_pickingPhoto) return;
     final source = await showModalBottomSheet<ImageSource>(
+      useSafeArea: true,
       context: context,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
