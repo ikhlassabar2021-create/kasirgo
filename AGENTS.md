@@ -1611,3 +1611,11 @@ Commit `ff04bb3` (main) + deploy web gh-pages `050051c` (live md5
 - Deploy web+admin gh-pages `6a6fd13`; versi app dinaikkan `1.0.9+10`.
 - CATATAN: SMTP Mailtrap masih demo domain (hanya email owner bisa menerima);
   konfirmasi pendaftar non-owner menunggu domain/SMTP final (Brevo/SMTP2GO).
+- APK 1.0.9 RILIS: tag `v1.0.9-apk-20261028`, CI run `40756955337` sukses,
+  re-sign lokal keystore (cert SHA-256 `fed1424c...`, versionCode 2010),
+  GitHub Release `427135633`:
+  `kasirgo-1.0.9-{arm64-v8a,armeabi-v7a,x86_64}.apk` + `kasirgo-1.0.9.aab` +
+  `SHA256SUMS-1.0.9.txt`. Semua link HTTP 200; `libapp.so` memuat string
+  "Bantuan & Tutorial".
+- Bersih artefak build lama di `/tmp/opencode` (~3,2 GB) dan APK/AAB < 1.0.8;
+  menyisakan `signed107` + tool signing + keystore. Disk `/` 100% -> 82%.
