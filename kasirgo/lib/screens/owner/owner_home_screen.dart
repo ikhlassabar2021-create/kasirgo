@@ -46,7 +46,7 @@ import 'report_screen.dart';
 import 'customer_list_screen.dart';
 import 'employee_screen.dart';
 import 'settings_screen.dart';
-import 'guide_screen.dart';
+import 'help_center_screen.dart';
 
 final homeSummaryProvider = FutureProvider<Map<String, dynamic>>((ref) async {
   final user = ref.watch(currentUserProvider);
@@ -582,7 +582,7 @@ class _OwnerHomeScreenState extends ConsumerState<OwnerHomeScreen> {
             icon: const Icon(Icons.help_outline_rounded, color: AppTheme.textPrimary),
             onPressed: () => Navigator.push(
               context,
-              MaterialPageRoute(builder: (_) => const GuideScreen()),
+              MaterialPageRoute(builder: (_) => const HelpCenterScreen()),
             ),
           ),
           summaryAsync.maybeWhen(
@@ -1292,7 +1292,7 @@ class _OwnerHomeScreenState extends ConsumerState<OwnerHomeScreen> {
             _moreTile(ctx, Icons.menu_book_rounded, 'Panduan', () {
               Navigator.pop(ctx);
               Navigator.push(context,
-                  MaterialPageRoute(builder: (_) => const GuideScreen()));
+                  MaterialPageRoute(builder: (_) => const HelpCenterScreen()));
             }),
             const SizedBox(height: 8),
           ],

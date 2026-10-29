@@ -71,6 +71,15 @@ class BusinessDoctorService {
     return (phase == null || phase.isEmpty) ? 'A' : phase;
   }
 
+  /// Status pool token AI (maks 5 akun). Menugaskan slot otomatis bila ada.
+  Future<Map<String, dynamic>> getAiStatus(String outletId) async {
+    try {
+      final res = await _client.rpc('doctor_ai_status', params: {'p_outlet': outletId});
+      if (res is Map) return Map<String, dynamic>.from(res);
+    } catch (_) {}
+    return <String, dynamic>{};
+  }
+
   Future<void> logPromotion({
     required String outletId,
     String? conversationId,

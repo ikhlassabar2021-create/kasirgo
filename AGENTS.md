@@ -1619,3 +1619,48 @@ Commit `ff04bb3` (main) + deploy web gh-pages `050051c` (live md5
   "Bantuan & Tutorial".
 - Bersih artefak build lama di `/tmp/opencode` (~3,2 GB) dan APK/AAB < 1.0.8;
   menyisakan `signed107` + tool signing + keystore. Disk `/` 100% -> 82%.
+
+## Sesi 2026-10-29: Pool Token AI Dokter Bisnis (maks 5 akun) + Panduan Bergambar (SELESAI)
+- MIGRASI `docs/migrations/2026-11-30-kasirgo-doctor-ai-pool.sql` (DITERAPKAN):
+  tabel `doctor_ai_pool` (slot_no 1..5, label/provider/base_url/model/api_key,
+  is_active, assigned_outlet_id, assigned_at) - RLS aktif TANPA policy +
+  REVOKE anon/authenticated (API key hanya service_role).
+  RPC: `admin_list_doctor_ai_pool()` (ter-mask, `key_hint ****1234`, hitung
+  used/active/assigned), `admin_save_doctor_ai_pool(slot, config)` (api_key hanya
+  ditimpa bila dikirim; `clear_key=true` menghapus; slot tanpa key/nonaktif
+  otomatis lepas outlet), `admin_release_doctor_ai_slot(slot)`,
+  `admin_assign_doctor_ai_slot(slot, outlet)`, `doctor_ai_claim_internal` +
+  `doctor_ai_claim` (service_role, `FOR UPDATE SKIP LOCKED` agar 1 slot = 1
+  outlet), `doctor_ai_status(outlet)` (authenticated, cek owner/member, otomatis
+  menugaskan slot, tanpa membocorkan key). Bila 5/5 -> `reason=pool_full`.
+- EF `business_doctor_chat` (REDEPLOYED via PAT Management API):
+  prioritas provider = override outlet -> pool (claim) -> global. Pool penuh ->
+  balas kartu "Token AI sudah maksimal (5/5 akun)". Respons +`ai_pool`
+  `{mode: override|pool|global|none, slot_no, model, key_hint}`.
+- ADMIN `ControlPlane.tsx` `DoctorTab`: kartu "Pool Token AI (maks 5 akun)" -
+  counter Terpakai n/5, banner peringatan saat 5/5, 5 kartu slot (label,
+  provider, model, base_url, API key password, toggle aktif, Simpan, Lepas
+  Outlet, Hapus Token). Helper `controlPlane.ts`: `listDoctorAiPool`,
+  `saveDoctorAiPool`, `releaseDoctorAiSlot` + tipe `DoctorAiPool`.
+- APP: `BusinessDoctorService.getAiStatus(outlet)` -> RPC `doctor_ai_status`;
+  `business_doctor_screen.dart` banner kecil di atas chat: "AI otomatis aktif:
+  model (****abcd) - token n/5" / "AI global aktif" / peringatan merah
+  "Token AI sudah maksimal (n/5). Hubungi admin...".
+- PANDUAN: `GuideScreen` + kartu gradien "Panduan Bergambar" (buka
+  `HelpCenterScreen`); ikon Panduan di beranda + menu "Panduan" drawer kini
+  membuka `HelpCenterScreen` (bukan daftar PDF saja). Semua 6 topik x 3 langkah
+  di `help_center_screen.dart` kini punya tombol aksi fitur (sebelumnya 8 langkah
+  tanpa tombol).
+- VERIFIKASI: migrasi 201; RPC list/save/status/release/clear OK (pool 1 ->
+  assigned otomatis -> release -> clear -> 0); isi 5 slot + 6 outlet -> slot 1-5
+  terisi, outlet ke-6 `mode:none, reason:pool_full, used:5`. EF: pool kosong ->
+  `ai_pool.mode=global` fallback=false; pool berisi -> `mode=pool` dipakai.
+  `flutter analyze lib` 0 error/warning; `npx tsc -b` bersih; build web + admin
+  sukses. E2E `e2e/verify_doctor_pool_guide.mjs` PASS: poolCard/counter/5 slot/
+  5 model/5 password input, aiBanner+doctorOpen, panduan->HelpCenter->topik->
+  mock simulasi ("Beras 5 kg", Total Rp66.000) + 14 tombol fitur, error 0
+  (admin & mobile). Deploy gh-pages `2ebce39`; live `main.dart.js` md5
+  `3699258c5c732890d8facd766b8ab54f` MATCH, admin bundle memuat "Pool Token AI".
+- CATATAN: tidak ada SUPABASE_ACCESS_TOKEN di env; deploy EF memakai PAT
+  Management API (`sbp_`) sebagai `SUPABASE_ACCESS_TOKEN` ke CLI. APK baru perlu
+  dibangun agar banner AI + panduan versi ini masuk perangkat.

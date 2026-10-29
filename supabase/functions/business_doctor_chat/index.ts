@@ -1373,6 +1373,36 @@ Deno.serve(async (req: Request) => {
     const { data: pcfg } = await admin
       .from("platform_configs").select("value").eq("key", "business_doctor").maybeSingle();
     const globalCfg: Json = pcfg?.value ?? {};
+    // Prioritas: override outlet -> pool token AI (maks 5 akun) -> global.
+    let pool: Json | null = null;
+    let poolBlocked: Json | null = null;
+    if (!(override?.is_active && override?.api_key_enc)) {
+      const { data: claim } = await admin.rpc("doctor_ai_claim", { p_outlet: outletId });
+      if (claim?.ok) {
+        pool = {
+          base_url: claim.base_url,
+          api_key: claim.api_key,
+          model: claim.model,
+          temperature: globalCfg?.provider_default?.temperature,
+          max_tokens: globalCfg?.provider_default?.max_tokens,
+          slot_no: claim.slot_no,
+          key_hint: claim.key_hint,
+        };
+      } else if (String(claim?.reason ?? "") === "pool_full") {
+        poolBlocked = claim as Json;
+      }
+    }
+    if (poolBlocked) {
+      return json({
+        success: true,
+        conversation_id: conversationId,
+        ai_pool: { mode: "none", reason: "pool_full", used: poolBlocked.used ?? 5, max: poolBlocked.max ?? 5 },
+        blocks: [
+          { type: "card", tone: "warning", title: "Token AI sudah maksimal", body: "Kuota token AI sudah terpakai 5 dari 5 akun. Hubungi admin KasirGo untuk melepas salah satu akun agar bisa dipakai di toko ini." },
+        ],
+        disclaimer: DISCLAIMER,
+      });
+    }
     const provider = override?.is_active && override?.api_key_enc
       ? {
         base_url: override.base_url,
@@ -1381,13 +1411,18 @@ Deno.serve(async (req: Request) => {
         temperature: override.temperature,
         max_tokens: override.max_tokens,
       }
-      : {
+      : (pool ?? {
         base_url: globalCfg?.provider_default?.base_url,
         api_key: globalCfg?.provider_default?.api_key,
         model: globalCfg?.provider_default?.model,
         temperature: globalCfg?.provider_default?.temperature,
         max_tokens: globalCfg?.provider_default?.max_tokens,
-      };
+      });
+    const aiPool: Json = override?.is_active && override?.api_key_enc
+      ? { mode: "override", model: override.model }
+      : pool
+      ? { mode: "pool", slot_no: pool.slot_no, model: pool.model, key_hint: pool.key_hint }
+      : { mode: "global", model: globalCfg?.provider_default?.model ?? null };
 
     // Rate limit / kuota token harian (superadmin dikecualikan).
     // Unlimited: outlet unlimited_tokens ON -> kuota dilewati (tetap dicatat).
@@ -1694,6 +1729,7 @@ Deno.serve(async (req: Request) => {
       reply: replyText,
       fallback: !!fallbackReason,
       tokens,
+      ai_pool: aiPool,
       disclaimer: DISCLAIMER,
     });
   } catch (e) {

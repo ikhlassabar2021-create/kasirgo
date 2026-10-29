@@ -5,6 +5,7 @@ import 'package:url_launcher/url_launcher.dart';
 
 import '../../config/app_theme.dart';
 import '../../services/guide_service.dart';
+import 'help_center_screen.dart';
 import 'support_tickets_screen.dart';
 import '../../widgets/common/centennial_background.dart';
 import '../../utils/error_messages.dart';
@@ -176,6 +177,43 @@ class _GuideScreenState extends ConsumerState<GuideScreen> {
       padding: const EdgeInsets.fromLTRB(16, 8, 16, 8),
       child: Column(
         children: [
+          GestureDetector(
+            onTap: () => Navigator.push(context,
+                MaterialPageRoute(builder: (_) => const HelpCenterScreen())),
+            child: Container(
+              margin: const EdgeInsets.only(bottom: 10),
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                gradient: const LinearGradient(
+                    colors: [Color(0xFF06B6D4), Color(0xFF0284C7)]),
+                borderRadius: BorderRadius.circular(14),
+              ),
+              child: Row(
+                children: [
+                  const Icon(Icons.auto_stories_rounded,
+                      color: Colors.white, size: 26),
+                  const SizedBox(width: 10),
+                  const Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text('Panduan Bergambar',
+                            style: TextStyle(
+                                color: Colors.white,
+                                fontSize: 13,
+                                fontWeight: FontWeight.w800)),
+                        Text('Simulasi layar + tombol langsung ke fitur',
+                            style: TextStyle(
+                                color: Colors.white70, fontSize: 11)),
+                      ],
+                    ),
+                  ),
+                  const Icon(Icons.arrow_forward_rounded,
+                      color: Colors.white, size: 20),
+                ],
+              ),
+            ),
+          ),
           TextField(
             controller: _searchController,
             onChanged: (v) => setState(() => _query = v),

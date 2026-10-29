@@ -557,6 +557,8 @@ class HelpTopicData {
           scene: 'settings',
           tip:
               'KYC hanya perlu sekali. Status verifikasi tampil di Pengaturan.',
+          action: 'settings',
+          actionLabel: 'Buka Pengaturan',
         ),
         HelpStep(
           title: 'Tambahkan produk',
@@ -590,6 +592,8 @@ class HelpTopicData {
               'Ubah jumlah dengan tombol + / -, tambahkan diskon bila perlu. '
               'Total diperbarui otomatis.',
           scene: 'pos',
+          action: 'pos',
+          actionLabel: 'Buka Kasir',
         ),
         HelpStep(
           title: 'Selesaikan pembayaran',
@@ -600,6 +604,8 @@ class HelpTopicData {
           tip:
               'Setelah sukses, struk bisa disimpan sebagai PDF atau dikirim '
               'lewat WhatsApp.',
+          action: 'pos',
+          actionLabel: 'Coba di Kasir',
         ),
       ],
     ),
@@ -626,6 +632,8 @@ class HelpTopicData {
               'QRIS diterima. Status berubah menjadi Diproses.',
           scene: 'orders',
           tip: 'Pesanan belum dibayar tidak masuk antrean dapur (KDS).',
+          action: 'orders',
+          actionLabel: 'Buka Pesanan Masuk',
         ),
         HelpStep(
           title: 'Pantau dari laporan',
@@ -658,6 +666,8 @@ class HelpTopicData {
               'kebutuhan pembukuan.',
           scene: 'reports',
           tip: 'File terunduh langsung dari HP; tidak perlu email.',
+          action: 'reports',
+          actionLabel: 'Buka Laporan',
         ),
         HelpStep(
           title: 'Minta saran Dokter Bisnis',
@@ -691,6 +701,8 @@ class HelpTopicData {
               'Admin bisa menambah produk dan melihat laporan, tetapi tidak '
               'bisa menghapus produk. Kasir hanya membuat transaksi.',
           scene: 'employees',
+          action: 'employees',
+          actionLabel: 'Buka Karyawan',
         ),
         HelpStep(
           title: 'Jaga kata sandi',
@@ -699,6 +711,8 @@ class HelpTopicData {
               'kata sandi staf dari menu Karyawan.',
           scene: 'settings',
           tip: 'Jangan bagikan akun owner kepada staf.',
+          action: 'settings',
+          actionLabel: 'Buka Pengaturan',
         ),
       ],
     ),
@@ -725,6 +739,8 @@ class HelpTopicData {
           scene: 'tickets',
           tip:
               'Screenshot membantu tim menemukan penyebab masalah lebih cepat.',
+          action: 'tickets',
+          actionLabel: 'Buat / Buka Tiket',
         ),
         HelpStep(
           title: 'Pantau balasan',
