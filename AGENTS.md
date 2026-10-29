@@ -1698,3 +1698,46 @@ Commit `ff04bb3` (main) + deploy web gh-pages `050051c` (live md5
   milik Mailjet (bukan domain user) -> sebaiknya nanti diganti ke sender domain sendiri
   yang terverifikasi Mailjet.
 - TIDAK ada perubahan kode/repo; hanya konfigurasi server Supabase (config/auth).
+
+## Sesi 2026-10-29 (4): Konfigurasi API AI Dinamis + Panduan Bergambar Pembeli (SELESAI)
+- TUJUAN: ganti fitur "Pool Token AI (maks 5 outlet/token)" dengan konfigurasi dinamis
+  Base URL / Model / Primary Key / 2 Backup Key lewat dashboard superadmin, plus panduan
+  bergambar (simulasi layar + tombol fitur) di sisi Pembeli.
+- MIGRASI `docs/migrations/2026-11-30-kasirgo-system-api-config.sql` (DITERAPKAN):
+  drop seluruh objek pool (`doctor_ai_pool`, `doctor_ai_pool_assignments`, seluruh RPC
+  `doctor_ai_*`, `doctor_ai_pool_max_per_key`); buat `public.system_api_configs`
+  (provider_name, base_url, model_name, primary_key, backup_key_1, backup_key_2,
+  is_active, updated_at) + RLS (REVOKE anon/authenticated); RPC superadmin
+  `admin_get_system_api_config` (ter-mask, hint `****XXXX`) + `admin_save_system_api_config(jsonb)`
+  (field kosong tidak menimpa key lama; `clear_keys=true` hapus).
+- EF `business_doctor_chat` (REDEPLOYED): hapus branch pool/claim/poolBlocked; prioritas
+  provider = override outlet -> `system_api_configs` -> global. `callLlm` ditulis ulang jadi
+  `callLlmOnce` + `callLlm` (fallback multi-kunci). Respons `ai_pool.mode` kini
+  `override|config|global` (+ `key_hint` dari primary).
+- EF BARU `doctor-proxy` (DEPLOYED): gateway LLM global baca `system_api_configs`, fallback
+  primary -> backup_1 -> backup_2; mode `test` (superadmin) + `completions`; CORS; timeout
+  `DOCTOR_LLM_TIMEOUT_MS`. VERIFIKASI: `test` -> 200 `{ok:false,"Lengkapi Base URL..."}`
+  (belum ada config), JWT superadmin lolos.
+- ADMIN `ControlPlane.tsx` DoctorTab: kartu "Konfigurasi API AI (Base URL, Model, Kunci)"
+  menggantikan Pool Token AI. Form provider/model/base_url + Primary/Backup1/Backup2
+  (password, placeholder "Tersimpan (hint)"), toggle aktif, Simpan + Tes Koneksi
+  (invoke `doctor-proxy` mode test). `controlPlane.ts`: `SystemApiConfig`,
+  `getSystemApiConfig`/`saveSystemApiConfig`/`testSystemApiConfig`; hapus `DoctorAiPool*`,
+  `listDoctorAiPool` dll. `npx tsc -b` + `npm run build` bersih.
+- APP: hapus banner status pool di Dokter Bisnis (`business_doctor_service.dart` `getAiStatus`,
+  `business_doctor_screen.dart` `_aiStatus`/`_loadAiStatus`/`_buildAiPoolBanner`).
+- PANDUAN PEMBELI: `screens/buyer/buyer_help_screen.dart` (BARU) — 4 topik
+  (Cari Warung / Katalog-Keranjang / Checkout / Lacak) x langkah bergambar + tombol
+  "Buka fitur" (`context.go('/buyer')`); scene baru di `guide_mock.dart`: `buyer_radar`,
+  `buyer_catalog`, `buyer_cart`, `buyer_checkout`, `buyer_tracking`. Entry: drawer
+  "Panduan Pembeli" + tombol di Profil Pembeli.
+- VERIFIKASI live: `admin_get_system_api_config` -> `{has_config:false}`; build web berisi
+  "Panduan Pembeli"/"buyer_radar"/"Konfigurasi API AI"/"Backup Key 1"; bundle TANPA
+  `admin_list_doctor_ai_pool`/`doctor_ai_status`; admin live `index-CXt6X-CB.js` terpasang
+  (mengandung "Konfigurasi API AI", 0 pool). Deploy gh-pages `9f3f0e4` (live md5 main.dart.js
+  `2693fc4c601ba88e19deaec5bc5a9cee` + flutter_bootstrap `4ceb5a39...` MATCH build);
+  main `d3c02e9`.
+- CATATAN: kunci `system_api_configs` disimpan plaintext di kolom (hanya service_role bisa
+  baca; klien REVOKE). `doctor-proxy` mode completions bisa dipanggil user ter-autentikasi
+  mana pun; konsumen utama tetap `business_doctor_chat` (ter-gate membership). APK perlu
+  dibangun ulang agar perubahan ini masuk perangkat.
