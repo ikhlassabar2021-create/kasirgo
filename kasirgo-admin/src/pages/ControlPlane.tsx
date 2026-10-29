@@ -11,6 +11,7 @@ import {
   ScrollText,
   Save,
   Plus,
+  PlusCircle,
   Trash2,
   RefreshCw,
   AlertTriangle,
@@ -55,7 +56,9 @@ import {
   deleteOutletAiConfig,
   listDoctorAiPool,
   saveDoctorAiPool,
-  releaseDoctorAiSlot,
+  deleteDoctorAiToken,
+  releaseDoctorAiOutlet,
+  backfillDoctorAiPool,
   listOutletDmConfigs,
   setOutletDmConfig,
   deleteOutletDmConfig,
@@ -2209,6 +2212,7 @@ function DoctorTab() {
   const [pool, setPool] = useState<DoctorAiPool | null>(null);
   const [poolForms, setPoolForms] = useState<Record<number, any>>({});
   const [poolBusy, setPoolBusy] = useState<number | null>(null);
+  const [newTokenForm, setNewTokenForm] = useState<Record<string, any>>({ provider: '', model: '', base_url: '', label: '', api_key: '', is_active: true });
   const { msg, show } = useToast();
 
   useEffect(() => {
@@ -2226,32 +2230,59 @@ function DoctorTab() {
 
   const refreshPool = () => listDoctorAiPool().then((p) => {
     setPool(p);
-    setPoolForms(Object.fromEntries((p.slots ?? []).map((sl) => [sl.slot_no, {
-      label: sl.label ?? '',
-      provider: sl.provider ?? '',
-      base_url: sl.base_url ?? '',
-      model: sl.model ?? '',
+    setPoolForms(Object.fromEntries((p.slots ?? []).map((t) => [t.id, {
+      label: t.label ?? '',
+      provider: t.provider ?? '',
+      base_url: t.base_url ?? '',
+      model: t.model ?? '',
       api_key: '',
-      is_active: sl.is_active !== false,
+      is_active: t.is_active !== false,
     }])));
   }).catch(() => {});
 
-  const savePoolSlot = async (slotNo: number, extra: Record<string, any> = {}) => {
-    setPoolBusy(slotNo);
+  const savePoolSlot = async (id: number, extra: Record<string, any> = {}) => {
+    setPoolBusy(id);
     try {
-      const form = { ...(poolForms[slotNo] ?? {}), ...extra };
-      const r = await saveDoctorAiPool(slotNo, form);
+      const form = { ...(poolForms[id] ?? {}), ...extra };
+      await saveDoctorAiPool(id, form);
       await refreshPool();
-      show('ok', r?.full ? 'Tersimpan. Token AI sudah maksimal (5/5 akun).' : `Slot ${slotNo} disimpan.`);
+      show('ok', `Token #${id} disimpan. Outlet yang belum dapat token otomatis ditugaskan.`);
     } catch (e: any) { show('err', e.message); } finally { setPoolBusy(null); }
   };
 
-  const releasePoolSlot = async (slotNo: number) => {
-    setPoolBusy(slotNo);
+  const addToken = async () => {
+    setPoolBusy(-1);
     try {
-      await releaseDoctorAiSlot(slotNo);
+      await saveDoctorAiPool(null, newTokenForm);
       await refreshPool();
-      show('ok', `Outlet dilepas dari slot ${slotNo}.`);
+      show('ok', 'Token baru ditambah. Kapasitas +5 outlet; outlet yang belum dapat token otomatis diisi.');
+    } catch (e: any) { show('err', e.message); } finally { setPoolBusy(null); }
+  };
+
+  const deleteToken = async (id: number) => {
+    setPoolBusy(id);
+    try {
+      await deleteDoctorAiToken(id);
+      await refreshPool();
+      show('ok', `Token #${id} dihapus. Outlet-nya dipindah ke token lain bila masih ada kapasitas.`);
+    } catch (e: any) { show('err', e.message); } finally { setPoolBusy(null); }
+  };
+
+  const releaseOutlet = async (outletId: string) => {
+    setPoolBusy(-2);
+    try {
+      await releaseDoctorAiOutlet(outletId);
+      await refreshPool();
+      show('ok', 'Outlet dilepas dari token.');
+    } catch (e: any) { show('err', e.message); } finally { setPoolBusy(null); }
+  };
+
+  const runBackfill = async () => {
+    setPoolBusy(-2);
+    try {
+      const r = await backfillDoctorAiPool();
+      await refreshPool();
+      show('ok', `Backfill selesai: ${r?.assigned ?? 0} outlet ditugaskan.`);
     } catch (e: any) { show('err', e.message); } finally { setPoolBusy(null); }
   };
 
@@ -2572,74 +2603,88 @@ function DoctorTab() {
         </div>
       </Card>
 
-      <Card title="Pool Token AI (maks 5 akun)" subtitle="Batasan provider AI hanya 5 token/akun. Isi API key + model pada tiap slot; token otomatis dipakai bergiliran oleh outlet yang membuka Dokter Bisnis AI. Bila 5/5 terpakai, outlet baru akan diberi notifikasi token sudah maksimal.">
+      <Card title="Pool Token AI (maks 5 outlet per token)" subtitle="Satu API key berlaku maksimal 5 akun. Tambah token baru kapan saja untuk melayani lebih banyak outlet; outlet yang belum punya token otomatis diisi begitu ada kapasitas kosong. Kunci hanya disimpan di server, tidak pernah dikirim ke aplikasi.">
         <div className="space-y-3">
           <div className="flex flex-wrap items-center gap-2">
-            <span className={`px-2.5 py-1 rounded-full text-[11px] font-bold border ${(pool?.used ?? 0) >= 5 ? 'bg-warning/10 text-warning border-warning/30' : 'bg-success/10 text-success border-success/30'}`}>
-              Terpakai {pool?.used ?? 0} / {pool?.max ?? 5}
+            <span className={`px-2.5 py-1 rounded-full text-[11px] font-bold border ${(pool?.capacity_used ?? 0) >= (pool?.capacity_total ?? 0) && (pool?.tokens ?? 0) > 0 ? 'bg-warning/10 text-warning border-warning/30' : 'bg-success/10 text-success border-success/30'}`}>
+              {pool?.connected_outlets ?? 0} / {pool?.capacity_total ?? 0} outlet terhubung
             </span>
-            <span className="text-[11px] text-muted">Aktif {pool?.active ?? 0} - Ditugaskan {pool?.assigned ?? 0} outlet</span>
+            <span className="text-[11px] text-muted">{pool?.tokens ?? 0} token - tiap token maks {pool?.max_per_key ?? 5} outlet</span>
+            <button onClick={runBackfill} disabled={poolBusy === -2} className="px-2.5 py-1 rounded-lg text-[11px] font-semibold border border-border bg-surface hover:bg-bg text-ink">
+              Isi Otomatis
+            </button>
           </div>
-          {(pool?.used ?? 0) >= 5 && (
+          {(pool?.tokens ?? 0) > 0 && (pool?.capacity_used ?? 0) >= (pool?.capacity_total ?? 0) && (
             <div className="rounded-xl border border-warning/40 bg-warning/10 px-3 py-2 text-[11px] font-semibold text-warning">
-              Token sudah maksimal (5/5 akun). Lepas salah satu outlet atau kosongkan token agar akun baru bisa memakai AI.
+              Kapasitas token habis. Outlet baru akan melihat "Token AI sudah maksimal". Tambah token baru untuk membuka kapasitas.
             </div>
           )}
+
+          <div className="rounded-xl border border-dashed border-border bg-bg/40 p-3">
+            <p className="text-xs font-bold text-ink mb-2">Tambah Token Baru (kapasitas +5 outlet)</p>
+            <div className="grid grid-cols-2 gap-2">
+              <div className="col-span-2">
+                <label className={labelCls}>Label Akun</label>
+                <input className={inputCls} value={newTokenForm.label ?? ''} placeholder="mis. Akun Bos 2" onChange={(e) => setNewTokenForm({ ...newTokenForm, label: e.target.value })} />
+              </div>
+              <div><label className={labelCls}>Provider</label><input className={inputCls} value={newTokenForm.provider ?? ''} placeholder="openai-compatible" onChange={(e) => setNewTokenForm({ ...newTokenForm, provider: e.target.value })} /></div>
+              <div><label className={labelCls}>Model AI</label><input className={inputCls} value={newTokenForm.model ?? ''} placeholder="mercury-3" onChange={(e) => setNewTokenForm({ ...newTokenForm, model: e.target.value })} /></div>
+              <div className="col-span-2"><label className={labelCls}>Base URL</label><input className={inputCls} value={newTokenForm.base_url ?? ''} placeholder="https://api.deepseek.com/v1" onChange={(e) => setNewTokenForm({ ...newTokenForm, base_url: e.target.value })} /></div>
+              <div className="col-span-2"><label className={labelCls}>API Key</label><input className={inputCls} type="password" value={newTokenForm.api_key ?? ''} placeholder="sk-..." onChange={(e) => setNewTokenForm({ ...newTokenForm, api_key: e.target.value })} /></div>
+            </div>
+            <div className="flex flex-wrap gap-2 mt-2">
+              <button onClick={addToken} disabled={poolBusy === -1} className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[11px] font-semibold ocean-gradient text-white disabled:opacity-60">
+                {poolBusy === -1 ? <RefreshCw className="w-3 h-3 animate-spin" /> : <PlusCircle className="w-3 h-3" />} Tambah Token
+              </button>
+            </div>
+          </div>
+
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
-            {(pool?.slots ?? []).map((sl) => {
-              const f = poolForms[sl.slot_no] ?? {};
-              const busy = poolBusy === sl.slot_no;
+            {(pool?.slots ?? []).map((t) => {
+              const f = poolForms[t.id] ?? {};
+              const busy = poolBusy === t.id;
               return (
-                <div key={sl.slot_no} className="rounded-xl border border-border bg-bg/40 p-3 space-y-2">
+                <div key={t.id} className="rounded-xl border border-border bg-bg/40 p-3 space-y-2">
                   <div className="flex items-center justify-between gap-2">
-                    <p className="text-xs font-bold text-ink">Slot {sl.slot_no}</p>
-                    <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold border ${sl.assigned_outlet_id ? 'bg-primary/10 text-primary border-primary/30' : sl.has_key ? 'bg-success/10 text-success border-success/30' : 'bg-surface text-muted border-border'}`}>
-                      {sl.assigned_outlet_id ? `Dipakai: ${sl.assigned_outlet_name ?? sl.assigned_outlet_id}` : sl.has_key ? 'Siap dipakai' : 'Kosong'}
+                    <p className="text-xs font-bold text-ink">Token #{t.id}{t.label ? ` - ${t.label}` : ''}</p>
+                    <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold border ${t.full ? 'bg-warning/10 text-warning border-warning/30' : t.has_key ? 'bg-success/10 text-success border-success/30' : 'bg-surface text-muted border-border'}`}>
+                      {t.full ? `Penuh ${t.outlet_count}/${pool?.max_per_key ?? 5}` : t.has_key ? `${t.outlet_count}/${pool?.max_per_key ?? 5} outlet` : 'Belum ada key'}
                     </span>
                   </div>
                   <div className="grid grid-cols-2 gap-2">
-                    <div className="col-span-2">
-                      <label className={labelCls}>Label Akun</label>
-                      <input className={inputCls} value={f.label ?? ''} placeholder="mis. Akun Bos 1" onChange={(e) => setPoolForms({ ...poolForms, [sl.slot_no]: { ...f, label: e.target.value } })} />
-                    </div>
-                    <div>
-                      <label className={labelCls}>Provider</label>
-                      <input className={inputCls} value={f.provider ?? ''} placeholder="openai-compatible" onChange={(e) => setPoolForms({ ...poolForms, [sl.slot_no]: { ...f, provider: e.target.value } })} />
-                    </div>
-                    <div>
-                      <label className={labelCls}>Model AI</label>
-                      <input className={inputCls} value={f.model ?? ''} placeholder="mercury-3" onChange={(e) => setPoolForms({ ...poolForms, [sl.slot_no]: { ...f, model: e.target.value } })} />
-                    </div>
-                    <div className="col-span-2">
-                      <label className={labelCls}>Base URL</label>
-                      <input className={inputCls} value={f.base_url ?? ''} placeholder="https://api.deepseek.com/v1" onChange={(e) => setPoolForms({ ...poolForms, [sl.slot_no]: { ...f, base_url: e.target.value } })} />
-                    </div>
-                    <div className="col-span-2">
-                      <label className={labelCls}>API Key</label>
-                      <input className={inputCls} type="password" value={f.api_key ?? ''} placeholder={sl.has_key ? `Tersimpan (${sl.key_hint ?? '****'}) - kosongkan bila tidak diubah` : 'sk-...'} onChange={(e) => setPoolForms({ ...poolForms, [sl.slot_no]: { ...f, api_key: e.target.value } })} />
-                      <p className="text-[10px] text-muted mt-1">Token hanya disimpan di server, tidak pernah dikirim ke aplikasi.</p>
-                    </div>
+                    <div><label className={labelCls}>Provider</label><input className={inputCls} value={f.provider ?? ''} onChange={(e) => setPoolForms({ ...poolForms, [t.id]: { ...f, provider: e.target.value } })} /></div>
+                    <div><label className={labelCls}>Model AI</label><input className={inputCls} value={f.model ?? ''} onChange={(e) => setPoolForms({ ...poolForms, [t.id]: { ...f, model: e.target.value } })} /></div>
+                    <div className="col-span-2"><label className={labelCls}>Base URL</label><input className={inputCls} value={f.base_url ?? ''} onChange={(e) => setPoolForms({ ...poolForms, [t.id]: { ...f, base_url: e.target.value } })} /></div>
+                    <div className="col-span-2"><label className={labelCls}>API Key</label><input className={inputCls} type="password" value={f.api_key ?? ''} placeholder={t.has_key ? `Tersimpan (${t.key_hint ?? '****'}) - kosongkan bila tidak diubah` : 'sk-...'} onChange={(e) => setPoolForms({ ...poolForms, [t.id]: { ...f, api_key: e.target.value } })} /></div>
                   </div>
+                  {t.outlets.length > 0 && (
+                    <div className="flex flex-wrap gap-1.5">
+                      {t.outlets.map((o) => (
+                        <span key={o.outlet_id} className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold bg-surface border border-border text-muted">
+                          {o.outlet_name ?? o.outlet_id.slice(0, 8)}
+                          <button onClick={() => releaseOutlet(o.outlet_id)} className="text-muted hover:text-error" title="Lepas outlet">x</button>
+                        </span>
+                      ))}
+                    </div>
+                  )}
                   <label className="flex items-center gap-2 text-[11px] font-semibold text-muted">
-                    <input type="checkbox" checked={f.is_active !== false} onChange={(e) => setPoolForms({ ...poolForms, [sl.slot_no]: { ...f, is_active: e.target.checked } })} />
-                    Slot aktif
+                    <input type="checkbox" checked={f.is_active !== false} onChange={(e) => setPoolForms({ ...poolForms, [t.id]: { ...f, is_active: e.target.checked } })} />
+                    Token aktif
                   </label>
                   <div className="flex flex-wrap gap-2">
-                    <button onClick={() => savePoolSlot(sl.slot_no)} disabled={busy} className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[11px] font-semibold ocean-gradient text-white disabled:opacity-60">
+                    <button onClick={() => savePoolSlot(t.id)} disabled={busy} className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[11px] font-semibold ocean-gradient text-white disabled:opacity-60">
                       {busy ? <RefreshCw className="w-3 h-3 animate-spin" /> : <Save className="w-3 h-3" />} Simpan
                     </button>
-                    {sl.assigned_outlet_id && (
-                      <button onClick={() => releasePoolSlot(sl.slot_no)} disabled={busy} className="px-3 py-1.5 rounded-lg text-[11px] font-semibold border border-border bg-surface hover:bg-bg text-ink">Lepas Outlet</button>
-                    )}
-                    {sl.has_key && (
-                      <button onClick={() => savePoolSlot(sl.slot_no, { clear_key: true, api_key: '', is_active: false })} disabled={busy} className="px-3 py-1.5 rounded-lg text-[11px] font-semibold border border-red-200 bg-red-50 hover:bg-red-100 text-red-600">Hapus Token</button>
-                    )}
+                    <button onClick={() => deleteToken(t.id)} disabled={busy} className="px-3 py-1.5 rounded-lg text-[11px] font-semibold border border-red-200 bg-red-50 hover:bg-red-100 text-red-600">Hapus Token</button>
                   </div>
                 </div>
               );
             })}
-            {!pool && <p className="text-xs text-muted">Memuat pool token...</p>}
           </div>
+          {!pool && <p className="text-xs text-muted">Memuat pool token...</p>}
+          {(pool?.slots ?? []).length === 0 && (
+            <p className="text-xs text-muted">Belum ada token. Tambah token pertama untuk mengaktifkan AI otomatis (default: provider global tetap dipakai bila belum ada token).</p>
+          )}
         </div>
       </Card>
 

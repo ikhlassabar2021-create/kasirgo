@@ -2729,9 +2729,9 @@ class _BusinessDoctorScreenState extends ConsumerState<BusinessDoctorScreen> {
     final isFull = mode == 'none' && reason == 'pool_full';
     final color = isFull ? AppTheme.warningColor : AppTheme.successColor;
     final label = isFull
-        ? 'Token AI sudah maksimal ($used/$max akun)'
+        ? 'Token AI sudah maksimal ($used/$max outlet terhubung)'
         : mode == 'pool'
-            ? 'AI otomatis aktif: ${s['model'] ?? '-'} (${s['key_hint'] ?? ''}) - token $used/$max'
+            ? 'AI otomatis aktif: ${s['model'] ?? '-'} (${s['key_hint'] ?? ''}) - $used/$max outlet memakai token ini'
             : mode == 'global'
                 ? 'AI global aktif (token khusus belum ditugaskan)'
                 : 'AI khusus toko ini aktif';

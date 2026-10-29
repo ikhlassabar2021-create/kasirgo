@@ -1385,7 +1385,7 @@ Deno.serve(async (req: Request) => {
           model: claim.model,
           temperature: globalCfg?.provider_default?.temperature,
           max_tokens: globalCfg?.provider_default?.max_tokens,
-          slot_no: claim.slot_no,
+          id: claim.id,
           key_hint: claim.key_hint,
         };
       } else if (String(claim?.reason ?? "") === "pool_full") {
@@ -1421,7 +1421,7 @@ Deno.serve(async (req: Request) => {
     const aiPool: Json = override?.is_active && override?.api_key_enc
       ? { mode: "override", model: override.model }
       : pool
-      ? { mode: "pool", slot_no: pool.slot_no, model: pool.model, key_hint: pool.key_hint }
+      ? { mode: "pool", id: pool.id, model: pool.model, key_hint: pool.key_hint }
       : { mode: "global", model: globalCfg?.provider_default?.model ?? null };
 
     // Rate limit / kuota token harian (superadmin dikecualikan).

@@ -470,8 +470,13 @@ export async function setOutletAiConfig(outletId: string, config: Record<string,
   return data
 }
 
-export interface DoctorAiPoolSlot {
-  slot_no: number
+export interface DoctorAiPoolOutlet {
+  outlet_id: string
+  outlet_name: string | null
+}
+
+export interface DoctorAiToken {
+  id: number
   label: string | null
   provider: string | null
   base_url: string | null
@@ -479,18 +484,19 @@ export interface DoctorAiPoolSlot {
   has_key: boolean
   key_hint: string | null
   is_active: boolean
-  assigned_outlet_id: string | null
-  assigned_outlet_name: string | null
-  assigned_at: string | null
+  outlet_count: number
+  full: boolean
+  outlets: DoctorAiPoolOutlet[]
   updated_at: string | null
 }
 
 export interface DoctorAiPool {
-  max: number
-  used: number
-  active: number
-  assigned: number
-  slots: DoctorAiPoolSlot[]
+  max_per_key: number
+  tokens: number
+  connected_outlets: number
+  capacity_used: number
+  capacity_total: number
+  slots: DoctorAiToken[]
 }
 
 export async function listDoctorAiPool(): Promise<DoctorAiPool> {
@@ -500,21 +506,37 @@ export async function listDoctorAiPool(): Promise<DoctorAiPool> {
   return data as DoctorAiPool
 }
 
-export async function saveDoctorAiPool(slotNo: number, config: Record<string, any>) {
+export async function saveDoctorAiPool(id: number | null, config: Record<string, any>) {
   const { data, error } = await supabase.rpc('admin_save_doctor_ai_pool', {
-    p_slot: slotNo,
+    p_id: id,
     p_config: config,
   })
   if (error) throw error
   if (data?.forbidden) throw new Error('Akses ditolak.')
-  if (data?.success === false) throw new Error(data?.message ?? 'Gagal menyimpan slot.')
+  if (data?.success === false) throw new Error(data?.message ?? 'Gagal menyimpan token.')
   return data
 }
 
-export async function releaseDoctorAiSlot(slotNo: number) {
-  const { data, error } = await supabase.rpc('admin_release_doctor_ai_slot', {
-    p_slot: slotNo,
+export async function deleteDoctorAiToken(id: number) {
+  const { data, error } = await supabase.rpc('admin_delete_doctor_ai_token', {
+    p_id: id,
   })
+  if (error) throw error
+  if (data?.forbidden) throw new Error('Akses ditolak.')
+  return data
+}
+
+export async function releaseDoctorAiOutlet(outletId: string) {
+  const { data, error } = await supabase.rpc('admin_release_doctor_ai_outlet', {
+    p_outlet: outletId,
+  })
+  if (error) throw error
+  if (data?.forbidden) throw new Error('Akses ditolak.')
+  return data
+}
+
+export async function backfillDoctorAiPool() {
+  const { data, error } = await supabase.rpc('doctor_ai_pool_backfill')
   if (error) throw error
   if (data?.forbidden) throw new Error('Akses ditolak.')
   return data

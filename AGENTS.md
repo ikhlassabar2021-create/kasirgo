@@ -1664,3 +1664,23 @@ Commit `ff04bb3` (main) + deploy web gh-pages `050051c` (live md5
 - CATATAN: tidak ada SUPABASE_ACCESS_TOKEN di env; deploy EF memakai PAT
   Management API (`sbp_`) sebagai `SUPABASE_ACCESS_TOKEN` ke CLI. APK baru perlu
   dibangun agar banner AI + panduan versi ini masuk perangkat.
+- UPDATE Sesi 2026-10-29 (lanjutan): Pool Token AI v2 — satu token = maks 5 outlet,
+  daftar token dinamis + auto-backfill (bukan 5 slot tetap). Migrasi
+  `docs/migrations/2026-11-30-kasirgo-doctor-ai-pool-multi.sql` (DROP+recreate):
+  `doctor_ai_pool` (id identity, tanpa slot_no) + tabel penghubung
+  `doctor_ai_pool_assignments(pool_id, outlet_id unique, assigned_at)`;
+  `doctor_ai_pool_max_per_key()=5`; RPC `admin_list_doctor_ai_pool` (per token:
+  outlet_count/full/outlets[], global tokens/connected_outlets/capacity_total),
+  `admin_save_doctor_ai_pool(p_id,config)` (p_id NULL = tambah token; otomatis
+  backfill), `admin_delete_doctor_ai_token`, `admin_release_doctor_ai_outlet`,
+  `doctor_ai_pool_backfill` + `doctor_ai_pool_backfill_internal` (assign outlet
+  ber-profil `doctor_outlet_profile` yang belum dapat token, urut updated_at),
+  `doctor_ai_claim_internal`/`doctor_ai_claim`/`doctor_ai_status` (claim cari
+  token berkapasitas <5, `FOR UPDATE SKIP LOCKED`; penuh -> `pool_full`).
+  EF `business_doctor_chat` redeploy (claim.id). Admin `ControlPlane.tsx`
+  DoctorTab kartu pool ditulis ulang: counter "X/Y outlet terhubung", form
+  "Tambah Token Baru" (+kapasitas 5), tombol "Isi Otomatis", kartu token
+  (outlet chips + lepas per outlet + Hapus Token + Simpan). App banner wording
+  "X/Y outlet memakai token ini". Verifikasi E2E: 1 token -> 5 outlet, 2 token
+  -> 7/10, claim 14 outlet -> 10 pool + 4 pool_full, cleanup 0. Build/deploy OK
+  (live md5 `fe3819c0ed8400a89116b4192bc01c5d` MATCH).
