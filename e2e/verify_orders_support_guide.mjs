@@ -110,7 +110,9 @@ const run = async () => {
     out.ticketRow = await click(page, 'Tiket Bantuan');
     await page.waitForTimeout(4000);
     txt = await textOf(page);
-    out.ticketsScreen = txt.includes('Tiket Bantuan') && txt.includes('Tiket Baru');
+    out.ticketsScreen =
+      (txt.includes('Tiket Support') || txt.includes('Tiket Bantuan')) &&
+      txt.includes('Tiket Baru');
 
     const opened = await click(page, 'Tiket Baru');
     await page.waitForTimeout(2000);

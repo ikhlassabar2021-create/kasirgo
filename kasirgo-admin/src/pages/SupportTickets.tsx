@@ -323,6 +323,16 @@ export function SupportTicketsPage() {
     if (!window.confirm(`Hapus tiket "${ticket.subject}"? Tindakan ini permanen.`)) return;
     setError(null);
     try {
+      const { data: atts } = await supabase
+        .from('support_ticket_attachments')
+        .select('storage_path')
+        .eq('ticket_id', ticket.id);
+      const paths = (atts ?? [])
+        .map((a) => a.storage_path as string)
+        .filter(Boolean);
+      if (paths.length > 0) {
+        await supabase.storage.from('support-attachments').remove(paths);
+      }
       const { error: err } = await supabase.from('support_tickets').delete().eq('id', ticket.id);
       if (err) throw err;
       try {
