@@ -97,6 +97,16 @@ class GuideMock extends StatelessWidget {
         return _tickets();
       case 'settings':
         return _settings();
+      case 'buyer_radar':
+        return _buyerRadar();
+      case 'buyer_catalog':
+        return _buyerCatalog();
+      case 'buyer_cart':
+        return _buyerCart();
+      case 'buyer_checkout':
+        return _buyerCheckout();
+      case 'buyer_tracking':
+        return _buyerTracking();
       case 'dashboard':
       default:
         return _dashboard();
@@ -1116,6 +1126,376 @@ class GuideMock extends StatelessWidget {
           ),
         ],
       ),
+    );
+  }
+
+  Widget _buyerRadar() {
+    return _pad(
+      Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Row(
+            children: [
+              Icon(Icons.near_me_rounded, size: 8, color: AppTheme.primaryColor),
+              SizedBox(width: 3),
+              Text(
+                'Lokasi: -6.3950, 106.8410',
+                style: TextStyle(fontSize: 5, color: AppTheme.textSecondary),
+              ),
+            ],
+          ),
+          const SizedBox(height: 4),
+          Row(
+            children: [
+              _chip('3 km', AppTheme.primaryColor),
+              const SizedBox(width: 2),
+              _chip('5 km', AppTheme.textSecondary),
+              const SizedBox(width: 2),
+              _chip('10 km', AppTheme.textSecondary),
+            ],
+          ),
+          const SizedBox(height: 5),
+          _nearbyCard(Icons.storefront_rounded, 'Toko Test', '250 m',
+              delivery: true),
+          _nearbyCard(Icons.storefront_rounded, 'Gerobak Test', '400 m',
+              delivery: false),
+          _nearbyCard(Icons.storefront_rounded, 'Warung Test', '1,2 km',
+              delivery: true),
+        ],
+      ),
+    );
+  }
+
+  Widget _nearbyCard(IconData icon, String name, String distance,
+      {required bool delivery}) {
+    return Container(
+      margin: const EdgeInsets.only(bottom: 4),
+      padding: const EdgeInsets.all(4),
+      decoration: BoxDecoration(
+        color: AppTheme.surfaceColor,
+        borderRadius: BorderRadius.circular(5),
+        border: Border.all(color: AppTheme.borderColor),
+      ),
+      child: Row(
+        children: [
+          Container(
+            width: 16,
+            height: 16,
+            decoration: BoxDecoration(
+              color: AppTheme.primaryColor.withValues(alpha: 0.1),
+              borderRadius: BorderRadius.circular(4),
+            ),
+            child: Icon(icon, size: 9, color: AppTheme.primaryColor),
+          ),
+          const SizedBox(width: 4),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  name,
+                  style: const TextStyle(
+                    fontSize: 5.8,
+                    fontWeight: FontWeight.w700,
+                    color: AppTheme.textPrimary,
+                  ),
+                ),
+                Text(
+                  distance,
+                  style: const TextStyle(
+                    fontSize: 4.8,
+                    color: AppTheme.textSecondary,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          _chip(delivery ? 'Diantar' : 'Ambil', AppTheme.successColor),
+        ],
+      ),
+    );
+  }
+
+  Widget _buyerCatalog() {
+    return _pad(
+      Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          _title('Katalog Toko Test'),
+          const SizedBox(height: 5),
+          _field('Cari produk di toko ini...'),
+          const SizedBox(height: 5),
+          _buyerProductRow(Icons.rice_bowl_rounded, 'Beras 5 kg', 'Rp62.000'),
+          _buyerProductRow(Icons.local_cafe_rounded, 'Kopi Sachet', 'Rp2.000'),
+          _buyerProductRow(
+            Icons.bakery_dining_rounded,
+            'Roti Bakar',
+            'Rp12.000',
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buyerProductRow(IconData icon, String name, String price) {
+    return Container(
+      margin: const EdgeInsets.only(bottom: 4),
+      padding: const EdgeInsets.all(4),
+      decoration: BoxDecoration(
+        color: AppTheme.surfaceColor,
+        borderRadius: BorderRadius.circular(5),
+        border: Border.all(color: AppTheme.borderColor),
+      ),
+      child: Row(
+        children: [
+          Container(
+            width: 16,
+            height: 16,
+            decoration: BoxDecoration(
+              color: AppTheme.primaryColor.withValues(alpha: 0.1),
+              borderRadius: BorderRadius.circular(4),
+            ),
+            child: Icon(icon, size: 9, color: AppTheme.primaryColor),
+          ),
+          const SizedBox(width: 4),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  name,
+                  style: const TextStyle(
+                    fontSize: 5.6,
+                    fontWeight: FontWeight.w700,
+                    color: AppTheme.textPrimary,
+                  ),
+                ),
+                Text(
+                  price,
+                  style: const TextStyle(
+                    fontSize: 5,
+                    color: AppTheme.primaryColor,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
+            decoration: BoxDecoration(
+              color: AppTheme.primaryColor,
+              borderRadius: BorderRadius.circular(3),
+            ),
+            child: const Text(
+              'Tambah',
+              style: TextStyle(
+                fontSize: 4.5,
+                fontWeight: FontWeight.w700,
+                color: Colors.white,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buyerCart() {
+    return Column(
+      children: [
+        _pad(
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              _title('Keranjang'),
+              _sub('1 toko per transaksi'),
+              const SizedBox(height: 5),
+              _line('Beras 5 kg', 'x1', 'Rp62.000'),
+              _line('Kopi Sachet', 'x2', 'Rp4.000'),
+              const Divider(height: 7, color: AppTheme.borderColor),
+              Row(
+                children: [
+                  const Text(
+                    'Total',
+                    style: TextStyle(
+                      fontSize: 5.5,
+                      fontWeight: FontWeight.w700,
+                      color: AppTheme.textPrimary,
+                    ),
+                  ),
+                  const Spacer(),
+                  const Text(
+                    'Rp66.000',
+                    style: TextStyle(
+                      fontSize: 7,
+                      fontWeight: FontWeight.w800,
+                      color: AppTheme.primaryColor,
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ),
+        const Spacer(),
+        Container(
+          padding: const EdgeInsets.fromLTRB(8, 6, 8, 8),
+          decoration: const BoxDecoration(
+            color: AppTheme.surfaceColor,
+            border: Border(top: BorderSide(color: AppTheme.borderColor)),
+          ),
+          child: Container(
+            width: double.infinity,
+            padding: const EdgeInsets.symmetric(vertical: 5),
+            decoration: BoxDecoration(
+              gradient: const LinearGradient(
+                colors: [Color(0xFF06B6D4), Color(0xFF0284C7)],
+              ),
+              borderRadius: BorderRadius.circular(5),
+            ),
+            child: const Text(
+              'Lanjut ke Checkout',
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                fontSize: 6,
+                fontWeight: FontWeight.w800,
+                color: Colors.white,
+              ),
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buyerCheckout() {
+    return Column(
+      children: [
+        _pad(
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              _title('Checkout'),
+              _sub('Bayar tunai atau QRIS saat pesanan diterima'),
+              const SizedBox(height: 5),
+              _field('Nama', icon: Icons.person_rounded),
+              const SizedBox(height: 3),
+              _field('No. WhatsApp', icon: Icons.phone_rounded),
+              const SizedBox(height: 5),
+              _line('Total + kode unik', '', 'Rp66.140'),
+            ],
+          ),
+        ),
+        const Spacer(),
+        Container(
+          padding: const EdgeInsets.fromLTRB(8, 6, 8, 8),
+          decoration: const BoxDecoration(
+            color: AppTheme.surfaceColor,
+            border: Border(top: BorderSide(color: AppTheme.borderColor)),
+          ),
+          child: Column(
+            children: [
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.symmetric(vertical: 5),
+                decoration: BoxDecoration(
+                  gradient: const LinearGradient(
+                    colors: [Color(0xFF06B6D4), Color(0xFF0284C7)],
+                  ),
+                  borderRadius: BorderRadius.circular(5),
+                ),
+                child: const Text(
+                  'Buat Pesanan',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    fontSize: 6,
+                    fontWeight: FontWeight.w800,
+                    color: Colors.white,
+                  ),
+                ),
+              ),
+              const SizedBox(height: 4),
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.symmetric(vertical: 3),
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(3),
+                  border: Border.all(
+                    color: AppTheme.warningColor.withValues(alpha: 0.6),
+                  ),
+                ),
+                child: const Text(
+                  'area navigasi HP',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(fontSize: 4.5, color: AppTheme.warningColor),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buyerTracking() {
+    return _pad(
+      Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          _title('Lacak Pesanan'),
+          _sub('Kode ORD2610...'),
+          const SizedBox(height: 6),
+          _trackStep(0, 'Pesanan dibuat', true),
+          _trackStep(1, 'Sedang diproses', true),
+          _trackStep(2, 'Pesanan siap / dikirim', false),
+        ],
+      ),
+    );
+  }
+
+  Widget _trackStep(int i, String label, bool done) {
+    final color = done ? AppTheme.successColor : AppTheme.textSecondary;
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Column(
+          children: [
+            Container(
+              width: 10,
+              height: 10,
+              decoration: BoxDecoration(
+                color: done ? AppTheme.successColor : AppTheme.surfaceColor,
+                shape: BoxShape.circle,
+                border: Border.all(color: color),
+              ),
+              child: done
+                  ? const Icon(Icons.check_rounded,
+                      size: 6, color: Colors.white)
+                  : null,
+            ),
+            if (i < 2)
+              Container(
+                width: 1,
+                height: 14,
+                color: done
+                    ? AppTheme.successColor
+                    : AppTheme.borderColor,
+              ),
+          ],
+        ),
+        const SizedBox(width: 5),
+        Padding(
+          padding: const EdgeInsets.only(top: 1),
+          child: Text(
+            label,
+            style: TextStyle(
+              fontSize: 5.5,
+              fontWeight: FontWeight.w700,
+              color: color,
+            ),
+          ),
+        ),
+      ],
     );
   }
 }

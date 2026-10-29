@@ -17,6 +17,7 @@ import '../../widgets/common/app_text_field.dart';
 import '../../widgets/common/centennial_background.dart';
 import '../../widgets/common/responsive.dart';
 import 'buyer_auth_screen.dart';
+import 'buyer_help_screen.dart';
 import 'buyer_home_tab.dart';
 import 'buyer_onboarding_screen.dart';
 import 'buyer_order_tracking_screen.dart';
@@ -135,6 +136,25 @@ class _BuyerShellState extends ConsumerState<BuyerShell> {
                   Navigator.of(context).pop();
                 },
               ),
+            const Divider(height: 1, color: AppTheme.borderColor),
+            ListTile(
+              leading: const Icon(Icons.menu_book_rounded,
+                  color: AppTheme.primaryColor),
+              title: Text(
+                'Panduan Pembeli',
+                style: GoogleFonts.plusJakartaSans(
+                  fontSize: 14,
+                  fontWeight: FontWeight.w600,
+                  color: AppTheme.textPrimary,
+                ),
+              ),
+              onTap: () {
+                Navigator.of(context).pop();
+                Navigator.of(context).push(
+                  MaterialPageRoute(builder: (_) => const BuyerHelpScreen()),
+                );
+              },
+            ),
           ],
         ),
       ),
@@ -648,6 +668,15 @@ class BuyerProfileView extends ConsumerWidget {
           ),
         ),
         const SizedBox(height: 20),
+        AppButton(
+          label: 'Panduan Pembeli',
+          icon: Icons.menu_book_rounded,
+          variant: AppButtonVariant.outline,
+          onPressed: () => Navigator.of(context).push(
+            MaterialPageRoute(builder: (_) => const BuyerHelpScreen()),
+          ),
+        ),
+        const SizedBox(height: 12),
         AppButton(
           label: 'Ganti Mode',
           icon: Icons.swap_horiz_rounded,

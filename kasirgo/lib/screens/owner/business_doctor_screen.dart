@@ -120,7 +120,6 @@ class _BusinessDoctorScreenState extends ConsumerState<BusinessDoctorScreen> {
   Map<String, dynamic>? _weeklyReport;
   List<Map<String, dynamic>> _pendingActions = const [];
   Map<String, dynamic>? _identity;
-  Map<String, dynamic>? _aiStatus;
   Map<String, dynamic>? _briefing;
   Map<String, dynamic>? _dailyDose;
   double _roiRevenue = 0;
@@ -191,7 +190,6 @@ class _BusinessDoctorScreenState extends ConsumerState<BusinessDoctorScreen> {
     _loadPrescription();
     _loadReprimand();
     _loadIdentity();
-    _loadAiStatus();
     _loadWeeklyReport();
     _loadPendingActions();
     _loadProfile();
@@ -218,17 +216,6 @@ class _BusinessDoctorScreenState extends ConsumerState<BusinessDoctorScreen> {
           .getOutletIdentity(outletId);
       if (!mounted) return;
       setState(() => _identity = id);
-    } catch (_) {}
-  }
-
-  Future<void> _loadAiStatus() async {
-    final outletId = ref.read(currentUserProvider)?.outletId;
-    if (outletId == null || outletId.isEmpty) return;
-    try {
-      final st = await (widget.service ?? BusinessDoctorService())
-          .getAiStatus(outletId);
-      if (!mounted || st.isEmpty || st['forbidden'] == true) return;
-      setState(() => _aiStatus = st);
     } catch (_) {}
   }
 
@@ -2692,7 +2679,6 @@ class _BusinessDoctorScreenState extends ConsumerState<BusinessDoctorScreen> {
       controller: _scroll,
       padding: const EdgeInsets.all(16),
       children: [
-        if (_aiStatus != null) _buildAiPoolBanner(),
         if (_isOwner && _attentionCount > 0) _buildAttentionBanner(),
         if (_messages.isEmpty && _isOwner) _buildWelcome(),
         if (_messages.isEmpty && !_isOwner) _buildStaffWelcome(),
@@ -2717,52 +2703,6 @@ class _BusinessDoctorScreenState extends ConsumerState<BusinessDoctorScreen> {
         ],
         const SizedBox(height: 8),
       ],
-    );
-  }
-
-  Widget _buildAiPoolBanner() {
-    final s = _aiStatus!;
-    final mode = s['mode']?.toString() ?? '';
-    final reason = s['reason']?.toString() ?? '';
-    final used = int.tryParse(s['used']?.toString() ?? '') ?? 0;
-    final max = int.tryParse(s['max']?.toString() ?? '') ?? 5;
-    final isFull = mode == 'none' && reason == 'pool_full';
-    final color = isFull ? AppTheme.warningColor : AppTheme.successColor;
-    final label = isFull
-        ? 'Token AI sudah maksimal ($used/$max outlet terhubung)'
-        : mode == 'pool'
-            ? 'AI otomatis aktif: ${s['model'] ?? '-'} (${s['key_hint'] ?? ''}) - $used/$max outlet memakai token ini'
-            : mode == 'global'
-                ? 'AI global aktif (token khusus belum ditugaskan)'
-                : 'AI khusus toko ini aktif';
-    return Container(
-      width: double.infinity,
-      margin: const EdgeInsets.only(bottom: 12),
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 9),
-      decoration: BoxDecoration(
-        color: color.withValues(alpha: 0.08),
-        borderRadius: BorderRadius.circular(AppTheme.radiusMedium),
-        border: Border.all(color: color.withValues(alpha: 0.35)),
-      ),
-      child: Row(
-        children: [
-          Icon(isFull ? Icons.error_outline : Icons.auto_awesome,
-              size: 18, color: color),
-          const SizedBox(width: 8),
-          Expanded(
-            child: Text(
-              isFull
-                  ? '$label. Hubungi admin KasirGo untuk melepas salah satu akun.'
-                  : label,
-              style: GoogleFonts.plusJakartaSans(
-                fontSize: 11.5,
-                fontWeight: FontWeight.w600,
-                color: AppTheme.textPrimary,
-              ),
-            ),
-          ),
-        ],
-      ),
     );
   }
 

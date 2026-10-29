@@ -1238,7 +1238,7 @@ function toolsFor(internetActive: boolean, skills: string[]) {
 // (bila lewat -> lempar error -> app pakai analisa lokal instan).
 const LLM_TIMEOUT_MS = Number(Deno.env.get("DOCTOR_LLM_TIMEOUT_MS") ?? 45000) || 45000;
 
-async function callLlm(cfg: Json, messages: Json[], tools: Json[] | null) {
+async function callLlmOnce(cfg: Json, apiKey: string, messages: Json[], tools: Json[] | null) {
   let base = String(cfg.base_url ?? "").replace(/\/+$/, "");
   const url = base.includes("/chat/completions") ? base : `${base}/chat/completions`;
   const body: Json = {
@@ -1257,7 +1257,7 @@ async function callLlm(cfg: Json, messages: Json[], tools: Json[] | null) {
   try {
     resp = await fetch(url, {
       method: "POST",
-      headers: { "Content-Type": "application/json", Authorization: `Bearer ${cfg.api_key}` },
+      headers: { "Content-Type": "application/json", Authorization: `Bearer ${apiKey}` },
       body: JSON.stringify(body),
       signal: ctrl.signal,
     });
@@ -1272,6 +1272,23 @@ async function callLlm(cfg: Json, messages: Json[], tools: Json[] | null) {
   const data = await resp.json().catch(() => ({}));
   if (!resp.ok) throw new Error(data?.error?.message ?? data?.message ?? `LLM HTTP ${resp.status}`);
   return data;
+}
+
+// Fallback otomatis: cfg.keys (array) dipakai berurutan; gagal -> kunci berikutnya.
+async function callLlm(cfg: Json, messages: Json[], tools: Json[] | null) {
+  const keys: string[] = Array.isArray(cfg.keys) && cfg.keys.length
+    ? (cfg.keys as string[]).filter((k) => k && String(k).trim()).map(String)
+    : [String(cfg.api_key ?? "")].filter(Boolean);
+  if (!keys.length) throw new Error("Tidak ada kunci API.");
+  let lastErr: unknown;
+  for (const key of keys) {
+    try {
+      return await callLlmOnce(cfg, key, messages, tools);
+    } catch (e) {
+      lastErr = e;
+    }
+  }
+  throw lastErr ?? new Error("Provider AI gagal.");
 }
 
 Deno.serve(async (req: Request) => {
@@ -1373,56 +1390,56 @@ Deno.serve(async (req: Request) => {
     const { data: pcfg } = await admin
       .from("platform_configs").select("value").eq("key", "business_doctor").maybeSingle();
     const globalCfg: Json = pcfg?.value ?? {};
-    // Prioritas: override outlet -> pool token AI (maks 5 akun) -> global.
-    let pool: Json | null = null;
-    let poolBlocked: Json | null = null;
-    if (!(override?.is_active && override?.api_key_enc)) {
-      const { data: claim } = await admin.rpc("doctor_ai_claim", { p_outlet: outletId });
-      if (claim?.ok) {
-        pool = {
-          base_url: claim.base_url,
-          api_key: claim.api_key,
-          model: claim.model,
-          temperature: globalCfg?.provider_default?.temperature,
-          max_tokens: globalCfg?.provider_default?.max_tokens,
-          id: claim.id,
-          key_hint: claim.key_hint,
-        };
-      } else if (String(claim?.reason ?? "") === "pool_full") {
-        poolBlocked = claim as Json;
-      }
-    }
-    if (poolBlocked) {
-      return json({
-        success: true,
-        conversation_id: conversationId,
-        ai_pool: { mode: "none", reason: "pool_full", used: poolBlocked.used ?? 5, max: poolBlocked.max ?? 5 },
-        blocks: [
-          { type: "card", tone: "warning", title: "Token AI sudah maksimal", body: "Kuota token AI sudah terpakai 5 dari 5 akun. Hubungi admin KasirGo untuk melepas salah satu akun agar bisa dipakai di toko ini." },
-        ],
-        disclaimer: DISCLAIMER,
-      });
-    }
-    const provider = override?.is_active && override?.api_key_enc
-      ? {
+    // Konfigurasi API AI global (system_api_configs): base_url/model + kunci
+    // primary/backup_1/backup_2 dengan fallback otomatis di callLlm.
+    const { data: sysCfg } = await admin
+      .from("system_api_configs")
+      .select("*")
+      .eq("is_active", true)
+      .order("updated_at", { ascending: false })
+      .limit(1)
+      .maybeSingle();
+    const sysKeys: string[] = [sysCfg?.primary_key, sysCfg?.backup_key_1, sysCfg?.backup_key_2]
+      .filter((k) => k && String(k).trim()).map(String);
+    const hasOverride = !!(override?.is_active && override?.api_key_enc);
+    const hasSys = !!(sysCfg && sysCfg.base_url && sysCfg.model_name && sysKeys.length);
+
+    // Prioritas: override outlet -> konfigurasi API AI -> fallback global.
+    let provider: Json;
+    let aiPool: Json;
+    if (hasOverride) {
+      provider = {
         base_url: override.base_url,
         api_key: override.api_key_enc,
         model: override.model,
         temperature: override.temperature,
         max_tokens: override.max_tokens,
-      }
-      : (pool ?? {
+      };
+      aiPool = { mode: "override", model: override.model };
+    } else if (hasSys) {
+      provider = {
+        base_url: sysCfg.base_url,
+        model: sysCfg.model_name,
+        keys: sysKeys,
+        temperature: globalCfg?.provider_default?.temperature,
+        max_tokens: globalCfg?.provider_default?.max_tokens,
+      };
+      aiPool = {
+        mode: "config",
+        model: sysCfg.model_name,
+        provider_name: sysCfg.provider_name,
+        key_hint: "****" + String(sysCfg.primary_key).slice(-4),
+      };
+    } else {
+      provider = {
         base_url: globalCfg?.provider_default?.base_url,
         api_key: globalCfg?.provider_default?.api_key,
         model: globalCfg?.provider_default?.model,
         temperature: globalCfg?.provider_default?.temperature,
         max_tokens: globalCfg?.provider_default?.max_tokens,
-      });
-    const aiPool: Json = override?.is_active && override?.api_key_enc
-      ? { mode: "override", model: override.model }
-      : pool
-      ? { mode: "pool", id: pool.id, model: pool.model, key_hint: pool.key_hint }
-      : { mode: "global", model: globalCfg?.provider_default?.model ?? null };
+      };
+      aiPool = { mode: "global", model: globalCfg?.provider_default?.model ?? null };
+    }
 
     // Rate limit / kuota token harian (superadmin dikecualikan).
     // Unlimited: outlet unlimited_tokens ON -> kuota dilewati (tetap dicatat).

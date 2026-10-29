@@ -470,76 +470,47 @@ export async function setOutletAiConfig(outletId: string, config: Record<string,
   return data
 }
 
-export interface DoctorAiPoolOutlet {
-  outlet_id: string
-  outlet_name: string | null
-}
-
-export interface DoctorAiToken {
-  id: number
-  label: string | null
-  provider: string | null
+// Konfigurasi API AI global (menggantikan Pool Token AI). Satu endpoint + satu
+// model + primary key + 2 backup key dengan fallback otomatis di Edge Function.
+export interface SystemApiConfig {
+  has_config: boolean
+  id?: string
+  provider_name: string
   base_url: string | null
-  model: string | null
-  has_key: boolean
-  key_hint: string | null
+  model_name: string | null
   is_active: boolean
-  outlet_count: number
-  full: boolean
-  outlets: DoctorAiPoolOutlet[]
-  updated_at: string | null
+  has_primary_key: boolean
+  has_backup_key_1: boolean
+  has_backup_key_2: boolean
+  primary_hint?: string | null
+  backup1_hint?: string | null
+  backup2_hint?: string | null
+  updated_at?: string | null
 }
 
-export interface DoctorAiPool {
-  max_per_key: number
-  tokens: number
-  connected_outlets: number
-  capacity_used: number
-  capacity_total: number
-  slots: DoctorAiToken[]
-}
-
-export async function listDoctorAiPool(): Promise<DoctorAiPool> {
-  const { data, error } = await supabase.rpc('admin_list_doctor_ai_pool')
+export async function getSystemApiConfig(): Promise<SystemApiConfig> {
+  const { data, error } = await supabase.rpc('admin_get_system_api_config')
   if (error) throw error
   if (data?.forbidden) throw new Error('Akses ditolak.')
-  return data as DoctorAiPool
+  return (data ?? { has_config: false, provider_name: 'custom_llm' }) as SystemApiConfig
 }
 
-export async function saveDoctorAiPool(id: number | null, config: Record<string, any>) {
-  const { data, error } = await supabase.rpc('admin_save_doctor_ai_pool', {
-    p_id: id,
+export async function saveSystemApiConfig(config: Record<string, any>) {
+  const { data, error } = await supabase.rpc('admin_save_system_api_config', {
     p_config: config,
   })
   if (error) throw error
   if (data?.forbidden) throw new Error('Akses ditolak.')
-  if (data?.success === false) throw new Error(data?.message ?? 'Gagal menyimpan token.')
-  return data
+  if (data?.success === false) throw new Error(data?.message ?? 'Gagal menyimpan konfigurasi.')
+  return data as SystemApiConfig
 }
 
-export async function deleteDoctorAiToken(id: number) {
-  const { data, error } = await supabase.rpc('admin_delete_doctor_ai_token', {
-    p_id: id,
+export async function testSystemApiConfig(): Promise<DoctorProviderProbe> {
+  const { data, error } = await supabase.functions.invoke('doctor-proxy', {
+    body: { mode: 'test' },
   })
   if (error) throw error
-  if (data?.forbidden) throw new Error('Akses ditolak.')
-  return data
-}
-
-export async function releaseDoctorAiOutlet(outletId: string) {
-  const { data, error } = await supabase.rpc('admin_release_doctor_ai_outlet', {
-    p_outlet: outletId,
-  })
-  if (error) throw error
-  if (data?.forbidden) throw new Error('Akses ditolak.')
-  return data
-}
-
-export async function backfillDoctorAiPool() {
-  const { data, error } = await supabase.rpc('doctor_ai_pool_backfill')
-  if (error) throw error
-  if (data?.forbidden) throw new Error('Akses ditolak.')
-  return data
+  return data as DoctorProviderProbe
 }
 
 export async function deleteOutletAiConfig(outletId: string) {
