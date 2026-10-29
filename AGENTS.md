@@ -1684,3 +1684,17 @@ Commit `ff04bb3` (main) + deploy web gh-pages `050051c` (live md5
   "X/Y outlet memakai token ini". Verifikasi E2E: 1 token -> 5 outlet, 2 token
   -> 7/10, claim 14 outlet -> 10 pool + 4 pool_full, cleanup 0. Build/deploy OK
   (live md5 `fe3819c0ed8400a89116b4192bc01c5d` MATCH).
+
+## Sesi 2026-10-29 (3): SMTP ganti Mailjet (SELESAI - fix konfirmasi email pendaftar)
+- SMTP Supabase dialihkan dari Mailtrap (demo domain -> golongan demo di email non-owner
+  ditolak) ke **Mailjet**. Config `config/auth` di-PATCH via Management API:
+  host `in-v3.mailjet.com`, port 587 (STARTTLS), user = API key Mailjet, pass = Secret
+  Key Mailjet, sender `supportUS@mailjet.com`, sender_name `KasirGo`.
+- SMTP terverifikasi: (1) test smtplib langsung -> `Authentication successful` + email
+  terkirim ke `ikhlassabar2021@gmail.com`; (2) PATCH config auth HTTP 200; (3) resend
+  konfirmasi via `POST /auth/v1/resend` untuk `ikhlassabar2021+unconf1791494815@` -> 200.
+- CATATAN: kunci Mailjet (API key + Secret Key) sudah melewati chat -> disarankan rotasi
+  kunci di dashboard Mailjet setelah ini. Sender `supportUS@mailjet.com` adalah alamat
+  milik Mailjet (bukan domain user) -> sebaiknya nanti diganti ke sender domain sendiri
+  yang terverifikasi Mailjet.
+- TIDAK ada perubahan kode/repo; hanya konfigurasi server Supabase (config/auth).
