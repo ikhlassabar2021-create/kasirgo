@@ -164074,11 +164074,11 @@ n=A.dY(r==null?"":r,f)
 if(n==null)n=5
 m=q==="none"&&p==="pool_full"
 l=m?B.Y:B.R
-if(m)k="Token AI sudah maksimal ("+o+"/"+n+" akun)"
+if(m)k="Token AI sudah maksimal ("+o+"/"+n+" outlet terhubung)"
 else if(q==="pool"){r=s.h(c,"model")
 r=A.q(r==null?"-":r)
 c=s.h(c,"key_hint")
-c="AI otomatis aktif: "+r+" ("+A.q(c==null?"":c)+") - token "+o+"/"+n
+c="AI otomatis aktif: "+r+" ("+A.q(c==null?"":c)+") - "+o+"/"+n+" outlet memakai token ini"
 k=c}else{c=q==="global"?"AI global aktif (token khusus belum ditugaskan)":"AI khusus toko ini aktif"
 k=c}c=l.J(0.08)
 s=A.w(12)
