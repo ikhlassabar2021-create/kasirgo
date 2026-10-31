@@ -5,6 +5,7 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
 
 import '../../config/app_theme.dart';
+import '../../config/supabase_config.dart';
 import '../../providers/auth_provider.dart';
 import '../../services/supabase_service.dart';
 import '../../widgets/common/centennial_background.dart';
@@ -132,7 +133,7 @@ class _AffiliateOwnerScreenState extends ConsumerState<AffiliateOwnerScreen> {
   String get _referralLink {
     final code = _referralCode;
     if (code.isEmpty) return '';
-    return 'https://ikhlassabar2021-create.github.io/kasirgo/#/register?ref=$code';
+    return '${SupabaseConfig.appUrl}#/register?ref=$code';
   }
 
   String _fmtRp(dynamic v) {

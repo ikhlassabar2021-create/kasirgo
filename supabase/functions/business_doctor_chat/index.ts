@@ -1274,21 +1274,65 @@ async function callLlmOnce(cfg: Json, apiKey: string, messages: Json[], tools: J
   return data;
 }
 
-// Fallback otomatis: cfg.keys (array) dipakai berurutan; gagal -> kunci berikutnya.
+// Fallback otomatis lintas provider. Tiap provider boleh punya base_url + model
+// sendiri (cfg.providers), atau memakai satu base_url/model dengan banyak kunci
+// (cfg.keys), atau satu provider tunggal (cfg.api_key).
+type ProviderEntry = { base_url: string; model: string; key: string };
+
 async function callLlm(cfg: Json, messages: Json[], tools: Json[] | null) {
-  const keys: string[] = Array.isArray(cfg.keys) && cfg.keys.length
-    ? (cfg.keys as string[]).filter((k) => k && String(k).trim()).map(String)
-    : [String(cfg.api_key ?? "")].filter(Boolean);
-  if (!keys.length) throw new Error("Tidak ada kunci API.");
+  let providers: ProviderEntry[] = [];
+  if (Array.isArray(cfg.providers) && cfg.providers.length) {
+    providers = (cfg.providers as Json[])
+      .filter((p) => p?.key && p?.base_url && p?.model)
+      .map((p) => ({ base_url: String(p.base_url), model: String(p.model), key: String(p.key) }));
+  } else if (Array.isArray(cfg.keys) && cfg.keys.length) {
+    const keys = (cfg.keys as string[]).filter((k) => k && String(k).trim()).map(String);
+    providers = keys.map((k) => ({ base_url: String(cfg.base_url ?? ""), model: String(cfg.model ?? ""), key: k }))
+      .filter((p) => p.base_url && p.model);
+  } else if (cfg.api_key && cfg.base_url && cfg.model) {
+    providers = [{ base_url: String(cfg.base_url), model: String(cfg.model), key: String(cfg.api_key) }];
+  }
+  if (!providers.length) throw new Error("Tidak ada kunci API.");
   let lastErr: unknown;
-  for (const key of keys) {
+  for (const p of providers) {
     try {
-      return await callLlmOnce(cfg, key, messages, tools);
+      return await callLlmOnce(
+        { base_url: p.base_url, model: p.model, temperature: cfg.temperature, max_tokens: cfg.max_tokens },
+        p.key,
+        messages,
+        tools,
+      );
     } catch (e) {
       lastErr = e;
     }
   }
   throw lastErr ?? new Error("Provider AI gagal.");
+}
+
+// Baca kunci system_api_configs dari Vault + susun provider per primary/backup.
+async function sysCfgProviders(admin: ReturnType<typeof createClient>, sysCfg: Json | null): Promise<ProviderEntry[]> {
+  if (!sysCfg?.base_url || !sysCfg?.model_name) return [];
+  const slots: Array<{ secretId: unknown; base: string | null; model: string | null }> = [
+    { secretId: sysCfg.primary_secret_id, base: sysCfg.base_url, model: sysCfg.model_name },
+    {
+      secretId: sysCfg.backup1_secret_id,
+      base: (sysCfg.backup1_base_url as string | null) ?? sysCfg.base_url,
+      model: (sysCfg.backup1_model_name as string | null) ?? sysCfg.model_name,
+    },
+    {
+      secretId: sysCfg.backup2_secret_id,
+      base: (sysCfg.backup2_base_url as string | null) ?? sysCfg.base_url,
+      model: (sysCfg.backup2_model_name as string | null) ?? sysCfg.model_name,
+    },
+  ];
+  const out: ProviderEntry[] = [];
+  for (const s of slots) {
+    if (!s.secretId || !s.base || !s.model) continue;
+    const { data: secret } = await admin.rpc("vault_read_secret", { p_secret_id: s.secretId });
+    const key = String(secret ?? "").trim();
+    if (key) out.push({ base_url: String(s.base), model: String(s.model), key });
+  }
+  return out;
 }
 
 Deno.serve(async (req: Request) => {
@@ -1399,10 +1443,10 @@ Deno.serve(async (req: Request) => {
       .order("updated_at", { ascending: false })
       .limit(1)
       .maybeSingle();
-    const sysKeys: string[] = [sysCfg?.primary_key, sysCfg?.backup_key_1, sysCfg?.backup_key_2]
-      .filter((k) => k && String(k).trim()).map(String);
+    // Kunci dibaca dari Vault; tiap primary/backup boleh punya base_url & model sendiri.
+    const sysProviders = await sysCfgProviders(admin, sysCfg);
     const hasOverride = !!(override?.is_active && override?.api_key_enc);
-    const hasSys = !!(sysCfg && sysCfg.base_url && sysCfg.model_name && sysKeys.length);
+    const hasSys = !!(sysCfg && sysCfg.base_url && sysCfg.model_name && sysProviders.length);
 
     // Prioritas: override outlet -> konfigurasi API AI -> fallback global.
     let provider: Json;
@@ -1418,9 +1462,7 @@ Deno.serve(async (req: Request) => {
       aiPool = { mode: "override", model: override.model };
     } else if (hasSys) {
       provider = {
-        base_url: sysCfg.base_url,
-        model: sysCfg.model_name,
-        keys: sysKeys,
+        providers: sysProviders,
         temperature: globalCfg?.provider_default?.temperature,
         max_tokens: globalCfg?.provider_default?.max_tokens,
       };
@@ -1428,7 +1470,6 @@ Deno.serve(async (req: Request) => {
         mode: "config",
         model: sysCfg.model_name,
         provider_name: sysCfg.provider_name,
-        key_hint: "****" + String(sysCfg.primary_key).slice(-4),
       };
     } else {
       provider = {
@@ -1538,7 +1579,9 @@ Deno.serve(async (req: Request) => {
     let tokens = 0;
     const sink: Json = {};
 
-    if (!provider.base_url || !provider.api_key || !provider.model) {
+    const hasProvider = (Array.isArray(provider.providers) && provider.providers.length) ||
+      (provider.base_url && provider.api_key && provider.model);
+    if (!hasProvider) {
       fallbackReason = "Provider AI belum diatur superadmin. Sementara pakai analisa lokal.";
     } else {
       try {

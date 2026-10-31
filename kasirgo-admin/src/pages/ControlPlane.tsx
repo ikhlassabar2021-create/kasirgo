@@ -2211,6 +2211,10 @@ function DoctorTab() {
     provider_name: '',
     base_url: '',
     model_name: '',
+    backup1_base_url: '',
+    backup1_model_name: '',
+    backup2_base_url: '',
+    backup2_model_name: '',
     primary_key: '',
     backup_key_1: '',
     backup_key_2: '',
@@ -2240,6 +2244,10 @@ function DoctorTab() {
       provider_name: c?.provider_name ?? '',
       base_url: c?.base_url ?? '',
       model_name: c?.model_name ?? '',
+      backup1_base_url: c?.backup1_base_url ?? '',
+      backup1_model_name: c?.backup1_model_name ?? '',
+      backup2_base_url: c?.backup2_base_url ?? '',
+      backup2_model_name: c?.backup2_model_name ?? '',
       primary_key: '',
       backup_key_1: '',
       backup_key_2: '',
@@ -2583,7 +2591,7 @@ function DoctorTab() {
         </div>
       </Card>
 
-      <Card title="Konfigurasi API AI (Base URL, Model, Kunci)" subtitle="Endpoint LLM global yang dipakai Dokter Bisnis AI. Satu base URL + satu model dengan primary key dan hingga 2 backup key; bila primary gagal/timeout, sistem otomatis mencoba backup. Kunci tersimpan di server, tidak pernah dikirim ke aplikasi.">
+      <Card title="Konfigurasi API AI (Base URL, Model, Kunci)" subtitle="Endpoint LLM global yang dipakai Dokter Bisnis AI. Primary key plus hingga 2 backup; tiap backup bisa punya base URL & model sendiri sehingga fallback lintas provider. Kunci dienkripsi di Supabase Vault, tidak pernah dikirim ke aplikasi.">
         <div className="space-y-3">
           <div className="flex flex-wrap items-center gap-2">
             <span className={`px-2.5 py-1 rounded-full text-[11px] font-bold border ${sysCfg?.has_config ? 'bg-success/10 text-success border-success/30' : 'bg-surface text-muted border-border'}`}>
@@ -2599,10 +2607,22 @@ function DoctorTab() {
           <div className="rounded-xl border border-dashed border-border bg-bg/40 p-3">
             <div className="grid grid-cols-2 gap-2">
               <div><label className={labelCls}>Nama Provider</label><input className={inputCls} value={sysForm.provider_name ?? ''} placeholder="mis. openai-compatible" onChange={(e) => setSysForm({ ...sysForm, provider_name: e.target.value })} /></div>
-              <div><label className={labelCls}>Model AI</label><input className={inputCls} value={sysForm.model_name ?? ''} placeholder="mis. mercury-3" onChange={(e) => setSysForm({ ...sysForm, model_name: e.target.value })} /></div>
-              <div className="col-span-2"><label className={labelCls}>Base URL</label><input className={inputCls} value={sysForm.base_url ?? ''} placeholder="https://api.deepseek.com/v1" onChange={(e) => setSysForm({ ...sysForm, base_url: e.target.value })} /></div>
+              <div><label className={labelCls}>Model AI (Primary)</label><input className={inputCls} value={sysForm.model_name ?? ''} placeholder="mis. mercury-3" onChange={(e) => setSysForm({ ...sysForm, model_name: e.target.value })} /></div>
+              <div className="col-span-2"><label className={labelCls}>Base URL (Primary)</label><input className={inputCls} value={sysForm.base_url ?? ''} placeholder="https://api.deepseek.com/v1" onChange={(e) => setSysForm({ ...sysForm, base_url: e.target.value })} /></div>
               <div className="col-span-2"><label className={labelCls}>Primary API Key</label><input className={inputCls} type="password" value={sysForm.primary_key ?? ''} placeholder={sysCfg?.has_primary_key ? `Tersimpan (${sysCfg.primary_hint ?? '****'}) - kosongkan bila tidak diubah` : 'sk-...'} onChange={(e) => setSysForm({ ...sysForm, primary_key: e.target.value })} /></div>
+            </div>
+
+            <div className="pt-2 mt-1 border-t border-border text-[11px] font-bold text-muted uppercase tracking-wide">Backup 1 (opsional — base URL & model sendiri)</div>
+            <div className="grid grid-cols-2 gap-2">
+              <div className="col-span-2"><label className={labelCls}>Base URL Backup 1</label><input className={inputCls} value={sysForm.backup1_base_url ?? ''} placeholder={sysForm.base_url || 'https://api.another.com/v1 (kosong = ikut primary)'} onChange={(e) => setSysForm({ ...sysForm, backup1_base_url: e.target.value })} /></div>
+              <div><label className={labelCls}>Model Backup 1</label><input className={inputCls} value={sysForm.backup1_model_name ?? ''} placeholder={sysForm.model_name || 'mis. model-b'} onChange={(e) => setSysForm({ ...sysForm, backup1_model_name: e.target.value })} /></div>
               <div><label className={labelCls}>Backup Key 1</label><input className={inputCls} type="password" value={sysForm.backup_key_1 ?? ''} placeholder={sysCfg?.has_backup_key_1 ? `Tersimpan (${sysCfg.backup1_hint ?? '****'}) - kosongkan bila tidak diubah` : 'sk-...'} onChange={(e) => setSysForm({ ...sysForm, backup_key_1: e.target.value })} /></div>
+            </div>
+
+            <div className="pt-2 mt-1 border-t border-border text-[11px] font-bold text-muted uppercase tracking-wide">Backup 2 (opsional — base URL & model sendiri)</div>
+            <div className="grid grid-cols-2 gap-2">
+              <div className="col-span-2"><label className={labelCls}>Base URL Backup 2</label><input className={inputCls} value={sysForm.backup2_base_url ?? ''} placeholder={sysForm.base_url || 'https://api.another.com/v1 (kosong = ikut primary)'} onChange={(e) => setSysForm({ ...sysForm, backup2_base_url: e.target.value })} /></div>
+              <div><label className={labelCls}>Model Backup 2</label><input className={inputCls} value={sysForm.backup2_model_name ?? ''} placeholder={sysForm.model_name || 'mis. model-c'} onChange={(e) => setSysForm({ ...sysForm, backup2_model_name: e.target.value })} /></div>
               <div><label className={labelCls}>Backup Key 2</label><input className={inputCls} type="password" value={sysForm.backup_key_2 ?? ''} placeholder={sysCfg?.has_backup_key_2 ? `Tersimpan (${sysCfg.backup2_hint ?? '****'}) - kosongkan bila tidak diubah` : 'sk-...'} onChange={(e) => setSysForm({ ...sysForm, backup_key_2: e.target.value })} /></div>
             </div>
             <label className="flex items-center gap-2 text-[11px] font-semibold text-muted mt-2">

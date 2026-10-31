@@ -27,14 +27,23 @@ import 'buyer_order_tracking_screen.dart';
 /// Menampilkan onboarding zero-friction bila profil belum ada, lalu shell
 /// dengan tab Beranda / Pesanan / Profil. Radar + katalog diisi pada ST17-5.
 class BuyerShell extends ConsumerStatefulWidget {
-  const BuyerShell({super.key});
+  const BuyerShell({super.key, this.initialTab = 0});
+
+  final int initialTab;
 
   @override
   ConsumerState<BuyerShell> createState() => _BuyerShellState();
 }
 
 class _BuyerShellState extends ConsumerState<BuyerShell> {
-  int _index = 0;
+  late int _index;
+
+  @override
+  void initState() {
+    super.initState();
+    final t = widget.initialTab;
+    _index = (t >= 0 && t <= 2) ? t : 0;
+  }
 
   static const _navItems = [
     AppNavItem(icon: Icons.storefront_rounded, label: 'Beranda'),

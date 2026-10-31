@@ -152,7 +152,7 @@ class AuthService {
       }
       return '$origin$path';
     }
-    return 'https://ikhlassabar2021-create.github.io/kasirgo/';
+    return 'https://dokterbisnis.web.id/';
   }
 
   Future<void> signInWithGoogle() async {

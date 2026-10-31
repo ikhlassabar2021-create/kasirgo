@@ -104,7 +104,7 @@ class _OnlineCatalogScreenState extends ConsumerState<OnlineCatalogScreen> {
     final user = ref.watch(currentUserProvider);
     final catalogUrl = user?.outletId != null
         ? SupabaseConfig.catalogUrl(user!.outletId!)
-        : 'https://ikhlassabar2021-create.github.io/kasirgo/#/catalog';
+        : '${SupabaseConfig.appUrl}#/catalog';
 
     final categories = ['Semua', ...{..._products.map((p) => p.category ?? 'Umum')}];
     final filtered = _selectedCategory == 'Semua'

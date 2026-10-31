@@ -35,6 +35,18 @@ import 'providers/auth_provider.dart';
 import 'providers/app_mode_provider.dart';
 import 'widgets/common/kyc_gate.dart';
 
+/// Petakan query `?tab=` ke indeks tab pembeli (0 Beranda, 1 Pesanan, 2 Profil).
+int _buyerTabIndex(String? tab) {
+  switch (tab) {
+    case 'pesanan':
+      return 1;
+    case 'profil':
+      return 2;
+    default:
+      return 0;
+  }
+}
+
 final _router = GoRouter(
   initialLocation: '/mode',
   routes: [
@@ -44,7 +56,9 @@ final _router = GoRouter(
     ),
     GoRoute(
       path: '/buyer',
-      builder: (context, state) => const BuyerShell(),
+      builder: (context, state) => BuyerShell(
+        initialTab: _buyerTabIndex(state.uri.queryParameters['tab']),
+      ),
     ),
     GoRoute(
       path: '/login',

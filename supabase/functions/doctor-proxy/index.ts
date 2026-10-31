@@ -60,29 +60,60 @@ async function callOnce(
   return data;
 }
 
-// Fallback otomatis: primary -> backup_1 -> backup_2 (base_url & model sama).
+type ProviderEntry = { base_url: string; model: string; key: string };
+
+// Susun daftar provider dari system_api_configs: primary lalu backup 1 & 2.
+// Setiap backup boleh punya base_url & model sendiri; kosong = ikut primary.
+// Kunci dibaca dari Supabase Vault (service role) via vault_read_secret.
+async function providersFromSysCfg(
+  admin: ReturnType<typeof createClient>,
+  sysCfg: Json | null,
+): Promise<ProviderEntry[]> {
+  if (!sysCfg?.base_url || !sysCfg?.model_name) return [];
+  const slots: Array<{ secretId: unknown; base: string | null; model: string | null }> = [
+    { secretId: sysCfg.primary_secret_id, base: sysCfg.base_url, model: sysCfg.model_name },
+    {
+      secretId: sysCfg.backup1_secret_id,
+      base: (sysCfg.backup1_base_url as string | null) ?? sysCfg.base_url,
+      model: (sysCfg.backup1_model_name as string | null) ?? sysCfg.model_name,
+    },
+    {
+      secretId: sysCfg.backup2_secret_id,
+      base: (sysCfg.backup2_base_url as string | null) ?? sysCfg.base_url,
+      model: (sysCfg.backup2_model_name as string | null) ?? sysCfg.model_name,
+    },
+  ];
+  const out: ProviderEntry[] = [];
+  for (const s of slots) {
+    if (!s.secretId || !s.base || !s.model) continue;
+    const { data: secret } = await admin.rpc("vault_read_secret", { p_secret_id: s.secretId });
+    const key = String(secret ?? "").trim();
+    if (key) out.push({ base_url: String(s.base), model: String(s.model), key });
+  }
+  return out;
+}
+
+// Fallback otomatis melintas provider; tiap provider punya base_url & model sendiri.
 async function completionsWithFallback(
-  sysCfg: Json,
+  providers: ProviderEntry[],
   messages: Json[],
   tools: Json[] | null,
   temperature: number,
   maxTokens: number,
 ) {
-  const keys = [sysCfg?.primary_key, sysCfg?.backup_key_1, sysCfg?.backup_key_2]
-    .filter((k) => k && String(k).trim());
-  if (!keys.length) return { ok: false, errors: ["Tidak ada kunci API yang diatur."] };
-
-  const cfg: Json = {
-    base_url: sysCfg.base_url,
-    model: sysCfg.model_name,
-    temperature,
-    max_tokens: maxTokens,
-  };
+  if (!providers.length) return { ok: false, errors: ["Tidak ada kunci API yang diatur."] };
 
   const errors: string[] = [];
-  for (let i = 0; i < keys.length; i++) {
+  for (let i = 0; i < providers.length; i++) {
+    const p = providers[i];
     try {
-      const data = await callOnce(cfg, String(keys[i]), messages, tools);
+      const cfg: Json = {
+        base_url: p.base_url,
+        model: p.model,
+        temperature,
+        max_tokens: maxTokens,
+      };
+      const data = await callOnce(cfg, p.key, messages, tools);
       return { ok: true, data, key_used: i };
     } catch (e) {
       const label = i === 0 ? "primary" : `backup_${i}`;
@@ -131,13 +162,15 @@ Deno.serve(async (req: Request) => {
       .limit(1)
       .maybeSingle();
 
+    const providers = await providersFromSysCfg(admin, sysCfg);
+
     if (mode === "test") {
       if (!isPlatformAdmin) return json({ success: false, message: "Forbidden" }, 403);
       if (!sysCfg?.base_url || !sysCfg?.model_name) {
         return json({ success: true, ok: false, message: "Lengkapi Base URL, Model, dan Primary Key." });
       }
       const r = await completionsWithFallback(
-        sysCfg,
+        providers,
         [{ role: "user", content: "Balas satu kata: ok" }],
         null,
         0,
@@ -163,7 +196,7 @@ Deno.serve(async (req: Request) => {
     const temperature = Number(body.temperature ?? 0.7);
     const maxTokens = Number(body.max_tokens ?? 4000) || 4000;
 
-    const r = await completionsWithFallback(sysCfg, messages, tools, temperature, maxTokens);
+    const r = await completionsWithFallback(providers, messages, tools, temperature, maxTokens);
     if (r.ok) {
       return json({ success: true, ok: true, data: r.data, key_used: r.key_used });
     }

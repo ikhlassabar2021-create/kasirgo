@@ -478,6 +478,10 @@ export interface SystemApiConfig {
   provider_name: string
   base_url: string | null
   model_name: string | null
+  backup1_base_url?: string | null
+  backup1_model_name?: string | null
+  backup2_base_url?: string | null
+  backup2_model_name?: string | null
   is_active: boolean
   has_primary_key: boolean
   has_backup_key_1: boolean

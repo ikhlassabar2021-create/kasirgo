@@ -49,7 +49,7 @@ class SupabaseConfig {
         return '$origin$path';
       }
     } catch (_) {}
-    return 'https://ikhlassabar2021-create.github.io/kasirgo/';
+    return 'https://dokterbisnis.web.id/';
   }
 
   /// Deep-link pesan mandiri per meja (QR Meja).

@@ -264,7 +264,7 @@ class _BuyerTopicScreen extends StatelessWidget {
                 SizedBox(
                   width: double.infinity,
                   child: OutlinedButton.icon(
-                    onPressed: () => context.go('/buyer'),
+                    onPressed: () => context.go('/buyer?tab=${step.tab}'),
                     icon: const Icon(Icons.open_in_new_rounded, size: 16),
                     label: Text(step.actionLabel),
                   ),
@@ -300,12 +300,14 @@ class _BuyerStep {
     required this.body,
     required this.scene,
     required this.actionLabel,
+    required this.tab,
   });
 
   final String title;
   final String body;
   final String scene;
   final String actionLabel;
+  final String tab;
 }
 
 class _BuyerTopicData {
@@ -323,6 +325,7 @@ class _BuyerTopicData {
               'gerobak di sekitarmu. Bisa diubah di pengaturan HP kapan saja.',
           scene: 'buyer_radar',
           actionLabel: 'Buka Radar Pembeli',
+          tab: 'beranda',
         ),
         _BuyerStep(
           title: 'Pilih radius',
@@ -331,6 +334,7 @@ class _BuyerTopicData {
               'daftar untuk memperluas atau mempersempit pencarian.',
           scene: 'buyer_radar',
           actionLabel: 'Coba Cari Warung',
+          tab: 'beranda',
         ),
       ],
     ),
@@ -347,6 +351,7 @@ class _BuyerTopicData {
               'lewat kolom pencarian bila daftarnya panjang.',
           scene: 'buyer_catalog',
           actionLabel: 'Lihat Katalog',
+          tab: 'beranda',
         ),
         _BuyerStep(
           title: 'Tambah ke keranjang',
@@ -355,6 +360,7 @@ class _BuyerTopicData {
               'warung agar ongkos dan totalnya jelas.',
           scene: 'buyer_cart',
           actionLabel: 'Buka Keranjang',
+          tab: 'beranda',
         ),
       ],
     ),
@@ -371,6 +377,7 @@ class _BuyerTopicData {
               'nomornya aktif dan benar.',
           scene: 'buyer_checkout',
           actionLabel: 'Buka Checkout',
+          tab: 'beranda',
         ),
         _BuyerStep(
           title: 'Buat pesanan',
@@ -380,6 +387,7 @@ class _BuyerTopicData {
               'pesanan diterima.',
           scene: 'buyer_checkout',
           actionLabel: 'Coba Buat Pesanan',
+          tab: 'beranda',
         ),
       ],
     ),
@@ -396,6 +404,7 @@ class _BuyerTopicData {
               'melihat status terbaru.',
           scene: 'buyer_tracking',
           actionLabel: 'Buka Pesanan Saya',
+          tab: 'pesanan',
         ),
         _BuyerStep(
           title: 'Pantau status',
@@ -404,6 +413,7 @@ class _BuyerTopicData {
               'Warung akan menghubungi lewat WhatsApp bila perlu.',
           scene: 'buyer_tracking',
           actionLabel: 'Lihat Lacak Pesanan',
+          tab: 'pesanan',
         ),
       ],
     ),
