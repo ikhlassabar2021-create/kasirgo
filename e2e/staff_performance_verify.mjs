@@ -1,6 +1,6 @@
 import { chromium } from 'playwright';
 
-const BASE = process.env.BASE || 'https://ikhlassabar2021-create.github.io/kasirgo/';
+const BASE = process.env.BASE || 'https://dokterbisnis.web.id/';
 
 const login = async (page, email) => {
   await page.goto(BASE + '?cb=' + Date.now(), { waitUntil: 'networkidle', timeout: 180000 });

@@ -180,7 +180,7 @@ function redirectTo(target: string, params: Record<string, string>) {
 // Allowlist origin redirect balik (cegah open-redirect). Bisa ditimpa via env
 // DM_OAUTH_ALLOWED_ORIGINS (dipisah koma). Scheme custom app (kasirgo://) aman.
 const ALLOWED_ORIGINS: string[] = (Deno.env.get("DM_OAUTH_ALLOWED_ORIGINS") ??
-  "https://ikhlassabar2021-create.github.io,http://localhost:8080,http://localhost:3000")
+  "https://dokterbisnis.web.id,https://ikhlassabar2021-create.github.io,http://localhost:8080,http://localhost:3000")
   .split(",").map((s) => s.trim()).filter(Boolean);
 
 const ALLOWED_SCHEMES = ["kasirgo:", "kasirgo-dev:"];

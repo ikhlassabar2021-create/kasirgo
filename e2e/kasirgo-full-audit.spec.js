@@ -18,9 +18,9 @@ const { test, expect } = require('@playwright/test');
  */
 
 const baseURL = process.env.E2E_BASE_URL ||
-  'https://ikhlassabar2021-create.github.io/kasirgo/';
+  'https://dokterbisnis.web.id/';
 const adminURL = process.env.E2E_ADMIN_URL ||
-  'https://ikhlassabar2021-create.github.io/kasirgo/admin/';
+  'https://dokterbisnis.web.id/admin/';
 
 test.describe('KasirGo Web - App Shell', () => {
   test('1. app shell termuat (bukan blank)', async ({ page }) => {

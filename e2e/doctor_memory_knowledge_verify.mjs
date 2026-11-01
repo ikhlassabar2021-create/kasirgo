@@ -1,6 +1,6 @@
 import { chromium } from 'playwright';
 
-const BASE = process.env.KASIRGO_BASE || 'https://ikhlassabar2021-create.github.io/kasirgo/';
+const BASE = process.env.KASIRGO_BASE || 'https://dokterbisnis.web.id/';
 const QA_TITLE = '__QA_UI__ Pelanggan suka gula 1 kg';
 
 const b = await chromium.launch({ args: ['--no-sandbox'] });

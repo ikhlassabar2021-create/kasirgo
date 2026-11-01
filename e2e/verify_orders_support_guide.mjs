@@ -1,6 +1,6 @@
 import { chromium } from 'playwright';
 
-const BASE = 'https://ikhlassabar2021-create.github.io/kasirgo/';
+const BASE = 'https://dokterbisnis.web.id/';
 const ADMIN = BASE + 'admin/';
 const SUPA = 'https://lmvjecdvfzsmrowwwpck.supabase.co';
 const KEY = 'sb_publishable_8RJnG66i_37cih8GTG1sBA_0B91KOW_';

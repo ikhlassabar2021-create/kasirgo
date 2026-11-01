@@ -110,14 +110,14 @@ CATATAN: bila `key.properties` tidak ada, build otomatis memakai debug key
   layar Dokter terbuka, TTS EF `tts_speak` 200 (pipeline audio jalan).
   Catatan: pemotongan suara hanya terjadi di Android (fokus audio
   mik) -> konfirmasi akhir lewat uji HP.
-- Web: https://ikhlassabar2021-create.github.io/kasirgo/
+- Web: https://dokterbisnis.web.id/
   (gh-pages `a112283`)
 - GitHub Release:
   https://github.com/ikhlassabar2021-create/kasirgo/releases/tag/v1.0.7-apk-20261024
 - Unduhan langsung (GitHub Pages, tanpa login):
-  - https://ikhlassabar2021-create.github.io/kasirgo/apk/kasirgo-1.0.7-arm64-v8a.apk
-  - https://ikhlassabar2021-create.github.io/kasirgo/apk/kasirgo-1.0.7-armeabi-v7a.apk
-  - https://ikhlassabar2021-create.github.io/kasirgo/apk/kasirgo-1.0.7-x86_64.apk
+  - https://dokterbisnis.web.id/apk/kasirgo-1.0.7-arm64-v8a.apk
+  - https://dokterbisnis.web.id/apk/kasirgo-1.0.7-armeabi-v7a.apk
+  - https://dokterbisnis.web.id/apk/kasirgo-1.0.7-x86_64.apk
 
 ## Rilis 1.0.6 (24 Okt 2026) - antrean pesan + semua balasan Dokter dibacakan
 
@@ -147,9 +147,9 @@ CATATAN: bila `key.properties` tidak ada, build otomatis memakai debug key
   https://github.com/ikhlassabar2021-create/kasirgo/releases/tag/v1.0.6-apk-20261024
   (3 APK + AAB + `SHA256SUMS.txt`)
 - Unduhan langsung (GitHub Pages, tanpa login):
-  - https://ikhlassabar2021-create.github.io/kasirgo/apk/kasirgo-1.0.6-arm64-v8a.apk
-  - https://ikhlassabar2021-create.github.io/kasirgo/apk/kasirgo-1.0.6-armeabi-v7a.apk
-  - https://ikhlassabar2021-create.github.io/kasirgo/apk/kasirgo-1.0.6-x86_64.apk
+  - https://dokterbisnis.web.id/apk/kasirgo-1.0.6-arm64-v8a.apk
+  - https://dokterbisnis.web.id/apk/kasirgo-1.0.6-armeabi-v7a.apk
+  - https://dokterbisnis.web.id/apk/kasirgo-1.0.6-x86_64.apk
 
 ## Rilis 1.0.5 (24 Okt 2026) - jawaban kedua Dokter tetap dibacakan
 
@@ -169,9 +169,9 @@ CATATAN: bila `key.properties` tidak ada, build otomatis memakai debug key
   https://github.com/ikhlassabar2021-create/kasirgo/releases/tag/v1.0.5-apk-20261024
   (3 APK + AAB + `SHA256SUMS.txt`)
 - Unduhan langsung (GitHub Pages, tanpa login):
-  - https://ikhlassabar2021-create.github.io/kasirgo/apk/kasirgo-1.0.5-arm64-v8a.apk
-  - https://ikhlassabar2021-create.github.io/kasirgo/apk/kasirgo-1.0.5-armeabi-v7a.apk
-  - https://ikhlassabar2021-create.github.io/kasirgo/apk/kasirgo-1.0.5-x86_64.apk
+  - https://dokterbisnis.web.id/apk/kasirgo-1.0.5-arm64-v8a.apk
+  - https://dokterbisnis.web.id/apk/kasirgo-1.0.5-armeabi-v7a.apk
+  - https://dokterbisnis.web.id/apk/kasirgo-1.0.5-x86_64.apk
 - Build: `workflow_dispatch` (`debug_sign_fallback=true`, run `40042155080`)
   -> artifact `apk-release`/`aab-release` -> `zipalign -p -f 4` + `apksigner
   sign` lokal; AAB `jarsigner` setelah `META-INF/*` lama dibuang.
@@ -189,9 +189,9 @@ CATATAN: bila `key.properties` tidak ada, build otomatis memakai debug key
   https://github.com/ikhlassabar2021-create/kasirgo/releases/tag/v1.0.4-apk-20261023
   (3 APK + AAB + `SHA256SUMS.txt`)
 - Unduhan langsung (GitHub Pages, tanpa login):
-  - https://ikhlassabar2021-create.github.io/kasirgo/apk/kasirgo-1.0.4-arm64-v8a.apk
-  - https://ikhlassabar2021-create.github.io/kasirgo/apk/kasirgo-1.0.4-armeabi-v7a.apk
-  - https://ikhlassabar2021-create.github.io/kasirgo/apk/kasirgo-1.0.4-x86_64.apk
+  - https://dokterbisnis.web.id/apk/kasirgo-1.0.4-arm64-v8a.apk
+  - https://dokterbisnis.web.id/apk/kasirgo-1.0.4-armeabi-v7a.apk
+  - https://dokterbisnis.web.id/apk/kasirgo-1.0.4-x86_64.apk
 - Build: `workflow_dispatch` (`debug_sign_fallback=true`) -> artifact `apk-release`
   -> `zipalign -p -f 4` + `apksigner sign` lokal dengan `kasirgo-upload.p12`;
   AAB ditandatangani `jarsigner` setelah `META-INF/*` lama dibuang.
@@ -204,8 +204,8 @@ CATATAN: bila `key.properties` tidak ada, build otomatis memakai debug key
   https://github.com/ikhlassabar2021-create/kasirgo/releases/tag/v1.0.3-apk-20261023
   (3 APK + `SHA256SUMS.txt`, checksum terverifikasi ulang setelah unduh)
 - Unduhan langsung (GitHub Pages, tanpa login):
-  - https://ikhlassabar2021-create.github.io/kasirgo/apk/kasirgo-1.0.3-arm64-v8a.apk
-  - https://ikhlassabar2021-create.github.io/kasirgo/apk/kasirgo-1.0.3-armeabi-v7a.apk
+  - https://dokterbisnis.web.id/apk/kasirgo-1.0.3-arm64-v8a.apk
+  - https://dokterbisnis.web.id/apk/kasirgo-1.0.3-armeabi-v7a.apk
 - Build: `workflow_dispatch` (`debug_sign_fallback=true`) -> artifact `apk-release`
   -> `zipalign -p -f 4` + `apksigner sign` lokal dengan `kasirgo-upload.p12`.
 - CATATAN API: pembuatan Release via REST harus memakai header

@@ -5,8 +5,8 @@ const { defineConfig, devices } = require('@playwright/test');
  * Konfigurasi audit E2E KasirGo.
  *
  * Uji berjalan melawan URL live (default) atau base URL lokal via env:
- *   E2E_BASE_URL=https://ikhlassabar2021-create.github.io/kasirgo/
- *   E2E_ADMIN_URL=https://ikhlassabar2021-create.github.io/kasirgo/admin/
+ *   E2E_BASE_URL=https://dokterbisnis.web.id/
+ *   E2E_ADMIN_URL=https://dokterbisnis.web.id/admin/
  *
  * Kredensial (opsional, untuk uji login nyata):
  *   E2E_OWNER_EMAIL / E2E_OWNER_PASSWORD
@@ -23,7 +23,7 @@ module.exports = defineConfig({
   reporter: [['list']],
   use: {
     baseURL: process.env.E2E_BASE_URL ||
-      'https://ikhlassabar2021-create.github.io/kasirgo/',
+      'https://dokterbisnis.web.id/',
     trace: 'retain-on-failure',
     screenshot: 'only-on-failure',
     viewport: { width: 1280, height: 900 },

@@ -1,6 +1,6 @@
 import { chromium } from 'playwright';
 
-const BASE = process.env.BASE_URL || 'https://ikhlassabar2021-create.github.io/kasirgo/';
+const BASE = process.env.BASE_URL || 'https://dokterbisnis.web.id/';
 const browser = await chromium.launch({
   args: ['--no-sandbox', '--autoplay-policy=no-user-gesture-required'],
 });

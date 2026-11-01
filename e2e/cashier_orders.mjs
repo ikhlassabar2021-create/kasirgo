@@ -1,6 +1,6 @@
 import { chromium } from 'playwright';
 
-const base = 'https://ikhlassabar2021-create.github.io/kasirgo/';
+const base = 'https://dokterbisnis.web.id/';
 const CODE = 'ORD26101908888';
 
 const browser = await chromium.launch({ args: ['--no-sandbox'] });

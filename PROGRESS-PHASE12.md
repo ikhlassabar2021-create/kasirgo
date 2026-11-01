@@ -7,7 +7,7 @@
 - `npm run build` admin OK (1.1MB js / 296KB gzip — catatan: saran code-split
   untuk fase lanjut).
 - Deploy gh-pages: app root + admin di /kasirgo/admin/ (commit `0edef08`).
-  Smoke test: https://ikhlassabar2021-create.github.io/kasirgo/ (200) dan
+  Smoke test: https://dokterbisnis.web.id/ (200) dan
   /kasirgo/admin/ (200), main.dart.js + chunk admin terlayani.
 - APK rilis TIDAK dibangun di sandbox (sesuai aturan): workflow CI
   `.github/workflows/release-apk.yml` (picu via tag v* atau manual) build

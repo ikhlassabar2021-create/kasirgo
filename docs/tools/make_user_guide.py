@@ -173,7 +173,7 @@ def build():
         'dan Pembeli. Ditulis sederhana agar langsung bisa dipraktikkan.', S['cover_sub']))
     story.append(Spacer(1, 30 * mm))
     story.append(Paragraph('Versi 3.0 &bull; Edisi Oktober 2026', S['cover_small']))
-    story.append(Paragraph('ikhlassabar2021-create.github.io/kasirgo', S['cover_small']))
+    story.append(Paragraph('dokterbisnis.web.id', S['cover_small']))
     story.append(PageBreak())
 
     # ------------------------------------------------------------ DAFTAR ISI
@@ -218,7 +218,7 @@ def build():
     ]))
     story.append(sub('1.2 Masuk ke aplikasi'))
     story.append(steps([
-        'Buka aplikasi KasirGo atau alamat <b>ikhlassabar2021-create.github.io/kasirgo</b> di browser.',
+        'Buka aplikasi KasirGo atau alamat <b>dokterbisnis.web.id</b> di browser.',
         'Pilih <b>Masuk</b> bila sudah punya akun, atau <b>Daftar</b> untuk membuat akun baru.',
         'Isi email dan kata sandi. Gunakan email aktif karena tautan konfirmasi dikirim ke email tersebut.',
         'Bila muncul pesan "Email harus dikonfirmasi", buka kotak masuk atau folder spam lalu klik tautan konfirmasi.',

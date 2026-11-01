@@ -1,5 +1,5 @@
 import { chromium } from 'playwright';
-const BASE = 'https://ikhlassabar2021-create.github.io/kasirgo/';
+const BASE = 'https://dokterbisnis.web.id/';
 const login = async (page, email) => {
   await page.goto(BASE + '?cb=' + Date.now(), { waitUntil: 'networkidle', timeout: 120000 });
   await page.waitForTimeout(5000);

@@ -1,7 +1,7 @@
 # Checklist Test KasirGo — Phase 1 s/d 7 (v2, setelah perbaikan)
 
-App: **https://ikhlassabar2021-create.github.io/kasirgo/**
-Superadmin: **https://ikhlassabar2021-create.github.io/kasirgo/admin/**
+App: **https://dokterbisnis.web.id/**
+Superadmin: **https://dokterbisnis.web.id/admin/**
 
 Legenda: `[ ]` belum · `[x]` PASS · `[!]` FAIL · `[/]` BLOKIR · `[-]` tak bisa dites di web
 
@@ -11,8 +11,8 @@ Legenda: `[ ]` belum · `[x]` PASS · `[!]` FAIL · `[/]` BLOKIR · `[-]` tak bi
 
 ### A1. URL Configuration
 Authentication → URL Configuration:
-1. [ ] Site URL = `https://ikhlassabar2021-create.github.io/kasirgo/`
-2. [ ] Redirect URLs = `https://ikhlassabar2021-create.github.io/kasirgo/`
+1. [ ] Site URL = `https://dokterbisnis.web.id/`
+2. [ ] Redirect URLs = `https://dokterbisnis.web.id/`
 
 ### A2. Email konfirmasi (PILIH SALAH SATU)
 - **Opsi A — Ada email konfirmasi** (yang Anda minta): Authentication → Providers → Email → **Confirm email = ON**.

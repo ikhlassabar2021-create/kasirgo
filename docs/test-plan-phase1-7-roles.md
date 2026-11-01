@@ -1,7 +1,7 @@
 # Test Plan KasirGo — Phase 1 s/d 7 × Role × Tipe Usaha
 
-App: **https://ikhlassabar2021-create.github.io/kasirgo/**
-Superadmin: **https://ikhlassabar2021-create.github.io/kasirgo/admin/**
+App: **https://dokterbisnis.web.id/**
+Superadmin: **https://dokterbisnis.web.id/admin/**
 
 Legenda: `[ ]` belum · `[x]` PASS · `[!]` FAIL · `[/]` BLOKIR · `[-]` tak bisa di web
 
@@ -13,8 +13,8 @@ Legenda: `[ ]` belum · `[x]` PASS · `[!]` FAIL · `[/]` BLOKIR · `[-]` tak bi
 Dashboard: https://supabase.com/dashboard/project/lmvjecdvfzsmrowwwpck
 
 - [ ] **Authentication → URL Configuration**
-  - Site URL = `https://ikhlassabar2021-create.github.io/kasirgo/`
-  - Redirect URLs = `https://ikhlassabar2021-create.github.io/kasirgo/`
+  - Site URL = `https://dokterbisnis.web.id/`
+  - Redirect URLs = `https://dokterbisnis.web.id/`
 - [ ] **Authentication → Providers → Email → Confirm email**
   - Pilih **ON** (ada email konfirmasi) atau **OFF** (langsung login)
 - [ ] **SQL Editor** → jalankan `docs/migrations/2026-09-28-fix-staff-auth-trigger.sql`

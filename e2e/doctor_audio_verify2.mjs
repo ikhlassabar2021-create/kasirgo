@@ -1,6 +1,6 @@
 import fs from 'fs';
 import { chromium } from 'playwright';
-const BASE='https://ikhlassabar2021-create.github.io/kasirgo/';
+const BASE='https://dokterbisnis.web.id/';
 const SUPA='https://lmvjecdvfzsmrowwwpck.supabase.co';
 const KEY='sb_publishable_8RJnG66i_37cih8GTG1sBA_0B91KOW_';
 const OUTLET='229c94d7-ce6d-4be1-98f5-448f600528cc';

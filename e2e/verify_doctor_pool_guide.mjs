@@ -1,6 +1,6 @@
 import { chromium } from 'playwright';
 
-const BASE = 'https://ikhlassabar2021-create.github.io/kasirgo/';
+const BASE = 'https://dokterbisnis.web.id/';
 const ADMIN = BASE + 'admin/';
 const out = {};
 

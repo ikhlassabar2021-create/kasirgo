@@ -8,9 +8,9 @@ Login via email + password (bukan Google). Jika tampilan lama, hard refresh
 
 | Keperluan | Link |
 |-----------|------|
-| Aplikasi (Flutter, semua role) | https://ikhlassabar2021-create.github.io/kasirgo/ |
-| Halaman login | https://ikhlassabar2021-create.github.io/kasirgo/#/login |
-| Superadmin (React) | https://ikhlassabar2021-create.github.io/kasirgo/admin/ |
+| Aplikasi (Flutter, semua role) | https://dokterbisnis.web.id/ |
+| Halaman login | https://dokterbisnis.web.id/#/login |
+| Superadmin (React) | https://dokterbisnis.web.id/admin/ |
 
 Catatan: halaman login belum mengisi email otomatis dari URL, jadi tempel email
 akun di bawah ini pada form login.
@@ -43,13 +43,13 @@ akun di bawah ini pada form login.
 
 | Email | Link | Catatan |
 |-------|------|---------|
-| `superadmin@kasirgo.com` | https://ikhlassabar2021-create.github.io/kasirgo/admin/ | `admin_users`: role superadmin, aktif |
+| `superadmin@kasirgo.com` | https://dokterbisnis.web.id/admin/ | `admin_users`: role superadmin, aktif |
 
 ## Akun Afiliasi (portal web affiliate)
 
 | Email | Password | Link portal |
 |-------|----------|-------------|
-| `ikhlassabar2021+affiliate@gmail.com` | `sabar2021` | https://ikhlassabar2021-create.github.io/kasirgo/admin/#/affiliate |
+| `ikhlassabar2021+affiliate@gmail.com` | `sabar2021` | https://dokterbisnis.web.id/admin/#/affiliate |
 
 Catatan: akun ini sudah ditautkan ke baris `affiliates` (kode `DEMOAFIL2026`,
 komisi 10%, bank BCA) dan punya 2 komisi contoh (Rp50.000 status `paid` +
@@ -86,9 +86,9 @@ Pelanggan TIDAK perlu akun. Cara masuk:
 
 | Outlet (tipe) | Link pelanggan |
 |---------------|----------------|
-| Toko Test (Cafe) | https://ikhlassabar2021-create.github.io/kasirgo/#/customer?outlet=229c94d7-ce6d-4be1-98f5-448f600528cc&table=Meja%2001 |
-| Warung Test | https://ikhlassabar2021-create.github.io/kasirgo/#/customer?outlet=5dda8727-2439-432a-91e6-308c824c4f7a&table=Meja%2001 |
-| Gerobak Test | https://ikhlassabar2021-create.github.io/kasirgo/#/customer?outlet=e545b57c-7ac8-4709-b4d2-db54819610e1&table=Meja%2001 |
+| Toko Test (Cafe) | https://dokterbisnis.web.id/#/customer?outlet=229c94d7-ce6d-4be1-98f5-448f600528cc&table=Meja%2001 |
+| Warung Test | https://dokterbisnis.web.id/#/customer?outlet=5dda8727-2439-432a-91e6-308c824c4f7a&table=Meja%2001 |
+| Gerobak Test | https://dokterbisnis.web.id/#/customer?outlet=e545b57c-7ac8-4709-b4d2-db54819610e1&table=Meja%2001 |
 
 Owner juga bisa membuka QR Meja (menu "QR Meja Dine-in") - QR memuat deep-link
 yang sama. Aturan akses: pelanggan anonim hanya bisa membaca menu & kirim
@@ -182,7 +182,7 @@ Centang tiap langkah. Urutan disarankan dari Phase 8 ke atas.
 
 ## Phase 11 & 13 - Superadmin + Control Plane
 
-Login `superadmin@kasirgo.com` di https://ikhlassabar2021-create.github.io/kasirgo/admin/
+Login `superadmin@kasirgo.com` di https://dokterbisnis.web.id/admin/
 
 1. **Laporan Utama** (`/superadmin`): ringkasan lintas outlet (revenue engine).
 2. **Outlet Terdaftar** (`/outlets`): daftar outlet (KYC verified tampil default) ->

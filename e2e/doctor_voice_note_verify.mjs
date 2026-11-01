@@ -1,6 +1,6 @@
 import { chromium } from 'playwright';
 
-const BASE = 'https://ikhlassabar2021-create.github.io/kasirgo/';
+const BASE = 'https://dokterbisnis.web.id/';
 const b = await chromium.launch({ args: ['--no-sandbox'] });
 const c = await b.newContext({
   viewport: { width: 1280, height: 1200 },

@@ -102,8 +102,8 @@ supabase_flutter, drift, sqlite3_flutter_libs, path_provider, go_router, flutter
 - GITHUB_URL: repo aktif = https://github.com/ikhlassabar2021-create/kasirgo.git
 - Remote origin sudah dikonfigurasi. Branch utama: main (bukan master). Branch deploy: gh-pages.
 - STATUS PUSH: SUDAH TER-PUSH (main + gh-pages sinkron).
-- App: https://ikhlassabar2021-create.github.io/kasirgo/ (base /kasirgo/, hash URL).
-- Superadmin React: https://ikhlassabar2021-create.github.io/kasirgo/admin/ (auth Supabase nyata).
+- App: https://dokterbisnis.web.id/ (base /kasirgo/, hash URL).
+- Superadmin React: https://dokterbisnis.web.id/admin/ (auth Supabase nyata).
   Akun: superadmin@kasirgo.com / sabar2021 (app_metadata.role=superadmin + baris admin_users).
 - SUPABASE: project id lmvjecdvfzsmrowwwpck; URL & anon key terisi di
   kasirgo/lib/config/supabase_config.dart dan kasirgo-admin/src/config/supabase.ts.
@@ -1008,7 +1008,7 @@ Commit `7d57a00` (main) + deploy web gh-pages `680c199`.
   (`SupporterService.ensureTrial`) saat belum punya akses. Upgrade tetap pakai QRIS
   DINAMIS otomatis (`SupporterService.checkout` -> `PaymentService.createQris`).
 - Verifikasi: `dart analyze lib` 0 error (hanya info pre-existing); bundle web memuat
-  string fitur baru; live: https://ikhlassabar2021-create.github.io/kasirgo/
+  string fitur baru; live: https://dokterbisnis.web.id/
 
 ## Sesi 2026-10-08 (3): BATCH #3 Perbaikan Owner (SELESAI)
 Commit `672286b` (main) + deploy web gh-pages `6a7acb2` (live md5
@@ -1562,7 +1562,7 @@ Commit `ff04bb3` (main) + deploy web gh-pages `050051c` (live md5
   title + RBAC (superadmin/finance/support/ops).
 - **PANDUAN PDF LENGKAP**: `docs/panduan-kasirgo.pdf` (19 halaman, generator
   `docs/tools/make_user_guide.py`, reportlab) + deploy
-  `https://ikhlassabar2021-create.github.io/kasirgo/panduan/panduan-kasirgo.pdf`.
+  `https://dokterbisnis.web.id/panduan/panduan-kasirgo.pdf`.
   Isi: peran & hak akses, setup toko/KYC, produk & stok, POS, pesanan/QR meja/KDS,
   katalog & WA, pelanggan, laporan, karyawan/shift/delegasi, Dokter Bisnis AI,
   marketplace pembeli, bundling/referral/afiliasi, Program Pendukung, tiket bantuan,

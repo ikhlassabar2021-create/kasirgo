@@ -1,7 +1,7 @@
 # Checklist Test KasirGo
 
-App: **https://ikhlassabar2021-create.github.io/kasirgo/**
-Superadmin: **https://ikhlassabar2021-create.github.io/kasirgo/admin/**
+App: **https://dokterbisnis.web.id/**
+Superadmin: **https://dokterbisnis.web.id/admin/**
 Semua route via hash (contoh `#/login`).
 
 Legend: `[ ]` belum · `[x]` PASS · `[!]` FAIL · `[/]` BLOKIR
@@ -12,8 +12,8 @@ Legend: `[ ]` belum · `[x]` PASS · `[!]` FAIL · `[/]` BLOKIR
 
 Di **Supabase → Authentication → URL Configuration**:
 
-1. [ ] **Site URL** = `https://ikhlassabar2021-create.github.io/kasirgo/`
-2. [ ] **Redirect URLs** = `https://ikhlassabar2021-create.github.io/kasirgo/`
+1. [ ] **Site URL** = `https://dokterbisnis.web.id/`
+2. [ ] **Redirect URLs** = `https://dokterbisnis.web.id/`
 3. [ ] **Confirm email** = OFF (Authentication → Providers → Email)
 
 > Tanpa ini, login owner/staff gagal dengan pesan "email belum dikonfirmasi".

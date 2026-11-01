@@ -1,5 +1,5 @@
 import { chromium } from 'playwright';
-const base = 'https://ikhlassabar2021-create.github.io/kasirgo/';
+const base = 'https://dokterbisnis.web.id/';
 const browser = await chromium.launch({ args: ['--no-sandbox'] });
 const ctx = await browser.newContext({ viewport: { width: 1280, height: 1000 }, serviceWorkers: 'block' });
 const page = await ctx.newPage();

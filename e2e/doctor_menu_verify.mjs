@@ -1,6 +1,6 @@
 import { chromium } from 'playwright';
 
-const BASE = process.env.KASIRGO_BASE || 'https://ikhlassabar2021-create.github.io/kasirgo/';
+const BASE = process.env.KASIRGO_BASE || 'https://dokterbisnis.web.id/';
 const EMAIL = 'ikhlassabar2021@gmail.com';
 const PASS = 'sabar2021';
 
