@@ -1,0 +1,65 @@
+name: Deploy Web
+
+# Build Flutter web (custom domain root) + React admin, lalu deploy ke gh-pages.
+# Flutter dibangun dengan --base-href / agar cocok untuk domain root
+# (dokterbisnis.web.id), BUKAN subpath github.io/kasirgo/.
+# apk/ dan file lain yang tak dipublikasikan dipertahankan via keep_files.
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'kasirgo/**'
+      - 'kasirgo-admin/**'
+      - 'docs/panduan-kasirgo.pdf'
+      - '.github/workflows/deploy-web.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+
+      - name: Flutter pub get
+        working-directory: kasirgo
+        run: flutter pub get
+
+      - name: Build Flutter web (base root domain)
+        working-directory: kasirgo
+        run: flutter build web --release --base-href /
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Build React admin
+        working-directory: kasirgo-admin
+        run: |
+          npm ci
+          npm run build
+
+      - name: Susun folder deploy
+        run: |
+          rm -rf deploy
+          mkdir -p deploy/admin deploy/panduan
+          cp -a kasirgo/build/web/. deploy/
+          cp -a kasirgo-admin/dist/. deploy/admin/
+          cp -a docs/panduan-kasirgo.pdf deploy/panduan/
+          ls -la deploy | sed -n '1,30p'
+
+      - name: Deploy ke gh-pages
+        uses: peaceiris/actions-gh-pages@v4
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: ./deploy
+          keep_files: true
+          publish_branch: gh-pages
