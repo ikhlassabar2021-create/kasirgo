@@ -637,6 +637,163 @@ async function logAdminAction(action: string, target: string, meta: Record<strin
 }
 
 // ---------------------------------------------------------------------------
+// Update Aplikasi: rilisan + SMTP + notifikasi
+// ---------------------------------------------------------------------------
+export interface AppRelease {
+  id: string
+  platform: string
+  version: string
+  build_number: number
+  file_key: string | null
+  file_url: string | null
+  file_size: number | null
+  sha256: string | null
+  guide_key: string | null
+  guide_url: string | null
+  changelog: string | null
+  is_published: boolean
+  force_update: boolean
+  published_at: string | null
+  created_at: string
+}
+
+export interface SmtpConfig {
+  has_config: boolean
+  id?: string
+  provider: string
+  host: string | null
+  port: number
+  secure: boolean
+  username: string | null
+  from_email: string | null
+  from_name: string | null
+  is_active: boolean
+  apply_as_auth: boolean
+  has_password: boolean
+  password_hint: string | null
+  updated_at: string | null
+}
+
+export interface SystemNotification {
+  id: string
+  kind: string
+  channel: string
+  title: string
+  body: string
+  release_id: string | null
+  status: string
+  recipient_count: number
+  error: string | null
+  created_at: string
+}
+
+export async function listAppReleases(): Promise<AppRelease[]> {
+  const { data, error } = await supabase.rpc('admin_list_app_releases')
+  if (error) throw error
+  if (data?.forbidden) throw new Error('Akses ditolak.')
+  return (data ?? []) as AppRelease[]
+}
+
+export async function saveAppRelease(release: Record<string, any>): Promise<AppRelease[]> {
+  const { data, error } = await supabase.rpc('admin_save_app_release', { p_release: release })
+  if (error) throw error
+  if (data?.forbidden) throw new Error('Akses ditolak.')
+  if (data?.error) throw new Error(data.error)
+  return (data ?? []) as AppRelease[]
+}
+
+export async function publishAppRelease(id: string, publish: boolean): Promise<AppRelease[]> {
+  const { data, error } = await supabase.rpc('admin_publish_app_release', {
+    p_id: id,
+    p_publish: publish,
+  })
+  if (error) throw error
+  if (data?.forbidden) throw new Error('Akses ditolak.')
+  return (data ?? []) as AppRelease[]
+}
+
+export async function deleteAppRelease(id: string): Promise<AppRelease[]> {
+  const { data, error } = await supabase.rpc('admin_delete_app_release', { p_id: id })
+  if (error) throw error
+  if (data?.forbidden) throw new Error('Akses ditolak.')
+  return (data ?? []) as AppRelease[]
+}
+
+export async function getSmtpConfig(): Promise<SmtpConfig> {
+  const { data, error } = await supabase.rpc('admin_get_smtp_config')
+  if (error) throw error
+  if (data?.forbidden) throw new Error('Akses ditolak.')
+  return data as SmtpConfig
+}
+
+export async function saveSmtpConfig(config: Record<string, any>): Promise<SmtpConfig> {
+  const { data, error } = await supabase.rpc('admin_save_smtp_config', { p_config: config })
+  if (error) throw error
+  if (data?.forbidden) throw new Error('Akses ditolak.')
+  return data as SmtpConfig
+}
+
+export async function listSystemNotifications(limit = 50): Promise<SystemNotification[]> {
+  const { data, error } = await supabase.rpc('admin_list_notifications', { p_limit: limit })
+  if (error) throw error
+  if (data?.forbidden) throw new Error('Akses ditolak.')
+  return (data ?? []) as SystemNotification[]
+}
+
+export async function logNotification(payload: {
+  kind: string
+  channel: string
+  title: string
+  body: string
+  release_id?: string | null
+  status: string
+  count: number
+  error?: string | null
+}) {
+  const { data, error } = await supabase.rpc('admin_log_notification', {
+    p_kind: payload.kind,
+    p_channel: payload.channel,
+    p_title: payload.title,
+    p_body: payload.body,
+    p_release_id: payload.release_id ?? null,
+    p_status: payload.status,
+    p_count: payload.count,
+    p_error: payload.error ?? null,
+  })
+  if (error) throw error
+  if (data?.forbidden) throw new Error('Akses ditolak.')
+  return data
+}
+
+/// Presigned PUT ke Cloudflare R2 via Edge Function r2_presign.
+export async function presignR2Upload(
+  key: string,
+  contentType: string,
+): Promise<{ success: boolean; url: string; public_url: string | null; message?: string }> {
+  const { data, error } = await supabase.functions.invoke('r2_presign', {
+    body: { key, content_type: contentType },
+  })
+  if (error) throw error
+  return data
+}
+
+/// Kirim email via Edge Function email_send (SMTP dari system_smtp_config).
+export async function sendUpdateEmail(to: string, subject: string, html: string) {
+  const { data, error } = await supabase.functions.invoke('email_send', {
+    body: { to, subject, html },
+  })
+  if (error) throw error
+  return data
+}
+
+/// Terapkan SMTP sebagai SMTP auth Supabase.
+export async function applySmtpAuth() {
+  const { data, error } = await supabase.functions.invoke('apply_smtp_auth', { body: {} })
+  if (error) throw error
+  return data
+}
+
+// ---------------------------------------------------------------------------
 // Helpers
 // ---------------------------------------------------------------------------
 export function maskSecret(value: any): string {

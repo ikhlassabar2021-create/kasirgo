@@ -6,12 +6,18 @@
     <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION"/>
     <!-- Dokter Bisnis 3.0: input suara (STT) -->
     <uses-permission android:name="android.permission.RECORD_AUDIO"/>
+    <!-- Update Aplikasi: unduh & pasang APK dari luar Play Store -->
+    <uses-permission android:name="android.permission.REQUEST_INSTALL_PACKAGES"/>
     <queries>
         <intent>
             <action android:name="android.speech.RecognitionService"/>
         </intent>
         <intent>
             <action android:name="android.intent.action.TTS_SERVICE"/>
+        </intent>
+        <intent>
+            <action android:name="android.intent.action.VIEW"/>
+            <data android:scheme="https"/>
         </intent>
     </queries>
     <application

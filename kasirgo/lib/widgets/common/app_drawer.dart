@@ -3,12 +3,15 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../config/app_theme.dart';
+import '../../config/constants.dart';
 import '../../models/user.dart';
 import '../../providers/auth_provider.dart';
 import '../../screens/owner/settings_screen.dart';
 import '../../screens/owner/help_center_screen.dart';
+import '../../screens/owner/app_update_screen.dart';
 import '../../screens/owner/customer_list_screen.dart';
 import '../../screens/owner/employee_screen.dart';
+import '../../services/app_update_service.dart';
 
 class AppDrawer extends ConsumerWidget {
   final User user;
@@ -161,6 +164,31 @@ class AppDrawer extends ConsumerWidget {
                     context,
                     MaterialPageRoute(builder: (_) => const HelpCenterScreen()),
                   );
+                },
+              ),
+              _DrawerTile(
+                icon: Icons.system_update_alt_rounded,
+                title: 'Update Aplikasi',
+                onTap: () async {
+                  Navigator.pop(context);
+                  final release = await AppUpdateService().checkForUpdate();
+                  if (!context.mounted) return;
+                  if (release != null) {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (_) => AppUpdateScreen(release: release),
+                      ),
+                    );
+                  } else {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                        content: Text(
+                          'Aplikasi sudah versi terbaru (${AppConstants.appVersion}).',
+                        ),
+                      ),
+                    );
+                  }
                 },
               ),
             ] else ...[

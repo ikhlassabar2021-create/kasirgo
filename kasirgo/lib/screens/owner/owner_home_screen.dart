@@ -36,6 +36,8 @@ import 'progress_tracker_screen.dart';
 import 'lapak_live_screen.dart';
 import '../../services/business_doctor_service.dart';
 import '../../services/delegation_service.dart';
+import '../../services/app_update_service.dart';
+import 'app_update_screen.dart';
 import '../modules/kitchen_display_screen.dart';
 import 'shift_screen.dart';
 import '../modules/supporter_screen.dart';
@@ -766,6 +768,7 @@ class _OwnerHomeScreenState extends ConsumerState<OwnerHomeScreen> {
               const SizedBox(height: 20),
               _OutletTypeSetupBanner(outletId: userOutletId()),
               _QrisSetupBanner(outletId: userOutletId()),
+              const _AppUpdateBanner(),
               const SizedBox(height: 16),
               _HeroSalesCard(
                 sales: todaySales,
@@ -1419,6 +1422,106 @@ class _SectionHeader extends StatelessWidget {
           ),
         ),
       ],
+    );
+  }
+}
+
+class _AppUpdateBanner extends StatefulWidget {
+  const _AppUpdateBanner();
+
+  @override
+  State<_AppUpdateBanner> createState() => _AppUpdateBannerState();
+}
+
+class _AppUpdateBannerState extends State<_AppUpdateBanner> {
+  AppReleaseInfo? _release;
+
+  @override
+  void initState() {
+    super.initState();
+    _check();
+  }
+
+  Future<void> _check() async {
+    final rel = await AppUpdateService().checkForUpdate();
+    if (!mounted) return;
+    setState(() => _release = rel);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final rel = _release;
+    if (rel == null) return const SizedBox.shrink();
+    return Padding(
+      padding: const EdgeInsets.only(top: 2),
+      child: Material(
+        color: AppTheme.primaryColor.withValues(alpha: 0.1),
+        borderRadius: BorderRadius.circular(16),
+        child: InkWell(
+          borderRadius: BorderRadius.circular(16),
+          onTap: () => Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (_) => AppUpdateScreen(release: rel),
+            ),
+          ),
+          child: Container(
+            padding: const EdgeInsets.all(14),
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(16),
+              border: Border.all(
+                color: AppTheme.primaryColor.withValues(alpha: 0.35),
+              ),
+            ),
+            child: Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(10),
+                  decoration: BoxDecoration(
+                    color: AppTheme.primaryColor.withValues(alpha: 0.16),
+                    borderRadius: BorderRadius.circular(14),
+                  ),
+                  child: const Icon(
+                    Icons.system_update_alt_rounded,
+                    color: AppTheme.primaryColor,
+                    size: 24,
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Pembaruan tersedia',
+                        style: GoogleFonts.plusJakartaSans(
+                          color: AppTheme.textPrimary,
+                          fontSize: 14,
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+                      const SizedBox(height: 3),
+                      Text(
+                        'Versi ${rel.version} — ketuk untuk unduh pembaruan.',
+                        style: GoogleFonts.plusJakartaSans(
+                          color: AppTheme.textSecondary,
+                          fontSize: 12,
+                          height: 1.3,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(width: 8),
+                const Icon(
+                  Icons.chevron_right_rounded,
+                  color: AppTheme.textSecondary,
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
     );
   }
 }

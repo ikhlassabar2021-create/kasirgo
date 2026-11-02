@@ -26,6 +26,10 @@ import {
   X,
   Stethoscope,
   CalendarClock,
+  DownloadCloud,
+  Mail,
+  Send,
+  UploadCloud,
 } from 'lucide-react';
 import {
   loadConfig,
@@ -63,6 +67,17 @@ import {
   listDmChannelAccounts,
   setDmChannelAccount,
   deleteDmChannelAccount,
+  listAppReleases,
+  saveAppRelease,
+  publishAppRelease,
+  deleteAppRelease,
+  getSmtpConfig,
+  saveSmtpConfig,
+  listSystemNotifications,
+  logNotification,
+  presignR2Upload,
+  sendUpdateEmail,
+  applySmtpAuth,
 } from '../lib/controlPlane';
 import type {
   ConfigKey,
@@ -76,6 +91,8 @@ import type {
   SystemApiConfig,
   OutletDmConfig,
   DmChannelAccount,
+  AppRelease,
+  SystemNotification,
 } from '../lib/controlPlane';
 import { supabase } from '../config/supabase';
 import { rp as supabaseRpc, platformOutletsList, UsersListResult } from '../lib/adminApi';
@@ -101,7 +118,8 @@ type TabId =
   | 'announcements'
   | 'monitoring'
   | 'admins'
-  | 'audit';
+  | 'audit'
+  | 'update';
 
 const TABS: { id: TabId; name: string; icon: any }[] = [
   { id: 'ads', name: 'Iklan', icon: Megaphone },
@@ -125,6 +143,7 @@ const TABS: { id: TabId; name: string; icon: any }[] = [
   { id: 'monitoring', name: 'Monitoring', icon: Activity },
   { id: 'admins', name: 'Admin & RBAC', icon: ShieldCheck },
   { id: 'audit', name: 'Audit Log', icon: ScrollText },
+  { id: 'update', name: 'Update Aplikasi', icon: DownloadCloud },
 ];
 
 const inputCls =
@@ -3263,6 +3282,308 @@ function SquadDmTab() {
 }
 
 // ===========================================================================
+// Update Aplikasi: R2 (upload rilis & panduan) + SMTP + notifikasi.
+// ===========================================================================
+async function sha256Hex(buf: ArrayBuffer): Promise<string> {
+  const d = await crypto.subtle.digest('SHA-256', buf);
+  return Array.from(new Uint8Array(d)).map((b) => b.toString(16).padStart(2, '0')).join('');
+}
+
+function UpdateAppTab() {
+  const { msg, show } = useToast();
+
+  // SMTP
+  const [smtp, setSmtp] = useState<any>({
+    provider: 'smtp', host: '', port: 587, secure: false, username: '',
+    password: '', from_email: '', from_name: 'KasirGo', is_active: false, apply_as_auth: false,
+  });
+  const [smtpBusy, setSmtpBusy] = useState(false);
+  const [applyBusy, setApplyBusy] = useState(false);
+
+  // Cloudflare R2
+  const [r2, setR2] = useState<any>({
+    account_id: '', bucket: '', public_url: '', access_key_id: '', secret_access_key: '',
+    has_access_key: false, has_secret: false,
+  });
+  const [r2Busy, setR2Busy] = useState(false);
+
+  // Rilisan + draft
+  const [releases, setReleases] = useState<AppRelease[]>([]);
+  const [releasesLoading, setReleasesLoading] = useState(true);
+  const [busyId, setBusyId] = useState<string | null>(null);
+  const [draft, setDraft] = useState<any>({
+    platform: 'android', version: '', build_number: 0, changelog: '',
+    force_update: false, file_key: null, file_url: null, file_size: null, sha256: null,
+    guide_key: null, guide_url: null,
+  });
+  const [uploadBusy, setUploadBusy] = useState(false);
+
+  // Notifikasi email + riwayat
+  const [emailForm, setEmailForm] = useState<any>({ to: '', subject: '', body: '' });
+  const [emailBusy, setEmailBusy] = useState(false);
+  const [notifications, setNotifications] = useState<SystemNotification[]>([]);
+
+  const reloadReleases = useCallback(async () => {
+    setReleasesLoading(true);
+    try { setReleases(await listAppReleases()); } catch (e: any) { show('err', e.message); } finally { setReleasesLoading(false); }
+  }, []);
+  const reloadNotifications = useCallback(async () => {
+    try { setNotifications(await listSystemNotifications(50)); } catch (_) { /* best-effort */ }
+  }, []);
+
+  useEffect(() => {
+    getSmtpConfig().then((c) => {
+      setSmtp({
+        provider: c.provider ?? 'smtp', host: c.host ?? '', port: c.port ?? 587,
+        secure: c.secure ?? false, username: c.username ?? '', password: '',
+        from_email: c.from_email ?? '', from_name: c.from_name ?? 'KasirGo',
+        is_active: c.is_active ?? false, apply_as_auth: c.apply_as_auth ?? false,
+        has_password: c.has_password ?? false,
+      });
+    }).catch(() => {});
+    getIntegration('cloudflare_r2').then((it) => {
+      const pub = it?.public_config ?? {};
+      const sec = it?.secret_config ?? {};
+      setR2({
+        account_id: pub.account_id ?? '', bucket: pub.bucket ?? '', public_url: pub.public_url ?? '',
+        access_key_id: '', secret_access_key: '',
+        has_access_key: !!sec.access_key_id, has_secret: !!sec.secret_access_key,
+      });
+    }).catch(() => {});
+    reloadReleases();
+    reloadNotifications();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  const uploadFile = async (file: File, kind: 'apk' | 'guide') => {
+    setUploadBusy(true);
+    try {
+      const platform = draft.platform;
+      const version = draft.version.trim();
+      if (!platform || !version) throw new Error('Isi platform & versi dulu sebelum upload file.');
+      const safe = file.name.replace(/[^a-zA-Z0-9._-]/g, '_');
+      const key = `kasirgo/updates/${platform}/${version}/${kind === 'apk' ? 'app' : 'panduan'}-${safe}`;
+      const presign = await presignR2Upload(key, file.type);
+      if (!presign.success || !presign.url) throw new Error(presign.message ?? 'Gagal presign R2.');
+      const res = await fetch(presign.url, { method: 'PUT', headers: { 'Content-Type': file.type }, body: file });
+      if (!res.ok) throw new Error(`Upload R2 gagal (HTTP ${res.status}).`);
+      const sha = await sha256Hex(await file.arrayBuffer());
+      const patch: any = {
+        ...(kind === 'apk'
+          ? { file_key: key, file_url: presign.public_url, file_size: file.size, sha256: sha }
+          : { guide_key: key, guide_url: presign.public_url }),
+      };
+      setDraft((d: any) => ({ ...d, ...patch }));
+      show('ok', `${kind === 'apk' ? 'APK' : 'Panduan'} berhasil diupload ke R2.`);
+    } catch (e: any) {
+      show('err', e.message);
+    } finally {
+      setUploadBusy(false);
+    }
+  };
+
+  const saveDraft = async () => {
+    setUploadBusy(true);
+    try {
+      if (!draft.platform || !draft.version.trim()) throw new Error('Platform & versi wajib diisi.');
+      const rel = await saveAppRelease({
+        ...draft,
+        build_number: Number(draft.build_number) || 0,
+      });
+      setReleases(rel);
+      setDraft({ platform: 'android', version: '', build_number: 0, changelog: '', force_update: false, file_key: null, file_url: null, file_size: null, sha256: null, guide_key: null, guide_url: null });
+      show('ok', 'Rilisan disimpan (draft). Jangan lupa Terbitkan.');
+    } catch (e: any) {
+      show('err', e.message);
+    } finally {
+      setUploadBusy(false);
+    }
+  };
+
+  const togglePublish = async (r: AppRelease) => {
+    setBusyId(r.id);
+    try { setReleases(await publishAppRelease(r.id, !r.is_published)); show('ok', r.is_published ? 'Rilisan ditarik.' : 'Rilisan diterbitkan.'); }
+    catch (e: any) { show('err', e.message); } finally { setBusyId(null); }
+  };
+  const removeRelease = async (r: AppRelease) => {
+    if (!confirm(`Hapus rilis ${r.version} (${r.platform})?`)) return;
+    setBusyId(r.id);
+    try { setReleases(await deleteAppRelease(r.id)); show('ok', 'Rilisan dihapus.'); }
+    catch (e: any) { show('err', e.message); } finally { setBusyId(null); }
+  };
+
+  const saveSmtp = async () => {
+    setSmtpBusy(true);
+    try {
+      await saveSmtpConfig({ ...smtp, port: Number(smtp.port) || 587 });
+      show('ok', 'Konfigurasi SMTP disimpan.');
+    } catch (e: any) { show('err', e.message); } finally { setSmtpBusy(false); }
+  };
+  const applyAuth = async () => {
+    setApplyBusy(true);
+    try {
+      const r = await applySmtpAuth();
+      show(r?.success ? 'ok' : 'err', r?.message ?? 'SMTP auth diterapkan ke Supabase.');
+    } catch (e: any) { show('err', e.message); } finally { setApplyBusy(false); }
+  };
+  const saveR2 = async () => {
+    setR2Busy(true);
+    try {
+      const secret: any = {};
+      if (r2.access_key_id) secret.access_key_id = r2.access_key_id;
+      if (r2.secret_access_key) secret.secret_access_key = r2.secret_access_key;
+      await saveIntegrationSecrets('cloudflare_r2', 'Storage - Cloudflare R2', secret, {
+        account_id: r2.account_id, bucket: r2.bucket, public_url: r2.public_url,
+      }, true);
+      show('ok', 'Konfigurasi Cloudflare R2 disimpan.');
+    } catch (e: any) { show('err', e.message); } finally { setR2Busy(false); }
+  };
+
+  const sendEmails = async () => {
+    const recipients = emailForm.to.split(',').map((s: string) => s.trim()).filter(Boolean);
+    if (!recipients.length) { show('err', 'Isi minimal satu email penerima.'); return; }
+    if (!emailForm.subject || !emailForm.body) { show('err', 'Subject & isi email wajib diisi.'); return; }
+    setEmailBusy(true);
+    let ok = 0; let errMsg = '';
+    for (const to of recipients) {
+      try {
+        const r = await sendUpdateEmail(to, emailForm.subject, emailForm.body);
+        if (r?.success) ok++; else errMsg = r?.message ?? 'gagal';
+      } catch (e: any) { errMsg = e.message; }
+    }
+    const status = ok > 0 ? 'sent' : 'failed';
+    await logNotification({ kind: 'app_update', channel: 'email', title: emailForm.subject, body: emailForm.body, release_id: null, status, count: ok, error: errMsg || null });
+    setEmailBusy(false);
+    reloadNotifications();
+    show(ok > 0 ? 'ok' : 'err', `Email terkirim ke ${ok}/${recipients.length} penerima.${errMsg ? ' Error: ' + errMsg : ''}`);
+  };
+
+  return (
+    <div className="space-y-4">
+      <Card title="Konfigurasi SMTP" subtitle="Untuk kirim email notifikasi update. Bisa juga diterapkan sebagai SMTP auth Supabase (mengganti provider email).">
+        <div className="max-w-[860px] space-y-3">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div><label className={labelCls}>Host SMTP</label><input className={inputCls} value={smtp.host ?? ''} onChange={(e) => setSmtp({ ...smtp, host: e.target.value })} placeholder="in-v3.mailjet.com" /></div>
+            <div><label className={labelCls}>Port</label><input type="number" className={inputCls} value={smtp.port ?? 587} onChange={(e) => setSmtp({ ...smtp, port: Number(e.target.value) })} /></div>
+            <div><label className={labelCls}>Username / API Key</label><input className={inputCls} value={smtp.username ?? ''} onChange={(e) => setSmtp({ ...smtp, username: e.target.value })} /></div>
+            <div><label className={labelCls}>Password (kosongkan = tidak diubah)</label><input type="password" className={inputCls} value={smtp.password ?? ''} onChange={(e) => setSmtp({ ...smtp, password: e.target.value })} placeholder={smtp.has_password ? 'Tersimpan (****)' : ''} /></div>
+            <div><label className={labelCls}>From Email</label><input className={inputCls} value={smtp.from_email ?? ''} onChange={(e) => setSmtp({ ...smtp, from_email: e.target.value })} /></div>
+            <div><label className={labelCls}>From Name</label><input className={inputCls} value={smtp.from_name ?? 'KasirGo'} onChange={(e) => setSmtp({ ...smtp, from_name: e.target.value })} /></div>
+          </div>
+          <div className="flex flex-wrap gap-4 pt-1">
+            <label className="flex items-center gap-2 text-xs font-semibold text-muted"><input type="checkbox" checked={!!smtp.secure} onChange={(e) => setSmtp({ ...smtp, secure: e.target.checked })} /> SSL/TLS (secure)</label>
+            <label className="flex items-center gap-2 text-xs font-semibold text-muted"><input type="checkbox" checked={!!smtp.is_active} onChange={(e) => setSmtp({ ...smtp, is_active: e.target.checked })} /> Aktif untuk kirim notifikasi</label>
+            <label className="flex items-center gap-2 text-xs font-semibold text-muted"><input type="checkbox" checked={!!smtp.apply_as_auth} onChange={(e) => setSmtp({ ...smtp, apply_as_auth: e.target.checked })} /> Terapkan sebagai SMTP auth</label>
+          </div>
+          <div className="flex flex-wrap gap-2">
+            <SaveButton loading={smtpBusy} label="Simpan SMTP" onClick={saveSmtp} />
+            <button onClick={applyAuth} disabled={applyBusy} className="flex items-center gap-2 px-4 py-2.5 rounded-xl font-semibold text-xs border border-border hover:bg-bg transition active:scale-95 disabled:opacity-50">
+              {applyBusy ? <RefreshCw className="w-4 h-4 animate-spin" /> : <Mail className="w-4 h-4" />} Terapkan ke Auth Supabase
+            </button>
+          </div>
+        </div>
+      </Card>
+
+      <Card title="Cloudflare R2 (Storage Update & Panduan)" subtitle="File APK & panduan disimpan di R2. Butuh R2 API Token (Access Key ID + Secret Access Key) dari dashboard Cloudflare.">
+        <div className="max-w-[860px] grid grid-cols-1 sm:grid-cols-2 gap-3">
+          <div><label className={labelCls}>Account ID</label><input className={inputCls} value={r2.account_id ?? ''} onChange={(e) => setR2({ ...r2, account_id: e.target.value })} /></div>
+          <div><label className={labelCls}>Bucket</label><input className={inputCls} value={r2.bucket ?? ''} onChange={(e) => setR2({ ...r2, bucket: e.target.value })} /></div>
+          <div className="sm:col-span-2"><label className={labelCls}>Public URL (CDN)</label><input className={inputCls} value={r2.public_url ?? ''} onChange={(e) => setR2({ ...r2, public_url: e.target.value })} placeholder="https://cdn.dokterbisnis.web.id" /></div>
+          <SecretField label="Access Key ID" value={r2.access_key_id ?? ''} existing={!!r2.has_access_key} reveal={false} onChange={(v) => setR2({ ...r2, access_key_id: v })} />
+          <SecretField label="Secret Access Key" value={r2.secret_access_key ?? ''} existing={!!r2.has_secret} reveal={false} onChange={(v) => setR2({ ...r2, secret_access_key: v })} />
+          <div className="sm:col-span-2">
+            <SaveButton loading={r2Busy} label="Simpan R2" onClick={saveR2} />
+          </div>
+        </div>
+      </Card>
+
+      <Card title="Rilis Aplikasi" subtitle="Upload APK/panduan ke R2, simpan rilis, lalu Terbitkan agar app klien melihat pembaruan.">
+        <div className="max-w-[860px] space-y-4">
+          <div className="rounded-xl border border-border bg-bg/50 p-4 space-y-3">
+            <p className="text-[11px] font-bold text-muted uppercase tracking-wide">Rilis Baru</p>
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+              <div>
+                <label className={labelCls}>Platform</label>
+                <select className={inputCls} value={draft.platform} onChange={(e) => setDraft({ ...draft, platform: e.target.value })}>
+                  <option value="android">Android (APK)</option>
+                  <option value="web">Web</option>
+                </select>
+              </div>
+              <div><label className={labelCls}>Versi</label><input className={inputCls} value={draft.version} onChange={(e) => setDraft({ ...draft, version: e.target.value })} placeholder="1.1.0" /></div>
+              <div><label className={labelCls}>Build Number</label><input type="number" className={inputCls} value={draft.build_number} onChange={(e) => setDraft({ ...draft, build_number: Number(e.target.value) })} /></div>
+              <div className="flex items-end"><label className="flex items-center gap-2 text-xs font-semibold text-muted pb-2.5"><input type="checkbox" checked={!!draft.force_update} onChange={(e) => setDraft({ ...draft, force_update: e.target.checked })} /> Paksa update</label></div>
+            </div>
+            <div>
+              <label className={labelCls}>Changelog</label>
+              <textarea className={`${inputCls} min-h-[70px]`} value={draft.changelog} onChange={(e) => setDraft({ ...draft, changelog: e.target.value })} placeholder="Perbaikan bug, fitur baru..." />
+            </div>
+            <div className="flex flex-wrap gap-2">
+              <label className="flex items-center gap-2 px-3.5 py-2.5 rounded-xl border border-border text-xs font-semibold cursor-pointer hover:bg-bg">
+                <UploadCloud className="w-4 h-4" />
+                {draft.file_url ? 'Ganti APK' : 'Upload APK'}
+                <input type="file" accept=".apk,application/vnd.android.package-archive" className="hidden" onChange={(e) => e.target.files?.[0] && uploadFile(e.target.files[0], 'apk')} />
+              </label>
+              <label className="flex items-center gap-2 px-3.5 py-2.5 rounded-xl border border-border text-xs font-semibold cursor-pointer hover:bg-bg">
+                <UploadCloud className="w-4 h-4" />
+                {draft.guide_url ? 'Ganti Panduan' : 'Upload Panduan (PDF)'}
+                <input type="file" accept=".pdf" className="hidden" onChange={(e) => e.target.files?.[0] && uploadFile(e.target.files[0], 'guide')} />
+              </label>
+            </div>
+            {draft.file_url && <p className="text-[11px] text-muted truncate">APK: {draft.file_url}</p>}
+            {draft.guide_url && <p className="text-[11px] text-muted truncate">Panduan: {draft.guide_url}</p>}
+            <SaveButton loading={uploadBusy} label="Simpan Rilisan" onClick={saveDraft} />
+          </div>
+
+          <div className="space-y-2">
+            <p className="text-[11px] font-bold text-muted uppercase tracking-wide">Daftar Rilisan</p>
+            {releasesLoading && <p className="text-xs text-muted">Memuat...</p>}
+            {!releasesLoading && releases.length === 0 && <p className="text-xs text-muted">Belum ada rilis.</p>}
+            {releases.map((r) => (
+              <div key={r.id} className="flex items-center gap-3 p-3 rounded-xl border border-border bg-bg/40">
+                <span className="px-2 py-1 rounded-md bg-primary/10 text-primary text-[10px] font-bold uppercase">{r.platform}</span>
+                <div className="flex-1 min-w-0">
+                  <p className="text-xs font-bold text-ink">{r.version} <span className="text-muted font-normal">(build {r.build_number})</span></p>
+                  <p className="text-[11px] text-muted truncate">{r.changelog || 'Tanpa changelog'}</p>
+                </div>
+                <span className={`px-2 py-1 rounded-full text-[10px] font-bold ${r.is_published ? 'bg-success/10 text-success' : 'bg-warning/10 text-warning'}`}>{r.is_published ? 'TERBIT' : 'DRAFT'}</span>
+                <button onClick={() => togglePublish(r)} disabled={busyId === r.id} className="px-2.5 py-1.5 rounded-lg border border-border text-[11px] font-semibold hover:bg-bg disabled:opacity-50">{r.is_published ? 'Tarik' : 'Terbitkan'}</button>
+                <button onClick={() => removeRelease(r)} disabled={busyId === r.id} className="p-2 rounded-lg border border-border text-red-500 hover:bg-red-50 disabled:opacity-50"><Trash2 className="w-4 h-4" /></button>
+              </div>
+            ))}
+          </div>
+        </div>
+      </Card>
+
+      <Card title="Notifikasi Update" subtitle="Kirim email pemberitahuan update ke pemilik toko (pisahkan email dengan koma) dan lihat riwayat pengiriman.">
+        <div className="max-w-[860px] space-y-3">
+          <div><label className={labelCls}>Penerima (pisahkan koma)</label><input className={inputCls} value={emailForm.to} onChange={(e) => setEmailForm({ ...emailForm, to: e.target.value })} placeholder="a@toko.com, b@toko.com" /></div>
+          <div><label className={labelCls}>Subject</label><input className={inputCls} value={emailForm.subject} onChange={(e) => setEmailForm({ ...emailForm, subject: e.target.value })} placeholder="Pembaruan KasirGo tersedia!" /></div>
+          <div><label className={labelCls}>Isi (HTML)</label><textarea className={`${inputCls} min-h-[80px]`} value={emailForm.body} onChange={(e) => setEmailForm({ ...emailForm, body: e.target.value })} placeholder="<p>Versi baru <b>1.1.0</b> tersedia...</p>" /></div>
+          <button onClick={sendEmails} disabled={emailBusy} className="flex items-center gap-2 px-4 py-2.5 rounded-xl font-semibold text-xs ocean-gradient text-white shadow-md shadow-primary/25 transition active:scale-95 disabled:opacity-50">
+            {emailBusy ? <RefreshCw className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />} Kirim Email
+          </button>
+
+          <div className="space-y-2 pt-2">
+            <p className="text-[11px] font-bold text-muted uppercase tracking-wide">Riwayat</p>
+            {notifications.length === 0 && <p className="text-xs text-muted">Belum ada notifikasi.</p>}
+            {notifications.map((n) => (
+              <div key={n.id} className="flex items-center gap-3 p-2.5 rounded-lg border border-border bg-bg/40 text-xs">
+                <span className="font-bold text-ink">{n.title}</span>
+                <span className="text-muted flex-1 truncate">{n.channel}</span>
+                <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${n.status === 'sent' ? 'bg-success/10 text-success' : 'bg-warning/10 text-warning'}`}>{n.status}</span>
+                <span className="text-[10px] text-muted">{n.recipient_count} penerima</span>
+                <span className="text-[10px] text-muted">{new Date(n.created_at).toLocaleString('id-ID')}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+      </Card>
+      <Toast msg={msg} />
+    </div>
+  );
+}
+
+// ===========================================================================
 export function ControlPlanePage() {
   const [activeId, setActiveId] = useState<TabId>('ads');
   const [warning] = useState<string | null>(null);
@@ -3360,6 +3681,7 @@ export function ControlPlanePage() {
           {activeId === 'monitoring' && <MonitoringTab />}
           {activeId === 'admins' && <AdminsTab />}
           {activeId === 'audit' && <AuditTab />}
+          {activeId === 'update' && <UpdateAppTab />}
         </div>
       </div>
     </div>
