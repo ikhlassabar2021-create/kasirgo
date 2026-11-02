@@ -258,14 +258,15 @@ Future<void> _switchMode(BuildContext context, WidgetRef ref) async {
 }
 
 Future<void> _openUpdateAplikasi(BuildContext context) async {
+  final navigator = Navigator.of(context);
+  final messenger = ScaffoldMessenger.of(context);
   final release = await AppUpdateService().checkForUpdate();
-  if (!context.mounted) return;
   if (release != null) {
-    Navigator.of(context).push(
+    navigator.push(
       MaterialPageRoute(builder: (_) => AppUpdateScreen(release: release)),
     );
   } else {
-    ScaffoldMessenger.of(context).showSnackBar(
+    messenger.showSnackBar(
       const SnackBar(content: Text('Aplikasi sudah versi terbaru.')),
     );
   }

@@ -170,18 +170,18 @@ class AppDrawer extends ConsumerWidget {
                 icon: Icons.system_update_alt_rounded,
                 title: 'Update Aplikasi',
                 onTap: () async {
-                  Navigator.pop(context);
+                  final navigator = Navigator.of(context);
+                  final messenger = ScaffoldMessenger.of(context);
+                  navigator.pop();
                   final release = await AppUpdateService().checkForUpdate();
-                  if (!context.mounted) return;
                   if (release != null) {
-                    Navigator.push(
-                      context,
+                    navigator.push(
                       MaterialPageRoute(
                         builder: (_) => AppUpdateScreen(release: release),
                       ),
                     );
                   } else {
-                    ScaffoldMessenger.of(context).showSnackBar(
+                    messenger.showSnackBar(
                       SnackBar(
                         content: Text(
                           'Aplikasi sudah versi terbaru (${AppConstants.appVersion}).',
