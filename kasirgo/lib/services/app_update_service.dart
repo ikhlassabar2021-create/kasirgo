@@ -8,9 +8,9 @@ class AppReleaseInfo {
   final String platform;
   final String version;
   final int buildNumber;
-  final String? fileUrl;
-  final int? fileSize;
-  final String? sha256;
+
+  /// Map ABI -> URL APK. Kunci: 'arm64', 'armeabi_v7a', 'x86_64'.
+  final Map<String, String> files;
   final String? guideUrl;
   final String changelog;
   final bool forceUpdate;
@@ -21,37 +21,48 @@ class AppReleaseInfo {
     required this.platform,
     required this.version,
     required this.buildNumber,
-    this.fileUrl,
-    this.fileSize,
-    this.sha256,
+    this.files = const {},
     this.guideUrl,
     this.changelog = '',
     this.forceUpdate = false,
     this.publishedAt,
   });
 
-  bool get hasApk => (fileUrl ?? '').trim().isNotEmpty;
   bool get hasGuide => (guideUrl ?? '').trim().isNotEmpty;
+
+  /// URL APK untuk ABI tertentu, atau null bila tidak tersedia.
+  String? fileUrlFor(String abi) {
+    final u = files[abi];
+    return (u != null && u.trim().isNotEmpty) ? u : null;
+  }
 
   /// True bila nomor build rilis lebih baru daripada build aplikasi saat ini.
   bool isNewer(int currentBuild) => buildNumber > currentBuild;
 
-  factory AppReleaseInfo.fromJson(Map<String, dynamic> json) => AppReleaseInfo(
-        id: json['id']?.toString(),
-        platform: (json['platform'] ?? 'web').toString(),
-        version: (json['version'] ?? '').toString(),
-        buildNumber: (json['build_number'] as num?)?.toInt() ?? 0,
-        fileUrl: json['file_url']?.toString(),
-        fileSize: (json['file_size'] as num?)?.toInt(),
-        sha256: json['sha256']?.toString(),
-        guideUrl: json['guide_url']?.toString(),
-        changelog: (json['changelog'] ?? '').toString(),
-        forceUpdate: json['force_update'] == true,
-        publishedAt: json['published_at']?.toString(),
-      );
+  factory AppReleaseInfo.fromJson(Map<String, dynamic> json) {
+    final rawFiles = json['files'];
+    final Map<String, String> files = <String, String>{};
+    if (rawFiles is Map) {
+      rawFiles.forEach((k, v) {
+        if (v != null) files[k.toString()] = v.toString();
+      });
+    }
+    return AppReleaseInfo(
+      id: json['id']?.toString(),
+      platform: (json['platform'] ?? 'web').toString(),
+      version: (json['version'] ?? '').toString(),
+      buildNumber: (json['build_number'] as num?)?.toInt() ?? 0,
+      files: files,
+      guideUrl: json['guide_url']?.toString(),
+      changelog: (json['changelog'] ?? '').toString(),
+      forceUpdate: json['force_update'] == true,
+      publishedAt: json['published_at']?.toString(),
+    );
+  }
 }
 
-/// Sumber data pembaruan aplikasi (Android APK / Web) dari tabel `app_releases`.
+/// Sumber data pembaruan aplikasi (Android APK per ABI / Web) dari tabel
+/// `app_releases`.
 class AppUpdateService {
   final SupabaseClient _db;
 

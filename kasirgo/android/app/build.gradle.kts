@@ -40,10 +40,12 @@ android {
 
     packaging {
         jniLibs {
-            // Kompres .so di dalam APK (legacy packaging) supaya ukuran unduh
-            // APK jauh lebih kecil (~58 MB -> ~31 MB per ABI). Android akan
-            // mengekstrak lib saat instalasi; semua fitur tetap utuh.
-            useLegacyPackaging = true
+            // useLegacyPackaging = false (default AGP): native library (.so)
+            // disimpan TERKOMPRES di dalam APK dan dimuat via mmap saat runtime
+            // (butuh minSdk >= 23; Flutter 3.47 default minSdk 24 = aman).
+            // Ini menekan ukuran APK tanpa menghilangkan fitur apa pun
+            // (estimasi arm64 ~58 MB -> ~40 MB, x86_64 ~63 MB -> ~45 MB).
+            useLegacyPackaging = false
         }
     }
 

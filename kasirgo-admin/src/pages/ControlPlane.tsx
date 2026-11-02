@@ -27,8 +27,8 @@ import {
   Stethoscope,
   CalendarClock,
   DownloadCloud,
-  Mail,
   UploadCloud,
+  Mail,
 } from 'lucide-react';
 import {
   loadConfig,
@@ -72,8 +72,9 @@ import {
   deleteAppRelease,
   getSmtpConfig,
   saveSmtpConfig,
-  presignR2Upload,
   applySmtpAuth,
+  APP_RELEASE_ABIS,
+  pushApkToGithub,
 } from '../lib/controlPlane';
 import type {
   ConfigKey,
@@ -3277,13 +3278,8 @@ function SquadDmTab() {
 }
 
 // ===========================================================================
-// Update Aplikasi: R2 (upload rilis & panduan) + SMTP + notifikasi.
+// Update Aplikasi: rilis per-ABI (gh-pages /updates/) + SMTP (verifikasi email).
 // ===========================================================================
-async function sha256Hex(buf: ArrayBuffer): Promise<string> {
-  const d = await crypto.subtle.digest('SHA-256', buf);
-  return Array.from(new Uint8Array(d)).map((b) => b.toString(16).padStart(2, '0')).join('');
-}
-
 function UpdateAppTab() {
   const { msg, show } = useToast();
 
@@ -3295,23 +3291,35 @@ function UpdateAppTab() {
   const [smtpBusy, setSmtpBusy] = useState(false);
   const [applyBusy, setApplyBusy] = useState(false);
 
-  // Cloudflare R2
-  const [r2, setR2] = useState<any>({
-    account_id: '', bucket: '', public_url: '', access_key_id: '', secret_access_key: '',
-    has_access_key: false, has_secret: false,
-  });
-  const [r2Busy, setR2Busy] = useState(false);
-
   // Rilisan + draft
   const [releases, setReleases] = useState<AppRelease[]>([]);
   const [releasesLoading, setReleasesLoading] = useState(true);
   const [busyId, setBusyId] = useState<string | null>(null);
   const [draft, setDraft] = useState<any>({
     platform: 'android', version: '', build_number: 0, changelog: '',
-    force_update: false, file_key: null, file_url: null, file_size: null, sha256: null,
-    guide_key: null, guide_url: null,
+    force_update: false,
+    files: {
+      arm64: 'https://dokterbisnis.web.id/updates/kasirgo-arm64.apk',
+      armeabi_v7a: 'https://dokterbisnis.web.id/updates/kasirgo-armeabi-v7a.apk',
+      x86_64: 'https://dokterbisnis.web.id/updates/kasirgo-x86_64.apk',
+    },
+    guide_url: 'https://dokterbisnis.web.id/panduan/panduan-kasirgo.pdf',
   });
-  const [uploadBusy, setUploadBusy] = useState(false);
+  const [saveBusy, setSaveBusy] = useState(false);
+  const [uploadingAbi, setUploadingAbi] = useState<string | null>(null);
+
+  const uploadAbi = async (abi: string, file: File) => {
+    setUploadingAbi(abi);
+    try {
+      const url = await pushApkToGithub(abi, file);
+      setDraft((d: any) => ({ ...d, files: { ...d.files, [abi]: url } }));
+      show('ok', `APK ${abi} ter-upload ke GitHub: ${url}`);
+    } catch (e: any) {
+      show('err', e.message);
+    } finally {
+      setUploadingAbi(null);
+    }
+  };
 
   const reloadReleases = useCallback(async () => {
     setReleasesLoading(true);
@@ -3328,61 +3336,46 @@ function UpdateAppTab() {
         has_password: c.has_password ?? false,
       });
     }).catch(() => {});
-    getIntegration('cloudflare_r2').then((it) => {
-      const pub = it?.public_config ?? {};
-      const sec = it?.secret_config ?? {};
-      setR2({
-        account_id: pub.account_id ?? '', bucket: pub.bucket ?? '', public_url: pub.public_url ?? '',
-        access_key_id: '', secret_access_key: '',
-        has_access_key: !!sec.access_key_id, has_secret: !!sec.secret_access_key,
-      });
-    }).catch(() => {});
     reloadReleases();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  const uploadFile = async (file: File, kind: 'apk' | 'guide') => {
-    setUploadBusy(true);
-    try {
-      const platform = draft.platform;
-      const version = draft.version.trim();
-      if (!platform || !version) throw new Error('Isi platform & versi dulu sebelum upload file.');
-      const safe = file.name.replace(/[^a-zA-Z0-9._-]/g, '_');
-      const key = `kasirgo/updates/${platform}/${version}/${kind === 'apk' ? 'app' : 'panduan'}-${safe}`;
-      const presign = await presignR2Upload(key, file.type);
-      if (!presign.success || !presign.url) throw new Error(presign.message ?? 'Gagal presign R2.');
-      const res = await fetch(presign.url, { method: 'PUT', headers: { 'Content-Type': file.type }, body: file });
-      if (!res.ok) throw new Error(`Upload R2 gagal (HTTP ${res.status}).`);
-      const sha = await sha256Hex(await file.arrayBuffer());
-      const patch: any = {
-        ...(kind === 'apk'
-          ? { file_key: key, file_url: presign.public_url, file_size: file.size, sha256: sha }
-          : { guide_key: key, guide_url: presign.public_url }),
-      };
-      setDraft((d: any) => ({ ...d, ...patch }));
-      show('ok', `${kind === 'apk' ? 'APK' : 'Panduan'} berhasil diupload ke R2.`);
-    } catch (e: any) {
-      show('err', e.message);
-    } finally {
-      setUploadBusy(false);
-    }
-  };
-
   const saveDraft = async () => {
-    setUploadBusy(true);
+    setSaveBusy(true);
     try {
       if (!draft.platform || !draft.version.trim()) throw new Error('Platform & versi wajib diisi.');
+      const files: Record<string, string> = {};
+      for (const abi of APP_RELEASE_ABIS) {
+        const u = (draft.files?.[abi] ?? '').trim();
+        if (u) files[abi] = u;
+      }
+      if (Object.keys(files).length === 0 && !draft.guide_url?.trim()) {
+        throw new Error('Isi minimal satu URL APK (arm64/armeabi-v7a/x86_64) atau URL Panduan.');
+      }
       const rel = await saveAppRelease({
-        ...draft,
+        platform: draft.platform,
+        version: draft.version.trim(),
         build_number: Number(draft.build_number) || 0,
+        force_update: !!draft.force_update,
+        changelog: draft.changelog,
+        files: Object.keys(files).length ? files : null,
+        guide_url: (draft.guide_url ?? '').trim() || null,
       });
       setReleases(rel);
-      setDraft({ platform: 'android', version: '', build_number: 0, changelog: '', force_update: false, file_key: null, file_url: null, file_size: null, sha256: null, guide_key: null, guide_url: null });
+      setDraft({
+        platform: 'android', version: '', build_number: 0, changelog: '', force_update: false,
+        files: {
+          arm64: 'https://dokterbisnis.web.id/updates/kasirgo-arm64.apk',
+          armeabi_v7a: 'https://dokterbisnis.web.id/updates/kasirgo-armeabi-v7a.apk',
+          x86_64: 'https://dokterbisnis.web.id/updates/kasirgo-x86_64.apk',
+        },
+        guide_url: 'https://dokterbisnis.web.id/panduan/panduan-kasirgo.pdf',
+      });
       show('ok', 'Rilisan disimpan (draft). Jangan lupa Terbitkan.');
     } catch (e: any) {
       show('err', e.message);
     } finally {
-      setUploadBusy(false);
+      setSaveBusy(false);
     }
   };
 
@@ -3412,18 +3405,6 @@ function UpdateAppTab() {
       show(r?.success ? 'ok' : 'err', r?.message ?? 'SMTP auth diterapkan ke Supabase.');
     } catch (e: any) { show('err', e.message); } finally { setApplyBusy(false); }
   };
-  const saveR2 = async () => {
-    setR2Busy(true);
-    try {
-      const secret: any = {};
-      if (r2.access_key_id) secret.access_key_id = r2.access_key_id;
-      if (r2.secret_access_key) secret.secret_access_key = r2.secret_access_key;
-      await saveIntegrationSecrets('cloudflare_r2', 'Storage - Cloudflare R2', secret, {
-        account_id: r2.account_id, bucket: r2.bucket, public_url: r2.public_url,
-      }, true);
-      show('ok', 'Konfigurasi Cloudflare R2 disimpan.');
-    } catch (e: any) { show('err', e.message); } finally { setR2Busy(false); }
-  };
 
   return (
     <div className="space-y-4">
@@ -3451,20 +3432,7 @@ function UpdateAppTab() {
         </div>
       </Card>
 
-      <Card title="Cloudflare R2 (Storage Update & Panduan)" subtitle="File APK & panduan disimpan di R2. Butuh R2 API Token (Access Key ID + Secret Access Key) dari dashboard Cloudflare.">
-        <div className="max-w-[860px] grid grid-cols-1 sm:grid-cols-2 gap-3">
-          <div><label className={labelCls}>Account ID</label><input className={inputCls} value={r2.account_id ?? ''} onChange={(e) => setR2({ ...r2, account_id: e.target.value })} /></div>
-          <div><label className={labelCls}>Bucket</label><input className={inputCls} value={r2.bucket ?? ''} onChange={(e) => setR2({ ...r2, bucket: e.target.value })} /></div>
-          <div className="sm:col-span-2"><label className={labelCls}>Public URL (CDN)</label><input className={inputCls} value={r2.public_url ?? ''} onChange={(e) => setR2({ ...r2, public_url: e.target.value })} placeholder="https://cdn.dokterbisnis.web.id" /></div>
-          <SecretField label="Access Key ID" value={r2.access_key_id ?? ''} existing={!!r2.has_access_key} reveal={false} onChange={(v) => setR2({ ...r2, access_key_id: v })} />
-          <SecretField label="Secret Access Key" value={r2.secret_access_key ?? ''} existing={!!r2.has_secret} reveal={false} onChange={(v) => setR2({ ...r2, secret_access_key: v })} />
-          <div className="sm:col-span-2">
-            <SaveButton loading={r2Busy} label="Simpan R2" onClick={saveR2} />
-          </div>
-        </div>
-      </Card>
-
-      <Card title="Rilis Aplikasi" subtitle="Upload APK/panduan ke R2, simpan rilis, lalu Terbitkan agar app klien melihat pembaruan.">
+      <Card title="Rilis Aplikasi" subtitle="Unggah file APK per ABI (otomatis masuk ke GitHub gh-pages /updates/, URL terisi sendiri) atau tempel URL manual. Simpan rilis, lalu Terbitkan agar app klien melihat pembaruan.">
         <div className="max-w-[860px] space-y-4">
           <div className="rounded-xl border border-border bg-bg/50 p-4 space-y-3">
             <p className="text-[11px] font-bold text-muted uppercase tracking-wide">Rilis Baru</p>
@@ -3481,24 +3449,47 @@ function UpdateAppTab() {
               <div className="flex items-end"><label className="flex items-center gap-2 text-xs font-semibold text-muted pb-2.5"><input type="checkbox" checked={!!draft.force_update} onChange={(e) => setDraft({ ...draft, force_update: e.target.checked })} /> Paksa update</label></div>
             </div>
             <div>
+              <label className={labelCls}>URL APK arm64 (arm64-v8a)</label>
+              <div className="flex gap-2">
+                <input className={inputCls} value={draft.files.arm64 ?? ''} onChange={(e) => setDraft({ ...draft, files: { ...draft.files, arm64: e.target.value } })} placeholder="https://dokterbisnis.web.id/updates/kasirgo-arm64.apk" readOnly={uploadingAbi === 'arm64'} />
+                <label className="flex shrink-0 items-center gap-1.5 px-3 rounded-xl border border-border text-[11px] font-semibold cursor-pointer hover:bg-bg transition active:scale-95">
+                  <input type="file" accept=".apk,application/vnd.android.package-archive" className="hidden" onChange={(e) => { const f = e.target.files?.[0]; e.currentTarget.value = ''; if (f) uploadAbi('arm64', f); }} />
+                  {uploadingAbi === 'arm64' ? <RefreshCw className="w-4 h-4 animate-spin" /> : <UploadCloud className="w-4 h-4" />}
+                  {uploadingAbi === 'arm64' ? 'Mengunggah…' : 'Unggah'}
+                </label>
+              </div>
+            </div>
+            <div>
+              <label className={labelCls}>URL APK armeabi-v7a (32-bit)</label>
+              <div className="flex gap-2">
+                <input className={inputCls} value={draft.files.armeabi_v7a ?? ''} onChange={(e) => setDraft({ ...draft, files: { ...draft.files, armeabi_v7a: e.target.value } })} placeholder="https://dokterbisnis.web.id/updates/kasirgo-armeabi-v7a.apk" readOnly={uploadingAbi === 'armeabi_v7a'} />
+                <label className="flex shrink-0 items-center gap-1.5 px-3 rounded-xl border border-border text-[11px] font-semibold cursor-pointer hover:bg-bg transition active:scale-95">
+                  <input type="file" accept=".apk,application/vnd.android.package-archive" className="hidden" onChange={(e) => { const f = e.target.files?.[0]; e.currentTarget.value = ''; if (f) uploadAbi('armeabi_v7a', f); }} />
+                  {uploadingAbi === 'armeabi_v7a' ? <RefreshCw className="w-4 h-4 animate-spin" /> : <UploadCloud className="w-4 h-4" />}
+                  {uploadingAbi === 'armeabi_v7a' ? 'Mengunggah…' : 'Unggah'}
+                </label>
+              </div>
+            </div>
+            <div>
+              <label className={labelCls}>URL APK x86_64 (emulator)</label>
+              <div className="flex gap-2">
+                <input className={inputCls} value={draft.files.x86_64 ?? ''} onChange={(e) => setDraft({ ...draft, files: { ...draft.files, x86_64: e.target.value } })} placeholder="https://dokterbisnis.web.id/updates/kasirgo-x86_64.apk" readOnly={uploadingAbi === 'x86_64'} />
+                <label className="flex shrink-0 items-center gap-1.5 px-3 rounded-xl border border-border text-[11px] font-semibold cursor-pointer hover:bg-bg transition active:scale-95">
+                  <input type="file" accept=".apk,application/vnd.android.package-archive" className="hidden" onChange={(e) => { const f = e.target.files?.[0]; e.currentTarget.value = ''; if (f) uploadAbi('x86_64', f); }} />
+                  {uploadingAbi === 'x86_64' ? <RefreshCw className="w-4 h-4 animate-spin" /> : <UploadCloud className="w-4 h-4" />}
+                  {uploadingAbi === 'x86_64' ? 'Mengunggah…' : 'Unggah'}
+                </label>
+              </div>
+            </div>
+            <div>
+              <label className={labelCls}>URL Panduan (PDF)</label>
+              <input className={inputCls} value={draft.guide_url} onChange={(e) => setDraft({ ...draft, guide_url: e.target.value })} placeholder="https://dokterbisnis.web.id/panduan/panduan-kasirgo.pdf" />
+            </div>
+            <div>
               <label className={labelCls}>Changelog</label>
               <textarea className={`${inputCls} min-h-[70px]`} value={draft.changelog} onChange={(e) => setDraft({ ...draft, changelog: e.target.value })} placeholder="Perbaikan bug, fitur baru..." />
             </div>
-            <div className="flex flex-wrap gap-2">
-              <label className="flex items-center gap-2 px-3.5 py-2.5 rounded-xl border border-border text-xs font-semibold cursor-pointer hover:bg-bg">
-                <UploadCloud className="w-4 h-4" />
-                {draft.file_url ? 'Ganti APK' : 'Upload APK'}
-                <input type="file" accept=".apk,application/vnd.android.package-archive" className="hidden" onChange={(e) => e.target.files?.[0] && uploadFile(e.target.files[0], 'apk')} />
-              </label>
-              <label className="flex items-center gap-2 px-3.5 py-2.5 rounded-xl border border-border text-xs font-semibold cursor-pointer hover:bg-bg">
-                <UploadCloud className="w-4 h-4" />
-                {draft.guide_url ? 'Ganti Panduan' : 'Upload Panduan (PDF)'}
-                <input type="file" accept=".pdf" className="hidden" onChange={(e) => e.target.files?.[0] && uploadFile(e.target.files[0], 'guide')} />
-              </label>
-            </div>
-            {draft.file_url && <p className="text-[11px] text-muted truncate">APK: {draft.file_url}</p>}
-            {draft.guide_url && <p className="text-[11px] text-muted truncate">Panduan: {draft.guide_url}</p>}
-            <SaveButton loading={uploadBusy} label="Simpan Rilisan" onClick={saveDraft} />
+            <SaveButton loading={saveBusy} label="Simpan Rilisan" onClick={saveDraft} />
           </div>
 
           <div className="space-y-2">

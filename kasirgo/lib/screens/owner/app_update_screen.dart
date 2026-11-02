@@ -6,6 +6,7 @@ import 'package:url_launcher/url_launcher.dart';
 import '../../config/app_theme.dart';
 import '../../config/constants.dart';
 import '../../services/app_update_service.dart';
+import '../../utils/device_abi.dart';
 import '../../utils/web_reload_stub.dart'
     if (dart.library.html) '../../utils/web_reload_web.dart' as platform;
 
@@ -203,9 +204,15 @@ class AppUpdateScreen extends StatelessWidget {
       platform.webReload();
       return;
     }
-    final url = release.fileUrl;
+    String? url;
+    try {
+      final abi = await deviceAbi();
+      url = abi == null ? null : release.fileUrlFor(abi);
+    } catch (_) {
+      url = release.fileUrlFor('arm64');
+    }
     if (url == null || url.trim().isEmpty) {
-      _snack(context, 'Tautan APK belum tersedia.');
+      _snack(context, 'Belum ada APK yang cocok untuk perangkat Anda.');
       return;
     }
     try {

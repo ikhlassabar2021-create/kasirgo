@@ -74,6 +74,27 @@ jobs:
           sha256sum flutter-apk/*-release.apk bundle/release/*.aab > checksums.txt
           cat checksums.txt
 
+      # APK split dipublikasikan ke gh-pages /updates/ dengan NAMA STABIL
+      # (kasirgo-arm64.apk, kasirgo-armeabi-v7a.apk, kasirgo-x86_64.apk)
+      # sehingga file lama tertimpa otomatis (tidak menumpuk).
+      - name: Siapkan APK split untuk gh-pages /updates
+        run: |
+          mkdir -p apk-publish
+          cp build/app/outputs/flutter-apk/app-arm64-v8a-release.apk apk-publish/kasirgo-arm64.apk
+          cp build/app/outputs/flutter-apk/app-armeabi-v7a-release.apk apk-publish/kasirgo-armeabi-v7a.apk
+          cp build/app/outputs/flutter-apk/app-x86_64-release.apk apk-publish/kasirgo-x86_64.apk
+          echo "APK stabil:"
+          sha256sum apk-publish/*.apk
+
+      - name: Deploy APK split ke gh-pages /updates
+        uses: peaceiris/actions-gh-pages@v4
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: kasirgo/apk-publish
+          destination_dir: updates
+          keep_files: true
+          publish_branch: gh-pages
+
       - name: Verifikasi tanda tangan
         if: ${{ inputs.debug_sign_fallback != true }}
         run: |

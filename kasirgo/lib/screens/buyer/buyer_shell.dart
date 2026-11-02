@@ -8,6 +8,7 @@ import '../../models/app_customer.dart';
 import '../../models/buyer_profile.dart';
 import '../../models/order.dart';
 import '../../providers/app_mode_provider.dart';
+import '../../services/app_update_service.dart';
 import '../../services/buyer_order_history_service.dart';
 import '../../services/order_service.dart';
 import '../../utils/formatters.dart';
@@ -16,6 +17,7 @@ import '../../widgets/common/app_card.dart';
 import '../../widgets/common/app_text_field.dart';
 import '../../widgets/common/centennial_background.dart';
 import '../../widgets/common/responsive.dart';
+import '../owner/app_update_screen.dart';
 import 'buyer_auth_screen.dart';
 import 'buyer_help_screen.dart';
 import 'buyer_home_tab.dart';
@@ -164,6 +166,22 @@ class _BuyerShellState extends ConsumerState<BuyerShell> {
                 );
               },
             ),
+            ListTile(
+              leading: const Icon(Icons.system_update_alt_rounded,
+                  color: AppTheme.primaryColor),
+              title: Text(
+                'Update Aplikasi',
+                style: GoogleFonts.plusJakartaSans(
+                  fontSize: 14,
+                  fontWeight: FontWeight.w600,
+                  color: AppTheme.textPrimary,
+                ),
+              ),
+              onTap: () {
+                Navigator.of(context).pop();
+                _openUpdateAplikasi(context);
+              },
+            ),
           ],
         ),
       ),
@@ -237,6 +255,20 @@ Future<void> _switchMode(BuildContext context, WidgetRef ref) async {
   await ref.read(appModeProvider.notifier).clear();
   ref.invalidate(appCustomerProvider);
   if (context.mounted) context.go('/mode');
+}
+
+Future<void> _openUpdateAplikasi(BuildContext context) async {
+  final release = await AppUpdateService().checkForUpdate();
+  if (!context.mounted) return;
+  if (release != null) {
+    Navigator.of(context).push(
+      MaterialPageRoute(builder: (_) => AppUpdateScreen(release: release)),
+    );
+  } else {
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text('Aplikasi sudah versi terbaru.')),
+    );
+  }
 }
 
 /// Tab Pesanan: daftar pesanan milik Pembeli saat ini.
@@ -684,6 +716,13 @@ class BuyerProfileView extends ConsumerWidget {
           onPressed: () => Navigator.of(context).push(
             MaterialPageRoute(builder: (_) => const BuyerHelpScreen()),
           ),
+        ),
+        const SizedBox(height: 12),
+        AppButton(
+          label: 'Update Aplikasi',
+          icon: Icons.system_update_alt_rounded,
+          variant: AppButtonVariant.outline,
+          onPressed: () => _openUpdateAplikasi(context),
         ),
         const SizedBox(height: 12),
         AppButton(

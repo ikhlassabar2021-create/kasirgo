@@ -637,18 +637,14 @@ async function logAdminAction(action: string, target: string, meta: Record<strin
 }
 
 // ---------------------------------------------------------------------------
-// Update Aplikasi: rilisan + SMTP (verifikasi email) + Cloudflare R2
+// Update Aplikasi: rilisan per-ABI (files) + SMTP (verifikasi email)
 // ---------------------------------------------------------------------------
 export interface AppRelease {
   id: string
   platform: string
   version: string
   build_number: number
-  file_key: string | null
-  file_url: string | null
-  file_size: number | null
-  sha256: string | null
-  guide_key: string | null
+  files: Record<string, string> | null
   guide_url: string | null
   changelog: string | null
   is_published: boolean
@@ -656,6 +652,8 @@ export interface AppRelease {
   published_at: string | null
   created_at: string
 }
+
+export const APP_RELEASE_ABIS = ['arm64', 'armeabi_v7a', 'x86_64'] as const
 
 export interface SmtpConfig {
   has_config: boolean
@@ -720,23 +718,31 @@ export async function saveSmtpConfig(config: Record<string, any>): Promise<SmtpC
   return data as SmtpConfig
 }
 
-/// Presigned PUT ke Cloudflare R2 via Edge Function r2_presign.
-export async function presignR2Upload(
-  key: string,
-  contentType: string,
-): Promise<{ success: boolean; url: string; public_url: string | null; message?: string }> {
-  const { data, error } = await supabase.functions.invoke('r2_presign', {
-    body: { key, content_type: contentType },
-  })
-  if (error) throw error
-  return data
-}
-
 /// Terapkan SMTP sebagai SMTP auth Supabase (untuk email verifikasi).
 export async function applySmtpAuth() {
   const { data, error } = await supabase.functions.invoke('apply_smtp_auth', { body: {} })
   if (error) throw error
   return data
+}
+
+/// Unggah APK ke Storage lalu push ke GitHub (gh-pages /updates/) via Edge
+/// Function. Mengembalikan URL domain file yang sudah ter-publish.
+export async function pushApkToGithub(abi: string, file: File): Promise<string> {
+  const storagePath = `kasirgo-${abi}.apk`
+  const { error: upErr } = await supabase.storage
+    .from('app-updates')
+    .upload(storagePath, file, {
+      upsert: true,
+      cacheControl: '3600',
+      contentType: 'application/vnd.android.package-archive',
+    })
+  if (upErr) throw new Error(`Upload gagal: ${upErr.message}`)
+  const { data, error } = await supabase.functions.invoke('push_apk_to_github', {
+    body: { abi },
+  })
+  if (error) throw error
+  if (!data?.success) throw new Error(data?.message ?? 'Push ke GitHub gagal.')
+  return data.url as string
 }
 
 // ---------------------------------------------------------------------------
