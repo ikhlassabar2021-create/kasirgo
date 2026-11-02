@@ -71,9 +71,15 @@ class AppUpdateService {
 
   String get _platform => kIsWeb ? 'web' : 'android';
 
-  Future<AppReleaseInfo?> latest() async {
+  Future<AppReleaseInfo?> latest() => _fetch(_platform);
+
+  /// Rilis Android terbaru (untuk layar "unduh APK" di web), terlepas dari
+  /// platform perangkat saat ini.
+  Future<AppReleaseInfo?> latestAndroid() => _fetch('android');
+
+  Future<AppReleaseInfo?> _fetch(String platform) async {
     final res = await _db.rpc('get_latest_app_release', params: {
-      'p_platform': _platform,
+      'p_platform': platform,
     });
     if (res == null) return null;
     if (res is Map) return AppReleaseInfo.fromJson(Map<String, dynamic>.from(res));

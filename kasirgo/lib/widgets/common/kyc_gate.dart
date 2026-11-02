@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -9,10 +10,13 @@ import '../../screens/auth/onboarding_kyc_screen.dart';
 import '../../services/kyc_verification_service.dart';
 import '../../services/supporter_service.dart';
 import 'centennial_background.dart';
+import 'web_install_gate.dart';
 
 /// Memblokir modul owner sampai KYC `verified`.
 ///
-/// Sebelum verified: hanya wizard KYC + bantuan + logout yang tampil.
+/// Di WEB, pemilik yang belum terverifikasi justru diblokir penuh dan diarahkan
+/// mengunduh/install APK Android — KYC hanya bisa dilakukan di aplikasi. Setelah
+/// terverifikasi, web kembali terbuka (tombol "Cek Kembali" memakai `_forceCheck`).
 /// Tidak ada tombol lewati (sesuai spec Phase 7.8 ST7.8-7).
 class KycGate extends ConsumerStatefulWidget {
   final Widget child;
@@ -64,6 +68,34 @@ class _KycGateState extends ConsumerState<KycGate> {
     }
   }
 
+  /// Pemeriksaan paksa tanpa cache (dipakai tombol "Cek Kembali" di web)
+  /// sehingga status verified yang baru diselesaikan di APK langsung terbaca.
+  Future<void> _forceCheck() async {
+    final user = ref.read(currentUserProvider);
+    final outletId = user?.outletId;
+    if (outletId == null || outletId.isEmpty) {
+      if (mounted) {
+        setState(() {
+          _checking = false;
+          _verified = true;
+        });
+      }
+      return;
+    }
+    _isOwner = user?.role == 'owner';
+    final ok = await _kyc.isVerified(outletId);
+    if (ok) {
+      // ignore: unawaited_futures
+      SupporterService().ensureTrial(outletId);
+    }
+    if (mounted) {
+      setState(() {
+        _verified = ok;
+        _checking = false;
+      });
+    }
+  }
+
   void _onStatus(KycStatus status) {
     if (status.isVerified) {
       setState(() => _verified = true);
@@ -83,6 +115,10 @@ class _KycGateState extends ConsumerState<KycGate> {
       );
     }
     if (_verified) return widget.child;
+
+    if (_isOwner && kIsWeb) {
+      return WebInstallGate(onCheckStatus: _forceCheck, onLogout: _logout);
+    }
 
     return Scaffold(
       backgroundColor: Colors.transparent,
