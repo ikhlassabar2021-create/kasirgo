@@ -1,19 +1,38 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 import '../../config/app_theme.dart';
+import '../../config/supabase_config.dart';
 import '../../widgets/common/centennial_background.dart';
 import '../../widgets/common/supporter_gate.dart';
 import '../../widgets/guide/guide_mock.dart';
 import '../cashier/incoming_orders_screen.dart';
 import 'business_doctor_screen.dart';
 import 'employee_screen.dart';
-import 'guide_screen.dart';
 import 'pos_screen.dart';
 import 'product_list_screen.dart';
 import 'report_screen.dart';
 import 'settings_screen.dart';
 import 'support_tickets_screen.dart';
+
+Future<void> _openPdf(BuildContext context) async {
+  final uri = Uri.parse('${SupabaseConfig.appUrl}panduan/panduan-kasirgo.pdf');
+  try {
+    final ok = await launchUrl(uri, mode: LaunchMode.externalApplication);
+    if (!ok && context.mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Tidak bisa membuka PDF.')),
+      );
+    }
+  } catch (_) {
+    if (context.mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Gagal membuka PDF. Silakan coba lagi.')),
+      );
+    }
+  }
+}
 
 /// Pusat bantuan owner: Panduan bergambar (simulasi layar) + Tiket Support.
 class HelpCenterScreen extends StatelessWidget {
@@ -129,12 +148,7 @@ class _GuideHomeTab extends StatelessWidget {
                           backgroundColor: Colors.white,
                           foregroundColor: AppTheme.primaryColor,
                         ),
-                        onPressed: () => Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (_) => const GuideScreen(),
-                          ),
-                        ),
+                        onPressed: () => _openPdf(context),
                         icon: const Icon(
                           Icons.picture_as_pdf_rounded,
                           size: 17,
