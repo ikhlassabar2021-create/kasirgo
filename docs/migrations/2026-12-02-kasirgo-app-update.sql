@@ -4,8 +4,8 @@
 --   1. Superadmin (Control Plane > Update Aplikasi) upload APK/panduan ke R2,
 --      lalu simpan + publish rilis (app_releases).
 --   2. App (klien) memanggil get_latest_app_release untuk melihat pembaruan.
---   3. Superadmin konfigurasi SMTP manual (system_smtp_config) untuk kirim email
---      notifikasi update ke pemilik toko; opsional diterapkan sebagai SMTP auth.
+--   3. Superadmin konfigurasi SMTP (system_smtp_config) khusus untuk email
+--      VERIFIKASI pendaftaran (auth), diterapkan via EF apply_smtp_auth.
 --   4. Banner "Update tersedia" ditampilkan di dashboard owner; klik Update Sistem
 --      -> download file terbaru (APK via install / web reload) tanpa hapus DB lokal.
 
@@ -40,29 +40,7 @@ CREATE POLICY "app_releases_select_published" ON public.app_releases
 -- Tulis hanya via RPC superadmin (tidak ada policy INSERT/UPDATE/DELETE).
 
 -- ============================================================
--- 2. Tabel notifikasi sistem (riwayat kirim email/in-app)
--- ============================================================
-CREATE TABLE IF NOT EXISTS public.system_notifications (
-  id              uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-  kind            text NOT NULL DEFAULT 'app_update',
-  channel         text NOT NULL DEFAULT 'in_app',
-  title           text NOT NULL,
-  body            text NOT NULL DEFAULT '',
-  release_id      uuid REFERENCES public.app_releases(id) ON DELETE SET NULL,
-  status          text NOT NULL DEFAULT 'draft',
-  recipient_count integer NOT NULL DEFAULT 0,
-  error           text,
-  created_at      timestamptz NOT NULL DEFAULT now(),
-  created_by      uuid
-);
-CREATE INDEX IF NOT EXISTS idx_system_notifications_created
-  ON public.system_notifications (created_at DESC);
-
-ALTER TABLE public.system_notifications ENABLE ROW LEVEL SECURITY;
-REVOKE ALL ON public.system_notifications FROM anon, authenticated;
-
--- ============================================================
--- 3. Tabel konfigurasi SMTP (superadmin, kunci hanya service_role)
+-- 3. Tabel konfigurasi SMTP (verifikasi email / auth, kunci hanya service_role)
 -- ============================================================
 CREATE TABLE IF NOT EXISTS public.system_smtp_config (
   id             uuid PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -280,17 +258,3 @@ BEGIN
   RETURN public.admin_get_smtp_config();
 END $$;
 GRANT EXECUTE ON FUNCTION public.admin_save_smtp_config(jsonb) TO authenticated;
-
--- ============================================================
--- 11. RPC superadmin: catat kirim notifikasi (riwayat)
--- ============================================================
-CREATE OR REPLACE FUNCTION public.admin_log_notification(p_kind text, p_channel text,
-  p_title text, p_body text, p_release_id uuid, p_status text, p_count integer, p_error text DEFAULT NULL)
-RETURNS jsonb LANGUAGE plpgsql SECURITY DEFINER SET search_path = public AS $$
-BEGIN
-  IF NOT public.is_platform_admin() THEN RETURN jsonb_build_object('forbidden', true); END IF;
-  INSERT INTO public.system_notifications (kind, channel, title, body, release_id, status, recipient_count, error, created_by)
-  VALUES (p_kind, p_channel, p_title, p_body, p_release_id, p_status, p_count, p_error, auth.uid());
-  RETURN jsonb_build_object('ok', true);
-END $$;
-GRANT EXECUTE ON FUNCTION public.admin_log_notification(text, text, text, text, uuid, text, integer, text) TO authenticated;

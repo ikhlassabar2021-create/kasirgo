@@ -51,8 +51,5 @@ verify_jwt = true
 [functions.r2_presign]
 verify_jwt = true
 
-[functions.email_send]
-verify_jwt = true
-
 [functions.apply_smtp_auth]
 verify_jwt = true

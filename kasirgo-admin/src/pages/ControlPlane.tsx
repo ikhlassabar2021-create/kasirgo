@@ -28,7 +28,6 @@ import {
   CalendarClock,
   DownloadCloud,
   Mail,
-  Send,
   UploadCloud,
 } from 'lucide-react';
 import {
@@ -73,10 +72,7 @@ import {
   deleteAppRelease,
   getSmtpConfig,
   saveSmtpConfig,
-  listSystemNotifications,
-  logNotification,
   presignR2Upload,
-  sendUpdateEmail,
   applySmtpAuth,
 } from '../lib/controlPlane';
 import type {
@@ -92,7 +88,6 @@ import type {
   OutletDmConfig,
   DmChannelAccount,
   AppRelease,
-  SystemNotification,
 } from '../lib/controlPlane';
 import { supabase } from '../config/supabase';
 import { rp as supabaseRpc, platformOutletsList, UsersListResult } from '../lib/adminApi';
@@ -3318,17 +3313,9 @@ function UpdateAppTab() {
   });
   const [uploadBusy, setUploadBusy] = useState(false);
 
-  // Notifikasi email + riwayat
-  const [emailForm, setEmailForm] = useState<any>({ to: '', subject: '', body: '' });
-  const [emailBusy, setEmailBusy] = useState(false);
-  const [notifications, setNotifications] = useState<SystemNotification[]>([]);
-
   const reloadReleases = useCallback(async () => {
     setReleasesLoading(true);
     try { setReleases(await listAppReleases()); } catch (e: any) { show('err', e.message); } finally { setReleasesLoading(false); }
-  }, []);
-  const reloadNotifications = useCallback(async () => {
-    try { setNotifications(await listSystemNotifications(50)); } catch (_) { /* best-effort */ }
   }, []);
 
   useEffect(() => {
@@ -3351,7 +3338,6 @@ function UpdateAppTab() {
       });
     }).catch(() => {});
     reloadReleases();
-    reloadNotifications();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -3439,28 +3425,9 @@ function UpdateAppTab() {
     } catch (e: any) { show('err', e.message); } finally { setR2Busy(false); }
   };
 
-  const sendEmails = async () => {
-    const recipients = emailForm.to.split(',').map((s: string) => s.trim()).filter(Boolean);
-    if (!recipients.length) { show('err', 'Isi minimal satu email penerima.'); return; }
-    if (!emailForm.subject || !emailForm.body) { show('err', 'Subject & isi email wajib diisi.'); return; }
-    setEmailBusy(true);
-    let ok = 0; let errMsg = '';
-    for (const to of recipients) {
-      try {
-        const r = await sendUpdateEmail(to, emailForm.subject, emailForm.body);
-        if (r?.success) ok++; else errMsg = r?.message ?? 'gagal';
-      } catch (e: any) { errMsg = e.message; }
-    }
-    const status = ok > 0 ? 'sent' : 'failed';
-    await logNotification({ kind: 'app_update', channel: 'email', title: emailForm.subject, body: emailForm.body, release_id: null, status, count: ok, error: errMsg || null });
-    setEmailBusy(false);
-    reloadNotifications();
-    show(ok > 0 ? 'ok' : 'err', `Email terkirim ke ${ok}/${recipients.length} penerima.${errMsg ? ' Error: ' + errMsg : ''}`);
-  };
-
   return (
     <div className="space-y-4">
-      <Card title="Konfigurasi SMTP" subtitle="Untuk kirim email notifikasi update. Bisa juga diterapkan sebagai SMTP auth Supabase (mengganti provider email).">
+      <Card title="Konfigurasi SMTP" subtitle="Untuk email verifikasi pendaftaran (auth). Terapkan sebagai SMTP auth Supabase agar email konfirmasi/verifikasi terkirim.">
         <div className="max-w-[860px] space-y-3">
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div><label className={labelCls}>Host SMTP</label><input className={inputCls} value={smtp.host ?? ''} onChange={(e) => setSmtp({ ...smtp, host: e.target.value })} placeholder="in-v3.mailjet.com" /></div>
@@ -3472,7 +3439,7 @@ function UpdateAppTab() {
           </div>
           <div className="flex flex-wrap gap-4 pt-1">
             <label className="flex items-center gap-2 text-xs font-semibold text-muted"><input type="checkbox" checked={!!smtp.secure} onChange={(e) => setSmtp({ ...smtp, secure: e.target.checked })} /> SSL/TLS (secure)</label>
-            <label className="flex items-center gap-2 text-xs font-semibold text-muted"><input type="checkbox" checked={!!smtp.is_active} onChange={(e) => setSmtp({ ...smtp, is_active: e.target.checked })} /> Aktif untuk kirim notifikasi</label>
+            <label className="flex items-center gap-2 text-xs font-semibold text-muted"><input type="checkbox" checked={!!smtp.is_active} onChange={(e) => setSmtp({ ...smtp, is_active: e.target.checked })} /> Aktif (untuk verifikasi email)</label>
             <label className="flex items-center gap-2 text-xs font-semibold text-muted"><input type="checkbox" checked={!!smtp.apply_as_auth} onChange={(e) => setSmtp({ ...smtp, apply_as_auth: e.target.checked })} /> Terapkan sebagai SMTP auth</label>
           </div>
           <div className="flex flex-wrap gap-2">
@@ -3554,30 +3521,6 @@ function UpdateAppTab() {
         </div>
       </Card>
 
-      <Card title="Notifikasi Update" subtitle="Kirim email pemberitahuan update ke pemilik toko (pisahkan email dengan koma) dan lihat riwayat pengiriman.">
-        <div className="max-w-[860px] space-y-3">
-          <div><label className={labelCls}>Penerima (pisahkan koma)</label><input className={inputCls} value={emailForm.to} onChange={(e) => setEmailForm({ ...emailForm, to: e.target.value })} placeholder="a@toko.com, b@toko.com" /></div>
-          <div><label className={labelCls}>Subject</label><input className={inputCls} value={emailForm.subject} onChange={(e) => setEmailForm({ ...emailForm, subject: e.target.value })} placeholder="Pembaruan KasirGo tersedia!" /></div>
-          <div><label className={labelCls}>Isi (HTML)</label><textarea className={`${inputCls} min-h-[80px]`} value={emailForm.body} onChange={(e) => setEmailForm({ ...emailForm, body: e.target.value })} placeholder="<p>Versi baru <b>1.1.0</b> tersedia...</p>" /></div>
-          <button onClick={sendEmails} disabled={emailBusy} className="flex items-center gap-2 px-4 py-2.5 rounded-xl font-semibold text-xs ocean-gradient text-white shadow-md shadow-primary/25 transition active:scale-95 disabled:opacity-50">
-            {emailBusy ? <RefreshCw className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />} Kirim Email
-          </button>
-
-          <div className="space-y-2 pt-2">
-            <p className="text-[11px] font-bold text-muted uppercase tracking-wide">Riwayat</p>
-            {notifications.length === 0 && <p className="text-xs text-muted">Belum ada notifikasi.</p>}
-            {notifications.map((n) => (
-              <div key={n.id} className="flex items-center gap-3 p-2.5 rounded-lg border border-border bg-bg/40 text-xs">
-                <span className="font-bold text-ink">{n.title}</span>
-                <span className="text-muted flex-1 truncate">{n.channel}</span>
-                <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${n.status === 'sent' ? 'bg-success/10 text-success' : 'bg-warning/10 text-warning'}`}>{n.status}</span>
-                <span className="text-[10px] text-muted">{n.recipient_count} penerima</span>
-                <span className="text-[10px] text-muted">{new Date(n.created_at).toLocaleString('id-ID')}</span>
-              </div>
-            ))}
-          </div>
-        </div>
-      </Card>
       <Toast msg={msg} />
     </div>
   );

@@ -637,7 +637,7 @@ async function logAdminAction(action: string, target: string, meta: Record<strin
 }
 
 // ---------------------------------------------------------------------------
-// Update Aplikasi: rilisan + SMTP + notifikasi
+// Update Aplikasi: rilisan + SMTP (verifikasi email) + Cloudflare R2
 // ---------------------------------------------------------------------------
 export interface AppRelease {
   id: string
@@ -672,19 +672,6 @@ export interface SmtpConfig {
   has_password: boolean
   password_hint: string | null
   updated_at: string | null
-}
-
-export interface SystemNotification {
-  id: string
-  kind: string
-  channel: string
-  title: string
-  body: string
-  release_id: string | null
-  status: string
-  recipient_count: number
-  error: string | null
-  created_at: string
 }
 
 export async function listAppReleases(): Promise<AppRelease[]> {
@@ -733,38 +720,6 @@ export async function saveSmtpConfig(config: Record<string, any>): Promise<SmtpC
   return data as SmtpConfig
 }
 
-export async function listSystemNotifications(limit = 50): Promise<SystemNotification[]> {
-  const { data, error } = await supabase.rpc('admin_list_notifications', { p_limit: limit })
-  if (error) throw error
-  if (data?.forbidden) throw new Error('Akses ditolak.')
-  return (data ?? []) as SystemNotification[]
-}
-
-export async function logNotification(payload: {
-  kind: string
-  channel: string
-  title: string
-  body: string
-  release_id?: string | null
-  status: string
-  count: number
-  error?: string | null
-}) {
-  const { data, error } = await supabase.rpc('admin_log_notification', {
-    p_kind: payload.kind,
-    p_channel: payload.channel,
-    p_title: payload.title,
-    p_body: payload.body,
-    p_release_id: payload.release_id ?? null,
-    p_status: payload.status,
-    p_count: payload.count,
-    p_error: payload.error ?? null,
-  })
-  if (error) throw error
-  if (data?.forbidden) throw new Error('Akses ditolak.')
-  return data
-}
-
 /// Presigned PUT ke Cloudflare R2 via Edge Function r2_presign.
 export async function presignR2Upload(
   key: string,
@@ -777,16 +732,7 @@ export async function presignR2Upload(
   return data
 }
 
-/// Kirim email via Edge Function email_send (SMTP dari system_smtp_config).
-export async function sendUpdateEmail(to: string, subject: string, html: string) {
-  const { data, error } = await supabase.functions.invoke('email_send', {
-    body: { to, subject, html },
-  })
-  if (error) throw error
-  return data
-}
-
-/// Terapkan SMTP sebagai SMTP auth Supabase.
+/// Terapkan SMTP sebagai SMTP auth Supabase (untuk email verifikasi).
 export async function applySmtpAuth() {
   const { data, error } = await supabase.functions.invoke('apply_smtp_auth', { body: {} })
   if (error) throw error
