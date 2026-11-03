@@ -1,0 +1,37 @@
+digraph G {
+  rankdir=LR;
+  graph [splines=ortho, nodesep=0.4, ranksep=0.6, bgcolor="white"];
+  node [shape=box, style="rounded,filled", fontname="Helvetica", fontsize=11, margin="0.12,0.07"];
+  edge [color="#94A3B8", arrowsize=0.65];
+  n1 [label="staf toko (auth, admin, cashier, kitchen)", fillcolor="#0284C7", color="#0284C7", fontcolor="white", penwidth=2];
+  n2 [label="auth/", fillcolor="#DBEAFE", color="#0284C7", fontcolor="#0F172A"];
+  n1 -> n2;
+  n3 [label="admin/", fillcolor="#DBEAFE", color="#0284C7", fontcolor="#0F172A"];
+  n1 -> n3;
+  n4 [label="cashier/", fillcolor="#DBEAFE", color="#0284C7", fontcolor="#0F172A"];
+  n1 -> n4;
+  n5 [label="kitchen/", fillcolor="#DBEAFE", color="#0284C7", fontcolor="#0F172A"];
+  n1 -> n5;
+  n6 [label="kitchen_home_screen.dart — KDS", fillcolor="white", color="#CBD5E1", fontcolor="#0F172A"];
+  n5 -> n6;
+  n7 [label="cashier_home_screen.dart", fillcolor="white", color="#CBD5E1", fontcolor="#0F172A"];
+  n4 -> n7;
+  n8 [label="cashier_pos_screen.dart", fillcolor="white", color="#CBD5E1", fontcolor="#0F172A"];
+  n4 -> n8;
+  n9 [label="cashier_report_screen.dart", fillcolor="white", color="#CBD5E1", fontcolor="#0F172A"];
+  n4 -> n9;
+  n10 [label="incoming_orders_screen.dart", fillcolor="white", color="#CBD5E1", fontcolor="#0F172A"];
+  n4 -> n10;
+  n11 [label="online_orders_screen.dart", fillcolor="white", color="#CBD5E1", fontcolor="#0F172A"];
+  n4 -> n11;
+  n12 [label="admin_home_screen.dart", fillcolor="white", color="#CBD5E1", fontcolor="#0F172A"];
+  n3 -> n12;
+  n13 [label="login_screen.dart", fillcolor="white", color="#CBD5E1", fontcolor="#0F172A"];
+  n2 -> n13;
+  n14 [label="register_screen.dart", fillcolor="white", color="#CBD5E1", fontcolor="#0F172A"];
+  n2 -> n14;
+  n15 [label="onboarding_kyc_screen.dart — form KYC", fillcolor="white", color="#CBD5E1", fontcolor="#0F172A"];
+  n2 -> n15;
+  n16 [label="kyc_upload_screen.dart — foto KTP", fillcolor="white", color="#CBD5E1", fontcolor="#0F172A"];
+  n2 -> n16;
+}

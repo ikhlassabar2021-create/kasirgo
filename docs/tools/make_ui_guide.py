@@ -17,9 +17,10 @@ from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
 from reportlab.lib.units import mm
 from reportlab.pdfbase import pdfmetrics
 from reportlab.pdfbase.ttfonts import TTFont
+from reportlab.lib.utils import ImageReader
 from reportlab.platypus import (
     BaseDocTemplate, Frame, PageTemplate, Paragraph, Spacer, PageBreak,
-    Table, TableStyle, HRFlowable, Preformatted,
+    Table, TableStyle, HRFlowable, Preformatted, Image,
 )
 
 PRIMARY = colors.HexColor('#0284C7')
@@ -164,6 +165,24 @@ def parse(src):
                 j += 1
             story.append(Paragraph(inline(' '.join(buf)), S['note']))
             i = j
+            continue
+
+        # Markdown image ![alt](path)
+        mimg = re.match(r'^!\[[^\]]*\]\((.+?)\)\s*$', ln)
+        if mimg:
+            rel = mimg.group(1)
+            img_path = os.path.join(os.path.dirname(SRC), rel)
+            if os.path.isfile(img_path):
+                ir = ImageReader(img_path)
+                iw, ih = ir.getSize()
+                max_w = 170 * mm
+                max_h = 250 * mm
+                scale = min(max_w / iw, max_h / ih, 1.0)
+                w = iw * scale
+                h = ih * scale
+                story.append(Image(img_path, width=w, height=h))
+                story.append(Spacer(1, 8))
+            i += 1
             continue
 
         # Fenced code block

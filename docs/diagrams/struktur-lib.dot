@@ -1,0 +1,33 @@
+digraph G {
+  rankdir=LR;
+  graph [splines=ortho, nodesep=0.4, ranksep=0.6, bgcolor="white"];
+  node [shape=box, style="rounded,filled", fontname="Helvetica", fontsize=11, margin="0.12,0.07"];
+  edge [color="#94A3B8", arrowsize=0.65];
+  n1 [label="kasirgo/lib/", fillcolor="#0284C7", color="#0284C7", fontcolor="white", penwidth=2];
+  n2 [label="main.dart", fillcolor="white", color="#CBD5E1", fontcolor="#0F172A"];
+  n1 -> n2;
+  n3 [label="app.dart", fillcolor="white", color="#CBD5E1", fontcolor="#0F172A"];
+  n1 -> n3;
+  n4 [label="config/", fillcolor="#DBEAFE", color="#0284C7", fontcolor="#0F172A"];
+  n1 -> n4;
+  n5 [label="core/ — util inti", fillcolor="#DBEAFE", color="#0284C7", fontcolor="#0F172A"];
+  n1 -> n5;
+  n6 [label="models/ — data classes", fillcolor="#DBEAFE", color="#0284C7", fontcolor="#0F172A"];
+  n1 -> n6;
+  n7 [label="providers/ — Riverpod", fillcolor="#DBEAFE", color="#0284C7", fontcolor="#0F172A"];
+  n1 -> n7;
+  n8 [label="services/ — Supabase/AI", fillcolor="#DBEAFE", color="#0284C7", fontcolor="#0F172A"];
+  n1 -> n8;
+  n9 [label="utils/ — helper", fillcolor="#DBEAFE", color="#0284C7", fontcolor="#0F172A"];
+  n1 -> n9;
+  n10 [label="screens/ — halaman UI", fillcolor="#DBEAFE", color="#0284C7", fontcolor="#0F172A"];
+  n1 -> n10;
+  n11 [label="widgets/ — komponen UI", fillcolor="#DBEAFE", color="#0284C7", fontcolor="#0F172A"];
+  n1 -> n11;
+  n12 [label="app_theme.dart — design system", fillcolor="white", color="#CBD5E1", fontcolor="#0F172A"];
+  n4 -> n12;
+  n13 [label="constants.dart — versi", fillcolor="white", color="#CBD5E1", fontcolor="#0F172A"];
+  n4 -> n13;
+  n14 [label="supabase_config.dart — URL", fillcolor="white", color="#CBD5E1", fontcolor="#0F172A"];
+  n4 -> n14;
+}
