@@ -12,6 +12,8 @@ on:
       - 'kasirgo/**'
       - 'kasirgo-admin/**'
       - 'docs/panduan-kasirgo.pdf'
+      - 'docs/panduan-aplikasi-kasirgo.pdf'
+      - 'docs/PANDUAN-APLIKASI-KASIRGO.md'
       - '.github/workflows/deploy-web.yml'
   workflow_dispatch:
 
@@ -54,6 +56,7 @@ jobs:
           cp -a kasirgo/build/web/. deploy/
           cp -a kasirgo-admin/dist/. deploy/admin/
           cp -a docs/panduan-kasirgo.pdf deploy/panduan/
+          cp -a docs/panduan-aplikasi-kasirgo.pdf deploy/panduan/
           ls -la deploy | sed -n '1,30p'
 
       - name: Deploy ke gh-pages
