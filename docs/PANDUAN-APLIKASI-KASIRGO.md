@@ -30,26 +30,42 @@ https://github.com/ikhlassabar2021-create/kasirgo/releases/download/v1.0.11-sign
 
 ### A. Pemilik (Owner)
 
+**Fitur inti — gratis selamanya:**
+
 1. **Daftar & masuk** (`register_screen.dart`, `login_screen.dart`) → sistem
    otomatis membuat outlet/toko.
 2. **Verifikasi KYC** (`onboarding_kyc_screen.dart` + `kyc_upload_screen.dart`):
    nama sesuai KTP, no HP/email, alamat toko, foto KTP, foto selfie.
-3. **Kelola produk** (`product_list_screen.dart` → `product_form_screen.dart`):
+3. **Dashboard & AI Co-Pilot** (`owner_home_screen.dart`): ringkasan omzet hari ini,
+   alert stok menipis/menumpuk, dan insight harian AI.
+4. **Kelola produk** (`product_list_screen.dart` → `product_form_screen.dart`):
    nama, harga, stok, kategori, foto (lokal di HP), produk jasa/layanan.
-4. **Jual di kasir** (`pos_screen.dart`): pilih produk → keranjang (`cart_panel.dart`)
-   → bayar (Tunai/QRIS/Transfer) di `checkout_dialog.dart` → struk PDF/WA.
-5. **Lihat laporan** (`report_screen.dart`): laba rugi, penjualan, per produk
-   (SAK EMKM), ekspor Excel & PDF; plus `staff_performance_screen.dart`.
-6. **Kelola karyawan** (`employee_screen.dart`), **shift** (`shift_screen.dart`),
+5. **Kasir / POS** (`pos_screen.dart`): pilih produk → keranjang (`cart_panel.dart`)
+   → bayar Tunai / QRIS statis / Transfer di `checkout_dialog.dart` → struk PDF/WA.
+6. **Laporan penjualan** (`report_screen.dart`): laba rugi, omzet, per produk, plus
+   `staff_performance_screen.dart`.
+7. **Kelola pelanggan** (`customer_list_screen.dart`).
+8. **Kelola karyawan** (`employee_screen.dart`), **shift** (`shift_screen.dart`),
    **delegasi tugas** (`delegation_board_screen.dart`).
-7. **QR Meja** (`qr_table_screen.dart`) untuk cafe/resto.
-8. **Katalog online & WA** (`online_catalog_screen.dart`,
-   `whatsapp_broadcast_screen.dart`).
-9. **Pelanggan & kasbon** (`customer_list_screen.dart`, `debt_screen.dart`).
-10. **Fitur premium (Program Pendukung Rp50.000/bulan)** via `supporter_screen.dart`:
-    Dokter Bisnis AI (`business_doctor_screen.dart`), Atur Harga & Diskon
-    (`dynamic_pricing_screen.dart`), Bundling (`bundle_manager_screen.dart`),
-    Referral, Squad Marketing, Sidak Stok & Kas, Laporan ke Bos.
+9. **Paket Bundling** (`bundle_manager_screen.dart`).
+10. **Afiliasi** (`affiliate_owner_screen.dart`): kode & komisi referral.
+11. **Kitchen (KDS)** (`kitchen_display_screen.dart`) — khusus usaha makanan/minuman
+    (cafe/warteg).
+
+**Fitur Program Pendukung (Rp50.000/bulan)** — dibuka lewat `supporter_screen.dart`:
+
+- Dokter Bisnis AI (`business_doctor_screen.dart`)
+- Sidak Stok & Kas (`sidak_bos_screen.dart`)
+- Atur Harga & Diskon (`dynamic_pricing_screen.dart`)
+- Laporan & Progres (`progress_tracker_screen.dart`)
+- Lapak Live (`lapak_live_screen.dart`)
+- WA Marketing (`whatsapp_broadcast_screen.dart`)
+- QR Meja Dine-in (`qr_table_screen.dart`) — khusus cafe/resto
+- Katalog Online (`online_catalog_screen.dart`)
+- Health Score (`health_score_screen.dart`)
+
+Beberapa fitur pendukung di Pengaturan: multi-outlet (`multi_outlet_screen.dart`),
+custom struk/logo, laporan otomatis ke Bos, dan slot staf tambahan.
 
 ### B. Kasir
 
@@ -91,6 +107,10 @@ https://github.com/ikhlassabar2021-create/kasirgo/releases/download/v1.0.11-sign
 ## Bagian 3 — Lampiran: Struktur Kode UI
 
 Lokasi root aplikasi Flutter: `kasirgo/lib/`
+
+> Catatan: diagram di bawah memetakan file kode apa adanya. Beberapa file layanan
+> (mis. PPOB, B2B, fintech) masih ada di kode tapi **disembunyikan** dari dashboard
+> owner. Daftar fitur yang tersedia untuk pengguna mengacu ke **Bagian 2**.
 
 ### 3.1 Peta folder utama
 
