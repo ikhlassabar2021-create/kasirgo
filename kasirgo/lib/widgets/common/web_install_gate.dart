@@ -189,10 +189,10 @@ class _WebInstallGateState extends State<WebInstallGate> {
                         ),
                         const SizedBox(height: 8),
                         Text(
-                          'Verifikasi toko (KYC) hanya bisa dilakukan di aplikasi '
-                          'Android KasirGo. Unduh dan pasang APK yang sesuai dengan '
-                          'HP Anda, lalu masuk dengan akun yang sama dan selesaikan '
-                          'verifikasi.',
+                          'Untuk menjalankan semua fitur, KasirGo wajib dipakai lewat '
+                          'aplikasi di HP agar berjalan optimal. Unduh dan pasang APK '
+                          'yang sesuai, lalu masuk dengan akun yang sama dan selesaikan '
+                          'verifikasi toko di aplikasi.',
                           textAlign: TextAlign.center,
                           style: GoogleFonts.plusJakartaSans(
                             fontSize: 14,
@@ -206,7 +206,9 @@ class _WebInstallGateState extends State<WebInstallGate> {
                         _StepRow(
                             no: '3', text: 'Selesaikan verifikasi toko (KTP & selfie).'),
                         _StepRow(
-                            no: '4', text: 'Kembali ke web dan tekan "Cek Kembali".'),
+                            no: '4',
+                            text: 'Jalankan semua fitur di HP. Web hanya untuk '
+                                'cadangan bila aplikasi HP error.'),
                         const SizedBox(height: 28),
                         AppButton(
                           label: 'Download APK Android',
@@ -217,11 +219,20 @@ class _WebInstallGateState extends State<WebInstallGate> {
                         ..._buildAbiCards(),
                         const SizedBox(height: 24),
                         AppButton(
-                          label: 'Saya sudah terverifikasi — Cek Kembali',
-                          icon: Icons.refresh_rounded,
+                          label: 'Lanjut ke Web (Cadangan)',
+                          icon: Icons.monitor_rounded,
                           variant: AppButtonVariant.secondary,
                           isLoading: _checking,
                           onPressed: _checkStatus,
+                        ),
+                        const SizedBox(height: 8),
+                        Text(
+                          'Gunakan web hanya saat aplikasi HP bermasalah.',
+                          textAlign: TextAlign.center,
+                          style: GoogleFonts.plusJakartaSans(
+                            fontSize: 12,
+                            color: AppTheme.textSecondary,
+                          ),
                         ),
                         const SizedBox(height: 16),
                         Text(
