@@ -1,11 +1,10 @@
-# Panduan Aplikasi KasirGo — Link Unduh + Struktur UI + Langkah Demi Langkah
+# Panduan Aplikasi KasirGo — Peran & Langkah Pemakaian
 
-Dokumen ini rangkuman dari kode sumber (`kasirgo/lib/`) dan dirangkai menjadi
-panduan pemakaian yang bisa langsung diikuti.
+Panduan untuk pengguna aplikasi Android KasirGo: **Pemilik (Owner)**,
+**Kasir**, **Admin**, **Koki**, dan **Pembeli (klien)**.
 
-Struktur folder/UI ditampilkan sebagai **gambar** (PNG/SVG). Sumber diagram
-(Mermaid + Graphviz) disimpan terpisah di `docs/diagrams/` agar bisa dirender
-ulang atau diberikan ke model AI untuk dibuat gambar.
+Struktur folder/UI ditampilkan sebagai gambar (PNG/SVG) di Lampiran. Sumber
+diagram (Mermaid + Graphviz) tersimpan di `docs/diagrams/`.
 
 ---
 
@@ -24,23 +23,84 @@ Checksum (SHA-256) tersedia di:
 https://github.com/ikhlassabar2021-create/kasirgo/releases/download/v1.0.11-signed-20261103/SHA256SUMS-1.0.11.txt
 
 > Web aplikasi (cadangan ketika HP bermasalah): https://dokterbisnis.web.id/
-> Dashboard superadmin: https://dokterbisnis.web.id/admin/
 
 ---
 
-## Bagian 2 — Struktur Kode UI
+## Bagian 2 — Panduan per Peran
+
+### A. Pemilik (Owner)
+
+1. **Daftar & masuk** (`register_screen.dart`, `login_screen.dart`) → sistem
+   otomatis membuat outlet/toko.
+2. **Verifikasi KYC** (`onboarding_kyc_screen.dart` + `kyc_upload_screen.dart`):
+   nama sesuai KTP, no HP/email, alamat toko, foto KTP, foto selfie.
+3. **Kelola produk** (`product_list_screen.dart` → `product_form_screen.dart`):
+   nama, harga, stok, kategori, foto (lokal di HP), produk jasa/layanan.
+4. **Jual di kasir** (`pos_screen.dart`): pilih produk → keranjang (`cart_panel.dart`)
+   → bayar (Tunai/QRIS/Transfer) di `checkout_dialog.dart` → struk PDF/WA.
+5. **Lihat laporan** (`report_screen.dart`): laba rugi, penjualan, per produk
+   (SAK EMKM), ekspor Excel & PDF; plus `staff_performance_screen.dart`.
+6. **Kelola karyawan** (`employee_screen.dart`), **shift** (`shift_screen.dart`),
+   **delegasi tugas** (`delegation_board_screen.dart`).
+7. **QR Meja** (`qr_table_screen.dart`) untuk cafe/resto.
+8. **Katalog online & WA** (`online_catalog_screen.dart`,
+   `whatsapp_broadcast_screen.dart`).
+9. **Pelanggan & kasbon** (`customer_list_screen.dart`, `debt_screen.dart`).
+10. **Fitur premium (Program Pendukung Rp50.000/bulan)** via `supporter_screen.dart`:
+    Dokter Bisnis AI (`business_doctor_screen.dart`), Atur Harga & Diskon
+    (`dynamic_pricing_screen.dart`), Bundling (`bundle_manager_screen.dart`),
+    Referral, Squad Marketing, Sidak Stok & Kas, Laporan ke Bos.
+
+### B. Kasir
+
+1. **Masuk** dengan akun kasir.
+2. **Beranda** (`cashier_home_screen.dart`) → kartu **Pesanan Masuk** (badge).
+3. **Jual di kasir** (`cashier_pos_screen.dart`): pilih produk, bayar, cetak struk.
+4. **Pesanan masuk** (`incoming_orders_screen.dart` + `online_orders_screen.dart`):
+   konfirmasi bayar pesanan dine-in/online.
+5. **Laporan kasir** (`cashier_report_screen.dart`).
+
+### C. Admin (Staf)
+
+1. **Masuk** dengan akun admin.
+2. **Beranda** (`admin_home_screen.dart`) → tab **Pesanan**, **POS**, **Laporan**.
+3. **Tambah/edit produk** (tanpa hapus produk — hapus khusus Owner).
+4. **Pantau pesanan masuk** (`incoming_orders_screen.dart`).
+5. **Lihat laporan standar**.
+
+### D. Koki (KDS / Dapur)
+
+1. **Masuk** dengan akun koki → langsung ke layar **Dapur (KDS)**
+   (`kitchen_home_screen.dart`).
+2. Lihat antrean pesanan yang **sudah dibayar** kasir.
+3. **Ubah status** pesanan (diproses → selesai).
+
+### E. Pembeli (Klien)
+
+1. Buka aplikasi → pilih mode **Pembeli** (`mode_gate.dart` → `mode_select_screen.dart`).
+2. **Daftar/masuk** (`buyer_auth_screen.dart`) + isi identitas
+   (`buyer_onboarding_screen.dart`).
+3. **Cari toko terdekat** di radar (`buyer_home_tab.dart`, radius 3/5/10 km).
+4. Buka katalog toko → **keranjang** → **Checkout** (`buyer_checkout_screen.dart`)
+   (pilih Diantar/Ambil di toko).
+5. **Lacak pesanan** realtime (`buyer_order_tracking_screen.dart`).
+6. Panduan pembeli: `buyer_help_screen.dart`.
+
+---
+
+## Bagian 3 — Lampiran: Struktur Kode UI
 
 Lokasi root aplikasi Flutter: `kasirgo/lib/`
 
-### 2.1 Peta folder utama
+### 3.1 Peta folder utama
 
 ![Peta folder utama kasirgo/lib](diagrams/struktur-lib.png)
 
-### 2.2 Screens (halaman) — dikelompokkan berdasarkan peran
+### 3.2 Screens (halaman) — dikelompokkan berdasarkan peran
 
 ![Delapan folder utama di bawah screens](diagrams/struktur-screens.png)
 
-**Folder `owner/` (halaman pemilik — paling lengkap):**
+**Folder `owner/` (halaman pemilik):**
 
 ![Halaman owner](diagrams/struktur-owner.png)
 
@@ -52,119 +112,19 @@ Lokasi root aplikasi Flutter: `kasirgo/lib/`
 
 ![Pelanggan & modul](diagrams/struktur-pelanggan.png)
 
-### 2.3 Widgets (komponen reusable)
+### 3.3 Widgets (komponen reusable)
 
 ![Komponen widgets](diagrams/struktur-widgets.png)
 
 ### Sumber diagram & cara render ulang
 
-- **PNG / SVG** sudah jadi di folder `docs/diagrams/` — tinggal ditempel ke panduan.
-- **Mermaid** (`*.mmd`) — format yang dipahami model AI, mermaid.live, dan GitHub.
-- **Graphviz DOT** (`*.dot`) — untuk render ulang gambar lokal.
-
-Render ulang semua gambar (Graphviz):
+- **PNG / SVG** sudah jadi di folder `docs/diagrams/`.
+- **Mermaid** (`*.mmd`) — untuk model AI, mermaid.live, dan GitHub.
+- **Graphviz DOT** (`*.dot`) — untuk render ulang lokal.
 
 ```bash
 python3 docs/tools/make_structure_images.py
 ```
-
-Render Mermaid menjadi gambar (misal buat model/integrasi lain):
-
-```bash
-npx -y @mermaid-js/mermaid-cli -i docs/diagrams/struktur-lib.mmd -o struktur-lib.png
-```
-
----
-
-## Bagian 3 — Panduan Langkah Demi Langkah
-
-### A. Instalasi & Akun Baru
-
-1. **Unduh APK** sesuai perangkat (link di Bagian 1). Untuk HP modern pakai
-   `arm64-v8a`; jika gagal install/cepat crash coba `armeabi-v7a`.
-2. **Buka aplikasi** → layar pemilihan mode **Penjual / Pembeli**
-   (`mode_select_screen.dart`). Pilih **Penjual** untuk kelola toko.
-3. **Daftar akun** (`register_screen.dart`): isi email, password, nama usaha,
-   tipe usaha. Konfirmasi lewat email.
-4. **Login** (`login_screen.dart`) → sistem otomatis membuat outlet.
-5. **Verifikasi KYC** (`onboarding_kyc_screen.dart` + `kyc_upload_screen.dart`):
-   nama sesuai KTP, no HP/email, alamat toko, foto KTP, foto selfie. KYC otomatis
-   diverifikasi. (Akun uji `qa.gate@kasirgo.test` bisa melewati cek nama.)
-
-### B. Siapkan Produk & Stok (Owner/Admin)
-
-1. Buka **Produk** (`product_list_screen.dart`).
-2. **Tambah produk** (`product_form_screen.dart`): nama, harga, stok, kategori,
-   foto (foto disimpan lokal di HP), produk jasa/layanan (tanpa stok).
-3. Kelola **stok** langsung dari daftar produk.
-
-### C. Jual di Kasir (POS)
-
-1. Owner: buka **POS** (`pos_screen.dart`) — Kasir: `cashier_pos_screen.dart`.
-2. Pilih produk → masuk keranjang (`cart_panel.dart`) → **Bayar**.
-3. Pilih metode bayar (Tunai / QRIS / Transfer) di `checkout_dialog.dart`.
-4. Setelah sukses muncul `checkout_success_dialog.dart` dengan tombol **Struk
-   PDF / Struk ke WA**.
-
-### D. Pesanan Dine-in & QR Meja (cafe/resto)
-
-1. Owner: siapkan **QR Meja** (`qr_table_screen.dart`) → cetak/salin QR.
-2. Pelanggan scan QR → `customer_menu_screen.dart` → pilih menu → kirim
-   (`customer_order_screen.dart` menampilkan status).
-3. Kasir konfirmasi bayar di **Pesanan Masuk** (`incoming_orders_screen.dart`).
-4. Koki melihat & mengubah status di **KDS** (`kitchen_home_screen.dart`).
-
-### E. Katalog Online & WhatsApp
-
-1. Owner: aktifkan **Katalog Online** (`online_catalog_screen.dart`).
-2. Promosi via **Broadcast WA** (`whatsapp_broadcast_screen.dart`).
-
-### F. Laporan & Keuangan
-
-1. **Laporan** (`report_screen.dart`): laba rugi, penjualan, per produk (SAK EMKM).
-2. Ekspor **Excel** & **PDF** dari tombol di layar laporan.
-3. **Laporan performa staf** (`staff_performance_screen.dart`).
-4. **Laporan otomatis ke bos** (`report_schedule_screen.dart`).
-
-### G. Karyawan, Shift & Delegasi
-
-1. **Karyawan** (`employee_screen.dart`): tambah Admin / Kasir / Koki
-   (+ kuota staf gratis 1 Admin + 1 Kasir).
-2. **Shift** (`shift_screen.dart`): atur shift & tip.
-3. **Delegasi tugas** (`delegation_board_screen.dart`) + pengingat otomatis.
-
-### H. Dokter Bisnis AI (Program Pendukung)
-
-1. Beranda → kartu **Dokter Bisnis AI** (`business_doctor_screen.dart`).
-2. Ikuti **Cek Fisik Toko** (`doctor_intake_screen.dart`).
-3. Baca **Hasil Diagnosa** (`doctor_result_screen.dart`), jalankan resep.
-4. Catat hasil promosi & ROI (`doctor_promotion_log_screen.dart`), lihat
-   riwayat (`doctor_cases_screen.dart`).
-
-### I. Fitur Pertumbuhan (AI / Marketing)
-
-1. **Atur Harga & Diskon** (`dynamic_pricing_screen.dart`).
-2. **Bundling produk** (`bundle_manager_screen.dart`).
-3. **Referral pelanggan** (`referral_screen.dart`).
-4. **Squad Marketing** (`design_studio_screen.dart`, `promotion_screen.dart`,
-   `ads_studio_screen.dart`).
-5. **Sidak Stok & Kas** (`sidak_bos_screen.dart`).
-
-### J. Pasar Hyperlocal (mode Pembeli)
-
-1. Ganti mode ke **Pembeli** (`mode_gate.dart`).
-2. Login/daftar pembeli (`buyer_auth_screen.dart`) + isi identitas
-   (`buyer_onboarding_screen.dart`).
-3. Radar toko terdekat (`buyer_home_tab.dart`) → pilih toko → katalog.
-4. **Checkout** (`buyer_checkout_screen.dart`) → **Lacak pesanan**
-   (`buyer_order_tracking_screen.dart`).
-
-### K. Bantuan & Pembaruan
-
-1. **Pusat Bantuan** (`help_center_screen.dart`) + **Tiket** (`support_tickets_screen.dart`).
-2. **Cek pembaruan** (`app_update_screen.dart`).
-3. **Program Pendukung** (`supporter_screen.dart`) untuk fitur premium
-   (Rp50.000/bulan).
 
 ---
 
