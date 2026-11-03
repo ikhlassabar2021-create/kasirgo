@@ -383,7 +383,9 @@ class _OnboardingKycScreenState extends ConsumerState<OnboardingKycScreen> {
       }
       return false;
     }
-    if (!namesMatch(_fullName.text, _ktpName)) {
+    // Akun test/QA (app_metadata.is_qa true atau email @kasirgo.test)
+    // dikecualikan dari pencocokan nama agar memudahkan uji coba end-to-end.
+    if (!_isQaAccount() && !namesMatch(_fullName.text, _ktpName)) {
       if (!silent) {
         _snack(
             'Nama pada KTP tidak cocok dengan nama pemilik. Periksa kembali.',
@@ -392,6 +394,19 @@ class _OnboardingKycScreenState extends ConsumerState<OnboardingKycScreen> {
       return false;
     }
     return true;
+  }
+
+  /// True bila akun sekarang adalah akun test/QA milik tim pengembang.
+  bool _isQaAccount() {
+    try {
+      final meta = Supabase.instance.client.auth.currentUser?.appMetadata;
+      if (meta?['is_qa'] == true) return true;
+    } catch (_) {}
+    final email = (_email.text.trim().isEmpty
+            ? ref.read(currentUserProvider)?.email
+            : _email.text.trim()) ??
+        '';
+    return email.toLowerCase().endsWith('@kasirgo.test');
   }
 
   void _next() {
@@ -598,6 +613,7 @@ class _OnboardingKycScreenState extends ConsumerState<OnboardingKycScreen> {
     required String label,
     required IconData icon,
     String? hint,
+    String? helper,
     TextInputType? keyboard,
     int maxLines = 1,
     bool optional = false,
@@ -617,6 +633,12 @@ class _OnboardingKycScreenState extends ConsumerState<OnboardingKycScreen> {
         decoration: InputDecoration(
           labelText: optional ? '$label (opsional)' : label,
           hintText: hint,
+          helperText: helper,
+          helperMaxLines: 3,
+          helperStyle: GoogleFonts.plusJakartaSans(
+            fontSize: 11.5,
+            color: AppTheme.textSecondary,
+          ),
           prefixIcon: Icon(icon, color: AppTheme.textSecondary, size: 20),
           filled: true,
           fillColor: AppTheme.surfaceColor,
@@ -644,6 +666,8 @@ class _OnboardingKycScreenState extends ConsumerState<OnboardingKycScreen> {
             label: 'Nama Lengkap Pemilik',
             icon: Icons.person_outline,
             hint: 'Sesuai KTP',
+            helper: 'Wajib sama dengan nama yang tercetak di KTP. '
+                'Biarkan kosong agar otomatis terisi saat foto KTP terbaca.',
           ),
           _field(
             controller: _phone,
