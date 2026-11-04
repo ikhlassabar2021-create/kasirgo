@@ -1,6 +1,8 @@
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
+import 'runtime_env.dart';
+
 class SecureLocalStorage extends LocalStorage {
   final _storage = const FlutterSecureStorage();
 
@@ -35,9 +37,14 @@ class SecureLocalStorage extends LocalStorage {
 }
 
 class SupabaseConfig {
-  static const String url = 'https://lmvjecdvfzsmrowwwpck.supabase.co';
-  static const String anonKey =
+  static const String _defaultUrl = 'https://lmvjecdvfzsmrowwwpck.supabase.co';
+  static const String _defaultAnonKey =
       'sb_publishable_8RJnG66i_37cih8GTG1sBA_0B91KOW_';
+
+  /// Boleh ditimpa saat self-host lewat `window.KASIRGO_CONFIG` (web).
+  static String get url => readRuntimeConfig()?['supabaseUrl'] ?? _defaultUrl;
+  static String get anonKey =>
+      readRuntimeConfig()?['supabaseAnonKey'] ?? _defaultAnonKey;
 
   /// URL dasar aplikasi (dipakai untuk deep-link QR meja & redirect auth).
   static String get appUrl {

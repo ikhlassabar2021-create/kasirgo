@@ -1,0 +1,14 @@
+{
+  "name": "kasirgo-selfhost-installer",
+  "version": "1.0.0",
+  "description": "Installer Duplicator-style untuk KasirGo: restore DB Postgres + sajikan app & admin.",
+  "type": "module",
+  "main": "server.mjs",
+  "scripts": {
+    "start": "node server.mjs"
+  },
+  "dependencies": {
+    "express": "^4.19.2",
+    "pg": "^8.12.0"
+  }
+}

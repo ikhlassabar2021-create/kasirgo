@@ -1,0 +1,7 @@
+# Never commit restored state, node_modules, staging, or database dumps (sensitive).
+installer/node_modules/
+installer/state.json
+state.json
+.stage/
+database/
+*.zip

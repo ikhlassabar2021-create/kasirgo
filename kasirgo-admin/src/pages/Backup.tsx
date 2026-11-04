@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import {
   CloudUpload, CloudDownload, Database, RefreshCw, CalendarClock, CheckCircle2, XCircle,
+  HardDriveDownload, ExternalLink,
 } from 'lucide-react';
 import {
   rp, fmtDate, fmtBytes,
@@ -137,6 +138,31 @@ export function BackupPage() {
           <XCircle className="w-4 h-4" /> {error}
         </div>
       )}
+
+      {/* Paket self-host (Duplicator-style) */}
+      <div className="bg-surface rounded-2xl card-shadow border border-border/80 p-4 sm:p-6 mb-6">
+        <h2 className="text-sm font-bold text-ink mb-2 flex items-center gap-2">
+          <HardDriveDownload className="w-4 h-4 text-primary" /> Paket Self-host (Duplicator-style)
+        </h2>
+        <p className="text-xs text-muted leading-relaxed mb-3">
+          Backup penuh (database + akun login + aplikasi &amp; admin) dalam satu ZIP, lalu pulihkan
+          di server PostgreSQL baru lewat wizard web: isi nama database, user, password, lalu
+          <span className="font-semibold"> next-next selesai</span>. Alamat domain ikut menyesuaikan otomatis.
+        </p>
+        <ol className="text-xs text-muted list-decimal list-inside space-y-1 mb-3">
+          <li>Jalankan <code className="bg-bg px-1 rounded">selfhost/scripts/dump-database.sh</code> (butuh pg_dump + kredensial DB).</li>
+          <li>Build web &amp; admin, lalu <code className="bg-bg px-1 rounded">node selfhost/scripts/package-backup.mjs</code>.</li>
+          <li>Ekstrak ZIP di server → <code className="bg-bg px-1 rounded">cd installer &amp;&amp; npm install &amp;&amp; npm start</code>.</li>
+        </ol>
+        <a
+          href="https://github.com/ikhlassabar2021-create/kasirgo/tree/main/selfhost"
+          target="_blank"
+          rel="noreferrer"
+          className="inline-flex items-center gap-2 ocean-gradient text-white px-4 py-2.5 rounded-xl font-semibold text-xs shadow-md shadow-primary/25 hover:brightness-105 transition"
+        >
+          <ExternalLink className="w-4 h-4" /> Buka Panduan &amp; Skrip
+        </a>
+      </div>
 
       {/* Buat backup */}
       <div className="bg-surface rounded-2xl card-shadow border border-border/80 p-4 sm:p-6 mb-6">

@@ -1,0 +1,120 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Installer KasirGo</title>
+  <link rel="stylesheet" href="app.css" />
+</head>
+<body>
+  <main class="wrap">
+    <header class="brand">
+      <div class="logo">K</div>
+      <div>
+        <h1>KasirGo</h1>
+        <p class="sub">Installer Backup &amp; Restore (Duplicator-style)</p>
+      </div>
+    </header>
+
+    <div class="card">
+      <!-- Langkah 1: Sambutan -->
+      <section data-step="0" class="step">
+        <h2>Selamat datang</h2>
+        <p class="muted">
+          Ini installer KasirGo. Isi kredensial <b>database PostgreSQL</b> lalu klik
+          <b>Next</b> untuk memulihkan seluruh data (produk, transaksi, pelanggan,
+          karyawan, dan <b>akun login</b> termasuk password) ke server baru.
+        </p>
+        <div class="note">
+          <ul>
+            <li>Target: <b>PostgreSQL</b> (mis. instance Supabase self-host / VPS).</li>
+            <li>Data diambil dari paket backup <code>database/*.sql</code>.</li>
+            <li>Akun login ikut dipulihkan apa adanya (hash password ter-copy).</li>
+          </ul>
+        </div>
+        <div class="actions">
+          <button class="btn primary" data-next>Mulai</button>
+        </div>
+      </section>
+
+      <!-- Langkah 2: Database -->
+      <section data-step="1" class="step hidden">
+        <h2>1. Database PostgreSQL</h2>
+        <p class="muted">Kredensial database tujuan (tempat data dipulihkan).</p>
+        <label>Host
+          <input name="host" placeholder="localhost / aws-0-...pooler.supabase.com" />
+        </label>
+        <div class="grid2">
+          <label>Port
+            <input name="port" type="number" value="5432" />
+          </label>
+          <label>Nama Database
+            <input name="database" placeholder="postgres" />
+          </label>
+        </div>
+        <div class="grid2">
+          <label>User
+            <input name="user" placeholder="postgres" />
+          </label>
+          <label>Password
+            <input name="password" type="password" placeholder="••••••••" />
+          </label>
+        </div>
+        <div layout="row" class="status" id="db-status"></div>
+        <div class="actions">
+          <button class="btn ghost" data-prev>Kembali</button>
+          <button class="btn ghost" id="test-db">Tes Koneksi</button>
+          <button class="btn primary" data-next>Next</button>
+        </div>
+      </section>
+
+      <!-- Langkah 3: API & Situs -->
+      <section data-step="2" class="step hidden">
+        <h2>2. Alamat API &amp; Situs</h2>
+        <p class="muted">Diisi otomatis dari domain ini. Sesuaikan bila API berjalan di alamat lain.</p>
+        <label>Supabase URL (API)
+          <input name="supabaseUrl" placeholder="https://domain-anda" />
+        </label>
+        <label>Anon / Publishable Key
+          <input name="supabaseAnonKey" placeholder="sb_publishable_... atau eyJ..." />
+        </label>
+        <div class="note">
+          Alamat aplikasi otomatis mengikuti domain tempat installer dibuka — tidak perlu diisi.
+        </div>
+        <div class="actions">
+          <button class="btn ghost" data-prev>Kembali</button>
+          <button class="btn primary" data-next>Next</button>
+        </div>
+      </section>
+
+      <!-- Langkah 4: Restore -->
+      <section data-step="3" class="step hidden">
+        <h2>3. Pulihkan Data</h2>
+        <p class="muted">Jalankan restore penuh. Jangan tutup halaman selama proses.</p>
+        <div class="actions">
+          <button class="btn ghost" data-prev>Kembali</button>
+          <button class="btn primary" id="run-restore">Jalankan Restore</button>
+        </div>
+        <pre class="log" id="log">Menunggu...</pre>
+      </section>
+
+      <!-- Langkah 5: Selesai -->
+      <section data-step="4" class="step hidden">
+        <h2>4. Selesai</h2>
+        <p class="muted">Sistem sudah dipulihkan. Buka aplikasi dan dashboard admin:</p>
+        <div class="done-links">
+          <a class="btn primary" href="/" id="open-app">Buka Aplikasi</a>
+          <a class="btn ghost" href="/admin/" id="open-admin">Buka Admin</a>
+        </div>
+        <div class="note">
+          Alamat sudah menyesuaikan dengan nama domain web ini.
+        </div>
+      </section>
+    </div>
+
+    <footer class="foot">KasirGo Self-host Installer</footer>
+  </main>
+
+  <script src="app.js"></script>
+</body>
+</html>
