@@ -48,8 +48,5 @@ verify_jwt = true
 [functions.stt_fix]
 verify_jwt = true
 
-[functions.r2_presign]
-verify_jwt = true
-
 [functions.apply_smtp_auth]
 verify_jwt = true
