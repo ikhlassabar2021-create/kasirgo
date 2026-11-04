@@ -24,6 +24,10 @@
   <!-- Kurangi latensi koneksi ke backend (Supabase). -->
   <link rel="preconnect" href="https://lmvjecdvfzsmrowwwpck.supabase.co" crossorigin>
   <link rel="dns-prefetch" href="https://lmvjecdvfzsmrowwwpck.supabase.co">
+
+  <!-- Konfigurasi runtime (self-host/cPanel): boleh menunjuk Supabase lain
+       tanpa rebuild. Musti dimuat SEBELUM flutter_bootstrap.js. -->
+  <script src="kasirgo-config.js"></script>
 </head>
 <body>
   <script src="flutter_bootstrap.js" async></script>

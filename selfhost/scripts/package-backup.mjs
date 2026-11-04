@@ -70,7 +70,10 @@ async function main() {
   await writeFile(join(STAGE, 'MANIFEST.json'), JSON.stringify(manifest, null, 2));
 
   const stamp = new Date().toISOString().slice(0, 10);
-  const out = join(ROOT, `kasirgo-selfhost-backup-${stamp}.zip`);
+  // Lokasi output paket bisa diarahkan lewat OUT_DIR (default: repo root).
+  const outDir = process.env.OUT_DIR || ROOT;
+  await mkdir(outDir, { recursive: true });
+  const out = join(outDir, `kasirgo-selfhost-backup-${stamp}.zip`);
   const zip = spawnSync('zip', ['-r', '-q', out, '.'], { cwd: STAGE, stdio: 'inherit' });
   if (zip.status !== 0) {
     console.error('✗ Gagal membuat zip (butuh utilitas `zip`).');
