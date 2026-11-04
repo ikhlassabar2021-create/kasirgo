@@ -150,6 +150,17 @@ final homeSummaryProvider = FutureProvider<Map<String, dynamic>>((ref) async {
   }
 });
 
+/// Apakah outlet sudah pernah membuat transaksi (bukan hanya hari ini).
+/// Dipakai checklist "Langkah Awal" untuk langkah "Transaksi pertama".
+final hasAnyTransactionProvider = FutureProvider.family<bool, String>((ref, outletId) async {
+  try {
+    final list = await SupabaseService().getTransactions(outletId, limit: 1);
+    return list.isNotEmpty;
+  } catch (_) {
+    return false;
+  }
+});
+
 /// Jumlah hal yang perlu perhatian owner dari Dokter Bisnis:
 /// tugas staf terlambat + teguran hari ini (badge di beranda, 13.21B).
 final doctorAttentionProvider = FutureProvider<int>((ref) async {
@@ -722,6 +733,7 @@ class _OwnerHomeScreenState extends ConsumerState<OwnerHomeScreen> {
     final productCount = (summary['products'] as num?)?.toInt() ?? 0;
     final customerCount = (summary['customers'] as num?)?.toInt() ?? 0;
     final allTransactions = (summary['allTransactions'] as List?) ?? [];
+    final allProducts = (summary['allProducts'] as List?) ?? [];
 
     return SingleChildScrollView(
           padding: EdgeInsets.fromLTRB(
@@ -766,7 +778,13 @@ class _OwnerHomeScreenState extends ConsumerState<OwnerHomeScreen> {
                 ],
               ),
               const SizedBox(height: 20),
-              _OutletTypeSetupBanner(outletId: userOutletId()),
+              _SetupChecklistCard(
+                outletId: userOutletId(),
+                productCount: productCount,
+                products: allProducts.cast<Product>(),
+                onOpenProducts: () => setState(() => _currentIndex = 1),
+                onOpenKasir: () => setState(() => _currentIndex = 2),
+              ),
               _QrisSetupBanner(outletId: userOutletId()),
               const _AppUpdateBanner(),
               const SizedBox(height: 16),
@@ -1614,18 +1632,29 @@ class _QrisSetupBannerState extends ConsumerState<_QrisSetupBanner> {
   }
 }
 
-class _OutletTypeSetupBanner extends ConsumerStatefulWidget {
+class _SetupChecklistCard extends ConsumerStatefulWidget {
   final String outletId;
-  const _OutletTypeSetupBanner({required this.outletId});
+  final int productCount;
+  final List<Product> products;
+  final VoidCallback onOpenProducts;
+  final VoidCallback onOpenKasir;
+
+  const _SetupChecklistCard({
+    required this.outletId,
+    required this.productCount,
+    required this.products,
+    required this.onOpenProducts,
+    required this.onOpenKasir,
+  });
 
   @override
-  ConsumerState<_OutletTypeSetupBanner> createState() =>
-      _OutletTypeSetupBannerState();
+  ConsumerState<_SetupChecklistCard> createState() =>
+      _SetupChecklistCardState();
 }
 
-class _OutletTypeSetupBannerState
-    extends ConsumerState<_OutletTypeSetupBanner> {
+class _SetupChecklistCardState extends ConsumerState<_SetupChecklistCard> {
   bool _saving = false;
+  bool _dismissed = false;
 
   Future<void> _pickType() async {
     final selected = await showDialog<String>(
@@ -1667,7 +1696,6 @@ class _OutletTypeSetupBannerState
     if (!mounted) return;
     setState(() => _saving = false);
     if (ok) {
-      // Muat ulang tipe outlet agar modul langsung menyesuaikan.
       ref.invalidate(outletProvider(widget.outletId));
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
@@ -1685,76 +1713,265 @@ class _OutletTypeSetupBannerState
     }
   }
 
-  @override
-  Widget build(BuildContext context) {
-    final outletType = ref.watch(outletTypeProvider(widget.outletId));
-    // Hanya tampilkan bila tipe outlet masih default/kosong.
-    final raw = outletType.trim().toLowerCase();
-    final isUnset = raw.isEmpty || raw == 'warung' || raw == 'toko baru';
-    if (!isUnset) return const SizedBox.shrink();
-
-    return Container(
-      margin: const EdgeInsets.only(bottom: 12),
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: AppTheme.primaryColor.withValues(alpha: 0.12),
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: AppTheme.primaryColor.withValues(alpha: 0.4)),
+  void _openKasirDemo() {
+    widget.onOpenKasir();
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text('Coba jual produk berlabel "Contoh" untuk latihan transaksi.'),
+        backgroundColor: AppTheme.primaryColor,
       ),
+    );
+  }
+
+  Future<void> _removeSample() async {
+    final count = await SupabaseService().deleteSampleProducts(widget.outletId);
+    if (!mounted) return;
+    ref.invalidate(homeSummaryProvider);
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text('$count produk contoh dihapus.'),
+        backgroundColor: AppTheme.successColor,
+      ),
+    );
+  }
+
+  Widget _stepRow({
+    required bool done,
+    required IconData icon,
+    required String title,
+    required String subtitle,
+    required String actionLabel,
+    required VoidCallback onAction,
+    required bool saving,
+  }) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 8),
       child: Row(
         children: [
           Container(
-            padding: const EdgeInsets.all(10),
+            width: 34,
+            height: 34,
             decoration: BoxDecoration(
-              color: AppTheme.primaryColor.withValues(alpha: 0.18),
-              borderRadius: BorderRadius.circular(14),
+              color: done
+                  ? AppTheme.successColor.withValues(alpha: 0.14)
+                  : AppTheme.primaryColor.withValues(alpha: 0.12),
+              shape: BoxShape.circle,
             ),
-            child: const Icon(Icons.storefront_rounded,
-                color: AppTheme.accentColor, size: 26),
+            child: Icon(
+              done ? Icons.check_rounded : icon,
+              size: 18,
+              color: done ? AppTheme.successColor : AppTheme.primaryColor,
+            ),
           ),
           const SizedBox(width: 12),
-          const Expanded(
+          Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  'Lengkapi Tipe Usaha Anda',
+                  title,
                   style: TextStyle(
                     color: AppTheme.textPrimary,
-                    fontSize: 14,
+                    fontSize: 13.5,
                     fontWeight: FontWeight.w700,
+                    decoration: done ? TextDecoration.lineThrough : null,
+                    decorationColor: AppTheme.textSecondary,
                   ),
                 ),
-                SizedBox(height: 3),
+                const SizedBox(height: 1),
                 Text(
-                  'Pilih tipe usaha agar fitur yang tampil sesuai (Warung, Gerobak, Cafe, dll).',
-                  style: TextStyle(
-                      color: AppTheme.textSecondary, fontSize: 12, height: 1.3),
+                  subtitle,
+                  style: const TextStyle(
+                      color: AppTheme.textSecondary, fontSize: 11.5, height: 1.3),
                 ),
               ],
             ),
           ),
           const SizedBox(width: 8),
-          TextButton(
-            onPressed: _saving ? null : _pickType,
-            style: TextButton.styleFrom(
-              backgroundColor: AppTheme.primaryColor,
-              foregroundColor: Colors.white,
-              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
-              shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(10)),
+          if (done)
+            const Icon(Icons.check_circle_rounded,
+                color: AppTheme.successColor, size: 22)
+          else
+            TextButton(
+              onPressed: saving ? null : onAction,
+              style: TextButton.styleFrom(
+                backgroundColor: AppTheme.primaryColor,
+                foregroundColor: Colors.white,
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
+                shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(10)),
+              ),
+              child: saving
+                  ? const SizedBox(
+                      width: 14,
+                      height: 14,
+                      child: CircularProgressIndicator(
+                          strokeWidth: 2, color: Colors.white),
+                    )
+                  : Text(actionLabel,
+                      style: const TextStyle(
+                          fontSize: 12.5, fontWeight: FontWeight.bold)),
             ),
-            child: _saving
-                ? const SizedBox(
-                    width: 16,
-                    height: 16,
-                    child: CircularProgressIndicator(
-                        strokeWidth: 2, color: Colors.white),
-                  )
-                : const Text('Pilih',
-                    style:
-                        TextStyle(fontSize: 13, fontWeight: FontWeight.bold)),
+        ],
+      ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    if (_dismissed) return const SizedBox.shrink();
+
+    final outletType = ref.watch(outletTypeProvider(widget.outletId));
+    final raw = outletType.trim().toLowerCase();
+    final typeDone = raw.isNotEmpty && raw != 'warung' && raw != 'toko baru';
+
+    final hasAnyTx =
+        ref.watch(hasAnyTransactionProvider(widget.outletId)).value ?? false;
+    final sampleProducts =
+        widget.products.where((p) => p.category == 'Contoh').toList();
+
+    final productDone = widget.productCount > 0;
+    final txDone = hasAnyTx;
+
+    final doneCount =
+        [typeDone, productDone, txDone].where((b) => b).length;
+    const total = 3;
+    final allDone = doneCount == total;
+
+    return Container(
+      margin: const EdgeInsets.only(bottom: 12),
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: AppTheme.surfaceColor,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: AppTheme.borderColor),
+        boxShadow: AppTheme.shadowSoft,
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(10),
+                decoration: BoxDecoration(
+                  gradient: AppTheme.primaryGradient,
+                  borderRadius: BorderRadius.circular(14),
+                ),
+                child: const Icon(Icons.rocket_launch_rounded,
+                    color: Colors.white, size: 22),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Langkah Awal Berjualan',
+                      style: GoogleFonts.plusJakartaSans(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w800,
+                        color: AppTheme.textPrimary,
+                      ),
+                    ),
+                    const SizedBox(height: 1),
+                    Text(
+                      allDone
+                          ? 'Tokomu siap. Selamat berjualan!'
+                          : 'Selesaikan 3 langkah cepat berikut',
+                      style: const TextStyle(
+                          color: AppTheme.textSecondary,
+                          fontSize: 12,
+                          height: 1.3),
+                    ),
+                  ],
+                ),
+              ),
+              Text(
+                '$doneCount/$total',
+                style: GoogleFonts.plusJakartaSans(
+                  fontSize: 13,
+                  fontWeight: FontWeight.w800,
+                  color: AppTheme.primaryColor,
+                ),
+              ),
+              if (allDone)
+                IconButton(
+                  tooltip: 'Tutup',
+                  icon: const Icon(Icons.close_rounded,
+                      color: AppTheme.textSecondary, size: 20),
+                  onPressed: () => setState(() => _dismissed = true),
+                ),
+            ],
           ),
+          const SizedBox(height: 12),
+          ClipRRect(
+            borderRadius: BorderRadius.circular(6),
+            child: LinearProgressIndicator(
+              value: (doneCount / total).clamp(0.0, 1.0),
+              minHeight: 6,
+              backgroundColor: AppTheme.borderColor,
+              color: AppTheme.primaryColor,
+            ),
+          ),
+          const SizedBox(height: 6),
+          _stepRow(
+            done: typeDone,
+            icon: Icons.storefront_rounded,
+            title: 'Pilih Tipe Usaha',
+            subtitle: 'Agar fitur yang tampil sesuai usahamu',
+            actionLabel: 'Pilih',
+            onAction: _pickType,
+            saving: _saving,
+          ),
+          _stepRow(
+            done: productDone,
+            icon: Icons.inventory_2_rounded,
+            title: 'Kelola Produk',
+            subtitle: widget.productCount > 0
+                ? 'Sudah ada ${widget.productCount} produk'
+                : 'Tambahkan produk pertamamu',
+            actionLabel: 'Tambah',
+            onAction: widget.onOpenProducts,
+            saving: false,
+          ),
+          _stepRow(
+            done: txDone,
+            icon: Icons.point_of_sale_rounded,
+            title: 'Coba Transaksi Pertama',
+            subtitle: 'Latihan jual memakai produk contoh',
+            actionLabel: 'Coba',
+            onAction: _openKasirDemo,
+            saving: false,
+          ),
+          if (sampleProducts.isNotEmpty)
+            Padding(
+              padding: const EdgeInsets.only(top: 6),
+              child: Row(
+                children: [
+                  const Icon(Icons.auto_awesome_rounded,
+                      color: AppTheme.accentColor, size: 16),
+                  const SizedBox(width: 6),
+                  Expanded(
+                    child: Text(
+                      '${sampleProducts.length} produk contoh aktif untuk latihan.',
+                      style: const TextStyle(
+                          color: AppTheme.textSecondary, fontSize: 11.5),
+                    ),
+                  ),
+                  TextButton(
+                    onPressed: _removeSample,
+                    style: TextButton.styleFrom(
+                      foregroundColor: AppTheme.textSecondary,
+                      padding: const EdgeInsets.symmetric(horizontal: 8),
+                    ),
+                    child: const Text('Hapus contoh',
+                        style: TextStyle(fontSize: 12)),
+                  ),
+                ],
+              ),
+            ),
         ],
       ),
     );

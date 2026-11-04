@@ -206,6 +206,23 @@ class SupabaseService {
     }
   }
 
+  /// Hapus semua produk contoh (category = 'Contoh') milik outlet.
+  /// Dipakai tombol "Hapus produk contoh" di checklist onboarding.
+  Future<int> deleteSampleProducts(String outletId) async {
+    try {
+      final res = await _client
+          .from('products')
+          .delete()
+          .eq('outlet_id', outletId)
+          .eq('category', 'Contoh')
+          .select('id');
+      invalidateProductCache();
+      return (res as List).length;
+    } catch (e) {
+      return 0;
+    }
+  }
+
   Future<List<Transaction>> getTransactions(String outletId, {int limit = 50, DateTime? startDate, DateTime? endDate}) async {
     try {
       final response = await _queryTransactions(
