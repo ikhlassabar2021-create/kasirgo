@@ -1,7 +1,18 @@
+// Buang meta-command psql (bukan SQL) yang dikeluarkan pg_dump plain-format.
+// Penting karena dump PostgreSQL 15.19+/18 menyisipkan penanda `\restrict`/`\unrestrict`
+// dan COPY memakai terminator `\.` — node-pg tidak memahami baris ber-backslash ini.
+export function stripPsqlMetaCommands(sql) {
+  return sql
+    .replace(/^\\restrict\b[^\r\n]*\r?\n?/gm, '')
+    .replace(/^\\unrestrict\b[^\r\n]*\r?\n?/gm, '')
+    .replace(/^\\\.\s*\r?\n?/gm, '');
+}
+
 // Split sebuah file SQL (bisa berisi DDL, fungsi dollar-quoted, INSERT multi-baris,
 // COPY, dll.) menjadi daftar pernyataan. Menangani: komentar baris `--`, komentar
 // blok `/* */`, string '...' dengan escape, identifier "..." dan $$...$$ dollar quote.
 export function splitSqlStatements(sql) {
+  sql = stripPsqlMetaCommands(sql);
   const statements = [];
   let cur = '';
   let i = 0;

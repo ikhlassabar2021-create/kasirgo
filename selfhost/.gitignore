@@ -1,7 +1,9 @@
-# Never commit restored state, node_modules, staging, or database dumps (sensitive).
+# Never commit restored state, node_modules, staging, database dumps, build
+# output aplikasi, atau paket ZIP (sensitif).
 installer/node_modules/
 installer/state.json
 state.json
 .stage/
 database/
+app/
 *.zip
