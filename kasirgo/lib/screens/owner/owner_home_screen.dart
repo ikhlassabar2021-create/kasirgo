@@ -49,6 +49,8 @@ import 'customer_list_screen.dart';
 import 'employee_screen.dart';
 import 'settings_screen.dart';
 import 'help_center_screen.dart';
+import 'onboarding_guide_screen.dart';
+import '../../services/onboarding_guide_service.dart';
 
 final homeSummaryProvider = FutureProvider<Map<String, dynamic>>((ref) async {
   final user = ref.watch(currentUserProvider);
@@ -202,6 +204,17 @@ class _OwnerHomeScreenState extends ConsumerState<OwnerHomeScreen> {
       }
       if (!mounted) return;
       final user = ref.read(currentUserProvider);
+      final guideDone = await OnboardingGuideService().isDone();
+      if (!mounted) return;
+      if (!guideDone) {
+        // Panduan bersuara menggantikan sapaan pada kunjungan pertama.
+        await Navigator.of(context).push(
+          MaterialPageRoute(
+            builder: (_) => OnboardingGuideScreen(outletId: user?.outletId),
+          ),
+        );
+        return;
+      }
       VoiceService().greetOnOpen(
         outletId: user?.outletId,
         ownerName: user?.name,
@@ -1735,6 +1748,14 @@ class _SetupChecklistCardState extends ConsumerState<_SetupChecklistCard> {
     );
   }
 
+  void _openVoiceGuide() {
+    Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (_) => OnboardingGuideScreen(outletId: widget.outletId),
+      ),
+    );
+  }
+
   Widget _stepRow({
     required bool done,
     required IconData icon,
@@ -1972,6 +1993,25 @@ class _SetupChecklistCardState extends ConsumerState<_SetupChecklistCard> {
                 ],
               ),
             ),
+          const Divider(height: 20, color: AppTheme.borderColor),
+          Row(
+            children: [
+              const Icon(Icons.record_voice_over_rounded,
+                  color: AppTheme.primaryColor, size: 18),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Text(
+                  'Dengar panduan langkah demi langkah bersuara',
+                  style: const TextStyle(
+                      color: AppTheme.textSecondary, fontSize: 11.5),
+                ),
+              ),
+              TextButton(
+                onPressed: _openVoiceGuide,
+                child: const Text('Dengar', style: TextStyle(fontSize: 12)),
+              ),
+            ],
+          ),
         ],
       ),
     );
