@@ -1,7 +1,7 @@
 name: kasirgo
 description: "Aplikasi kasir UMKM super-app untuk Indonesia"
 publish_to: 'none'
-version: 1.0.12+13
+version: 1.0.13+14
 
 environment:
   sdk: ^3.13.3
