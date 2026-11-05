@@ -556,30 +556,54 @@ class HelpTopicData {
         HelpStep(
           title: 'Kenali beranda',
           body:
-              'Kartu omzet hari ini, transaksi, dan tombol cepat ada di '
-              'beranda. Semua fitur utama bisa dibuka dari sini.',
+              'Di beranda ada kartu omzet hari ini, jumlah transaksi, grafik 7 '
+              'hari terakhir, dan tombol cepat. Semua fitur utama dibuka dari '
+              'sini. Perhatikan juga kartu "Langkah Awal Berjualan" berisi 3 '
+              'langkah cepat dengan bilah kemajuan.',
           scene: 'dashboard',
-          tip: 'Grafik kecil menunjukkan pola penjualan 7 hari terakhir.',
+          tip:
+              'Grafik kecil menunjukkan pola penjualan 7 hari terakhir. '
+              'Semua tombol penting diberi jarak aman dari navigasi HP.',
           action: 'settings',
           actionLabel: 'Buka Pengaturan',
         ),
         HelpStep(
+          title: 'Selesaikan langkah awal',
+          body:
+              'Kartu "Langkah Awal Berjualan" memandu 3 hal: Pilih Tipe Usaha '
+              '(tekan Pilih), Kelola Produk (tekan Tambah), dan Coba Transaksi '
+              'Pertama (tekan Coba). Setelah ketiganya selesai, kartu berubah '
+              'jadi "Tokomu siap" dan bisa ditutup.',
+          scene: 'dashboard',
+          tip:
+              'Outlet baru otomatis punya produk contoh kategori "Contoh" untuk '
+              'latihan. Bila tidak perlu, tekan "Hapus contoh" di kartu ini.',
+          action: 'products',
+          actionLabel: 'Buka Produk',
+        ),
+        HelpStep(
           title: 'Lengkapi profil & KYC',
           body:
-              'Isi nama toko, alamat, dan verifikasi KYC. Data ini dipakai '
-              'untuk katalog online dan pencairan pembayaran.',
+              'Buka Pengaturan, isi nama toko, nomor WhatsApp aktif, dan alamat. '
+              'Lalu buka Verifikasi KYC: isi nama sesuai KTP, unggah foto KTP '
+              '(NIK harus terbaca jelas) dan selfie memegang KTP. Verifikasi '
+              'berjalan otomatis.',
           scene: 'settings',
           tip:
-              'KYC hanya perlu sekali. Status verifikasi tampil di Pengaturan.',
+              'Selama belum terverifikasi, hanya layar KYC, bantuan, dan keluar '
+              'yang bisa diakses. Foto KTP/selfie disimpan di perangkat Anda.',
           action: 'settings',
           actionLabel: 'Buka Pengaturan',
         ),
         HelpStep(
           title: 'Tambahkan produk',
           body:
-              'Tekan tombol +, isi nama, harga, dan stok. Produk jasa bisa '
-              'diaktifkan tanpa stok.',
+              'Tekan tombol + / Tambah Produk. Isi nama, harga jual, stok awal, '
+              'kategori, dan foto. Tekan Simpan - produk langsung bisa dijual.',
           scene: 'products',
+          tip:
+              'Aktifkan saklar "Produk Jasa / Layanan" untuk jasa seperti '
+              'potong rambut atau servis; stok tidak dihitung.',
           action: 'products',
           actionLabel: 'Buka Produk',
         ),
@@ -594,8 +618,10 @@ class HelpTopicData {
         HelpStep(
           title: 'Pilih produk',
           body:
-              'Cari produk lewat kolom pencarian atau ketuk kartu produk. '
-              'Badge stok membantu memantau ketersediaan.',
+              'Buka Kasir (POS). Cari produk lewat pencarian atau tekan tombol '
+              'pindai barcode. Ketuk kartu produk untuk menambahkan ke '
+              'keranjang. Badge stok membantu memantau ketersediaan (hijau aman, '
+              'kuning menipis, merah habis).',
           scene: 'products',
           action: 'pos',
           actionLabel: 'Buka Kasir',
@@ -603,8 +629,9 @@ class HelpTopicData {
         HelpStep(
           title: 'Atur keranjang',
           body:
-              'Ubah jumlah dengan tombol + / -, tambahkan diskon bila perlu. '
-              'Total diperbarui otomatis.',
+              'Di keranjang, ubah jumlah dengan tombol + / -, hapus item dengan '
+              'ikon tempat sampah. Total diperbarui otomatis. Isi nama & nomor '
+              'WhatsApp pelanggan bila ingin mengirim struk.',
           scene: 'pos',
           action: 'pos',
           actionLabel: 'Buka Kasir',
@@ -612,12 +639,13 @@ class HelpTopicData {
         HelpStep(
           title: 'Selesaikan pembayaran',
           body:
-              'Tekan Bayar, pilih metode, lalu konfirmasi. Tombol Buat Pesanan '
-              'selalu berada di atas area navigasi HP sehingga tidak terhalang.',
+              'Tekan Bayar, pilih Tunai / QRIS / Transfer, lalu konfirmasi. '
+              'Untuk tunai, masukkan uang diterima dan kembalian dihitung '
+              'otomatis. Tombol aksi selalu di atas area navigasi HP.',
           scene: 'checkout',
           tip:
-              'Setelah sukses, struk bisa disimpan sebagai PDF atau dikirim '
-              'lewat WhatsApp.',
+              'Setelah sukses, simpan struk sebagai PDF atau kirim ke WhatsApp. '
+              'Transaksi tetap jalan walau internet putus.',
           action: 'pos',
           actionLabel: 'Coba di Kasir',
         ),
@@ -633,8 +661,9 @@ class HelpTopicData {
         HelpStep(
           title: 'Lihat pesanan masuk',
           body:
-              'Tab Pesanan menampilkan pesanan Dine-in dan Online. Badge '
-              'merah berarti ada pesanan yang menunggu konfirmasi.',
+              'Buka layar Pesanan Masuk. Ada dua tab: Dine-in (pesanan QR meja) '
+              'dan Online (katalog/marketplace). Badge merah berarti ada '
+              'pesanan menunggu konfirmasi.',
           scene: 'orders',
           action: 'orders',
           actionLabel: 'Buka Pesanan Masuk',
@@ -642,10 +671,24 @@ class HelpTopicData {
         HelpStep(
           title: 'Konfirmasi pembayaran',
           body:
-              'Periksa nominal, lalu tekan Konfirmasi Bayar setelah uang atau '
-              'QRIS diterima. Status berubah menjadi Diproses.',
+              'Buka pesanan berlabel Menunggu Bayar, periksa nominal, lalu tekan '
+              'Konfirmasi Bayar setelah uang atau QRIS diterima. Status berubah '
+              'menjadi Diproses dan pesanan diteruskan ke Dapur.',
           scene: 'orders',
-          tip: 'Pesanan belum dibayar tidak masuk antrean dapur (KDS).',
+          tip:
+              'Pesanan belum dibayar tidak masuk antrean dapur (KDS) - ini '
+              'mencegah masakan dibuat untuk pesanan yang belum dibayar.',
+          action: 'orders',
+          actionLabel: 'Buka Pesanan Masuk',
+        ),
+        HelpStep(
+          title: 'Atur QR Meja (cafe/resto)',
+          body:
+              'Buka QR Meja Dine-in, tambahkan meja (mis. "Meja 1"), lalu cetak '
+              'QR-nya. Pelanggan memindai QR, memilih menu, dan mengirim '
+              'pesanan yang langsung masuk ke kasir.',
+          scene: 'orders',
+          tip: 'Pesanan QR meja ikut masuk ke tab Dine-in untuk dikonfirmasi.',
           action: 'orders',
           actionLabel: 'Buka Pesanan Masuk',
         ),
@@ -727,6 +770,54 @@ class HelpTopicData {
           tip: 'Jangan bagikan akun owner kepada staf.',
           action: 'settings',
           actionLabel: 'Buka Pengaturan',
+        ),
+      ],
+    ),
+    HelpTopic(
+      title: 'Dokter Bisnis AI & Penumbuh Usaha',
+      subtitle: 'Diagnosa usaha, resep, sidak, atur harga, dan progres.',
+      icon: Icons.health_and_safety_rounded,
+      color: Color(0xFF7C3AED),
+      steps: [
+        HelpStep(
+          title: 'Mulai konsultasi',
+          body:
+              'Buka kartu Dokter Bisnis AI di beranda. Pilih topik cepat '
+              '(Diagnosa Usaha / Kenapa Omzet Turun / Saran Promosi / Cek Stok '
+              '& Kas), lalu isi "Cek Fisik Toko" 3 langkah agar saran lebih '
+              'tepat. Ketik pertanyaan seperti ke konsultan.',
+          scene: 'doctor',
+          tip:
+              'Fitur ini bagian dari Program Pendukung. Bila terkunci, ikuti '
+              'ajakan mengaktifkan pada layar yang muncul.',
+          action: 'doctor',
+          actionLabel: 'Buka Dokter Bisnis AI',
+        ),
+        HelpStep(
+          title: 'Baca hasil & jalankan resep',
+          body:
+              'Setelah diagnosa, tekan "Lihat Hasil Diagnosa" untuk melihat '
+              'skor usaha 0-100, vonis, dan Peta Resep. Tiap langkah punya '
+              'tombol Jalankan (buka fitur terkait) atau Tandai Selesai.',
+          scene: 'doctor',
+          tip:
+              'Hasil bisa disimpan sebagai PDF atau dikirim ke WhatsApp bos.',
+          action: 'doctor',
+          actionLabel: 'Buka Dokter Bisnis AI',
+        ),
+        HelpStep(
+          title: 'Sidak, harga & progres',
+          body:
+              'Tiga fitur pendamping: Sidak Stok & Kas (hitung fisik stok & '
+              'uang, lihat selisih), Atur Harga & Diskon (saran diskon/kenaikan '
+              'harga aman di atas modal), dan Laporan & Progres (skor usaha + '
+              'catat capaian harian).',
+          scene: 'doctor',
+          tip:
+              'Buka lewat kartu di beranda atau dari langkah resep Dokter '
+              'Bisnis AI.',
+          action: 'doctor',
+          actionLabel: 'Buka Dokter Bisnis AI',
         ),
       ],
     ),

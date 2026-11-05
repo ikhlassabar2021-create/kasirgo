@@ -48,7 +48,7 @@ https://github.com/ikhlassabar2021-create/kasirgo/releases/download/v1.0.11-sign
 8. **Kelola karyawan** (`employee_screen.dart`), **shift** (`shift_screen.dart`),
    **delegasi tugas** (`delegation_board_screen.dart`).
 9. **Paket Bundling** (`bundle_manager_screen.dart`).
-10. **Afiliasi** (`affiliate_owner_screen.dart`): kode & komisi referral.
+10. **Afiliasi** (`affiliate_owner_screen.dart`): kode & komisi afiliasi.
 11. **Kitchen (KDS)** (`kitchen_display_screen.dart`) — khusus usaha makanan/minuman
     (cafe/warteg).
 
@@ -58,11 +58,9 @@ https://github.com/ikhlassabar2021-create/kasirgo/releases/download/v1.0.11-sign
 - Sidak Stok & Kas (`sidak_bos_screen.dart`)
 - Atur Harga & Diskon (`dynamic_pricing_screen.dart`)
 - Laporan & Progres (`progress_tracker_screen.dart`)
-- Lapak Live (`lapak_live_screen.dart`)
 - WA Marketing (`whatsapp_broadcast_screen.dart`)
 - QR Meja Dine-in (`qr_table_screen.dart`) — khusus cafe/resto
 - Katalog Online (`online_catalog_screen.dart`)
-- Health Score (`health_score_screen.dart`)
 
 Beberapa fitur pendukung di Pengaturan: multi-outlet (`multi_outlet_screen.dart`),
 custom struk/logo, laporan otomatis ke Bos, dan slot staf tambahan.
