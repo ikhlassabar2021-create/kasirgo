@@ -244,8 +244,8 @@ class RcbProvider implements PgProviderClient {
   }
 }
 
-/// Facade Payment Gateway. Memilih provider aktif (saat ini Midtrans) dan
-/// menyediakan helper config non-secret untuk UI.
+/// Facade Payment Gateway. Memilih provider aktif (default & produksi: RCB)
+/// dan menyediakan helper config non-secret untuk UI.
 class PaymentService {
   PaymentService({SupabaseClient? client})
       : _client = client ?? Supabase.instance.client;

@@ -511,7 +511,7 @@ class SupporterService {
       final amount = (map['amount'] as num?)?.toDouble() ?? price;
       final periodDays = (map['period_days'] as num?)?.toInt() ?? 30;
 
-      // Coba buat QRIS dinamis (Midtrans) agar pembayaran terverifikasi otomatis.
+      // Buat QRIS dinamis (RCB produksi) agar pembayaran terverifikasi otomatis via webhook.
       try {
         final pgOrder = await PaymentService().createQris(
           outletId: outletId,
