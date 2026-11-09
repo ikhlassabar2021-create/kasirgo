@@ -25,6 +25,7 @@ import 'screens/cashier/cashier_report_screen.dart';
 import 'screens/kitchen/kitchen_home_screen.dart';
 import 'screens/customer/customer_menu_screen.dart';
 import 'screens/customer/customer_catalog_screen.dart';
+import 'screens/modules/supporter_screen.dart';
 import 'services/local_db_service.dart';
 import 'services/sync_service.dart';
 import 'services/auth_service.dart';
@@ -62,7 +63,12 @@ final _router = GoRouter(
     ),
     GoRoute(
       path: '/login',
-      builder: (context, state) => const LoginScreen(),
+      builder: (context, state) {
+        final then = state.uri.queryParameters['then'];
+        return LoginScreen(
+          redirectTarget: (then != null && then.isNotEmpty) ? then : null,
+        );
+      },
     ),
     GoRoute(
       path: '/register',
@@ -108,6 +114,10 @@ final _router = GoRouter(
     GoRoute(
       path: '/owner/guide',
       builder: (context, state) => const KycGate(child: HelpCenterScreen()),
+    ),
+    GoRoute(
+      path: '/owner/supporter',
+      builder: (context, state) => const KycGate(child: SupporterScreen()),
     ),
     GoRoute(
       path: '/admin',
@@ -177,13 +187,7 @@ class _KasirGoAppState extends ConsumerState<KasirGoApp> {
         if (user != null && mounted) {
           ref.read(currentUserProvider.notifier).setUserDirectly(user);
           _maybeTriggerAlerts(user);
-          final route = switch (user.role) {
-            'admin' => '/admin',
-            'cashier' => '/cashier',
-            'kitchen' => '/kitchen',
-            _ => '/owner',
-          };
-          _router.go(route);
+          _router.go(_resolveTarget(user));
         }
       }
     });
@@ -211,13 +215,23 @@ class _KasirGoAppState extends ConsumerState<KasirGoApp> {
 
     ref.read(currentUserProvider.notifier).setUserDirectly(user);
     _maybeTriggerAlerts(user);
-    final route = switch (user.role) {
+    _router.go(_resolveTarget(user));
+  }
+
+  /// Tentukan tujuan setelah login: hormati deep-link `?then=` (hanya rute owner),
+  /// selain itu arahkan ke beranda sesuai peran.
+  String _resolveTarget(User user) {
+    final redirect = ref.read(loginRedirectProvider);
+    if (redirect != null && redirect.startsWith('/owner')) {
+      ref.read(loginRedirectProvider.notifier).state = null;
+      return redirect;
+    }
+    return switch (user.role) {
       'admin' => '/admin',
       'cashier' => '/cashier',
       'kitchen' => '/kitchen',
       _ => '/owner',
     };
-    _router.go(route);
   }
 
   void _maybeTriggerAlerts(User user) {

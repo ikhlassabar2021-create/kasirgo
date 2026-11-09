@@ -19,6 +19,10 @@ final currentUserProvider = StateNotifierProvider<CurrentUserNotifier, User?>((r
   return CurrentUserNotifier(ref.watch(authServiceProvider));
 });
 
+/// Target deep-link yang harus dituju setelah login berhasil
+/// (mis. `/owner/supporter` dari landing page tombol "Beli Program Pendukung").
+final loginRedirectProvider = StateProvider<String?>((ref) => null);
+
 class CurrentUserNotifier extends StateNotifier<User?> {
   final AuthService _authService;
 

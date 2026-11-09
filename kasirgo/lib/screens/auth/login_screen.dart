@@ -10,7 +10,9 @@ import '../../utils/error_messages.dart';
 import '../../widgets/common/bubble_glass.dart';
 
 class LoginScreen extends ConsumerStatefulWidget {
-  const LoginScreen({super.key});
+  final String? redirectTarget;
+
+  const LoginScreen({super.key, this.redirectTarget});
 
   @override
   ConsumerState<LoginScreen> createState() => _LoginScreenState();
@@ -25,6 +27,10 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
   @override
   void initState() {
     super.initState();
+    final then = widget.redirectTarget;
+    if (then != null && then.isNotEmpty) {
+      ref.read(loginRedirectProvider.notifier).state = then;
+    }
   }
 
   Future<void> _loginWithGoogle() async {
@@ -67,23 +73,9 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
       
       final user = await authService.getCurrentUser();
       if (user != null && mounted) {
+        // Navigasi pasca-login ditangani `_listenAuth` di app.dart, yang juga
+        // menghormati deep-link `?then=` (loginRedirectProvider).
         ref.read(currentUserProvider.notifier).setUserDirectly(user);
-        switch (user.role) {
-          case 'owner':
-            context.go('/owner');
-            break;
-          case 'admin':
-            context.go('/admin');
-            break;
-          case 'cashier':
-            context.go('/cashier');
-            break;
-          case 'kitchen':
-            context.go('/kitchen');
-            break;
-          default:
-            context.go('/owner');
-        }
       }
     } catch (e) {
       if (mounted) {
