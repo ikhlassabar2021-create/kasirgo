@@ -5,6 +5,7 @@ import 'package:qr_flutter/qr_flutter.dart';
 import '../../config/app_theme.dart';
 import '../../providers/auth_provider.dart';
 import '../../services/supporter_service.dart';
+import '../../services/voice_service.dart';
 import '../../utils/formatters.dart';
 import '../../widgets/common/centennial_background.dart';
 import '../../widgets/common/dynamic_qris_sheet.dart';
@@ -94,6 +95,11 @@ class _SupporterScreenState extends ConsumerState<SupporterScreen> {
         builder: (_) => DynamicQrisSheet(result: result),
       );
       if (paid == true && mounted) {
+        // Suara aktif: nominal upgrade yang diterima + suara KasirGo.
+        VoiceService().announcePayment(
+          amount: result.amount,
+          outletId: ref.read(currentUserProvider)?.outletId,
+        );
         ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
           content: Text('Pembayaran diterima. Program Pendukung Anda aktif.'),
           backgroundColor: AppTheme.successColor,

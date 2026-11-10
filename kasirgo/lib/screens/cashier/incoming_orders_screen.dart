@@ -7,6 +7,7 @@ import '../../config/app_theme.dart';
 import '../../models/transaction.dart';
 import '../../providers/auth_provider.dart';
 import '../../services/supabase_service.dart';
+import '../../services/voice_service.dart';
 import '../../utils/formatters.dart';
 import 'online_orders_screen.dart';
 
@@ -142,6 +143,12 @@ class _IncomingOrdersScreenState extends ConsumerState<IncomingOrdersScreen>
         content: Text('Pembayaran dikonfirmasi. Pesanan masuk dapur.'),
         backgroundColor: AppTheme.successColor,
       ));
+    // Suara aktif: nominal yang sudah dikonfirmasi + suara KasirGo.
+    VoiceService().announcePayment(
+      amount: tx.finalAmount,
+      method: tx.paymentMethod,
+      outletId: ref.read(currentUserProvider)?.outletId,
+    );
     await _load(silent: true);
   }
 

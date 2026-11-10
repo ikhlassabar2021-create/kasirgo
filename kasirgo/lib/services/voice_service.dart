@@ -656,19 +656,16 @@ class VoiceService {
     await init();
     if (!available) return;
 
-    final buf = StringBuffer('Konfirmasi diterima. Masuk, ');
-    buf.write(_terbilangRupiah(amount));
+    final buf = StringBuffer(_terbilangRupiah(amount));
     if (method != null && method.trim().isNotEmpty) {
       buf.write(' ${_methodLabel(method)}');
     }
-    buf.write('. ');
+    buf.write(' berhasil diterima Kasir Go');
     if (change > 0) {
-      buf.write('Kembalian ${_terbilangRupiah(change)}. ');
+      buf.write('. Kembalian ${_terbilangRupiah(change)}');
     }
     if (customerName != null && customerName.trim().isNotEmpty) {
-      buf.write('Terima kasih ${customerName.trim()}.');
-    } else {
-      buf.write('Terima kasih.');
+      buf.write('. Terima kasih ${customerName.trim()}');
     }
     await speak(buf.toString(), priority: true);
   }
