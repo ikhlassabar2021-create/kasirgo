@@ -258,6 +258,23 @@ export const platformOutletRemoveStaff = (outletId: string, userId: string) =>
 export const platformOutletDeleteAccount = (outletId: string) =>
   rp<void>('platform_outlet_delete_account', { p_outlet_id: outletId })
 
+export const platformAccountEdit = (payload: {
+  outletId: string; name?: string | null; email?: string | null
+  outletName?: string | null; phone?: string | null
+}) =>
+  rp<void>('platform_account_edit', {
+    p_outlet_id: payload.outletId,
+    p_name: payload.name ?? null,
+    p_email: payload.email ?? null,
+    p_outlet_name: payload.outletName ?? null,
+    p_phone: payload.phone ?? null,
+  })
+
+export const platformAccountResetPassword = (outletId: string, newPassword: string) =>
+  rp<void>('platform_account_reset_password', {
+    p_outlet_id: outletId, p_new_password: newPassword,
+  })
+
 export const platformOutletReport = (outletId: string, start: string, end: string) =>
   rp<OutletReportResult>('platform_outlet_report', {
     p_outlet_id: outletId, p_start: start, p_end: end,

@@ -1,7 +1,10 @@
 import { useCallback, useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Search, Eye, RefreshCw, ChevronLeft, ChevronRight } from 'lucide-react';
-import { fmtRp, fmtDate, platformOutletsList, type OutletsListResult } from '../lib/adminApi';
+import { Search, Eye, RefreshCw, ChevronLeft, ChevronRight, Pencil, KeyRound, X } from 'lucide-react';
+import {
+  fmtRp, fmtDate, platformOutletsList, platformAccountEdit,
+  platformAccountResetPassword, type OutletsListResult, type OutletRow,
+} from '../lib/adminApi';
 
 const PAGE_SIZE = 25;
 
@@ -14,6 +17,13 @@ export function OutletsPage() {
   const [data, setData] = useState<OutletsListResult | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [modal, setModal] = useState<{ mode: 'edit' | 'reset'; outlet: OutletRow } | null>(null);
+  const [msg, setMsg] = useState<{ type: 'ok' | 'err'; text: string } | null>(null);
+
+  const flash = (type: 'ok' | 'err', text: string) => {
+    setMsg({ type, text });
+    setTimeout(() => setMsg(null), 3000);
+  };
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -144,13 +154,27 @@ export function OutletsPage() {
                     </span>
                   </td>
                   <td className="px-4 sm:px-6 py-3.5">
-                    <div className="flex justify-end">
+                    <div className="flex justify-end gap-1">
                       <button
                         onClick={() => navigate(`/outlets/${o.outlet_id}`)}
                         className="p-2 hover:bg-bg rounded-lg transition-colors text-primary"
                         title="Kelola Outlet"
                       >
                         <Eye className="w-4 h-4" />
+                      </button>
+                      <button
+                        onClick={() => setModal({ mode: 'edit', outlet: o })}
+                        className="p-2 hover:bg-bg rounded-lg transition-colors text-muted hover:text-primary"
+                        title="Edit Akun"
+                      >
+                        <Pencil className="w-4 h-4" />
+                      </button>
+                      <button
+                        onClick={() => setModal({ mode: 'reset', outlet: o })}
+                        className="p-2 hover:bg-bg rounded-lg transition-colors text-muted hover:text-amber-600"
+                        title="Reset Password"
+                      >
+                        <KeyRound className="w-4 h-4" />
                       </button>
                     </div>
                   </td>
@@ -181,6 +205,143 @@ export function OutletsPage() {
           </div>
         </div>
       </div>
+
+      {msg && (
+        <div className={`fixed bottom-5 right-5 z-[60] px-4 py-2.5 rounded-xl text-xs font-semibold shadow-lg ${
+          msg.type === 'ok' ? 'bg-success text-white' : 'bg-red-500 text-white'
+        }`}>{msg.text}</div>
+      )}
+
+      {modal && (
+        <AccountModal
+          mode={modal.mode}
+          outlet={modal.outlet}
+          onClose={() => setModal(null)}
+          onDone={(type, text) => {
+            flash(type, text);
+            setModal(null);
+            load();
+          }}
+        />
+      )}
     </div>
+  );
+}
+
+type AccountModalProps = {
+  mode: 'edit' | 'reset';
+  outlet: OutletRow;
+  onClose: () => void;
+  onDone: (type: 'ok' | 'err', text: string) => void;
+};
+
+function AccountModal({ mode, outlet, onClose, onDone }: AccountModalProps) {
+  const [busy, setBusy] = useState(false);
+  const [name, setName] = useState(outlet.owner_name || '');
+  const [email, setEmail] = useState(outlet.email || '');
+  const [outletName, setOutletName] = useState(outlet.outlet_name || '');
+  const [phone, setPhone] = useState(outlet.phone || '');
+  const [password, setPassword] = useState('');
+
+  const submit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (busy) return;
+    setBusy(true);
+    try {
+      if (mode === 'reset') {
+        if (password.length < 6) throw new Error('Password minimal 6 karakter');
+        await platformAccountResetPassword(outlet.outlet_id, password);
+        onDone('ok', `Password ${outlet.email} berhasil direset`);
+      } else {
+        await platformAccountEdit({
+          outletId: outlet.outlet_id,
+          name: name.trim() || null,
+          email: email.trim() || null,
+          outletName: outletName.trim() || null,
+          phone: phone.trim() || null,
+        });
+        onDone('ok', 'Data akun diperbarui');
+      }
+    } catch (err) {
+      onDone('err', err instanceof Error ? err.message : 'Aksi gagal');
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  return (
+    <div className="fixed inset-0 z-50 bg-black/50 flex items-center justify-center p-4" onClick={onClose}>
+      <div
+        className="bg-surface w-full max-w-md rounded-2xl border border-border shadow-xl p-5"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="flex items-start justify-between mb-4">
+          <div>
+            <h2 className="text-sm font-bold text-ink">
+              {mode === 'edit' ? 'Edit Akun' : 'Reset Password'}
+            </h2>
+            <p className="text-[11px] text-muted mt-0.5">{outlet.email}</p>
+          </div>
+          <button onClick={onClose} className="p-1.5 rounded-lg hover:bg-bg text-muted">
+            <X className="w-4 h-4" />
+          </button>
+        </div>
+
+        {mode === 'edit' ? (
+          <form onSubmit={submit} className="space-y-3">
+            <Field label="Nama Pemilik">
+              <input value={name} onChange={(e) => setName(e.target.value)} className={inputCls} placeholder="Nama pemilik" />
+            </Field>
+            <Field label="Email">
+              <input value={email} onChange={(e) => setEmail(e.target.value)} className={inputCls} type="email" placeholder="email@contoh.com" />
+            </Field>
+            <Field label="Nama Outlet">
+              <input value={outletName} onChange={(e) => setOutletName(e.target.value)} className={inputCls} placeholder="Nama toko" />
+            </Field>
+            <Field label="Telepon">
+              <input value={phone} onChange={(e) => setPhone(e.target.value)} className={inputCls} placeholder="08xx..." />
+            </Field>
+            <button
+              disabled={busy}
+              className="w-full py-2.5 rounded-xl bg-primary hover:bg-primary-light text-white text-xs font-bold disabled:opacity-50"
+            >
+              {busy ? 'Menyimpan...' : 'Simpan Perubahan'}
+            </button>
+          </form>
+        ) : (
+          <form onSubmit={submit} className="space-y-3">
+            <Field label="Password Baru">
+              <input
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                className={inputCls}
+                type="text"
+                placeholder="Minimal 6 karakter"
+              />
+            </Field>
+            <p className="text-[11px] text-muted">
+              Pemilik akan login dengan email tetap <b className="text-ink">{outlet.email}</b> dan password baru ini.
+            </p>
+            <button
+              disabled={busy}
+              className="w-full py-2.5 rounded-xl bg-amber-500 hover:bg-amber-600 text-white text-xs font-bold disabled:opacity-50"
+            >
+              {busy ? 'Memproses...' : 'Reset Password'}
+            </button>
+          </form>
+        )}
+      </div>
+    </div>
+  );
+}
+
+const inputCls = 'w-full px-3 py-2.5 text-sm bg-bg border border-border rounded-xl focus:ring-2 focus:ring-primary outline-none';
+
+function Field({ label, children }: { label: string; children: React.ReactNode }) {
+  return (
+    <label className="block">
+      <span className="block text-[11px] font-semibold text-muted mb-1">{label}</span>
+      {children}
+    </label>
   );
 }
