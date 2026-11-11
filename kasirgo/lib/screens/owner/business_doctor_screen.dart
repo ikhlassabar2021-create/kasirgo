@@ -172,6 +172,10 @@ class _BusinessDoctorScreenState extends ConsumerState<BusinessDoctorScreen> {
   int _loadingSeconds = 0;
   Timer? _loadingTicker;
 
+  /// Pesan terakhir pengguna, dipakai tombol "Coba Lagi" saat Dokter gagal
+  /// menjawab karena gangguan provider AI.
+  String? _lastUserMessage;
+
   /// Panel fitur yang sedang dibuka dari menu. `null` = layar chat.
   String? _pane;
   String _paneTitle = '';
@@ -854,10 +858,11 @@ class _BusinessDoctorScreenState extends ConsumerState<BusinessDoctorScreen> {
   }
 
   /// Muat preferensi mode voice note (per perangkat, bukan per outlet).
+  /// Default AKTIF: jawaban Dokter Bisnis otomatis dibacakan tanpa setting manual.
   Future<void> _loadVoiceNoteMode() async {
     try {
       final prefs = await SharedPreferences.getInstance();
-      final on = prefs.getBool('kasirgo_doctor_voice_note') ?? false;
+      final on = prefs.getBool('kasirgo_doctor_voice_note') ?? true;
       final show = prefs.getBool('kasirgo_doctor_voice_transcript') ?? false;
       if (!mounted) return;
       setState(() {
@@ -1410,6 +1415,7 @@ class _BusinessDoctorScreenState extends ConsumerState<BusinessDoctorScreen> {
       ));
       _loading = true;
       _attachment = null;
+      _lastUserMessage = text.trim().isEmpty ? message : text.trim();
     });
     _startLoadingTicker();
     _input.clear();
@@ -1571,6 +1577,15 @@ class _BusinessDoctorScreenState extends ConsumerState<BusinessDoctorScreen> {
     }
     if (actionKey == 'catat_promosi') {
       _openPromotionLog();
+      return;
+    }
+    if (actionKey == 'retry') {
+      final last = _lastUserMessage;
+      if (last == null || last.isEmpty) {
+        _snack('Belum ada pertanyaan untuk diulang.');
+        return;
+      }
+      _send(last);
       return;
     }
     final screen = _actionScreen(actionKey);

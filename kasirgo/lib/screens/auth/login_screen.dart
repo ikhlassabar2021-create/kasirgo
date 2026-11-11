@@ -23,6 +23,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
   bool _isLoading = false;
+  bool _obscurePassword = true;
 
   @override
   void initState() {
@@ -231,7 +232,16 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
               label: 'Password',
               hint: '••••••••',
               prefixIcon: Icons.lock_outlined,
-              obscureText: true,
+              obscureText: _obscurePassword,
+              suffixIcon: IconButton(
+                tooltip: _obscurePassword ? 'Tampilkan password' : 'Sembunyikan password',
+                icon: Icon(
+                  _obscurePassword ? Icons.visibility_off_outlined : Icons.visibility_outlined,
+                  color: AppTheme.textSecondary,
+                  size: 18,
+                ),
+                onPressed: () => setState(() => _obscurePassword = !_obscurePassword),
+              ),
               validator: (value) {
                 if (value == null || value.isEmpty) {
                   return 'Password wajib diisi';
@@ -309,6 +319,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
     required String hint,
     required IconData prefixIcon,
     bool obscureText = false,
+    Widget? suffixIcon,
     String? Function(String?)? validator,
   }) {
     return TextFormField(
@@ -320,6 +331,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
         labelText: label,
         hintText: hint,
         prefixIcon: Icon(prefixIcon, color: AppTheme.textSecondary, size: 18),
+        suffixIcon: suffixIcon,
         filled: true,
         fillColor: AppTheme.backgroundColor,
         border: OutlineInputBorder(

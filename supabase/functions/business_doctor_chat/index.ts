@@ -1116,6 +1116,12 @@ function sanitizeReply(raw: string): string {
     "```", "select *", "insert into", "curl ", "npm ", "git ", "import ",
     "function(", "const ", "console.log", "<?php", "<script", "def ",
   ];
+  // JSON mentah yang bocor ke layar (model gagal format) -> ambil isi reply-nya.
+  if (/^\{[\s\S]*"?reply"?\s*:/.test(text)) {
+    const salvaged = salvageReply(text);
+    if (salvaged) return salvaged.trim();
+    return "Maaf, jawaban saya tadi tidak terbaca. Bisa diulang pertanyaannya? (Saran AI)";
+  }
   if (codeMarkers.some((m) => lower.includes(m))) {
     return "Maaf, jawaban saya tadi kurang pas. Bisa diulang dengan pertanyaan yang lebih spesifik? Saya siap bantu dalam Bahasa Indonesia. (Saran AI)";
   }
@@ -1128,18 +1134,61 @@ function sanitizeReply(raw: string): string {
   return text;
 }
 
+// Tutup JSON yang terpotong (model kehabisan token di tengah jawaban) agar
+// jawaban asli tetap bisa ditampilkan, bukan berubah jadi teks JSON mentah.
+function repairTruncatedJson(text: string): Json | null {
+  const start = text.indexOf("{");
+  if (start < 0) return null;
+  const stack: string[] = [];
+  let inStr = false;
+  let esc = false;
+  for (let i = start; i < text.length; i++) {
+    const ch = text[i];
+    if (inStr) {
+      if (esc) esc = false;
+      else if (ch === "\\") esc = true;
+      else if (ch === '"') inStr = false;
+      continue;
+    }
+    if (ch === '"') inStr = true;
+    else if (ch === "{" || ch === "[") stack.push(ch);
+    else if (ch === "}" || ch === "]") stack.pop();
+  }
+  let out = text.slice(start).replace(/[,\s]+$/, "");
+  if (inStr) out += '"';
+  for (let i = stack.length - 1; i >= 0; i--) out += stack[i] === "{" ? "}" : "]";
+  try {
+    const parsed = JSON.parse(out);
+    return parsed && typeof parsed === "object" ? parsed : null;
+  } catch {
+    return null;
+  }
+}
+
+// Ambil isi field "reply" walau JSON-nya rusak total.
+function salvageReply(text: string): string {
+  const m = text.match(/"reply"\s*:\s*"((?:[^"\\]|\\.)*)/);
+  if (!m) return "";
+  try {
+    return JSON.parse(`"${m[1]}"`);
+  } catch {
+    return m[1].replace(/\\n/g, "\n").replace(/\\"/g, '"');
+  }
+}
+
 function extractJson(text: string): Json | null {
   const t = String(text ?? "").trim();
   const cleaned = t.replace(/^```(?:json)?/i, "").replace(/```$/, "").trim();
   try {
-    return JSON.parse(cleaned);
+    const parsed = JSON.parse(cleaned);
+    if (parsed && typeof parsed === "object" && !Array.isArray(parsed)) return parsed;
   } catch {
     /* fallthrough */
   }
   // Ambil objek JSON pertama yang seimbang (model kadang menambah teks setelahnya).
   const start = cleaned.indexOf("{");
   if (start < 0) return null;
-  let depth = 0;
+  const stack: string[] = [];
   let inStr = false;
   let esc = false;
   for (let i = start; i < cleaned.length; i++) {
@@ -1151,18 +1200,24 @@ function extractJson(text: string): Json | null {
       continue;
     }
     if (ch === '"') inStr = true;
-    else if (ch === "{") depth++;
-    else if (ch === "}") {
-      depth--;
-      if (depth === 0) {
+    else if (ch === "{" || ch === "[") stack.push(ch);
+    else if (ch === "}" || ch === "]") {
+      stack.pop();
+      if (!stack.length) {
         try {
-          return JSON.parse(cleaned.slice(start, i + 1));
+          const parsed = JSON.parse(cleaned.slice(start, i + 1));
+          if (parsed && typeof parsed === "object") return parsed;
         } catch {
-          return null;
+          break;
         }
       }
     }
   }
+  const repaired = repairTruncatedJson(cleaned);
+  if (repaired) return repaired;
+  // JSON rusak tanpa "reply" terparsir -> jangan tampilkan JSON mentah.
+  const salvaged = salvageReply(cleaned);
+  if (salvaged) return { reply: salvaged, blocks: [] };
   return null;
 }
 
@@ -1177,11 +1232,20 @@ function fallbackBlocks(snap: Json, reason: string) {
   }
   items.push({ text: "Catat penjualan hari ini di aplikasi agar Dokter bisa menganalisa", done: false });
   items.push({ text: "Tawarkan produk paling laku ke pelanggan langganan", done: false });
+  // Jangan salahkan Program Pendukung bila penyebabnya gangguan provider AI.
+  const providerIssue = /provider ai|llm|http|timeout|sibuk|gagal/i.test(reason);
   return [
-    { type: "card", tone: "warning", title: "Otak penuh belum aktif", body: reason },
+    {
+      type: "card",
+      tone: "warning",
+      title: providerIssue ? "Dokter sedang sibuk" : "Otak penuh belum aktif",
+      body: providerIssue
+        ? `${reason}\n\nSementara ini saya tampilkan analisa dari data toko Anda. Coba kirim ulang pertanyaannya sebentar lagi.`
+        : reason,
+    },
     { type: "gauge", label: "Skor Kesehatan Usaha (perkiraan)", value: score, hint: "Berdasarkan data aplikasi" },
     { type: "checklist", title: "Langkah awal", items },
-    { type: "action", label: "Aktifkan Program Pendukung", action_key: "upgrade" },
+    { type: "action", label: "Coba Lagi", action_key: "retry" },
   ];
 }
 
@@ -1237,6 +1301,22 @@ function toolsFor(internetActive: boolean, skills: string[]) {
 // Batas waktu tiap panggilan LLM agar respons tidak menggantung lama
 // (bila lewat -> lempar error -> app pakai analisa lokal instan).
 const LLM_TIMEOUT_MS = Number(Deno.env.get("DOCTOR_LLM_TIMEOUT_MS") ?? 45000) || 45000;
+// Anggaran total untuk seluruh rangkaian panggilan LLM + tool (multi-putaran).
+// Klien menunggu maks 75 detik, jadi hentikan lebih awal agar pengguna tetap
+// menerima jawaban (fallback lokal) sebelum koneksi diputus.
+const LLM_BUDGET_MS = Number(Deno.env.get("DOCTOR_LLM_BUDGET_MS") ?? 45000) || 45000;
+let llmDeadline = 0;
+
+function beginLlmBudget() {
+  llmDeadline = Date.now() + LLM_BUDGET_MS;
+}
+
+function remainingLlmMs(): number {
+  if (!llmDeadline) return LLM_TIMEOUT_MS;
+  return Math.max(0, Math.min(LLM_TIMEOUT_MS, 22000, llmDeadline - Date.now()));
+}
+
+const RETRY_SIGNAL = Symbol("retry");
 
 async function callLlmOnce(cfg: Json, apiKey: string, messages: Json[], tools: Json[] | null) {
   let base = String(cfg.base_url ?? "").replace(/\/+$/, "");
@@ -1251,8 +1331,23 @@ async function callLlmOnce(cfg: Json, apiKey: string, messages: Json[], tools: J
     body.tools = tools;
     body.tool_choice = "auto";
   }
+  // Provider agregator sering membalas 429/502/503 sesaat. Ulangi sekali
+  // dengan jeda pendek agar percakapan tidak langsung jatuh ke analisa lokal.
+  const MAX_TRIES = 2;
+  for (let attempt = 1; attempt <= MAX_TRIES; attempt++) {
+    const isLast = attempt === MAX_TRIES;
+    const data = await callLlmFetch(url, body, apiKey, isLast);
+    if (data !== RETRY_SIGNAL) return data;
+    await new Promise((r) => setTimeout(r, 1200));
+  }
+  throw new Error("Provider AI sedang sibuk. Coba lagi sebentar.");
+}
+
+async function callLlmFetch(url: string, body: Json, apiKey: string, throwOnTransient: boolean): Promise<Json | typeof RETRY_SIGNAL> {
   const ctrl = new AbortController();
-  const timer = setTimeout(() => ctrl.abort(), LLM_TIMEOUT_MS);
+  const budget = remainingLlmMs();
+  if (budget <= 1500) throw new Error("Waktu analisa habis. Coba lagi sebentar.");
+  const timer = setTimeout(() => ctrl.abort(), budget);
   let resp: Response;
   try {
     resp = await fetch(url, {
@@ -1263,14 +1358,21 @@ async function callLlmOnce(cfg: Json, apiKey: string, messages: Json[], tools: J
     });
   } catch (e) {
     if ((e as Error)?.name === "AbortError") {
-      throw new Error(`Provider AI timeout (>${Math.round(LLM_TIMEOUT_MS / 1000)} detik).`);
+      throw new Error(`Provider AI timeout (>${Math.round(budget / 1000)} detik).`);
     }
     throw e;
   } finally {
     clearTimeout(timer);
   }
   const data = await resp.json().catch(() => ({}));
-  if (!resp.ok) throw new Error(data?.error?.message ?? data?.message ?? `LLM HTTP ${resp.status}`);
+  if (!resp.ok) {
+    const msg = String(data?.error?.message ?? data?.message ?? `LLM HTTP ${resp.status}`);
+    // Hanya 429/5xx yang layak diulang. 401/403 = akun upstream bermasalah pada
+    // provider ini -> langsung lempar agar rantai failover pindah provider cepat.
+    const transient = [429, 500, 502, 503, 504].includes(resp.status);
+    if (transient && !throwOnTransient) return RETRY_SIGNAL;
+    throw new Error(msg);
+  }
   return data;
 }
 
@@ -1586,6 +1688,7 @@ Deno.serve(async (req: Request) => {
     } else {
       try {
         let data: Json;
+        beginLlmBudget();
         const tools = toolsFor(internetActive, skillList(globalCfg));
         try {
           data = await callLlm(provider, messages, tools);
