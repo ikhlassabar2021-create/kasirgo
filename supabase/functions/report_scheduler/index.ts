@@ -103,6 +103,17 @@ Deno.serve(async (req: Request) => {
   const resendKey = Deno.env.get("RESEND_API_KEY") ?? "";
   const fromEmail = Deno.env.get("REPORT_FROM_EMAIL") ?? "laporan@kasirgo.app";
 
+  // Saklar "Email Notifikasi Pelanggan" (Control Plane > Email & SMTP).
+  const { data: smtpCfg } = await admin
+    .from("system_smtp_config")
+    .select("is_active, email_notifications_enabled")
+    .order("updated_at", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+  const emailAllowed = !!resendKey &&
+    (smtpCfg?.is_active === true) &&
+    (smtpCfg?.email_notifications_enabled !== false);
+
   const { data: schedules, error } = await admin
     .from("report_schedules")
     .select("*")
@@ -176,7 +187,7 @@ Deno.serve(async (req: Request) => {
 
       const emailRecipients = recipients.filter((r) => r.includes("@"));
       let sent = false;
-      if (channels.includes("email") && emailRecipients.length > 0 && resendKey) {
+      if (channels.includes("email") && emailRecipients.length > 0 && emailAllowed) {
         let attachments: Array<Record<string, string>> = [];
         try {
           attachments = [{

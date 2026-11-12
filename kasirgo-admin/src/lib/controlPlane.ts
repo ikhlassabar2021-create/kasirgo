@@ -667,6 +667,8 @@ export interface SmtpConfig {
   from_name: string | null
   is_active: boolean
   apply_as_auth: boolean
+  email_confirmation_enabled: boolean
+  email_notifications_enabled: boolean
   has_password: boolean
   password_hint: string | null
   updated_at: string | null
@@ -721,6 +723,15 @@ export async function saveSmtpConfig(config: Record<string, any>): Promise<SmtpC
 /// Terapkan SMTP sebagai SMTP auth Supabase (untuk email verifikasi).
 export async function applySmtpAuth() {
   const { data, error } = await supabase.functions.invoke('apply_smtp_auth', { body: {} })
+  if (error) throw error
+  return data
+}
+
+/// Kirim email tes melalui SMTP yang tersimpan (untuk validasi dari Control Plane).
+export async function testSmtpEmail(to: string) {
+  const { data, error } = await supabase.functions.invoke('apply_smtp_auth', {
+    body: { mode: 'test_email', to },
+  })
   if (error) throw error
   return data
 }

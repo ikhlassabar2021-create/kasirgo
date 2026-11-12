@@ -73,6 +73,7 @@ import {
   getSmtpConfig,
   saveSmtpConfig,
   applySmtpAuth,
+  testSmtpEmail,
   APP_RELEASE_ABIS,
   pushApkToGithub,
 } from '../lib/controlPlane';
@@ -3287,9 +3288,12 @@ function UpdateAppTab() {
   const [smtp, setSmtp] = useState<any>({
     provider: 'smtp', host: '', port: 587, secure: false, username: '',
     password: '', from_email: '', from_name: 'KasirGo', is_active: false, apply_as_auth: false,
+    email_confirmation_enabled: false, email_notifications_enabled: true,
   });
   const [smtpBusy, setSmtpBusy] = useState(false);
   const [applyBusy, setApplyBusy] = useState(false);
+  const [testEmail, setTestEmail] = useState('');
+  const [testBusy, setTestBusy] = useState(false);
 
   // Rilisan + draft
   const [releases, setReleases] = useState<AppRelease[]>([]);
@@ -3333,6 +3337,8 @@ function UpdateAppTab() {
         secure: c.secure ?? false, username: c.username ?? '', password: '',
         from_email: c.from_email ?? '', from_name: c.from_name ?? 'KasirGo',
         is_active: c.is_active ?? false, apply_as_auth: c.apply_as_auth ?? false,
+        email_confirmation_enabled: c.email_confirmation_enabled ?? false,
+        email_notifications_enabled: c.email_notifications_enabled ?? true,
         has_password: c.has_password ?? false,
       });
     }).catch(() => {});
@@ -3402,13 +3408,21 @@ function UpdateAppTab() {
     setApplyBusy(true);
     try {
       const r = await applySmtpAuth();
-      show(r?.success ? 'ok' : 'err', r?.message ?? 'SMTP auth diterapkan ke Supabase.');
+      show(r?.success ? 'ok' : 'err', r?.message ?? 'Pengaturan email diterapkan ke Supabase.');
     } catch (e: any) { show('err', e.message); } finally { setApplyBusy(false); }
+  };
+  const sendTestEmailAction = async () => {
+    if (!testEmail.trim()) { show('err', 'Isi alamat email tujuan tes dulu.'); return; }
+    setTestBusy(true);
+    try {
+      const r = await testSmtpEmail(testEmail.trim());
+      show(r?.success ? 'ok' : 'err', r?.message ?? 'Tes email selesai.');
+    } catch (e: any) { show('err', e.message); } finally { setTestBusy(false); }
   };
 
   return (
     <div className="space-y-4">
-      <Card title="Konfigurasi SMTP" subtitle="Untuk email verifikasi pendaftaran (auth). Terapkan sebagai SMTP auth Supabase agar email konfirmasi/verifikasi terkirim.">
+      <Card title="Konfigurasi Email & SMTP" subtitle="Atur SMTP, saklar kirim email, email konfirmasi pendaftaran, dan email notifikasi pelanggan. Tombol 'Terapkan' menyinkronkan pengaturan konfirmasi/SMTP ke Supabase Auth.">
         <div className="max-w-[860px] space-y-3">
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div><label className={labelCls}>Host SMTP</label><input className={inputCls} value={smtp.host ?? ''} onChange={(e) => setSmtp({ ...smtp, host: e.target.value })} placeholder="in-v3.mailjet.com" /></div>
@@ -3420,7 +3434,9 @@ function UpdateAppTab() {
           </div>
           <div className="flex flex-wrap gap-4 pt-1">
             <label className="flex items-center gap-2 text-xs font-semibold text-muted"><input type="checkbox" checked={!!smtp.secure} onChange={(e) => setSmtp({ ...smtp, secure: e.target.checked })} /> SSL/TLS (secure)</label>
-            <label className="flex items-center gap-2 text-xs font-semibold text-muted"><input type="checkbox" checked={!!smtp.is_active} onChange={(e) => setSmtp({ ...smtp, is_active: e.target.checked })} /> Aktif (untuk verifikasi email)</label>
+            <label className="flex items-center gap-2 text-xs font-semibold text-muted"><input type="checkbox" checked={!!smtp.is_active} onChange={(e) => setSmtp({ ...smtp, is_active: e.target.checked })} /> Kirim Email (SMTP aktif)</label>
+            <label className="flex items-center gap-2 text-xs font-semibold text-muted"><input type="checkbox" checked={!!smtp.email_confirmation_enabled} onChange={(e) => setSmtp({ ...smtp, email_confirmation_enabled: e.target.checked })} /> Email Konfirmasi Pendaftaran</label>
+            <label className="flex items-center gap-2 text-xs font-semibold text-muted"><input type="checkbox" checked={!!smtp.email_notifications_enabled} onChange={(e) => setSmtp({ ...smtp, email_notifications_enabled: e.target.checked })} /> Email Notifikasi Pelanggan</label>
             <label className="flex items-center gap-2 text-xs font-semibold text-muted"><input type="checkbox" checked={!!smtp.apply_as_auth} onChange={(e) => setSmtp({ ...smtp, apply_as_auth: e.target.checked })} /> Terapkan sebagai SMTP auth</label>
           </div>
           <div className="flex flex-wrap gap-2">
@@ -3428,6 +3444,16 @@ function UpdateAppTab() {
             <button onClick={applyAuth} disabled={applyBusy} className="flex items-center gap-2 px-4 py-2.5 rounded-xl font-semibold text-xs border border-border hover:bg-bg transition active:scale-95 disabled:opacity-50">
               {applyBusy ? <RefreshCw className="w-4 h-4 animate-spin" /> : <Mail className="w-4 h-4" />} Terapkan ke Auth Supabase
             </button>
+          </div>
+          <div className="rounded-xl border border-border bg-bg/50 p-3 space-y-2">
+            <p className="text-[11px] font-bold text-muted uppercase tracking-wide">Tes Kirim Email</p>
+            <div className="flex flex-wrap gap-2">
+              <input className={`${inputCls} flex-1 min-w-[220px]`} value={testEmail} onChange={(e) => setTestEmail(e.target.value)} placeholder="nama@email.com" />
+              <button onClick={sendTestEmailAction} disabled={testBusy} className="flex items-center gap-2 px-4 py-2.5 rounded-xl font-semibold text-xs border border-border hover:bg-bg transition active:scale-95 disabled:opacity-50">
+                {testBusy ? <RefreshCw className="w-4 h-4 animate-spin" /> : <Mail className="w-4 h-4" />} Kirim Tes
+              </button>
+            </div>
+            <p className="text-[11px] text-muted">Simpan dulu konfigurasi + aktifkan "Kirim Email" sebelum mengetes. Hasil tes memakai kredensial SMTP tersimpan.</p>
           </div>
         </div>
       </Card>
