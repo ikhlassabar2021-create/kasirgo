@@ -1741,3 +1741,50 @@ Commit `ff04bb3` (main) + deploy web gh-pages `050051c` (live md5
   baca; klien REVOKE). `doctor-proxy` mode completions bisa dipanggil user ter-autentikasi
   mana pun; konsumen utama tetap `business_doctor_chat` (ter-gate membership). APK perlu
   dibangun ulang agar perubahan ini masuk perangkat.
+
+## Sesi 2026-11-12: Ganti SMTP brandbisnis + Backup/Pulihkan + Console AI Superadmin (SELESAI)
+- SMTP DIGANTI DARI MAILJET KE BRANDBISNIS (email resmi domain dokterbisnis.web.id):
+  - `system_smtp_config` live kini: host `mail.brandbisnis.web.id`, port `465`, `secure=true`,
+    username/from `dokter@brandbisnis.web.id`, from_name `KasirGo`, `is_active=true`, `apply_as_auth=true`.
+  - ROOT CAUSE + FIX penting: Edge Function `apply_smtp_auth` semula mengirim objek bersarang
+    `smtp: {...}` ke Management API config/auth — Supabase Auth ternyata memakai field DATAR
+    `smtp_host`/`smtp_port`/`smtp_user`/`smtp_pass`/`smtp_admin_email`/`smtp_sender_name`
+    (objek `smtp` dikembalikan `null`, tidak pernah ter-apply). Juga `smtp_port` harus STRING
+    (`String(settings.port)`), bukan number (400 "expected string").
+  - FIX `supabase/functions/apply_smtp_auth/index.ts` baris 252-260: `patchBody.smtp_host/…`
+    datar + port string. REDEPLOYED. Verifikasi auth live: `smtp_host=mail.brandbisnis.web.id`,
+    `smtp_port=465`, `smtp_user=dokter@brandbisnis.web.id`, `smtp_admin_email=dokter@…`,
+    `mailer_autoconfirm=true`. Tes kirim ke `ikhlassabar2021@gmail.com` SUCCESS (SSL 465 via
+    `Deno.connectTls` sudah didukung `sendTestEmail` sejak awal).
+- BACKUP & PULIHKAN KINI TERLIHAT DI SIDEBAR SUPERADMIN:
+  - Halaman `BackupPage` (`kasirgo-admin/src/pages/Backup.tsx`) sudah ada dari ST11-2 tetapi
+    route-nya redirect ke `/outlets`. Kini route `/backup` = `guard(<BackupPage/>)` + item
+    sidebar "Backup & Pulihkan" (ikon DatabaseBackup) + judul mobile di `Layout.tsx`.
+    Fitur: snapshot JSON per outlet (RPC `platform_backup_*`), jadwal backup, unduh, restore
+    data hilang (produk/varian/pelanggan), dan kartu panduan self-host (Duplicator-style).
+- CONSOLE AI SUPERADMIN (BARU) — chat untuk periksa/perbaiki/develop sistem:
+  - MIGRASI `docs/migrations/2026-12-11-kasirgo-console-ai.sql` (DITERAPKAN):
+    tabel `console_ai_sessions` + `console_ai_messages` (RLS `is_platform_admin`); RPC
+    `console_ai_run_sql(p_sql text, p_mode text='read')` SECURITY DEFINER (admin-gated):
+    single statement, blokir DROP DATABASE/SCHEMA/ROLE, TRUNCATE, dll; mode 'read' hanya
+    SELECT/SHOW/EXPLAIN/WITH (tolak CTE tulis), mode 'write' jalankan DML/DDL + `log_admin_action`;
+    hasil rows (jsonb_agg, potong 200) atau affected row count. RPC `console_ai_list_tables()`.
+    PERHATIAN REGEX: Postgres memakai `\y` (word boundary), BUKAN `\b` (backspace) — regex
+    `\b(...)` menyebabkan "parentheses not balanced" / pola tak pernah match.
+  - EF BARU `supabase/functions/system_console/index.ts` (DEPLOYED): superadmin-only
+    (`is_platform_admin`), baca provider LLM dari `system_api_configs` + Vault (sama seperti
+    `doctor-proxy`), tool loop maks 4 putaran, tools `run_sql` (read/write) + `list_tables`;
+    aksi `list`/`history`/`delete`/`chat`; simpan sesi+pesan ke `console_ai_*`.
+    PENTING: `run_sql` dipanggil via `userClient` (JWT superadmin) supaya `is_platform_admin()`
+    melihat `auth.uid()` aktor — kalau via service role, auth.uid() null -> selalu "Hanya superadmin".
+  - ADMIN `kasirgo-admin/src/pages/ConsoleAi.tsx` (BARU): riwayat sesi (sticky), kotak chat,
+    render tool calls (badge run_sql read/write + hasil ok/gagal), auto-scroll, Enter kirim.
+    Route `/console-ai` + sidebar "Console AI" (ikon Bot) + judul mobile.
+  - E2E live terverifikasi: chat "Berapa total outlet?" -> `run_sql` read -> jawaban
+    "6 outlet" (tool_calls ok:true). Data uji dibersihkan (sesi dihapus).
+- Build admin `tsc`+`vite` bersih; commit `ed51bea`; CI Deploy Web `43217956038` + Pages
+  `43218298709` sukses. Live admin bundle `index-DOvN7Z-X.js` memuat "Backup & Pulihkan",
+  "Console AI", "system_console".
+- CATATAN: kunci AI global sudah ada di `system_api_configs` (base_url `https://tiprouter.my.id/v1`,
+  model `deepseek-v-4.1-flash-1017`, primary key di Vault hint ****1h3E) — Console AI langsung
+  jalan tanpa setting ulang. APK tidak terpengaruh (fitur superadmin web-only).
