@@ -250,14 +250,14 @@ Deno.serve(async (req: Request) => {
     };
 
     if (sendEnabled) {
-      patchBody.smtp = {
-        host: settings.host,
-        port: settings.port,
-        user: settings.username,
-        pass: settings.password,
-        sender_name: settings.fromName,
-        admin_email: settings.fromEmail,
-      };
+      // Supabase Auth memakai field datar smtp_host/smtp_port/smtp_user/smtp_pass
+      // (bukan objek bersarang `smtp`).
+      patchBody.smtp_host = settings.host;
+      patchBody.smtp_port = String(settings.port);
+      patchBody.smtp_user = settings.username;
+      patchBody.smtp_pass = settings.password;
+      patchBody.smtp_admin_email = settings.fromEmail;
+      patchBody.smtp_sender_name = settings.fromName;
     }
 
     const resp = await fetch(`https://api.supabase.com/v1/projects/${ref}/config/auth`, {

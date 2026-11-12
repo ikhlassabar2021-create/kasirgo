@@ -8,7 +8,9 @@ import {
   SlidersHorizontal,
   X,
   LogOut,
-  LifeBuoy
+  LifeBuoy,
+  DatabaseBackup,
+  Bot
 } from 'lucide-react';
 
 interface StarAdminSidebarProps {
@@ -34,6 +36,8 @@ export function StarAdminSidebar({ isOpen, onClose, onLogout, role = 'superadmin
     { name: 'Fitur Utama', href: '/features', icon: SlidersHorizontal },
     { name: 'Affiliates', href: '/affiliates', icon: CreditCard },
     { name: 'Tiket Support', href: '/support', icon: LifeBuoy },
+    { name: 'Backup & Pulihkan', href: '/backup', icon: DatabaseBackup },
+    { name: 'Console AI', href: '/console-ai', icon: Bot },
     { name: 'Control Plane', href: '/control-plane', icon: Settings },
   ].filter((item) => allowed.includes('*') || allowed.includes(item.href));
 

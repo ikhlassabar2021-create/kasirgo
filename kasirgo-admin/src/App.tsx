@@ -11,6 +11,8 @@ import { ControlPlanePage } from './pages/ControlPlane'
 import { AffiliatesPage } from './pages/Affiliates'
 import { SupportTicketsPage } from './pages/SupportTickets'
 import { AffiliatePortalPage } from './pages/AffiliatePortal'
+import { BackupPage } from './pages/Backup'
+import { ConsoleAiPage } from './pages/ConsoleAi'
 import { checkAdminRole } from './lib/adminApi'
 
 // RBAC: halaman per role (superadmin = semua).
@@ -138,9 +140,10 @@ export default function App() {
           <Route path="users/:id" element={<Navigate to="/outlets" replace />} />
           <Route path="revenue" element={<Navigate to="/superadmin" replace />} />
           <Route path="transactions" element={<Navigate to="/superadmin" replace />} />
-          <Route path="backup" element={<Navigate to="/outlets" replace />} />
+          <Route path="backup" element={guard(<BackupPage />)} />
           <Route path="audit" element={<Navigate to="/superadmin" replace />} />
           <Route path="intelligence" element={<Navigate to="/superadmin" replace />} />
+          <Route path="console-ai" element={guard(<ConsoleAiPage />)} />
           <Route path="settings" element={<Navigate to="/control-plane" replace />} />
         </Route>
 
