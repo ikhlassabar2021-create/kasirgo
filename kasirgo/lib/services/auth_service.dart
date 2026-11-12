@@ -190,9 +190,13 @@ class AuthService {
         'business_type': businessType,
       };
       if (kycData != null && kycData.isNotEmpty) {
-        data['kyc_nik'] = kycData['nik'];
-        data['kyc_full_name'] = kycData['fullName'];
-        data['kyc_phone'] = kycData['phone'];
+        // NIK & nomor HP sengaja TIDAK diminta saat daftar; keduanya
+        // dilengkapi pada verifikasi KYC (submit_kyc) setelah akun aktif.
+        final fullName = (kycData['fullName'] ?? '').toString().trim();
+        if (fullName.isNotEmpty) {
+          data['kyc_full_name'] = fullName;
+          data['full_name'] = fullName;
+        }
         data['kyc_status'] = 'pending';
       }
 
@@ -202,19 +206,6 @@ class AuthService {
         data: data,
         emailRedirectTo: getAuthRedirectUrl(),
       );
-
-      if (kycData != null && kycData.isNotEmpty && response.user != null) {
-        // Insert KYC record into database if table exists
-        try {
-          await _client.from('outlet_kyc').insert({
-            'owner_nik': kycData['nik'],
-            'owner_full_name': kycData['fullName'],
-            'owner_phone': kycData['phone'],
-            'kyc_status': 'pending',
-            'created_at': DateTime.now().toIso8601String(),
-          });
-        } catch (_) {}
-      }
 
       return response;
     } catch (e) {

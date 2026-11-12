@@ -85,6 +85,9 @@ class _CheckoutDialogState extends State<CheckoutDialog> {
   bool _sendWaReceipt = false;
   bool _isLoadingQris = false;
   QrisConfig _qrisConfig = const QrisConfig();
+  String _bankName = '';
+  String _bankAccountNumber = '';
+  String _bankAccountName = '';
   String? _outletId;
   PgPaymentOrder? _pgOrder;
   String _pgStatus = 'PENDING';
@@ -151,6 +154,23 @@ class _CheckoutDialogState extends State<CheckoutDialog> {
       if (mounted) {
         setState(() => _qrisConfig = config);
       }
+      _loadBankAccount(outletId);
+    } catch (_) {}
+  }
+
+  Future<void> _loadBankAccount(String outletId) async {
+    try {
+      final db = await Supabase.instance.client
+          .rpc('get_public_outlet_payment', params: {'p_outlet': outletId});
+      final list = db as List;
+      if (list.isEmpty) return;
+      final row = Map<String, dynamic>.from(list.first as Map);
+      if (!mounted) return;
+      setState(() {
+        _bankName = row['bank_name']?.toString() ?? '';
+        _bankAccountNumber = row['bank_account_number']?.toString() ?? '';
+        _bankAccountName = row['bank_account_name']?.toString() ?? '';
+      });
     } catch (_) {}
   }
 
@@ -894,6 +914,19 @@ class _CheckoutDialogState extends State<CheckoutDialog> {
   }
 
   Widget _buildTransferSection() {
+    final bankName = _bankName.isEmpty
+        ? (_qrisConfig.bankOrWallet.trim().isNotEmpty
+            ? _qrisConfig.bankOrWallet.trim()
+            : 'BCA')
+        : _bankName;
+    final accountNumber = _bankAccountNumber.isEmpty
+        ? (_qrisConfig.qrisString.trim().isNotEmpty
+            ? _qrisConfig.qrisString.trim()
+            : '8735091223')
+        : _bankAccountNumber;
+    final accountName = _bankAccountName.trim().isNotEmpty
+        ? _bankAccountName.trim()
+        : '(KasirGo Outlet)';
     return Container(
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
@@ -901,16 +934,18 @@ class _CheckoutDialogState extends State<CheckoutDialog> {
         borderRadius: BorderRadius.circular(14),
         border: Border.all(color: AppTheme.borderColor),
       ),
-      child: const Column(
+      child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text('Rekening Tujuan:', style: TextStyle(color: AppTheme.textSecondary, fontSize: 12)),
-          SizedBox(height: 4),
-          Text('BCA 8735091223 (KasirGo Outlet)',
-              style: TextStyle(color: AppTheme.textPrimary, fontWeight: FontWeight.w800, fontSize: 13)),
-          SizedBox(height: 2),
-          Text('Konfirmasi manual setelah mutasi masuk',
-              style: TextStyle(color: AppTheme.textSecondary, fontSize: 11)),
+          const Text('Rekening Tujuan:', style: TextStyle(color: AppTheme.textSecondary, fontSize: 12)),
+          const SizedBox(height: 4),
+          Text('$bankName $accountNumber a.n. $accountName',
+              style: const TextStyle(color: AppTheme.textPrimary, fontWeight: FontWeight.w800, fontSize: 13)),
+          const SizedBox(height: 2),
+          Text(_bankName.isEmpty
+                  ? 'Atur rekening toko di Pengaturan > Transfer Bank'
+                  : 'Konfirmasi manual setelah mutasi masuk',
+              style: const TextStyle(color: AppTheme.textSecondary, fontSize: 11)),
         ],
       ),
     );

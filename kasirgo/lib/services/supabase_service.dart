@@ -2217,6 +2217,8 @@ class SupabaseService {
   }
 
   /// Simpan info pembayaran outlet (owner). Teks + gambar QRIS (base64).
+  /// Field rekening transfer bersifat opsional: bila `null` kolom lama
+  /// dipertahankan (upsert hanya menulis kolom yang dikirim).
   Future<bool> saveOutletPayment({
     required String outletId,
     required String merchantName,
@@ -2225,6 +2227,9 @@ class SupabaseService {
     required String nmid,
     String instruction = '',
     String qrisImage = '',
+    String? bankName,
+    String? bankAccountNumber,
+    String? bankAccountName,
   }) async {
     try {
       await _client.from('outlet_payment_configs').upsert({
@@ -2235,12 +2240,39 @@ class SupabaseService {
         'nmid': nmid,
         'instruction': instruction,
         'qris_image': qrisImage,
+        if (bankName != null) 'bank_name': bankName,
+        if (bankAccountNumber != null) 'bank_account_number': bankAccountNumber,
+        if (bankAccountName != null) 'bank_account_name': bankAccountName,
         'is_active': true,
         'updated_at': DateTime.now().toUtc().toIso8601String(),
       });
       return true;
     } catch (e) {
       debugPrint('saveOutletPayment error: $e');
+      return false;
+    }
+  }
+
+  /// Simpan HANYA rekening transfer bank outlet (owner). Dipakai form
+  /// "Transfer Bank" di Pengaturan agar tidak menimpa konfigurasi QRIS.
+  Future<bool> saveOutletBankAccount({
+    required String outletId,
+    required String bankName,
+    required String accountNumber,
+    required String accountName,
+  }) async {
+    try {
+      await _client.from('outlet_payment_configs').upsert({
+        'outlet_id': outletId,
+        'bank_name': bankName,
+        'bank_account_number': accountNumber,
+        'bank_account_name': accountName,
+        'is_active': true,
+        'updated_at': DateTime.now().toUtc().toIso8601String(),
+      });
+      return true;
+    } catch (e) {
+      debugPrint('saveOutletBankAccount error: $e');
       return false;
     }
   }

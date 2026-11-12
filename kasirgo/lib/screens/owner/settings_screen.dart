@@ -1119,6 +1119,13 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
             },
           ),
           _buildMenuRow(
+            Icons.account_balance_rounded,
+            'Transfer Bank (Rekening Toko)',
+            () {
+              _showBankTransferDialog();
+            },
+          ),
+          _buildMenuRow(
             Icons.delivery_dining_rounded,
             'Pengiriman / Diantar',
             () {
@@ -1558,6 +1565,211 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                   );
                 },
                 icon: const Icon(Icons.save_outlined, size: 18),
+                label: const Text('Simpan'),
+              ),
+            ],
+          );
+        },
+      ),
+    );
+  }
+
+  Future<void> _showBankTransferDialog() async {
+    final user = ref.read(currentUserProvider);
+    final outletId = user?.outletId;
+    if (outletId == null || outletId.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Outlet ID tidak ditemukan')),
+      );
+      return;
+    }
+
+    String bankName = '';
+    String accountNumber = '';
+    String accountName = '';
+    bool isSaving = false;
+    try {
+      final db = await SupabaseService().getPublicOutletPayment(outletId);
+      if (db != null) {
+        bankName = db['bank_name']?.toString() ?? '';
+        accountNumber = db['bank_account_number']?.toString() ?? '';
+        accountName = db['bank_account_name']?.toString() ?? '';
+      }
+    } catch (_) {}
+    if (!mounted) return;
+
+    final bankController = TextEditingController(text: bankName);
+    final numberController = TextEditingController(text: accountNumber);
+    final nameController = TextEditingController(text: accountName);
+
+    await showDialog<void>(
+      context: context,
+      builder: (ctx) => StatefulBuilder(
+        builder: (context, setDialogState) {
+          return AlertDialog(
+            backgroundColor: AppTheme.surfaceColor,
+            titlePadding: const EdgeInsets.fromLTRB(20, 16, 8, 0),
+            title: Row(
+              children: [
+                const Expanded(
+                  child: Text(
+                    'Transfer Bank',
+                    style: TextStyle(fontWeight: FontWeight.bold),
+                  ),
+                ),
+                IconButton(
+                  tooltip: 'Tutup',
+                  onPressed: () => Navigator.pop(ctx),
+                  icon: const Icon(
+                    Icons.close_rounded,
+                    color: AppTheme.textSecondary,
+                  ),
+                ),
+              ],
+            ),
+            content: SizedBox(
+              width: 420,
+              child: SingleChildScrollView(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.all(12),
+                      decoration: BoxDecoration(
+                        color: AppTheme.primaryColor.withValues(alpha: 0.06),
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(
+                          color: AppTheme.primaryColor.withValues(alpha: 0.2),
+                        ),
+                      ),
+                      child: const Row(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Icon(
+                            Icons.info_outline,
+                            size: 18,
+                            color: AppTheme.primaryColor,
+                          ),
+                          SizedBox(width: 8),
+                          Expanded(
+                            child: Text(
+                              'Rekening toko ini tampil ke pelanggan saat '
+                              'memilih Transfer Bank di kasir/POS, dan di '
+                              'halaman Program Pendukung.',
+                              style: TextStyle(
+                                fontSize: 12,
+                                height: 1.35,
+                                color: AppTheme.textSecondary,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+                    TextField(
+                      controller: bankController,
+                      textCapitalization: TextCapitalization.characters,
+                      decoration: const InputDecoration(
+                        labelText: 'Nama Bank',
+                        hintText: 'Contoh: BCA, BRI, Mandiri, BNI',
+                        prefixIcon: Icon(
+                          Icons.account_balance_outlined,
+                          color: AppTheme.textSecondary,
+                        ),
+                        isDense: true,
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                    TextField(
+                      controller: numberController,
+                      keyboardType: TextInputType.number,
+                      decoration: const InputDecoration(
+                        labelText: 'Nomor Rekening',
+                        hintText: 'Contoh: 8735091223',
+                        prefixIcon: Icon(
+                          Icons.pin_outlined,
+                          color: AppTheme.textSecondary,
+                        ),
+                        isDense: true,
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                    TextField(
+                      controller: nameController,
+                      textCapitalization: TextCapitalization.words,
+                      decoration: const InputDecoration(
+                        labelText: 'Atas Nama',
+                        hintText: 'Nama pemilik rekening',
+                        prefixIcon: Icon(
+                          Icons.person_outline_rounded,
+                          color: AppTheme.textSecondary,
+                        ),
+                        isDense: true,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+            actions: [
+              BubbleButton.icon(
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: AppTheme.primaryColor,
+                  foregroundColor: Colors.white,
+                ),
+                onPressed: isSaving
+                    ? null
+                    : () async {
+                        final bank = bankController.text.trim();
+                        final number = numberController.text.trim();
+                        final name = nameController.text.trim();
+                        if (bank.isEmpty || number.isEmpty || name.isEmpty) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(
+                              content: Text(
+                                'Lengkapi nama bank, nomor rekening, dan atas nama.',
+                              ),
+                              backgroundColor: AppTheme.warningColor,
+                            ),
+                          );
+                          return;
+                        }
+                        setDialogState(() => isSaving = true);
+                        final ok = await SupabaseService().saveOutletBankAccount(
+                          outletId: outletId,
+                          bankName: bank,
+                          accountNumber: number,
+                          accountName: name,
+                        );
+                        if (!ctx.mounted) return;
+                        setDialogState(() => isSaving = false);
+                        Navigator.pop(ctx);
+                        if (!mounted) return;
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(
+                            content: Text(
+                              ok
+                                  ? 'Rekening transfer disimpan.'
+                                  : 'Gagal menyimpan rekening. Coba lagi.',
+                            ),
+                            backgroundColor: ok
+                                ? AppTheme.successColor
+                                : AppTheme.errorColor,
+                          ),
+                        );
+                      },
+                icon: isSaving
+                    ? const SizedBox(
+                        height: 16,
+                        width: 16,
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2,
+                          color: Colors.white,
+                        ),
+                      )
+                    : const Icon(Icons.save_outlined, size: 18),
                 label: const Text('Simpan'),
               ),
             ],

@@ -5,6 +5,7 @@ import 'package:qr_flutter/qr_flutter.dart';
 import '../../config/app_theme.dart';
 import '../../providers/auth_provider.dart';
 import '../../services/supporter_service.dart';
+import '../../services/supabase_service.dart';
 import '../../services/voice_service.dart';
 import '../../utils/formatters.dart';
 import '../../widgets/common/centennial_background.dart';
@@ -24,6 +25,7 @@ class _SupporterScreenState extends ConsumerState<SupporterScreen> {
   bool _busy = false;
   Entitlements? _ent;
   Map<String, dynamic> _billing = SupporterService.fallbackBilling;
+  Map<String, dynamic> _bank = <String, dynamic>{};
   bool _autoRenew = true;
   Map<String, dynamic>? _pending;
 
@@ -43,9 +45,15 @@ class _SupporterScreenState extends ConsumerState<SupporterScreen> {
     final billing = await svc.getBillingConfig();
     final ent = await svc.getEntitlements(outletId);
     final pending = await svc.loadPendingCheckout(outletId);
+    Map<String, dynamic> bank = <String, dynamic>{};
+    try {
+      final db = await SupabaseService().getPublicOutletPayment(outletId);
+      if (db != null) bank = db;
+    } catch (_) {}
     if (mounted) {
       setState(() {
         _billing = billing;
+        _bank = bank;
         _ent = ent;
         _pending = pending;
         _loading = false;
@@ -111,6 +119,13 @@ class _SupporterScreenState extends ConsumerState<SupporterScreen> {
 
     final payload = (_billing['qris_static_payload'] ?? '').toString();
     final transfer = _billing['manual_transfer'];
+    // Rekening owner (dari Pengaturan > Transfer Bank) diprioritaskan untuk
+    // tujuan transfer; bila belum diatur, pakai rekening manual dari config.
+    final ownerBank = (_bank['bank_name'] ?? '').toString().trim();
+    final ownerAccount = (_bank['bank_account_number'] ?? '').toString().trim();
+    final ownerName = (_bank['bank_account_name'] ?? '').toString().trim();
+    final hasOwnerBank =
+        ownerBank.isNotEmpty && ownerAccount.isNotEmpty && ownerName.isNotEmpty;
     await showModalBottomSheet<void>(
       useSafeArea: true,
       context: context,
@@ -198,7 +213,23 @@ class _SupporterScreenState extends ConsumerState<SupporterScreen> {
                           color: AppTheme.textSecondary,
                           height: 1.4),
                     ),
-                    if (transfer is Map && (transfer['bank'] ?? '').toString().isNotEmpty) ...[
+                    if (hasOwnerBank) ...[
+                      const SizedBox(height: 10),
+                      Container(
+                        width: double.infinity,
+                        padding: const EdgeInsets.all(10),
+                        decoration: BoxDecoration(
+                          color: AppTheme.surfaceMutedColor,
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                        child: Text(
+                          'Transfer: $ownerBank $ownerAccount a.n. $ownerName',
+                          textAlign: TextAlign.center,
+                          style: GoogleFonts.plusJakartaSans(
+                              fontSize: 12, fontWeight: FontWeight.w700),
+                        ),
+                      ),
+                    ] else if (transfer is Map && (transfer['bank'] ?? '').toString().isNotEmpty) ...[
                       const SizedBox(height: 10),
                       Container(
                         width: double.infinity,

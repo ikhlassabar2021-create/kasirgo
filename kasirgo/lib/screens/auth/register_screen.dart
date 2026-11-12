@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
@@ -25,9 +24,7 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
   final _businessNameController = TextEditingController();
-  final _nikController = TextEditingController();
   final _fullNameController = TextEditingController();
-  final _phoneController = TextEditingController();
   String _selectedBusinessType = 'Warung Sembako';
   bool _isLoading = false;
   bool _obscurePassword = true;
@@ -37,9 +34,7 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
     _emailController.dispose();
     _passwordController.dispose();
     _businessNameController.dispose();
-    _nikController.dispose();
     _fullNameController.dispose();
-    _phoneController.dispose();
     super.dispose();
   }
 
@@ -56,9 +51,7 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
         businessName: _businessNameController.text.trim(),
         businessType: _selectedBusinessType,
         kycData: {
-          'nik': _nikController.text.trim(),
           'fullName': _fullNameController.text.trim(),
-          'phone': _phoneController.text.trim(),
         },
       );
 
@@ -223,43 +216,25 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                           Divider(),
                           const SizedBox(height: 8),
                           Text(
-                            'Data KYC Wajib',
+                            'Data Pemilik',
                             style: GoogleFonts.plusJakartaSans(fontSize: 14, fontWeight: FontWeight.w700, color: AppTheme.textPrimary),
                           ),
-                          const SizedBox(height: 8),
-                          TextFormField(
-                            controller: _nikController,
-                            keyboardType: TextInputType.number,
-                            validator: (v) => v == null || v.length < 16 ? 'NIK harus 16 digit' : null,
-                            style: const TextStyle(color: AppTheme.textPrimary),
-                            decoration: const InputDecoration(
-                              labelText: 'NIK (16 digit)',
-                              prefixIcon: Icon(Icons.badge_outlined),
-                            ),
-                            maxLength: 16,
+                          const SizedBox(height: 4),
+                          Text(
+                            'NIK dan nomor HP dilengkapi saat verifikasi KYC di langkah berikutnya.',
+                            style: GoogleFonts.plusJakartaSans(fontSize: 11.5, color: AppTheme.textSecondary, height: 1.35),
                           ),
-                          const SizedBox(height: 16),
+                          const SizedBox(height: 12),
                           TextFormField(
                             controller: _fullNameController,
                             validator: (v) => Validators.required(v, 'Nama lengkap sesuai KTP'),
                             style: const TextStyle(color: AppTheme.textPrimary),
                             decoration: const InputDecoration(
-                              labelText: 'Nama Lengkap',
+                              labelText: 'Nama Lengkap (sesuai KTP)',
+                              hintText: 'Tulis persis seperti di KTP',
                               prefixIcon: Icon(Icons.person_outline_rounded),
+                              helperText: 'Nama harus sama dengan yang tertera di KTP.',
                             ),
-                          ),
-                          const SizedBox(height: 16),
-                          TextFormField(
-                            controller: _phoneController,
-                            keyboardType: TextInputType.phone,
-                            validator: Validators.phoneNumber,
-                            style: const TextStyle(color: AppTheme.textPrimary),
-                            decoration: InputDecoration(
-                              labelText: 'Nomor Telepon',
-                              prefixIcon: const Icon(Icons.phone_outlined),
-                            ),
-                            maxLength: 13,
-                            inputFormatters: [FilteringTextInputFormatter.digitsOnly],
                           ),
                           const SizedBox(height: 16),
                           TextFormField(
