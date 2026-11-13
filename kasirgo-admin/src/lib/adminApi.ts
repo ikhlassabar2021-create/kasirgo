@@ -121,6 +121,24 @@ export type BackupRunRow = {
 
 export type BackupListResult = { rows: BackupRunRow[] }
 
+export type SystemBackupRow = {
+  id: string
+  kind: string
+  status: string
+  table_count: number
+  row_count: number
+  size_bytes: number
+  created_at: string
+  created_by_email: string | null
+}
+
+export type SystemBackupListResult = { rows: SystemBackupRow[] }
+
+export type SystemBackupRestoreResult = {
+  restored: number
+  tables: { table: string; inserted?: number; error?: string }[]
+}
+
 export type ImpersonateResult = {
   outlet: { id: string; name: string; outlet_type?: string; type?: string; address?: string; phone?: string; created_at?: string } | null
   entitlements: Record<string, unknown> | null

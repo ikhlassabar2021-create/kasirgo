@@ -6,6 +6,7 @@ import {
 import {
   rp, fmtDate, fmtBytes,
   UsersListResult, BackupListResult,
+  SystemBackupListResult, SystemBackupRestoreResult,
 } from '../lib/adminApi';
 
 type ScheduleState = Record<string, { enabled: boolean; cadence: string }>;
@@ -13,6 +14,7 @@ type ScheduleState = Record<string, { enabled: boolean; cadence: string }>;
 export function BackupPage() {
   const [outlets, setOutlets] = useState<UsersListResult['rows']>([]);
   const [runs, setRuns] = useState<BackupListResult['rows']>([]);
+  const [sysRuns, setSysRuns] = useState<SystemBackupListResult['rows']>([]);
   const [schedules, setSchedules] = useState<ScheduleState>({});
   const [selected, setSelected] = useState('');
   const [kind, setKind] = useState<'full' | 'quick'>('quick');
@@ -23,12 +25,14 @@ export function BackupPage() {
   const load = useCallback(async () => {
     setError(null);
     try {
-      const [users, list] = await Promise.all([
+      const [users, list, sysList] = await Promise.all([
         rp<UsersListResult>('platform_users_list', { p_limit: 100, p_offset: 0 }),
         rp<BackupListResult>('platform_backup_list'),
+        rp<SystemBackupListResult>('platform_system_backup_list'),
       ]);
       setOutlets(users.rows);
       setRuns(list.rows);
+      setSysRuns(sysList.rows);
       if (!selected && users.rows.length) setSelected(users.rows[0].outlet_id ?? '');
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Gagal memuat data backup');
@@ -99,6 +103,70 @@ export function BackupPage() {
     }
   };
 
+  const createSystemBackup = async () => {
+    setBusy('sys-create');
+    setError(null);
+    try {
+      const res = await rp<{ id: string; table_count: number; row_count: number; size_bytes: number }>(
+        'platform_system_backup_create', { p_kind: 'full' });
+      setMsg(`Backup system penuh dibuat: ${res.table_count} tabel, ${res.row_count} baris (${fmtBytes(res.size_bytes)}).`);
+      await load();
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'Gagal membuat backup system');
+    } finally {
+      setBusy(null);
+    }
+  };
+
+  const downloadSystem = async (id: string) => {
+    setBusy(`sys-${id}`);
+    try {
+      const data = await rp<Record<string, unknown>>('platform_system_backup_get', { p_id: id });
+      const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `kasirgo-full-system-${new Date().toISOString().slice(0, 10)}.json`;
+      a.click();
+      URL.revokeObjectURL(url);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'Gagal mengunduh backup system');
+    } finally {
+      setBusy(null);
+    }
+  };
+
+  const restoreSystem = async (id: string) => {
+    if (!window.confirm(
+      'Pulihkan SELURUH data system dari snapshot ini?\nHanya baris yang HILANG akan diisi ulang (id sama = dilewati). Data yang sudah ada TIDAK ditimpa.')) return;
+    setBusy(`sys-${id}`);
+    try {
+      const res = await rp<SystemBackupRestoreResult>('platform_system_backup_restore', { p_id: id });
+      const failed = res.tables.filter((t) => t.error);
+      setMsg(`Pulihkan system selesai: ${res.restored} baris diisi ulang${failed.length ? `, ${failed.length} tabel gagal` : ''}.`);
+      if (failed.length) setError(`Gagal pada: ${failed.map((t) => `${t.table} (${t.error})`).join('; ').slice(0, 500)}`);
+      await load();
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'Gagal memulihkan system');
+    } finally {
+      setBusy(null);
+    }
+  };
+
+  const deleteSystem = async (id: string) => {
+    if (!window.confirm('Hapus snapshot backup system penuh ini?\nAksi ini tidak dapat dibatalkan.')) return;
+    setBusy(`sys-${id}`);
+    try {
+      await rp<void>('platform_system_backup_delete', { p_id: id });
+      setMsg('Snapshot backup system dihapus.');
+      await load();
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'Gagal menghapus backup system');
+    } finally {
+      setBusy(null);
+    }
+  };
+
   const setSchedule = async (outletId: string, enabled: boolean, cadence: string) => {
     setBusy(`sched-${outletId}`);
     try {
@@ -164,10 +232,84 @@ export function BackupPage() {
         </a>
       </div>
 
-      {/* Buat backup */}
+      {/* Backup system penuh (semua database public) */}
+      <div className="bg-surface rounded-2xl card-shadow border border-primary/40 p-4 sm:p-6 mb-6">
+        <h2 className="text-sm font-bold text-ink mb-2 flex items-center gap-2">
+          <Database className="w-4 h-4 text-primary" /> Backup System Penuh (Semua Data)
+        </h2>
+        <p className="text-xs text-muted leading-relaxed mb-3">
+          Snapshot SELURUH database aplikasi ({/* jumlah dinamis */}semua tabel public) dalam satu file JSON.
+          Bisa diunduh, dipulihkan (isi baris yang hilang saja), dan dihapus lewat superadmin.
+        </p>
+        <button
+          onClick={createSystemBackup}
+          disabled={busy === 'sys-create'}
+          className="ocean-gradient text-white px-5 py-2.5 rounded-xl font-semibold text-xs shadow-md shadow-primary/25 active:scale-95 transition disabled:opacity-50"
+        >
+          {busy === 'sys-create' ? 'Menyimpan...' : 'Buat Backup System Penuh'}
+        </button>
+
+        {sysRuns.length > 0 && (
+          <div className="mt-4 pt-4 border-t border-border overflow-x-auto">
+            <table className="w-full min-w-[640px]">
+              <thead>
+                <tr className="text-left text-[10px] font-bold text-muted uppercase">
+                  <th className="pr-4 py-2">Waktu</th>
+                  <th className="pr-4 py-2">Tabel</th>
+                  <th className="pr-4 py-2">Baris</th>
+                  <th className="pr-4 py-2">Ukuran</th>
+                  <th className="pr-4 py-2">Oleh</th>
+                  <th className="text-right py-2">Aksi</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-border">
+                {sysRuns.map((b) => (
+                  <tr key={b.id} className="text-xs">
+                    <td className="pr-4 py-2 text-muted">{fmtDate(b.created_at)}</td>
+                    <td className="pr-4 py-2 text-ink">{b.table_count}</td>
+                    <td className="pr-4 py-2 text-ink">{b.row_count}</td>
+                    <td className="pr-4 py-2 text-muted">{fmtBytes(b.size_bytes)}</td>
+                    <td className="pr-4 py-2 text-muted">{b.created_by_email ?? '-'}</td>
+                    <td className="py-2">
+                      <div className="flex items-center justify-end gap-1">
+                        <button
+                          onClick={() => downloadSystem(b.id)}
+                          disabled={busy === `sys-${b.id}`}
+                          className="p-2 hover:bg-primary/10 rounded-lg text-primary disabled:opacity-40"
+                          title="Unduh JSON"
+                        >
+                          <CloudDownload className="w-4 h-4" />
+                        </button>
+                        <button
+                          onClick={() => restoreSystem(b.id)}
+                          disabled={busy === `sys-${b.id}`}
+                          className="p-2 hover:bg-success/10 rounded-lg text-success disabled:opacity-40"
+                          title="Pulihkan baris hilang"
+                        >
+                          <Database className="w-4 h-4" />
+                        </button>
+                        <button
+                          onClick={() => deleteSystem(b.id)}
+                          disabled={busy === `sys-${b.id}`}
+                          className="p-2 hover:bg-danger/10 rounded-lg text-danger disabled:opacity-40"
+                          title="Hapus snapshot"
+                        >
+                          <XCircle className="w-4 h-4" />
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </div>
+
+      {/* Buat backup per outlet */}
       <div className="bg-surface rounded-2xl card-shadow border border-border/80 p-4 sm:p-6 mb-6">
         <h2 className="text-sm font-bold text-ink mb-3 flex items-center gap-2">
-          <CloudUpload className="w-4 h-4 text-primary" /> Buat Backup Baru
+          <CloudUpload className="w-4 h-4 text-primary" /> Buat Backup per Outlet
         </h2>
         <div className="flex flex-col sm:flex-row gap-3 sm:items-end">
           <div className="flex-1">

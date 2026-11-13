@@ -16,20 +16,25 @@ const json = (body: unknown, status = 200) =>
 type Json = Record<string, any>;
 
 const LLM_TIMEOUT_MS = Number(Deno.env.get("DOCTOR_LLM_TIMEOUT_MS") ?? 45000) || 45000;
-const MAX_TOOL_ROUNDS = 4;
+const MAX_TOOL_ROUNDS = 8;
 
 const SYSTEM_PROMPT = `Kamu adalah "Console AI", asisten teknis superadmin platform KasirGo.
-Tugasmu memeriksa, menjelaskan, memperbaiki, dan mengembangkan sistem KasirGo lewat database Supabase.
+Tugasmu memeriksa, menjelaskan, memperbaiki, mengaktifkan/menonaktifkan fitur, mengganti pengaturan, dan mengembangkan sistem KasirGo langsung lewat database Supabase — seperti engineer yang bisa bertindak, tanpa harus menyentuh kode.
 
 Aturan WAJIB:
 - Gunakan bahasa Indonesia yang ringkas dan jelas. Jangan pakai kode markup mentah.
-- Untuk membaca data gunakan fungsi run_sql dengan mode "read" (hanya SELECT/SHOW/EXPLAIN/WITH).
-- Untuk MENGUBAH data (INSERT/UPDATE/DELETE/ALTER/CREATE/DROP) gunakan run_sql dengan mode "write", dan HANYA setelah jelas diperlukan serta ringkas.
-- SEBELUM menulis, jelaskan apa yang akan diubah dan mengapa.
-- JANGAN sentuh tabel sensitif: vault, auth, supabase_*, storage, pgbouncer.
+- Untuk membaca data gunakan run_sql dengan mode "read" (hanya SELECT/SHOW/EXPLAIN/WITH).
+- Untuk MENGUBAH data (INSERT/UPDATE/DELETE/ALTER/CREATE) gunakan run_sql dengan mode "write", dan HANYA setelah jelas diperlukan.
+- SEBELUM menulis, jelaskan dengan singkat apa yang akan diubah dan mengapa, lalu setelahnya laporkan hasilnya.
+- JANGAN sentuh tabel sensitif: vault, auth, supabase_*, storage, pgbouncer, pg_catalog.
 - Jangan pernah mengekspos nilai secret; tampilkan hanya hint/keterangan.
-- Bila butuh data untuk menjawab, jalankan run_sql (read) dulu, lalu simpulkan.
-- Tampilkan jawaban sebagai teks dan, bila berguna, tabel ringkas (baris <= 8).
+- Bila perlu data untuk menjawab, jalankan run_sql (read) terlebih dahulu, lalu simpulkan.
+- Tampilkan jawaban sebagai teks dan, bila berguna, tabel ringkas (baris <= 8). Bahasa Indonesia.
+
+Cara mengubah fitur & konfigurasi (utamakan tool khusus, bukan SQL mentah):
+- Aktif/nonaktifkan fitur PER OUTLET: pakai tool set_feature_flag (mis. "module_ppob", "module_restockB2B", "module_tableManagement", "module_kitchenDisplay").
+- Ubah KONFIGURASI PLATFORM: pakai tool save_config (key + value + scope global/segment/outlet).
+- Untuk hal lain (data outlet/produk/staf/langganan/audit), gunakan run_sql.
 
 Skema penting (kolom utama):
 - outlets: id, name, type, phone, address, owner_id, is_active
@@ -38,7 +43,10 @@ Skema penting (kolom utama):
 - transactions: id, outlet_id, final_amount, payment_method, payment_status, order_status, created_at
 - supporters: id, outlet_id, status, start_date, end_date
 - customers: id, outlet_id, name, phone
+- feature_flags: key, enabled (flag global per fitur, mis. 'payment_gateway', 'business_doctor')
+- outlet_module_overrides: outlet_id, module_key, enabled (override fitur per outlet)
 - platform_integrations: config JSONB untuk payment gateway/PPOB/dll.
+- platform_configs: key, scope, scope_ref, value (pengaturan platform)
 - system_smtp_config: pengaturan SMTP email.
 - system_api_configs: konfigurasi API AI (base_url/model/kunci di Vault).`;
 
@@ -65,6 +73,53 @@ const TOOLS: Json[] = [
       name: "list_tables",
       description: "Daftar nama tabel public yang ada di database.",
       parameters: { type: "object", properties: {} },
+    },
+  },
+  {
+    type: "function",
+    function: {
+      name: "list_outlets",
+      description: "Daftar outlet (id, nama, tipe, email owner) untuk mencari id outlet yang akan diubah.",
+      parameters: {
+        type: "object",
+        properties: {
+          search: { type: "string", description: "Potongan nama outlet/email (opsional)." },
+        },
+      },
+    },
+  },
+  {
+    type: "function",
+    function: {
+      name: "set_feature_flag",
+      description: "Aktifkan/nonaktifkan fitur untuk SATU outlet (module override). Contoh key: module_ppob, module_restockB2B, module_tableManagement, module_kitchenDisplay, module_inventory.",
+      parameters: {
+        type: "object",
+        properties: {
+          outlet_id: { type: "string", description: "UUID outlet." },
+          key: { type: "string", description: "Kunci fitur/module." },
+          enabled: { type: "boolean", description: "true = aktif, false = nonaktif." },
+        },
+        required: ["outlet_id", "key", "enabled"],
+      },
+    },
+  },
+  {
+    type: "function",
+    function: {
+      name: "save_config",
+      description: "Simpan/ubah konfigurasi platform (platform_configs) dengan versioning + audit. Kirim value sebagai objek JSON.",
+      parameters: {
+        type: "object",
+        properties: {
+          key: { type: "string", description: "Kunci config." },
+          value: { type: "object", description: "Nilai config (JSON object)." },
+          scope: { type: "string", enum: ["global", "segment", "outlet"], description: "Cakupan (default global)." },
+          scope_ref: { type: "string", description: "Referensi scope (id outlet/segment; 'all' bila global)." },
+          note: { type: "string", description: "Catatan perubahan (opsional)." },
+        },
+        required: ["key", "value"],
+      },
     },
   },
 ];
@@ -298,6 +353,34 @@ Deno.serve(async (req: Request) => {
           const { data, error } = await admin.rpc("console_ai_list_tables");
           if (error) toolResult = { ok: false, error: error.message };
           else toolResult = { ok: true, tables: data };
+        } else if (fnName === "list_outlets") {
+          const { data, error } = await userClient.rpc("platform_outlets_list", {
+            p_search: args?.search ?? null,
+            p_kyc: "all",
+            p_plan: "all",
+            p_limit: 50,
+            p_offset: 0,
+          });
+          if (error) toolResult = { ok: false, error: error.message };
+          else toolResult = { ok: true, outlets: (data as Json)?.rows ?? [] };
+        } else if (fnName === "set_feature_flag") {
+          const { data, error } = await userClient.rpc("platform_outlet_set_feature", {
+            p_outlet_id: String(args?.outlet_id ?? ""),
+            p_key: String(args?.key ?? ""),
+            p_enabled: args?.enabled === true,
+          });
+          if (error) toolResult = { ok: false, error: error.message };
+          else toolResult = { ok: true, outlet_id: args?.outlet_id, key: args?.key, enabled: args?.enabled === true };
+        } else if (fnName === "save_config") {
+          const { data, error } = await userClient.rpc("platform_config_save", {
+            p_key: String(args?.key ?? ""),
+            p_scope: String(args?.scope ?? "global"),
+            p_scope_ref: String(args?.scope_ref ?? "all"),
+            p_value: args?.value ?? {},
+            p_note: args?.note ?? null,
+          });
+          if (error) toolResult = { ok: false, error: error.message };
+          else toolResult = { ok: true, version: data };
         } else if (fnName === "run_sql") {
           const sql = String(args.sql ?? "");
           const mode = args.mode === "write" ? "write" : "read";
@@ -313,7 +396,13 @@ Deno.serve(async (req: Request) => {
           toolResult = { ok: false, error: `Tool tidak dikenal: ${fnName}` };
         }
 
-        toolLog.push({ name: fnName, mode: args?.mode ?? null, sql: String(args?.sql ?? "").slice(0, 500), ok: toolResult?.ok !== false });
+        toolLog.push({
+          name: fnName,
+          mode: args?.mode ?? null,
+          sql: String(args?.sql ?? "").slice(0, 500),
+          args: fnName === "run_sql" ? null : args,
+          ok: toolResult?.ok !== false,
+        });
         messages.push({
           role: "tool",
           tool_call_id: tc.id ?? `call_${round}`,

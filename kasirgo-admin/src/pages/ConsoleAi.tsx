@@ -6,7 +6,7 @@ import { supabase } from '../config/supabase';
 
 type Session = { id: string; title: string | null; created_at: string; updated_at: string };
 type Message = { role: string; content: string | null; tool_calls?: unknown; created_at?: string };
-type ToolLog = { name: string; mode: string | null; sql: string; ok: boolean };
+type ToolLog = { name: string; mode: string | null; sql: string; args?: Record<string, unknown> | null; ok: boolean };
 
 export function ConsoleAiPage() {
   const [sessions, setSessions] = useState<Session[]>([]);
@@ -105,7 +105,7 @@ export function ConsoleAiPage() {
             <span className="truncate">
               <span className="font-bold text-ink">{t.name}</span>
               {t.mode ? <span className="mx-1 text-primary">{t.mode}</span> : null}
-              <span className="text-muted">{t.sql?.slice(0, 70) || ''}</span>
+              <span className="text-muted">{t.sql?.slice(0, 70) || (t.args ? JSON.stringify(t.args).slice(0, 70) : '')}</span>
               <span className={t.ok ? 'text-success' : 'text-danger'}>{t.ok ? ' ✓' : ' ✗'}</span>
             </span>
           </div>
