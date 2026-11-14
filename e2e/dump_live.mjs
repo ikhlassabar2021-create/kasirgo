@@ -1,0 +1,12 @@
+import { chromium } from 'playwright';
+const BASE='https://dokterbisnis.web.id/';
+const b=await chromium.launch();
+const p=await b.newPage({viewport:{width:1280,height:1000}});
+await p.goto(BASE,{waitUntil:'domcontentloaded'});
+await p.waitForTimeout(9000);
+const txt=await p.evaluate(()=>[...document.querySelectorAll('flt-semantics')].map(e=>({aria:e.getAttribute('aria-label')||'',role:e.getAttribute('role')||'',txt:(e.textContent||'').trim()})).filter(n=>(n.aria||n.txt)).slice(0,60));
+console.log(JSON.stringify(txt,null,1));
+console.log('URL',p.url());
+const canvases=await p.evaluate(()=>document.querySelectorAll('flt-glass-pane,canvas').length);
+console.log('CANVAS',canvases);
+await b.close();

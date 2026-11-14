@@ -307,44 +307,8 @@ class _CheckoutDialogState extends State<CheckoutDialog> {
                             ),
                           ),
                           const SizedBox(height: 10),
-                          _buildPaymentOption('cash', 'Tunai (Cash)', Icons.payments_rounded),
-                          _buildPaymentOption('qris', 'QRIS Manual', Icons.qr_code_2_rounded),
-                          if (_paymentMethod == 'qris') ...[
-                            const SizedBox(height: 10),
-                            // CATATAN (owner): QRIS Dinamis disembunyikan dari semua
-                            // login; pembayaran memakai QRIS Statis saja.
-                            Container(
-                              width: double.infinity,
-                              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                              decoration: BoxDecoration(
-                                color: AppTheme.backgroundColor,
-                                borderRadius: BorderRadius.circular(10),
-                                border: Border.all(color: AppTheme.borderColor),
-                              ),
-                              child: Row(
-                                children: [
-                                  const Icon(Icons.info_outline_rounded,
-                                      size: 15, color: AppTheme.textSecondary),
-                                  const SizedBox(width: 8),
-                                  Expanded(
-                                    child: Text(
-                                      'Mode QRIS Statis (sesuai kebijakan pembayaran)',
-                                      style: GoogleFonts.plusJakartaSans(
-                                        color: AppTheme.textSecondary,
-                                        fontSize: 12,
-                                        fontWeight: FontWeight.w600,
-                                      ),
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ),
-                          ],
-                          _buildPaymentOption('bank_transfer', 'Transfer Bank', Icons.account_balance_rounded),
-                          const SizedBox(height: 14),
                           if (_paymentMethod == 'cash') _buildCashSection(),
-                          if (_paymentMethod == 'qris') _buildQrisSection(mode: _qrisMode),
-                          if (_paymentMethod == 'bank_transfer') _buildTransferSection(),
+                          if (_paymentMethod == 'qris') _buildQrisSection(),
                           const SizedBox(height: 16),
                           _buildWaReceiptSection(),
                           const SizedBox(height: 16),

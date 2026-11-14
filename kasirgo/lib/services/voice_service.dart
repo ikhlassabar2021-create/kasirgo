@@ -645,13 +645,12 @@ class VoiceService {
   Future<void> announcePayment({
     required double amount,
     String? method,
-    double change = 0,
-    String? customerName,
-    String? outletId,
   }) async {
-    if (outletId != null && outletId.isNotEmpty) {
-      await applyOutletPrefs(outletId);
-    }
+    if (!available) return;
+    final nominal = _amountToWords(amount);
+    final text = 'Terima Kasih, Pembayaran di terima sejumlah $nominal rupiah';
+    await speak(text);
+  }
     if (!available || !_config.soundboxPos) return;
     await init();
     if (!available) return;

@@ -22,6 +22,35 @@ export function BackupPage() {
   const [msg, setMsg] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
+  const downloadText = (name: string, text: string) => {
+    const blob = new Blob([text], { type: 'application/sql;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = name;
+    a.click();
+    URL.revokeObjectURL(url);
+  };
+
+  const exportSystemSql = async () => {
+    setBusy('sys-export-sql');
+    setMsg(null);
+    setError(null);
+    try {
+      const res = await rp<{ schema: string; data: string; auth: string; tables: number; rows: number }>(
+        'platform_system_backup_export_sql', { p_kind: 'full' });
+      const stamp = new Date().toISOString().slice(0, 10);
+      downloadText(`kasirgo-schema-${stamp}.sql`, res.schema || '');
+      downloadText(`kasirgo-data-${stamp}.sql`, res.data || '');
+      downloadText(`kasirgo-auth-${stamp}.sql`, res.auth || '');
+      setMsg(`Export SQL selesai: ${res.tables} tabel, ${res.rows} baris (schema + data + auth).`);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'Gagal export SQL');
+    } finally {
+      setBusy(null);
+    }
+  };
+
   const load = useCallback(async () => {
     setError(null);
     try {
@@ -238,16 +267,27 @@ export function BackupPage() {
           <Database className="w-4 h-4 text-primary" /> Backup System Penuh (Semua Data)
         </h2>
         <p className="text-xs text-muted leading-relaxed mb-3">
-          Snapshot SELURUH database aplikasi ({/* jumlah dinamis */}semua tabel public) dalam satu file JSON.
-          Bisa diunduh, dipulihkan (isi baris yang hilang saja), dan dihapus lewat superadmin.
+          Snapshot SELURUH database aplikasi (outlet, akun, staff, produk, stok, transaksi, langganan, konfigurasi, dst).
+          Tersimpan di server — bisa dipulihkan kapan saja. <b>Export SQL</b> mengunduh 3 file (<code>schema.sql</code>, <code>data.sql</code>, <code>auth.sql</code>) untuk <b>membangun ulang / memindahkan sistem ke server baru</b>.
+          Ini berbeda dari "Backup &amp; Restore Data" per-outlet di bawah.
         </p>
-        <button
-          onClick={createSystemBackup}
-          disabled={busy === 'sys-create'}
-          className="ocean-gradient text-white px-5 py-2.5 rounded-xl font-semibold text-xs shadow-md shadow-primary/25 active:scale-95 transition disabled:opacity-50"
-        >
-          {busy === 'sys-create' ? 'Menyimpan...' : 'Buat Backup System Penuh'}
-        </button>
+        <div className="flex flex-wrap items-center gap-2">
+          <button
+            onClick={createSystemBackup}
+            disabled={busy === 'sys-create'}
+            className="ocean-gradient text-white px-5 py-2.5 rounded-xl font-semibold text-xs shadow-md shadow-primary/25 active:scale-95 transition disabled:opacity-50"
+          >
+            {busy === 'sys-create' ? 'Menyimpan...' : 'Buat Backup System Penuh'}
+          </button>
+          <button
+            onClick={exportSystemSql}
+            disabled={busy === 'sys-export-sql'}
+            className="inline-flex items-center gap-2 border border-primary/30 bg-primary/10 text-primary px-5 py-2.5 rounded-xl font-semibold text-xs hover:bg-primary/15 active:scale-95 transition disabled:opacity-50"
+            title="Unduh schema.sql + data.sql + auth.sql (restore ke PostgreSQL/Supabase baru)"
+          >
+            {busy === 'sys-export-sql' ? 'Menyiapkan...' : 'Export SQL (Duplicator)'}
+          </button>
+        </div>
 
         {sysRuns.length > 0 && (
           <div className="mt-4 pt-4 border-t border-border overflow-x-auto">
