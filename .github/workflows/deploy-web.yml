@@ -3,25 +3,22 @@ name: Deploy Web
 # Build Flutter web (custom domain root) + React admin, lalu deploy ke gh-pages.
 # Flutter dibangun dengan --base-href / agar cocok untuk domain root
 # (dokterbisnis.web.id), BUKAN subpath github.io/kasirgo/.
-# apk/ dan file lain yang tak dipublikasikan dipertahankan via keep_files.
+# apk/ dan file lain yang sudah ada di gh-pages dipertahankan (keep_files).
 
 on:
   push:
     branches: [main]
-    paths:
-      - 'kasirgo/**'
-      - 'kasirgo-admin/**'
-      - 'docs/panduan-kasirgo.pdf'
-      - 'docs/panduan-aplikasi-kasirgo.pdf'
-      - 'docs/PANDUAN-APLIKASI-KASIRGO.md'
-      - '.github/workflows/deploy-web.yml'
   workflow_dispatch:
 
 permissions:
   contents: write
 
+concurrency:
+  group: deploy-web
+  cancel-in-progress: true
+
 jobs:
-  deploy:
+  build-and-deploy:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -47,17 +44,33 @@ jobs:
         working-directory: kasirgo-admin
         run: |
           npm ci
-          npm run build
+          # Base /admin/ agar cocok saat di-host di subpath gh-pages
+          npm run build -- --base=/admin/
 
-      - name: Susun folder deploy
+      - name: Stage Flutter web + React admin ke ./deploy
         run: |
           rm -rf deploy
-          mkdir -p deploy/admin deploy/panduan
-          cp -a kasirgo/build/web/. deploy/
-          cp -a kasirgo-admin/dist/. deploy/admin/
-          cp -a docs/panduan-kasirgo.pdf deploy/panduan/
-          cp -a docs/panduan-aplikasi-kasirgo.pdf deploy/panduan/
-          ls -la deploy | sed -n '1,30p'
+          mkdir -p deploy/admin deploy/app
+
+          # Flutter web di root deploy (path /, untuk custom domain)
+          cp -r kasirgo/build/web/* deploy/
+
+          # React admin di subpath /admin/
+          cp -r kasirgo-admin/dist/* deploy/admin/
+
+          # Sinkronkan version.json dari pubspec agar web mencerminkan versi app terbaru
+          VERSION=$(grep '^version:' kasirgo/pubspec.yaml | sed 's/version: *//')
+          VER_NAME="${VERSION%%+*}"
+          BUILD_NUM="${VERSION##*+}"
+          printf '{"app_name":"kasirgo","version":"%s","build_number":"%s","package_name":"kasirgo"}\n' "$VER_NAME" "$BUILD_NUM" > deploy/version.json
+          cp deploy/version.json deploy/app/version.json
+
+          touch deploy/.nojekyll
+          echo "Deployed: $(date -u '+%Y-%m-%dT%H:%M:%SZ')" > deploy/.deployed-at
+          echo "Deploy contents (top-level):"
+          ls deploy
+          echo "Admin contents:"
+          ls deploy/admin | head -n '1,30p'
 
       - name: Deploy ke gh-pages
         uses: peaceiris/actions-gh-pages@v4
