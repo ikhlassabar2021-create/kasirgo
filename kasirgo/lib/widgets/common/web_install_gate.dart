@@ -67,13 +67,11 @@ class _WebInstallGateState extends State<WebInstallGate> {
   final _service = AppUpdateService();
 
   // Fallback bila belum ada rilis `app_releases` yang dipublikasikan.
-  static const String _releaseBase =
-      'https://github.com/ikhlassabar2021-create/kasirgo/releases/download/'
-      'v1.0.11-signed-20261103/';
+  static const String _apkBase = 'https://dokterbisnis.web.id/updates/';
   static const Map<String, String> _fallbackFiles = {
-    'arm64': '${_releaseBase}kasirgo-1.0.11-arm64-v8a.apk',
-    'armeabi_v7a': '${_releaseBase}kasirgo-1.0.11-armeabi-v7a.apk',
-    'x86_64': '${_releaseBase}kasirgo-1.0.11-x86_64.apk',
+    'arm64': '${_apkBase}kasirgo-arm64.apk',
+    'armeabi_v7a': '${_apkBase}kasirgo-armeabi-v7a.apk',
+    'x86_64': '${_apkBase}kasirgo-x86_64.apk',
   };
 
   Map<String, String> _urls = _fallbackFiles;

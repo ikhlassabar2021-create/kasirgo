@@ -8,19 +8,19 @@ diagram (Mermaid + Graphviz) tersimpan di `docs/diagrams/`.
 
 ---
 
-## Bagian 1 — Link Unduh APK (v1.0.11, release-signed)
+## Bagian 1 — Link Unduh APK (rilis terbaru)
 
-APK ditandatangani keystore resmi KasirGo (sama dengan 1.0.10), jadi bisa diinstall
-langsung di atas versi lama **tanpa perlu uninstall** data.
+APK terbaru tersedia setelah workflow rilis selesai. APK release-signed dapat diinstall
+di atas versi lama tanpa menghapus data.
 
 | Perangkat | Ukuran | Link Unduh |
 |-----------|--------|-----------|
-| HP Android modern (arm64) — **Direkomendasikan** | ~57 MB | https://github.com/ikhlassabar2021-create/kasirgo/releases/download/v1.0.11-signed-20261103/kasirgo-1.0.11-arm64-v8a.apk |
-| HP Android lama (armeabi-v7a) | ~46 MB | https://github.com/ikhlassabar2021-create/kasirgo/releases/download/v1.0.11-signed-20261103/kasirgo-1.0.11-armeabi-v7a.apk |
-| Emulator / PC Intel (x86_64) | ~61 MB | https://github.com/ikhlassabar2021-create/kasirgo/releases/download/v1.0.11-signed-20261103/kasirgo-1.0.11-x86_64.apk |
+| HP Android modern (arm64) — **Direkomendasikan** | ~57 MB | https://dokterbisnis.web.id/updates/kasirgo-arm64.apk |
+| HP Android lama (armeabi-v7a) | ~46 MB | https://dokterbisnis.web.id/updates/kasirgo-armeabi-v7a.apk |
+| Emulator / Chromebook (x86_64) | ~61 MB | https://dokterbisnis.web.id/updates/kasirgo-x86_64.apk |
 
 Checksum (SHA-256) tersedia di:
-https://github.com/ikhlassabar2021-create/kasirgo/releases/download/v1.0.11-signed-20261103/SHA256SUMS-1.0.11.txt
+https://dokterbisnis.web.id/updates/SHA256SUMS.txt
 
 > Web aplikasi (cadangan ketika HP bermasalah): https://dokterbisnis.web.id/
 
