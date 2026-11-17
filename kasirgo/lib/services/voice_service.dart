@@ -645,21 +645,22 @@ class VoiceService {
   Future<void> announcePayment({
     required double amount,
     String? method,
+    double change = 0,
+    String? customerName,
+    String? outletId,
   }) async {
-    if (!available) return;
-    final nominal = _amountToWords(amount);
-    final text = 'Terima Kasih, Pembayaran di terima sejumlah $nominal rupiah';
-    await speak(text);
-  }
-    if (!available || !_config.soundboxPos) return;
-    await init();
-    if (!available) return;
-
-    final buf = StringBuffer(_terbilangRupiah(amount));
+    if (outletId != null && outletId.trim().isNotEmpty) {
+      try {
+        await applyOutletPrefs(outletId);
+      } catch (_) {}
+    }
+    if (!_available) return;
+    final buf = StringBuffer(
+      'Pembayaran diterima Kasir Go senilai ${_terbilangRupiah(amount)} rupiah',
+    );
     if (method != null && method.trim().isNotEmpty) {
       buf.write(' ${_methodLabel(method)}');
     }
-    buf.write(' berhasil diterima Kasir Go');
     if (change > 0) {
       buf.write('. Kembalian ${_terbilangRupiah(change)}');
     }

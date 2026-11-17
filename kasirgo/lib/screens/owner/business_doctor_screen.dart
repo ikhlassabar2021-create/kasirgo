@@ -137,7 +137,7 @@ class _BusinessDoctorScreenState extends ConsumerState<BusinessDoctorScreen> {
   bool _audioTeguran = true;
   bool _audioSoundbox = true;
   bool _audioShopFloor = true;
-  bool _voiceNoteMode = false;
+  bool _voiceNoteMode = true;
   bool _showTranscript = false;
   final Set<_Msg> _expandedVoiceNotes = <_Msg>{};
   bool _overduePrompted = false;
