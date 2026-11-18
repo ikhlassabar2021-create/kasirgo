@@ -70,7 +70,7 @@ jobs:
           echo "Deploy contents (top-level):"
           ls deploy
           echo "Admin contents:"
-          ls deploy/admin | head -n '1,30p'
+          ls deploy/admin | head -n 30
 
       - name: Deploy ke gh-pages
         uses: peaceiris/actions-gh-pages@v4
