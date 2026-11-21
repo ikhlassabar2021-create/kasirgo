@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:url_launcher/url_launcher.dart';
 import '../../config/app_theme.dart';
 import '../../config/supabase_config.dart';
 import '../../models/product.dart';
@@ -27,6 +28,7 @@ class _OnlineCatalogScreenState extends ConsumerState<OnlineCatalogScreen> {
   String _selectedCategory = 'Semua';
   final Set<String> _publishedIds = {};
   final Set<String> _thumbOptIn = {};
+  String? _slug;
 
   @override
   void initState() {
@@ -39,7 +41,9 @@ class _OnlineCatalogScreenState extends ConsumerState<OnlineCatalogScreen> {
     if (user?.outletId == null) return;
     setState(() => _isLoading = true);
     final data = await _service.getProducts(user!.outletId!);
+    final slug = await _service.getOutletSlug(user.outletId!);
     setState(() {
+      _slug = slug;
       _products = data.where((p) => p.isActive).toList();
       for (final p in _products) {
         if (p.isPublished) {
@@ -99,12 +103,33 @@ class _OnlineCatalogScreenState extends ConsumerState<OnlineCatalogScreen> {
     WaHelper.sendWhatsAppMessage(phone: storePhone, message: message);
   }
 
+  Future<void> _openCatalog(String url) async {
+    final uri = Uri.tryParse(url);
+    if (uri == null) return;
+    if (!await launchUrl(uri, mode: LaunchMode.externalApplication)) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Tidak dapat membuka link katalog.'),
+            backgroundColor: AppTheme.errorColor,
+          ),
+        );
+      }
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final user = ref.watch(currentUserProvider);
-    final catalogUrl = user?.outletId != null
-        ? SupabaseConfig.catalogUrl(user!.outletId!)
-        : '${SupabaseConfig.appUrl}#/catalog';
+    final slug = _slug;
+    final catalogUrl = (slug != null && slug.isNotEmpty)
+        ? SupabaseConfig.catalogSlugUrl(slug)
+        : user?.outletId != null
+            ? SupabaseConfig.catalogUrl(user!.outletId!)
+            : '${SupabaseConfig.appUrl}#/catalog';
+    final storeName = (user?.name?.trim().isNotEmpty ?? false)
+        ? user!.name!
+        : 'Katalog Toko';
 
     final categories = ['Semua', ...{..._products.map((p) => p.category ?? 'Umum')}];
     final filtered = _selectedCategory == 'Semua'
@@ -166,6 +191,20 @@ class _OnlineCatalogScreenState extends ConsumerState<OnlineCatalogScreen> {
                           children: [
                             Text('Link Toko Online', style: GoogleFonts.plusJakartaSans(fontWeight: FontWeight.w700, fontSize: 13, color: AppTheme.textPrimary)),
                             const SizedBox(height: 2),
+                            InkWell(
+                              onTap: () => _openCatalog(catalogUrl),
+                              child: Text(
+                                storeName,
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: GoogleFonts.plusJakartaSans(
+                                  fontSize: 13,
+                                  fontWeight: FontWeight.w700,
+                                  color: AppTheme.primaryColor,
+                                  decoration: TextDecoration.underline,
+                                ),
+                              ),
+                            ),
                             Text(catalogUrl, maxLines: 1, overflow: TextOverflow.ellipsis, style: GoogleFonts.plusJakartaSans(fontSize: 11, color: AppTheme.textSecondary)),
                           ],
                         ),

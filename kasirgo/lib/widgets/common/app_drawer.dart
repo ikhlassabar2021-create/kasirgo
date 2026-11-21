@@ -21,6 +21,7 @@ class AppDrawer extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final isAdmin = user.role == 'admin';
+    final isCashier = user.role == 'cashier';
 
     return Drawer(
       backgroundColor: Colors.white,
@@ -105,8 +106,8 @@ class AppDrawer extends ConsumerWidget {
 
             const SizedBox(height: 8),
 
-            // Navigation Items (Admin has limited access)
-            if (!isAdmin)
+            // Profil/Pengaturan hanya untuk owner (kasir memakai beranda kasir).
+            if (!isAdmin && !isCashier) ...[
               _DrawerTile(
                 icon: Icons.person_outline,
                 title: 'Profil Akun',
@@ -118,8 +119,10 @@ class AppDrawer extends ConsumerWidget {
                   );
                 },
               ),
+            ],
 
-            if (!isAdmin) ...[
+            // Menu khusus owner (kasir tidak boleh melihat modul manajemen).
+            if (!isAdmin && !isCashier) ...[
               _DrawerTile(
                 icon: Icons.settings_outlined,
                 title: 'Pengaturan & Supporter',
@@ -155,6 +158,10 @@ class AppDrawer extends ConsumerWidget {
                   );
                 },
               ),
+            ],
+
+            // Bantuan & update tersedia untuk semua staf non-admin.
+            if (!isAdmin) ...[
               _DrawerTile(
                 icon: Icons.help_outline,
                 title: 'Bantuan & Tutorial',

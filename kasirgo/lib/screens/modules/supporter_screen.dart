@@ -28,11 +28,44 @@ class _SupporterScreenState extends ConsumerState<SupporterScreen> {
   Map<String, dynamic> _bank = <String, dynamic>{};
   bool _autoRenew = true;
   Map<String, dynamic>? _pending;
+  final _referralController = TextEditingController();
+  bool _referralBusy = false;
 
   @override
   void initState() {
     super.initState();
     _load();
+  }
+
+  @override
+  void dispose() {
+    _referralController.dispose();
+    super.dispose();
+  }
+
+  Future<void> _saveReferral() async {
+    final code = _referralController.text.trim();
+    if (code.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+        content: Text('Isi kode referral terlebih dahulu.'),
+      ));
+      return;
+    }
+    setState(() => _referralBusy = true);
+    final outletId = ref.read(currentUserProvider)?.outletId;
+    final error = await SupabaseService()
+        .setOutletReferral(code, outletId: outletId);
+    if (!mounted) return;
+    setState(() => _referralBusy = false);
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+      content: Text(error ??
+          'Kode referral tersimpan. Komisi akan tercatat saat upgrade.'),
+      backgroundColor: error == null ? AppTheme.successColor : AppTheme.errorColor,
+    ));
+    if (error == null) {
+      _referralController.clear();
+      await _load();
+    }
   }
 
   Future<void> _load() async {
@@ -554,11 +587,84 @@ class _SupporterScreenState extends ConsumerState<SupporterScreen> {
                       ],
                     ),
                   ),
+                  const SizedBox(height: 16),
+                  _buildReferralCard(),
                 ],
               ),
       ),
     );
   }
+
+  Widget _buildReferralCard() => Container(
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: AppTheme.surfaceColor,
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: AppTheme.borderColor),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Row(
+              children: [
+                Icon(Icons.card_giftcard_rounded,
+                    color: AppTheme.secondaryColor, size: 20),
+                SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    'Punya Kode Referral?',
+                    style: TextStyle(
+                        fontSize: 14,
+                        fontWeight: FontWeight.bold,
+                        color: AppTheme.textPrimary),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 6),
+            const Text(
+              'Masukkan kode dari teman yang mengundang Anda. Pemilik kode '
+              'akan mendapat komisi saat Anda upgrade pertama kali.',
+              style: TextStyle(
+                  fontSize: 12,
+                  height: 1.4,
+                  color: AppTheme.textSecondary),
+            ),
+            const SizedBox(height: 12),
+            TextField(
+              controller: _referralController,
+              textCapitalization: TextCapitalization.characters,
+              style: const TextStyle(color: AppTheme.textPrimary),
+              decoration: const InputDecoration(
+                labelText: 'Kode Referral',
+                hintText: 'Contoh: KGO-AB12CD',
+                prefixIcon: Icon(Icons.local_offer_outlined),
+              ),
+            ),
+            const SizedBox(height: 10),
+            SizedBox(
+              width: double.infinity,
+              height: 46,
+              child: OutlinedButton.icon(
+                onPressed: _referralBusy ? null : _saveReferral,
+                icon: _referralBusy
+                    ? const SizedBox(
+                        width: 16,
+                        height: 16,
+                        child: CircularProgressIndicator(strokeWidth: 2))
+                    : const Icon(Icons.save_outlined, size: 18),
+                label: const Text('Simpan Kode'),
+                style: OutlinedButton.styleFrom(
+                  foregroundColor: AppTheme.secondaryColor,
+                  side: const BorderSide(color: AppTheme.secondaryColor),
+                  shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12)),
+                ),
+              ),
+            ),
+          ],
+        ),
+      );
 
   Widget _chip(String text, Color color) => Container(
         padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),

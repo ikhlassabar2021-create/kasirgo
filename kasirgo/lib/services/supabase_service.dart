@@ -206,20 +206,85 @@ class SupabaseService {
     }
   }
 
-  /// Hapus semua produk contoh (category = 'Contoh') milik outlet.
-  /// Dipakai tombol "Hapus produk contoh" di checklist onboarding.
+  /// Hapus semua produk contoh (category = 'Contoh') milik outlet BESERTA
+  /// transaksi latihannya. RPC `delete_sample_data` menghapus transaksi yang
+  /// memakai produk contoh (transaction_items CASCADE) lalu produknya, supaya
+  /// laporan ikut kosong. Dipakai tombol "Hapus produk contoh".
   Future<int> deleteSampleProducts(String outletId) async {
     try {
-      final res = await _client
-          .from('products')
-          .delete()
-          .eq('outlet_id', outletId)
-          .eq('category', 'Contoh')
-          .select('id');
+      final res = await _client.rpc('delete_sample_data', params: {
+        'p_outlet': outletId,
+      });
       invalidateProductCache();
-      return (res as List).length;
-    } catch (e) {
+      if (res is Map) {
+        return (res['products'] as num?)?.toInt() ?? 0;
+      }
       return 0;
+    } catch (e) {
+      // Fallback bila migrasi belum diterapkan: hapus produk saja.
+      try {
+        final res = await _client
+            .from('products')
+            .delete()
+            .eq('outlet_id', outletId)
+            .eq('category', 'Contoh')
+            .select('id');
+        invalidateProductCache();
+        return (res as List).length;
+      } catch (_) {
+        return 0;
+      }
+    }
+  }
+
+  /// Slug katalog pendek milik outlet (mis. "toko-test"). Null bila belum ada.
+  Future<String?> getOutletSlug(String outletId) async {
+    try {
+      final res = await _client
+          .from('outlets')
+          .select('slug')
+          .eq('id', outletId)
+          .maybeSingle();
+      final slug = res?['slug']?.toString().trim();
+      return (slug == null || slug.isEmpty) ? null : slug;
+    } catch (e) {
+      return null;
+    }
+  }
+
+  /// Resolusi slug katalog -> id outlet (RPC publik, boleh anon).
+  Future<String?> resolveOutletSlug(String slug) async {
+    try {
+      final res = await _client.rpc('get_outlet_by_slug', params: {
+        'p_slug': slug,
+      });
+      if (res is Map && res['found'] == true) {
+        return res['id']?.toString();
+      }
+      return null;
+    } catch (e) {
+      return null;
+    }
+  }
+
+  /// Pasang kode referral afiliasi untuk outlet milik owner yang login.
+  /// Mengembalikan null bila berhasil, atau pesan error.
+  Future<String?> setOutletReferral(String code, {String? outletId}) async {
+    try {
+      final res = await _client.rpc('set_outlet_referral', params: {
+        'p_code': code,
+        'p_outlet': outletId,
+      });
+      if (res is Map && res['ok'] == true) return null;
+      final err = (res is Map ? res['error'] : null)?.toString();
+      if (err == 'code_not_found') return 'Kode referral tidak ditemukan.';
+      if (err == 'empty_code') return 'Kode referral kosong.';
+      if (err == 'outlet_forbidden') {
+        return 'Outlet ini bukan milik akun Anda.';
+      }
+      return 'Gagal menyimpan kode referral.';
+    } catch (e) {
+      return 'Gagal menyimpan kode referral.';
     }
   }
 

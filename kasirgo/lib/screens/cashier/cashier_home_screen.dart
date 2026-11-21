@@ -5,7 +5,6 @@ import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../config/app_theme.dart';
 import '../../models/shift.dart';
-import '../../models/tip.dart';
 import '../../providers/auth_provider.dart';
 import '../../providers/order_badge_provider.dart';
 import '../../providers/outlet_provider.dart';
@@ -13,7 +12,6 @@ import '../../services/supabase_service.dart';
 import '../../utils/formatters.dart';
 import '../../widgets/common/app_drawer.dart';
 import '../../widgets/common/app_close_button.dart';
-import '../../widgets/common/delegation_tasks_card.dart';
 import '../../widgets/common/glass_card.dart';
 import '../../widgets/common/logout_button.dart';
 import '../../widgets/common/responsive.dart';
@@ -25,12 +23,6 @@ final activeShiftProvider = FutureProvider.autoDispose<Shift?>((ref) async {
   final user = ref.watch(currentUserProvider);
   if (user?.outletId == null) return null;
   return SupabaseService().getActiveShift(user!.outletId!, userId: user.id);
-});
-
-final shiftTipsProvider = FutureProvider.autoDispose<List<Tip>>((ref) async {
-  final user = ref.watch(currentUserProvider);
-  if (user?.outletId == null) return [];
-  return SupabaseService().getTips(user!.outletId!);
 });
 
 class CashierHomeScreen extends ConsumerStatefulWidget {
@@ -188,74 +180,6 @@ class _CashierHomeScreenState extends ConsumerState<CashierHomeScreen> {
     );
   }
 
-  void _showAddTipDialog(BuildContext parentContext, String outletId, String? userId) {
-    final tipController = TextEditingController();
-
-    showDialog(
-      context: parentContext,
-      builder: (ctx) => AlertDialog(
-        backgroundColor: AppTheme.surfaceColor,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(16),
-          side: const BorderSide(color: AppTheme.borderColor),
-        ),
-        title: Row(
-          children: [
-            Expanded(
-              child: Text(
-                'Catat Tip Tunai/Kolektif',
-                style: GoogleFonts.plusJakartaSans(fontWeight: FontWeight.w700, color: AppTheme.textPrimary),
-              ),
-            ),
-            AppCloseButton(onTap: () => Navigator.pop(ctx)),
-          ],
-        ),
-        content: TextField(
-          controller: tipController,
-          keyboardType: TextInputType.number,
-          inputFormatters: [FilteringTextInputFormatter.digitsOnly],
-          autofocus: true,
-          style: const TextStyle(color: AppTheme.textPrimary),
-          decoration: const InputDecoration(
-            labelText: 'Nominal Tip',
-            prefixText: 'Rp ',
-            hintText: 'Contoh: 10000',
-          ),
-        ),
-        actions: [
-          BubbleButton(
-            onPressed: () async {
-              final amount = double.tryParse(tipController.text) ?? 0.0;
-              if (amount <= 0) return;
-              final messenger = ScaffoldMessenger.of(parentContext);
-              Navigator.pop(ctx);
-              final openShift =
-                  await SupabaseService().getOpenShift(outletId);
-              final tip = Tip(
-                id: '',
-                outletId: outletId,
-                userId: userId,
-                shiftId: openShift?.id,
-                amount: amount,
-                createdAt: DateTime.now(),
-              );
-              final res = await SupabaseService().recordTip(tip);
-              if (!mounted) return;
-              ref.invalidate(shiftTipsProvider);
-              messenger.showSnackBar(
-                SnackBar(
-                  content: Text(res != null ? 'Tip ${Formatters.currency(amount)} dicatat!' : 'Gagal mencatat tip'),
-                  backgroundColor: res != null ? AppTheme.successColor : AppTheme.errorColor,
-                ),
-              );
-            },
-            child: const Text('Simpan Tip'),
-          ),
-        ],
-      ),
-    );
-  }
-
   @override
   Widget build(BuildContext context) {
     final user = ref.watch(currentUserProvider);
@@ -268,7 +192,6 @@ class _CashierHomeScreenState extends ConsumerState<CashierHomeScreen> {
 
     final outletType = ref.watch(outletTypeProvider(user.outletId ?? ''));
     final activeShiftAsync = ref.watch(activeShiftProvider);
-    final tipsAsync = ref.watch(shiftTipsProvider);
     final pendingOrders = ref.watch(pendingOrderCountProvider).value ?? 0;
 
     return AppShell(
@@ -287,6 +210,7 @@ class _CashierHomeScreenState extends ConsumerState<CashierHomeScreen> {
         }
       },
       headerTitle: 'Home Kasir',
+      showSidebar: false,
       drawer: AppDrawer(user: user),
       mobileActions: const [LogoutButton()],
       sidebarFooter: _CashierSidebarFooter(email: user.email, role: user.role),
@@ -298,16 +222,8 @@ class _CashierHomeScreenState extends ConsumerState<CashierHomeScreen> {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               _buildHero(context, user.email, activeShiftAsync.value),
-              const SizedBox(height: 16),
-              const DelegationTasksCard(),
               const SizedBox(height: 24),
-              _buildShiftAndTipSection(
-                context,
-                user.outletId ?? '',
-                user.id,
-                activeShiftAsync.value,
-                tipsAsync.value ?? [],
-              ),
+              _buildShiftStatusCard(activeShiftAsync.value),
               const SizedBox(height: 28),
               const _SectionLabel(title: 'Aksi Cepat Kasir'),
               const SizedBox(height: 14),
@@ -342,25 +258,11 @@ class _CashierHomeScreenState extends ConsumerState<CashierHomeScreen> {
                     onTap: () => context.push('/cashier/pos'),
                   ),
                   _QuickActionCard(
-                    icon: Icons.qr_code_2_rounded,
-                    color: AppTheme.secondaryColor,
-                    title: 'QRIS Manual',
-                    subtitle: 'Statis / Dinamis',
-                    onTap: () => context.push('/cashier/pos'),
-                  ),
-                  _QuickActionCard(
                     icon: Icons.insights_rounded,
                     color: AppTheme.accentColor,
                     title: 'Laporan Penjualan',
                     subtitle: 'Hari ini / shift aktif',
                     onTap: () => context.push('/cashier/reports'),
-                  ),
-                  _QuickActionCard(
-                    icon: Icons.volunteer_activism_rounded,
-                    color: AppTheme.warningColor,
-                    title: 'Input Tip',
-                    subtitle: 'Catat tip masuk',
-                    onTap: () => _showAddTipDialog(context, user.outletId ?? '', user.id),
                   ),
                   _QuickActionCard(
                     icon: Icons.access_time_rounded,
@@ -479,87 +381,41 @@ class _CashierHomeScreenState extends ConsumerState<CashierHomeScreen> {
     );
   }
 
-  Widget _buildShiftAndTipSection(
-    BuildContext context,
-    String outletId,
-    String userId,
-    Shift? activeShift,
-    List<Tip> tips,
-  ) {
-    final totalTips = tips.fold<double>(0.0, (sum, t) => sum + t.amount);
-
-    return Row(
-      children: [
-        Expanded(
-          child: Container(
-            padding: const EdgeInsets.all(14),
-            decoration: BoxDecoration(
-              color: AppTheme.surfaceColor,
-              borderRadius: BorderRadius.circular(16),
-              border: Border.all(color: AppTheme.borderColor),
-            ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    const Text('Status Shift', style: TextStyle(color: AppTheme.textSecondary, fontSize: 12)),
-                    Icon(
-                      activeShift != null ? Icons.check_circle : Icons.pause_circle_outline,
-                      size: 16,
-                      color: activeShift != null ? AppTheme.successColor : AppTheme.warningColor,
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 6),
-                Text(
-                  activeShift != null ? 'Shift Aktif' : 'Tutup',
-                  style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14, color: AppTheme.textPrimary),
-                ),
-                Text(
-                  activeShift != null
-                      ? 'Modal: ${Formatters.currency(activeShift.openingCash)}'
-                      : 'Buka sebelum melayani',
-                  style: const TextStyle(fontSize: 11, color: AppTheme.textSecondary),
-                ),
-              ],
-            ),
+  Widget _buildShiftStatusCard(Shift? activeShift) {
+    return Container(
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: AppTheme.surfaceColor,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: AppTheme.borderColor),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              const Text('Status Shift', style: TextStyle(color: AppTheme.textSecondary, fontSize: 12)),
+              Icon(
+                activeShift != null ? Icons.check_circle : Icons.pause_circle_outline,
+                size: 16,
+                color: activeShift != null ? AppTheme.successColor : AppTheme.warningColor,
+              ),
+            ],
           ),
-        ),
-        const SizedBox(width: 12),
-        Expanded(
-          child: Container(
-            padding: const EdgeInsets.all(14),
-            decoration: BoxDecoration(
-              color: AppTheme.surfaceColor,
-              borderRadius: BorderRadius.circular(16),
-              border: Border.all(color: AppTheme.borderColor),
-            ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                const Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Text('Total Tip', style: TextStyle(color: AppTheme.textSecondary, fontSize: 12)),
-                    Icon(Icons.volunteer_activism_rounded, size: 16, color: AppTheme.warningColor),
-                  ],
-                ),
-                const SizedBox(height: 6),
-                Text(
-                  Formatters.currency(totalTips),
-                  style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14, color: AppTheme.textPrimary),
-                ),
-                Text(
-                  '${tips.length} transaksi tip',
-                  style: const TextStyle(fontSize: 11, color: AppTheme.textSecondary),
-                ),
-              ],
-            ),
+          const SizedBox(height: 6),
+          Text(
+            activeShift != null ? 'Shift Aktif' : 'Tutup',
+            style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14, color: AppTheme.textPrimary),
           ),
-        ),
-      ],
+          Text(
+            activeShift != null
+                ? 'Modal: ${Formatters.currency(activeShift.openingCash)}'
+                : 'Buka sebelum melayani',
+            style: const TextStyle(fontSize: 11, color: AppTheme.textSecondary),
+          ),
+        ],
+      ),
     );
   }
 }

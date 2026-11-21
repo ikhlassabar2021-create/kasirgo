@@ -45,6 +45,7 @@ class AppShell extends StatelessWidget {
   final Widget? mobileTitle;
   final List<Widget> mobileActions;
   final bool showBottomNav;
+  final bool showSidebar;
 
   const AppShell({
     super.key,
@@ -59,6 +60,7 @@ class AppShell extends StatelessWidget {
     this.mobileTitle,
     this.mobileActions = const [],
     this.showBottomNav = true,
+    this.showSidebar = true,
   });
 
   @override
@@ -75,37 +77,38 @@ class AppShell extends StatelessWidget {
       body: CentennialBackground(
         child: Row(
           children: [
-            Container(
-              width: AppTheme.sidebarWidth,
-              decoration: const BoxDecoration(
-                color: AppTheme.surfaceColor,
-                border: Border(right: BorderSide(color: AppTheme.borderColor)),
-              ),
-              child: Column(
-                children: [
-                  if (brand != null)
-                    Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 22),
-                      child: Align(alignment: Alignment.centerLeft, child: brand),
-                    ),
-                  const Divider(height: 1, color: AppTheme.borderColor),
-                  const SizedBox(height: 12),
-                  Expanded(
-                    child: ListView(
-                      padding: const EdgeInsets.symmetric(horizontal: 12),
-                      children: [
-                        for (var i = 0; i < navItems.length; i++)
-                          _buildNavItem(i),
-                      ],
-                    ),
-                  ),
-                  if (sidebarFooter != null) ...[
+            if (showSidebar)
+              Container(
+                width: AppTheme.sidebarWidth,
+                decoration: const BoxDecoration(
+                  color: AppTheme.surfaceColor,
+                  border: Border(right: BorderSide(color: AppTheme.borderColor)),
+                ),
+                child: Column(
+                  children: [
+                    if (brand != null)
+                      Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 22),
+                        child: Align(alignment: Alignment.centerLeft, child: brand),
+                      ),
                     const Divider(height: 1, color: AppTheme.borderColor),
-                    sidebarFooter!,
+                    const SizedBox(height: 12),
+                    Expanded(
+                      child: ListView(
+                        padding: const EdgeInsets.symmetric(horizontal: 12),
+                        children: [
+                          for (var i = 0; i < navItems.length; i++)
+                            _buildNavItem(i),
+                        ],
+                      ),
+                    ),
+                    if (sidebarFooter != null) ...[
+                      const Divider(height: 1, color: AppTheme.borderColor),
+                      sidebarFooter!,
+                    ],
                   ],
-                ],
+                ),
               ),
-            ),
             Expanded(
               child: Column(
                 children: [

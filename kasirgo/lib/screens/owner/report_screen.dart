@@ -167,9 +167,20 @@ class _ReportScreenState extends ConsumerState<ReportScreen> with SingleTickerPr
       final restockSummary =
           await b2b.getSummary(user.outletId!, range.start, range.end);
 
+      // Jangan hitung transaksi latihan yang seluruh itemnya produk contoh,
+      // walau produknya sudah dihapus/tersisa.
+      final sampleIds =
+          prodList.where((p) => p.category == 'Contoh').map((p) => p.id).toSet();
+      final cleanTx = sampleIds.isEmpty
+          ? txList
+          : txList
+              .where((t) => !(t.items.isNotEmpty &&
+                  t.items.every((i) => sampleIds.contains(i.productId))))
+              .toList();
+
       if (mounted) {
         setState(() {
-          _transactions = txList;
+          _transactions = cleanTx;
           _productMap = pMap;
           _ppobSummary = ppobSummary;
           _restockSummary = restockSummary;

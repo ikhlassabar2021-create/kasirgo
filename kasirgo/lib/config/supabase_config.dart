@@ -67,6 +67,11 @@ class SupabaseConfig {
   static String catalogUrl(String outletId) =>
       '$appUrl#/catalog?outlet=$outletId';
 
+  /// Link katalog pendek berbasis nama toko (slug), mis.
+  /// `https://dokterbisnis.web.id/#/s/toko-test`.
+  static String catalogSlugUrl(String slug) =>
+      '$appUrl#/s/${Uri.encodeComponent(slug)}';
+
   static Future<void> initialize() async {
     await Supabase.initialize(
       url: url,

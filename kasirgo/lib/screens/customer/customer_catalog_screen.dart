@@ -18,8 +18,13 @@ import '../../widgets/common/bubble_glass.dart';
 /// WhatsApp toko (bila nomor WA owner sudah diatur).
 class CustomerCatalogScreen extends StatefulWidget {
   final String initialOutletId;
+  final String initialSlug;
 
-  const CustomerCatalogScreen({super.key, this.initialOutletId = ''});
+  const CustomerCatalogScreen({
+    super.key,
+    this.initialOutletId = '',
+    this.initialSlug = '',
+  });
 
   @override
   State<CustomerCatalogScreen> createState() => _CustomerCatalogScreenState();
@@ -50,7 +55,30 @@ class _CustomerCatalogScreenState extends State<CustomerCatalogScreen> {
       WidgetsBinding.instance.addPostFrameCallback((_) {
         _load(widget.initialOutletId.trim());
       });
+    } else if (widget.initialSlug.trim().isNotEmpty) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        _loadBySlug(widget.initialSlug.trim());
+      });
     }
+  }
+
+  /// Resolusi link pendek `#/s/<slug>` -> id outlet lalu muat katalog.
+  Future<void> _loadBySlug(String slug) async {
+    setState(() {
+      _isLoading = true;
+      _error = '';
+    });
+    final id = await _service.resolveOutletSlug(slug);
+    if (!mounted) return;
+    if (id == null || id.isEmpty) {
+      setState(() {
+        _isLoading = false;
+        _error = 'Toko tidak ditemukan. Pastikan tautan katalog benar.';
+      });
+      return;
+    }
+    _outletController.text = id;
+    await _load(id);
   }
 
   Future<void> _loadAdConsent() async {

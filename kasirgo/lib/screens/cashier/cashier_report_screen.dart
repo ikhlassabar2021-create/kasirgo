@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../config/app_theme.dart';
+import '../../models/product.dart';
 import '../../models/shift.dart';
 import '../../models/transaction.dart';
 import '../../providers/auth_provider.dart';
@@ -71,11 +72,24 @@ class _CashierReportScreenState extends ConsumerState<CashierReportScreen> {
         endDate: range.end,
       ),
       service.getActiveShift(user.outletId!, userId: user.id),
+      service.getProducts(user.outletId!),
     ]);
 
     if (!mounted) return;
+    final txList = results[0] as List<Transaction>;
+    final products = results[2] as List<Product>;
+    // Buang transaksi latihan yang seluruh itemnya produk contoh.
+    final sampleIds =
+        products.where((p) => p.category == 'Contoh').map((p) => p.id).toSet();
+    final cleanTx = sampleIds.isEmpty
+        ? txList
+        : txList
+            .where((t) => !(t.items.isNotEmpty &&
+                t.items.every((i) => sampleIds.contains(i.productId))))
+            .toList();
+
     setState(() {
-      _transactions = results[0] as List<Transaction>;
+      _transactions = cleanTx;
       _activeShift = results[1] as Shift?;
       _isLoading = false;
     });

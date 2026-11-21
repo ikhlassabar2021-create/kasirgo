@@ -25,6 +25,7 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
   final _passwordController = TextEditingController();
   final _businessNameController = TextEditingController();
   final _fullNameController = TextEditingController();
+  final _referralController = TextEditingController();
   String _selectedBusinessType = 'Warung Sembako';
   bool _isLoading = false;
   bool _obscurePassword = true;
@@ -35,6 +36,7 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
     _passwordController.dispose();
     _businessNameController.dispose();
     _fullNameController.dispose();
+    _referralController.dispose();
     super.dispose();
   }
 
@@ -50,6 +52,9 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
         password: _passwordController.text,
         businessName: _businessNameController.text.trim(),
         businessType: _selectedBusinessType,
+        referralCode: _referralController.text.trim().isEmpty
+            ? null
+            : _referralController.text.trim(),
         kycData: {
           'fullName': _fullNameController.text.trim(),
         },
@@ -200,6 +205,19 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                                 setState(() => _selectedBusinessType = value);
                               }
                             },
+                          ),
+                          const SizedBox(height: 16),
+                          TextFormField(
+                            controller: _referralController,
+                            textCapitalization: TextCapitalization.characters,
+                            style: const TextStyle(color: AppTheme.textPrimary),
+                            decoration: const InputDecoration(
+                              labelText: 'Kode Referral (opsional)',
+                              hintText: 'Contoh: KGO-AB12CD',
+                              prefixIcon: Icon(Icons.card_giftcard_rounded),
+                              helperText:
+                                  'Isi bila Anda mendapat kode dari teman/pengelola.',
+                            ),
                           ),
                           const SizedBox(height: 16),
                           TextFormField(

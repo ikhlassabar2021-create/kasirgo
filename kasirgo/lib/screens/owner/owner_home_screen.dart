@@ -193,6 +193,7 @@ class OwnerHomeScreen extends ConsumerStatefulWidget {
 
 class _OwnerHomeScreenState extends ConsumerState<OwnerHomeScreen> {
   late int _currentIndex;
+  int _dataEpoch = 0;
 
   @override
   void initState() {
@@ -356,9 +357,9 @@ class _OwnerHomeScreenState extends ConsumerState<OwnerHomeScreen> {
           index: _currentIndex > 3 ? 0 : _currentIndex,
           children: [
             _buildDashboard(user.name ?? user.email, summaryAsync),
-            const ProductListScreen(embedded: true),
+            ProductListScreen(key: ValueKey('products-$_dataEpoch'), embedded: true),
             const PosScreen(embedded: true),
-            const ReportScreen(embedded: true),
+            ReportScreen(key: ValueKey('report-$_dataEpoch'), embedded: true),
           ],
         );
 
@@ -797,6 +798,7 @@ class _OwnerHomeScreenState extends ConsumerState<OwnerHomeScreen> {
                 products: allProducts.cast<Product>(),
                 onOpenProducts: () => setState(() => _currentIndex = 1),
                 onOpenKasir: () => setState(() => _currentIndex = 2),
+                onSampleDeleted: () => setState(() => _dataEpoch++),
               ),
               _QrisSetupBanner(outletId: userOutletId()),
               const _AppUpdateBanner(),
@@ -1651,6 +1653,7 @@ class _SetupChecklistCard extends ConsumerStatefulWidget {
   final List<Product> products;
   final VoidCallback onOpenProducts;
   final VoidCallback onOpenKasir;
+  final VoidCallback onSampleDeleted;
 
   const _SetupChecklistCard({
     required this.outletId,
@@ -1658,6 +1661,7 @@ class _SetupChecklistCard extends ConsumerStatefulWidget {
     required this.products,
     required this.onOpenProducts,
     required this.onOpenKasir,
+    required this.onSampleDeleted,
   });
 
   @override
@@ -1740,9 +1744,11 @@ class _SetupChecklistCardState extends ConsumerState<_SetupChecklistCard> {
     final count = await SupabaseService().deleteSampleProducts(widget.outletId);
     if (!mounted) return;
     ref.invalidate(homeSummaryProvider);
+    // Paksa tab Produk & Laporan memuat ulang agar data contoh tidak tersisa.
+    widget.onSampleDeleted();
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
-        content: Text('$count produk contoh dihapus.'),
+        content: Text('$count produk contoh & transaksi latihannya dihapus.'),
         backgroundColor: AppTheme.successColor,
       ),
     );

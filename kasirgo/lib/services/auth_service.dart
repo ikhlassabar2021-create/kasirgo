@@ -183,12 +183,17 @@ class AuthService {
     required String businessName,
     required String businessType,
     Map<String, dynamic>? kycData,
+    String? referralCode,
   }) async {
     try {
       final data = <String, dynamic>{
         'business_name': businessName,
         'business_type': businessType,
       };
+      final cleanReferral = (referralCode ?? '').trim();
+      if (cleanReferral.isNotEmpty) {
+        data['referral_code'] = cleanReferral.toUpperCase();
+      }
       if (kycData != null && kycData.isNotEmpty) {
         // NIK & nomor HP sengaja TIDAK diminta saat daftar; keduanya
         // dilengkapi pada verifikasi KYC (submit_kyc) setelah akun aktif.

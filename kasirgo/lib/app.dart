@@ -158,6 +158,12 @@ final _router = GoRouter(
         initialOutletId: state.uri.queryParameters['outlet'] ?? '',
       ),
     ),
+    GoRoute(
+      path: '/s/:slug',
+      builder: (context, state) => CustomerCatalogScreen(
+        initialSlug: state.pathParameters['slug'] ?? '',
+      ),
+    ),
   ],
 );
 
