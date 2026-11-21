@@ -1788,3 +1788,32 @@ Commit `ff04bb3` (main) + deploy web gh-pages `050051c` (live md5
 - CATATAN: kunci AI global sudah ada di `system_api_configs` (base_url `https://tiprouter.my.id/v1`,
   model `deepseek-v-4.1-flash-1017`, primary key di Vault hint ****1h3E) — Console AI langsung
   jalan tanpa setting ulang. APK tidak terpengaruh (fitur superadmin web-only).
+
+## Sesi 2026-11-21: Tutup Shift Kasir + Auto-Referral + Payout Closing Afiliasi (SELESAI)
+- MIGRASI `docs/migrations/2026-11-21-kasirgo-close-shift-payouts.sql` (DITERAPKAN):
+  - RPC `close_shift(p_shift_id,p_closing_cash,p_note)` SECURITY DEFINER: cek
+    `is_outlet_member(outlet)` (owner/admin/kasir), hitung cash/qris/transfer dari
+    `transaction_payments` + tip, isi expected/difference, tolak shift tertutup.
+  - `outlet_affiliate_closings` +`scheduled_at`, `paid_note`.
+  - RPC `platform_outlet_affiliate_closings(profile)` + `platform_outlet_affiliate_closing_pay(
+    closing,mode now|schedule|unschedule,scheduled_at,note)` (superadmin, audit
+    `affiliate.outlet_closing_pay`); `platform_outlet_affiliates` kini mengirim
+    paid_at/scheduled_at/paid_note di `closings_preview`.
+  - Teruji via transaksi-rollback: kasir menutup shift outlet (selisih/note benar);
+    payout schedule -> now -> list OK.
+- APP: `supabase_service.closeShift` panggil RPC (fallback jalur lama); provider shift
+  kasir & laporan kasir jadi outlet-wide (`getActiveShift(outlet)` tanpa userId) sehingga
+  kasir melihat/menutup shift yang dibuka owner. Route `/register` meneruskan
+  `?ref=` ke `RegisterScreen(initialReferralCode:)`; field terisi otomatis + banner.
+- ADMIN: `Affiliates.tsx` modal closing outlet punya tombol "Bayar Sekarang",
+  "Jadwalkan" (prompt tanggal), "Batalkan Jadwal"; helper
+  `platformOutletAffiliateClosings`/`platformOutletAffiliateClosingPay`; `tsc` bersih.
+- VERSI 1.0.18+19; commit `a49f9bc`; Deploy Web run `44950979235` sukses; live
+  `version.json` 1.0.18/19. Verifikasi live referral: `/register?ref=KGO-TEST99`
+  -> input value `KGO-TEST99` + banner. Admin bundle memuat tombol payout.
+- APK: tag `v1.0.18-apk-20261121`, run `44952042780` sukses (signed keystore CI),
+  /updates/ terisi 1.0.18 (arm64 59,3 MB; armeabi 48,8 MB; x86_64 63,8 MB).
+  Migrasi `docs/migrations/2026-11-21-kasirgo-seed-android-release-1.0.18.sql`
+  (DITERAPKAN): `app_releases` 1.0.18 build 19 published + files stable URL.
+  GitHub Release TIDAK dibuat: token GitHub App tidak punya izin release; link
+  download web memakai URL stabil /updates/ sehingga tetap terbaru.
