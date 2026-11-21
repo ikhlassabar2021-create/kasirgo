@@ -72,7 +72,15 @@ final _router = GoRouter(
     ),
     GoRoute(
       path: '/register',
-      builder: (context, state) => const RegisterScreen(),
+      builder: (context, state) {
+        final raw = state.uri.queryParameters['ref'] ??
+            Uri.base.queryParameters['ref'];
+        return RegisterScreen(
+          initialReferralCode: (raw == null || raw.trim().isEmpty)
+              ? null
+              : raw.trim().toUpperCase(),
+        );
+      },
     ),
     GoRoute(
       path: '/owner',

@@ -71,7 +71,7 @@ class _CashierReportScreenState extends ConsumerState<CashierReportScreen> {
         startDate: range.start,
         endDate: range.end,
       ),
-      service.getActiveShift(user.outletId!, userId: user.id),
+      service.getActiveShift(user.outletId!),
       service.getProducts(user.outletId!),
     ]);
 

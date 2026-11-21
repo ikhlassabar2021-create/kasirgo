@@ -9,6 +9,8 @@ import {
   platformAffiliateSetStatus,
   platformOutletAffiliates,
   platformAffiliateClosings,
+  platformOutletAffiliateClosings,
+  platformOutletAffiliateClosingPay,
 } from '../lib/adminApi';
 import type { AffiliateRow } from '../lib/adminApi';
 
@@ -16,6 +18,16 @@ type Toast = { kind: 'ok' | 'err'; text: string } | null;
 
 const fmtRp = (v: number) =>
   'Rp ' + Number(v ?? 0).toLocaleString('id-ID', { maximumFractionDigits: 0 });
+
+const fmtDateShort = (v?: string | null) =>
+  v ? new Date(v).toLocaleDateString('id-ID', { day: '2-digit', month: 'short', year: 'numeric' }) : '-';
+
+const closingStatusLabel = (c: any) => {
+  if (c.status === 'paid') return `Dibayar ${fmtDateShort(c.paid_at)}`;
+  if (c.scheduled_at) return `Terjadwal ${fmtDateShort(c.scheduled_at)}`;
+  if (c.status === 'cancelled') return 'Dibatalkan';
+  return 'Belum dibayar';
+};
 
 const emptyForm = {
   id: null as string | null,
@@ -45,6 +57,7 @@ export function AffiliatesPage() {
   const [closingsFor, setClosingsFor] = useState<Record<string, any> | null>(null);
   const [closingRows, setClosingRows] = useState<Record<string, any>[]>([]);
   const [closingLoading, setClosingLoading] = useState(false);
+  const [payoutBusy, setPayoutBusy] = useState<string | null>(null);
 
   const loadOutletAffiliates = async (q?: string) => {
     setOutletLoading(true);
@@ -76,6 +89,53 @@ export function AffiliatesPage() {
   const openClosingsOutlet = (p: Record<string, any>) => {
     setClosingsFor({ ...p, _kind: 'outlet' });
     setClosingRows((p.closings_preview as any[]) ?? []);
+  };
+
+  const refreshOutletClosings = async (profileId: string) => {
+    const res = await platformOutletAffiliateClosings(profileId);
+    setClosingRows(res.rows ?? []);
+    const list = await platformOutletAffiliates(search.trim() || null);
+    setOutletRows(list.rows ?? []);
+  };
+
+  const handleClosingPay = async (c: any, mode: 'now' | 'schedule' | 'unschedule') => {
+    const profileId = closingsFor?.id;
+    if (!profileId) return;
+    let scheduledAt: string | null = null;
+
+    if (mode === 'now' && !window.confirm(`Tandai closing ${fmtRp(Number(c.amount ?? 0))} sudah dibayar?`)) return;
+    if (mode === 'schedule') {
+      const def = c.scheduled_at
+        ? String(c.scheduled_at).slice(0, 10)
+        : new Date(Date.now() + 86400000).toISOString().slice(0, 10);
+      const input = window.prompt('Tanggal pembayaran (YYYY-MM-DD):', def);
+      if (!input) return;
+      const d = new Date(`${input}T09:00:00`);
+      if (Number.isNaN(d.getTime())) {
+        flash('err', 'Tanggal tidak valid.');
+        return;
+      }
+      scheduledAt = d.toISOString();
+    }
+    if (mode === 'unschedule' && !window.confirm('Batalkan jadwal pembayaran closing ini?')) return;
+
+    setPayoutBusy(c.id);
+    try {
+      await platformOutletAffiliateClosingPay({ closingId: c.id, mode, scheduledAt });
+      flash(
+        'ok',
+        mode === 'now'
+          ? 'Closing ditandai sudah dibayar.'
+          : mode === 'schedule'
+            ? 'Pembayaran closing dijadwalkan.'
+            : 'Jadwal pembayaran dibatalkan.',
+      );
+      await refreshOutletClosings(profileId);
+    } catch (e: any) {
+      flash('err', e.message);
+    } finally {
+      setPayoutBusy(null);
+    }
   };
 
   const flash = (kind: 'ok' | 'err', text: string) => {
@@ -527,16 +587,57 @@ export function AffiliatesPage() {
               <p className="text-xs text-muted text-center py-4">Belum ada closing.</p>
             )}
             {!closingLoading && closingRows.map((c: any, i) => (
-              <div key={c.id ?? i} className="flex items-center justify-between p-2.5 rounded-xl border border-border bg-bg/50 text-xs">
-                <div>
-                  <p className="font-semibold text-ink">{c.referred_name ?? c.referred_outlet_name ?? c.outlet_name ?? 'Usaha/Pelanggan'}</p>
-                  <p className="text-[10px] text-muted">
-                    {c.created_at ? new Date(c.created_at).toLocaleDateString('id-ID', { day: '2-digit', month: 'short', year: 'numeric' }) : '-'}
-                    {c.outlet_name && c.referred_name !== c.outlet_name ? ` · outlet: ${c.outlet_name}` : ''}
-                    {c.status ? ` · ${c.status}` : ''}
-                  </p>
+              <div key={c.id ?? i} className="p-3 rounded-xl border border-border bg-bg/50 text-xs space-y-2">
+                <div className="flex items-start justify-between gap-3">
+                  <div className="min-w-0">
+                    <p className="font-semibold text-ink truncate">{c.referred_name ?? c.referred_outlet_name ?? c.outlet_name ?? 'Usaha/Pelanggan'}</p>
+                    <p className="text-[10px] text-muted">
+                      {fmtDateShort(c.created_at)}
+                      {c.outlet_name && c.referred_name !== c.outlet_name ? ` · outlet: ${c.outlet_name}` : ''}
+                      {c.description ? ` · ${c.description}` : ''}
+                    </p>
+                  </div>
+                  <p className="font-bold text-success whitespace-nowrap">{fmtRp(c.commission_amount ?? c.amount ?? 0)}</p>
                 </div>
-                <p className="font-bold text-success">{fmtRp(c.commission_amount ?? c.amount ?? 0)}</p>
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                  <span className={`px-2 py-0.5 rounded-full text-[10px] font-semibold ${
+                    c.status === 'paid'
+                      ? 'bg-success/10 text-success'
+                      : c.scheduled_at
+                        ? 'bg-warning/10 text-warning'
+                        : 'bg-bg text-muted'
+                  }`}>
+                    {closingStatusLabel(c)}
+                  </span>
+                  {closingsFor?._kind === 'outlet' && c.status !== 'paid' && c.status !== 'cancelled' && (
+                    <div className="flex flex-wrap gap-1.5">
+                      <button
+                        onClick={() => handleClosingPay(c, 'now')}
+                        disabled={payoutBusy === c.id}
+                        className="px-2.5 py-1 rounded-lg bg-success text-white text-[10px] font-semibold disabled:opacity-50"
+                      >
+                        Bayar Sekarang
+                      </button>
+                      {c.scheduled_at ? (
+                        <button
+                          onClick={() => handleClosingPay(c, 'unschedule')}
+                          disabled={payoutBusy === c.id}
+                          className="px-2.5 py-1 rounded-lg border border-border text-[10px] font-semibold disabled:opacity-50"
+                        >
+                          Batalkan Jadwal
+                        </button>
+                      ) : (
+                        <button
+                          onClick={() => handleClosingPay(c, 'schedule')}
+                          disabled={payoutBusy === c.id}
+                          className="px-2.5 py-1 rounded-lg border border-border text-[10px] font-semibold disabled:opacity-50"
+                        >
+                          Jadwalkan
+                        </button>
+                      )}
+                    </div>
+                  )}
+                </div>
               </div>
             ))}
           </div>

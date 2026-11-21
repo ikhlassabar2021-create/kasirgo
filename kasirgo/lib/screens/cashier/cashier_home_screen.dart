@@ -22,7 +22,7 @@ import 'incoming_orders_screen.dart';
 final activeShiftProvider = FutureProvider.autoDispose<Shift?>((ref) async {
   final user = ref.watch(currentUserProvider);
   if (user?.outletId == null) return null;
-  return SupabaseService().getActiveShift(user!.outletId!, userId: user.id);
+  return SupabaseService().getActiveShift(user!.outletId!);
 });
 
 class CashierHomeScreen extends ConsumerStatefulWidget {

@@ -1,7 +1,7 @@
 class AppConstants {
   static const String appName = 'KasirGo';
-  static const String appVersion = '1.0.17';
-  static const int appBuildNumber = 18;
+  static const String appVersion = '1.0.18';
+  static const int appBuildNumber = 19;
   static const String appTagline = 'Aplikasi Kasir UMKM Indonesia';
 
   static const List<String> businessTypes = [

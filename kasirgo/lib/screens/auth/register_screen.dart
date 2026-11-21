@@ -13,7 +13,10 @@ import '../../utils/error_messages.dart';
 import '../../widgets/common/bubble_glass.dart';
 
 class RegisterScreen extends ConsumerStatefulWidget {
-  const RegisterScreen({super.key});
+  /// Kode referral dari link `/register?ref=KGO-XXXXXX`.
+  final String? initialReferralCode;
+
+  const RegisterScreen({super.key, this.initialReferralCode});
 
   @override
   ConsumerState<RegisterScreen> createState() => _RegisterScreenState();
@@ -29,6 +32,17 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
   String _selectedBusinessType = 'Warung Sembako';
   bool _isLoading = false;
   bool _obscurePassword = true;
+  bool _referralAutoFilled = false;
+
+  @override
+  void initState() {
+    super.initState();
+    final code = (widget.initialReferralCode ?? '').trim();
+    if (code.isNotEmpty) {
+      _referralController.text = code.toUpperCase();
+      _referralAutoFilled = true;
+    }
+  }
 
   @override
   void dispose() {
@@ -207,14 +221,51 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                             },
                           ),
                           const SizedBox(height: 16),
+                          if (_referralAutoFilled)
+                            Container(
+                              margin: const EdgeInsets.only(bottom: 10),
+                              padding: const EdgeInsets.symmetric(
+                                  horizontal: 12, vertical: 10),
+                              decoration: BoxDecoration(
+                                color: AppTheme.successColor.withValues(alpha: 0.08),
+                                borderRadius:
+                                    BorderRadius.circular(AppTheme.radiusMedium),
+                                border: Border.all(
+                                    color: AppTheme.successColor.withValues(alpha: 0.35)),
+                              ),
+                              child: Row(
+                                children: [
+                                  const Icon(Icons.check_circle_rounded,
+                                      size: 18, color: AppTheme.successColor),
+                                  const SizedBox(width: 8),
+                                  const Expanded(
+                                    child: Text(
+                                      'Kode referral terisi otomatis dari link yang Anda buka.',
+                                      style: TextStyle(
+                                          fontSize: 12,
+                                          color: AppTheme.textSecondary),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
                           TextFormField(
                             controller: _referralController,
                             textCapitalization: TextCapitalization.characters,
+                            onChanged: (_) {
+                              if (_referralAutoFilled) {
+                                setState(() => _referralAutoFilled = false);
+                              }
+                            },
                             style: const TextStyle(color: AppTheme.textPrimary),
-                            decoration: const InputDecoration(
+                            decoration: InputDecoration(
                               labelText: 'Kode Referral (opsional)',
                               hintText: 'Contoh: KGO-AB12CD',
-                              prefixIcon: Icon(Icons.card_giftcard_rounded),
+                              prefixIcon: const Icon(Icons.card_giftcard_rounded),
+                              suffixIcon: _referralController.text.isNotEmpty
+                                  ? const Icon(Icons.verified_rounded,
+                                      color: AppTheme.successColor)
+                                  : null,
                               helperText:
                                   'Isi bila Anda mendapat kode dari teman/pengelola.',
                             ),

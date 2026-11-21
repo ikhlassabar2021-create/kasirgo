@@ -462,6 +462,26 @@ export const platformOutletAffiliates = (search?: string | null) =>
     p_search: search ?? null,
   })
 
+export const platformOutletAffiliateClosings = (profileId: string) =>
+  rp<{ rows: Record<string, unknown>[] }>('platform_outlet_affiliate_closings', {
+    p_profile_id: profileId,
+  })
+
+export const platformOutletAffiliateClosingPay = (payload: {
+  closingId: string
+  mode: 'now' | 'schedule' | 'unschedule'
+  scheduledAt?: string | null
+  note?: string | null
+}) =>
+  rp<{ ok: boolean; id: string; status: string; paid_at?: string | null; scheduled_at?: string | null }>(
+    'platform_outlet_affiliate_closing_pay', {
+      p_closing_id: payload.closingId,
+      p_mode: payload.mode,
+      p_scheduled_at: payload.scheduledAt ?? null,
+      p_note: payload.note ?? null,
+    },
+  )
+
 export const platformOutletAffiliateClosingAdd = (payload: {
   profileId: string; amount: number; description?: string | null
   referredOutletId?: string | null

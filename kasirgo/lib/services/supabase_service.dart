@@ -1631,6 +1631,23 @@ class SupabaseService {
   /// (shift_id), tip dari tips, expected = opening + cash, difference = closing - expected.
   Future<Shift?> closeShift(String shiftId, double closingCash, String? note) async {
     try {
+      final result = await _client.rpc('close_shift', params: {
+        'p_shift_id': shiftId,
+        'p_closing_cash': closingCash,
+        'p_note': note,
+      });
+      if (result is Map) {
+        return Shift.fromJson(Map<String, dynamic>.from(result));
+      }
+      if (result is List && result.isNotEmpty && result.first is Map) {
+        return Shift.fromJson(
+            Map<String, dynamic>.from(result.first as Map));
+      }
+    } catch (_) {
+      // Fallback ke jalur lama (klien lama / sebelum migrasi).
+    }
+
+    try {
       final payRes = await _client
           .from('transaction_payments')
           .select('method, amount')
