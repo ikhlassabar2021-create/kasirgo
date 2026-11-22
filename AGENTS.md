@@ -1233,6 +1233,8 @@ Commit `ff04bb3` (main) + deploy web gh-pages `050051c` (live md5
 - Keystore rilis dibuat agen: PKCS12 alias `kasirgo`, RSA 2048, valid s.d. 2054
   (`/tmp/opencode/keystore/kasirgo-upload.p12`; JKS + `pass.txt` di folder sama;
   JANGAN commit). SHA-1 `A6:17:30:2D:91:C6:A0:9C:F3:22:14:73:2B:6C:51:42:3A:41:4C:28`.
+  CATATAN (22 Nov 2026): fingerprint ini USANG; keystore aktif sekarang SHA-1
+  `AD:C4:F5:F5:47:8E:E7:26:8E:F8:BC:45:3B:5F:A4:15:22:B0:AA:88` (lihat sesi 1.0.18).
 - Signing wiring: `android/app/build.gradle.kts` baca `android/key.properties`
   (release-if-exists-else-debug); `.gitignore` menutup `key.properties`/`*.p12`/`*.jks`/`*.keystore`.
 - `.github/workflows/release-apk.yml`: setup-java 17 + flutter-action, langkah
@@ -1815,5 +1817,16 @@ Commit `ff04bb3` (main) + deploy web gh-pages `050051c` (live md5
   /updates/ terisi 1.0.18 (arm64 59,3 MB; armeabi 48,8 MB; x86_64 63,8 MB).
   Migrasi `docs/migrations/2026-11-21-kasirgo-seed-android-release-1.0.18.sql`
   (DITERAPKAN): `app_releases` 1.0.18 build 19 published + files stable URL.
-  GitHub Release TIDAK dibuat: token GitHub App tidak punya izin release; link
-  download web memakai URL stabil /updates/ sehingga tetap terbaru.
+  GitHub Release `v1.0.18-apk-20261121` DIBUAT (22 Nov 2026, **Latest**, bukan
+  prerelease):
+  `kasirgo-arm64.apk` (59.327.530 B), `kasirgo-armeabi-v7a.apk` (48.758.434 B),
+  `kasirgo-x86_64.apk` (63.751.196 B), `SHA256SUMS.txt`. Checksum lokal = aset
+  release = live `/updates/`. Catatan: PAT wajib scope **Contents: Read & write**
+  pada repo ini; PAT read-only gagal `403 Resource not accessible`.
+  Link download web tetap memakai URL stabil `/updates/`.
+- Tanda tangan APK 1.0.18: cert SHA-256 `381b8206f41441760d651be235f622b191b96925637169518a33e453d7f497c5`,
+  SHA-1 `AD:C4:F5:F5:47:8E:E7:26:8E:F8:BC:45:3B:5F:A4:15:22:B0:AA:88`
+  (SAMA dengan APK `v1.0.13-signed` -> update dari 1.0.13 aman, tanpa uninstall).
+  Ini keystore aktif `/tmp/opencode/keystore/kasirgo-upload.p12` (file 2 Nov 2026);
+  fingerprint `A6:17...` di catatan 1.0.2 sudah USANG (keystore lama).
+  versionCode split: arm64 `2019`, armeabi-v7a `1019`, x86_64 `4019`; label `KasirGo`.
